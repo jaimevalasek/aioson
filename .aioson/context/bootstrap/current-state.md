@@ -8,6 +8,9 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-model-benchmark · 2026-09-25] Corpus de 18 casos rodado em 54 execuções Codex/gpt-6-sol/medium: 10/18 aceites em cada uma das três variantes; relatório e JSON por critério mostram 41/54 antes e 43/54 atuais, sem ganho geral comprovado. Duas regressões de desenvolvimento motivaram correções dirigidas.
+- [squad-benchmark-corrections · 2026-09-25] Instruções Squad exigem recibos de todos os consumidores antes do ack e controle positivo de sessão válida em validação de caminho; quatro retestes dirigidos passaram nos critérios antes ausentes.
+
 - [squad-optimization-audit · 2026-09-25] Inventário de 80 entradas CLI, 5 agentes, 50 skills e 15 scripts; corpus de 18 casos preparado. Relatório squad-optimization-progress.md consolida commits e limites: 173 testes Linux passaram; Windows final teve uma falha de paleta que passou isolada. Sem exclusões sem evidência. Benchmark aguarda modelos/consumo.
 
 - [squad-clean-install · 2026-09-25] Lockfile sincronizado com @cursor/sdk opcional e binário já declarados; npm ci voltou a aceitar instalação limpa em Linux, sem alterar versões do package.json.

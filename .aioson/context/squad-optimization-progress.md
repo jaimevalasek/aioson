@@ -52,17 +52,17 @@ Inventário: `squad-surface-inventory.json`.
 | 1 — confiabilidade | Pendências apresentadas de preflight, pipeline guiado, Agent Teams e exemplos CLI corrigidas; regressões de estado, concorrência, eventos e retomada mantidas. Windows e Linux exercitados; ver resultados e ressalva de paleta abaixo |
 | 2 — execução coerente | run/status/resume unificados; pipeline com run-id compartilha sessões e deriva conclusão de evidências verificadas. Despacho dos nós permanece explícito. Heartbeat do status é null; a posse local do processo é consultada |
 | 3 — domínios | Conteúdo com revisão e derivados, processos com recibos/recuperação e construção com entry point executado têm regressões reais. Contratos por domínio documentados. Isso não demonstra qualidade semântica geral dos modelos. Failed exige rearme explícito após verificar/corrigir a falha; não há retry automático de efeitos |
-| 4 — contexto/inteligência | Instruções proporcionais implementadas. Corpus de 18 casos preparado; comparação com modelos não executada |
+| 4 — contexto/inteligência | Instruções proporcionais implementadas. 18 casos × três variantes executados com Codex; aceite integral inicial empatado em 10/18. Duas perdas pontuais de contrato foram corrigidas e retestadas. Não há prova de ganho geral de qualidade |
 | 5 — revisão/reutilização | Revisão por tarefa e derivados implementada. Snapshots protegem respostas retornadas; arquivos externos apontados não são automaticamente versionados. Exemplos aprovados continuam no mecanismo existente de playbook |
 | 6 — catálogo | Inventário e classificação conservadora concluídos; nenhuma remoção física possui evidência suficiente nesta auditoria |
 
 Este relatório não declara os seis ciclos integralmente concluídos.
 
-## Benchmark preparado
+## Benchmark executado
 
-`squad-evaluation-corpus.json`: seis casos por domínio, quatro de desenvolvimento e dois reservados. Comparar configuração existente, executor único e especialização adaptativa com as mesmas entradas, ferramentas e critérios. Registrar host/modelo/versão, tentativas, aceite, retrabalho, tempo, tokens/custo medidos e falhas de recuperação. Métricas indisponíveis permanecem null.
+`squad-evaluation-corpus.json`: seis casos por domínio, quatro de desenvolvimento e dois reservados. Em 54 execuções Codex CLI/gpt-6-sol/medium, as três variantes ficaram em 10/18 casos aceitos; critérios: 41/54 antes e 43/54 nas duas variantes atuais. Mediana: 22,3 s antes, 21,1 s executor único, 21,5 s adaptativa. Tokens de entrada medidos: 1.063.091, 989.018 e 987.613; valores incluem grande parcela em cache e trabalho variável com ferramentas, logo não isolam custo do prompt. Custo monetário faturado e retrabalho humano externo são null.
 
-Claude e Codex estão instalados. Foi solicitada ao operador a definição de hosts/modelos e limite de consumo antes de executar a comparação. Nenhuma chamada de modelo foi feita para esse benchmark nesta rodada.
+O relatório `squad-model-benchmark-report.md` e os resultados por critério em `squad-model-benchmark-results.json` incluem respostas, hashes de prompt, telemetria, avaliação cega por ID e limites. Somente Codex foi usado, conforme preferência registrada. Não há superioridade geral demonstrada; a configuração adaptativa não superou o executor único. As regressões de recibo por consumidor e teste de ID válido foram corrigidas nos módulos canônicos e passaram em quatro reexecuções dirigidas (dois casos × duas variantes); o resultado inicial de 18 casos permanece congelado. Logs brutos estão em `.aioson/runtime/squad-model-benchmark/`.
 
 ## Verificação
 
@@ -85,7 +85,7 @@ Claude e Codex estão instalados. Foi solicitada ao operador a definição de ho
 
 ## Próximos incrementos necessários para encerrar o plano maior
 
-1. Executar comparação controlada do corpus após a definição de modelos/hosts e limite de consumo solicitada ao operador. Somente essa comparação permite afirmar ganho de qualidade/custo dos modelos.
+1. Para medir ganho geral de qualidade, rodar casos de clientes com ambientes executáveis e repetição; corrigir fixtures insuficientes do corpus (`process-approval-boundary`, `software-entry-smoke`) antes de inferência estatística.
 2. Investigar a falha intermitente de proveniência visual se reaparecer; a execução isolada não confirmou regressão e nenhum código de paleta foi alterado.
 3. Validar uso real de clientes antes de eventual remoção física. Nenhuma remoção é recomendada com a evidência atual; essa decisão conservadora encerra o inventário, sem criar exclusões artificiais.
 

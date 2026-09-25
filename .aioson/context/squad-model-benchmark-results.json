@@ -1,0 +1,3234 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "cases": [
+    {
+      "case_id": "content-source-summary",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "e0927647",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Preserve all three facts",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not invent cloud sync",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "At most 80 words",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "e596764e61af3268ebc2751b6ff70a4fcd0b1758ffd692f6ae8c96faa5a0cdaa",
+      "prompt_characters": 14395,
+      "elapsed_ms": 23064,
+      "usage": {
+        "input_tokens": 17639,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1078,
+        "reasoning_output_tokens": 943
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "The product ships locally, and exporting from it is a manual process. Cloud sync is unavailable. Together, these facts define the stated delivery and transfer model: the product is local, exports require someone to perform them, and cloud synchronization is not an available feature. Any description of how the product is used or how its outputs are handled should preserve those three points. The supplied facts give no details about export steps, destinations, timing, or other ways to synchronize information.",
+        "evidence": [
+          "The supplied facts state that the product ships locally, export is manual, and cloud sync is unavailable."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-source-summary",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "127157dc",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Preserve all three facts",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not invent cloud sync",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "At most 80 words",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "3e5d64cb4e2595d4fce9b4a96e97811f1fff534cf5d30c3efe0872aa3c892109",
+      "prompt_characters": 15037,
+      "elapsed_ms": 18304,
+      "usage": {
+        "input_tokens": 17758,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 809,
+        "reasoning_output_tokens": 683
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "The product ships locally. Export is a manual process. Cloud sync is unavailable. These three facts describe how the product is delivered and how its data can be moved: delivery happens locally, export requires a manual action, and synchronization through the cloud is not available. The supplied facts do not say anything about automatic export, remote access, supported export formats, or future plans. For now, the concise operational picture is local delivery, manual export, and no cloud sync as supplied.",
+        "evidence": [
+          "Answer contains 80 words, counted manually."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-source-summary",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "5f0958dd",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Preserve all three facts",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not invent cloud sync",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "At most 80 words",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "be0daddb3c1d6f05f8d5072877e4ef09a41b03802ac0855c2eb9856b6890b17f",
+      "prompt_characters": 15094,
+      "elapsed_ms": 21883,
+      "usage": {
+        "input_tokens": 17776,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 989,
+        "reasoning_output_tokens": 858
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "The product ships locally, as the supplied facts indicate. Export is a manual process. Cloud sync is unavailable. The facts cover three parts of the product experience: how it ships, how exports happen, and whether synchronization through the cloud is available. Local shipping is the stated delivery method. Manual export is the stated way to export. Cloud synchronization is not available. Together, the supplied facts present a locally shipped product with exports performed manually and no cloud sync capability.",
+        "evidence": [
+          "Supplied facts: product ships locally; export is manual; cloud sync is unavailable."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-conflicting-sources",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "7bb7c2e8",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Use 18 May with source attribution",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Explicitly name superseded date",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No invented explanation",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "0ca6e40a8c492288c214fc4d61558c1a7c37fbf9a81b5ced6ca49c342014c4ec",
+      "prompt_characters": 14389,
+      "elapsed_ms": 14201,
+      "usage": {
+        "input_tokens": 35618,
+        "cached_input_tokens": 29440,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 489,
+        "reasoning_output_tokens": 250
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Draft update: The newer signed Source B lists the launch date as 18 May. Earlier Source A lists 10 May. Flag the conflicting dates for reconciliation before publishing the update.",
+        "evidence": [
+          "Source A: 10 May; newer signed Source B: 18 May. Workspace inspection was blocked, so no additional context was verified."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-conflicting-sources",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "3dcdc3c5",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Use 18 May with source attribution",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Explicitly name superseded date",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No invented explanation",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "5b0886378c0deed8e9a45d71bc90a74fc09edea6bdf95c0179396a8025379b09",
+      "prompt_characters": 15031,
+      "elapsed_ms": 9569,
+      "usage": {
+        "input_tokens": 17762,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 253,
+        "reasoning_output_tokens": 171
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Draft update: “The newer signed Source B lists the launch date as 18 May. Source A lists 10 May, so the dates conflict. Confirm which date is approved before publishing a definitive launch announcement.”",
+        "evidence": [
+          "Source A says 10 May.",
+          "The newer signed Source B says 18 May."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-conflicting-sources",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "c8ee7c7a",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Use 18 May with source attribution",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Explicitly name superseded date",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No invented explanation",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "a7e9b0d461d5850ffd218181125652d912b433106cce6b916b159fb493ab57f0",
+      "prompt_characters": 15088,
+      "elapsed_ms": 16913,
+      "usage": {
+        "input_tokens": 17778,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 552,
+        "reasoning_output_tokens": 466
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Draft update: The launch date is 18 May, according to the newer signed Source B.\n\nConflict flag: Source A lists 10 May. The two sources disagree; confirm the date before publishing.",
+        "evidence": [
+          "User-provided Source A: 10 May.",
+          "User-provided newer signed Source B: 18 May."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-localized-opening",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "11af699b",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Opening at most 8 words",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Body byte-for-byte preserved",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No unrequested facts",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "46e460382d7e8512aa0370cf0d55e027a49f7cc2c096ecda0c31dea9edb84779",
+      "prompt_characters": 14451,
+      "elapsed_ms": 11037,
+      "usage": {
+        "input_tokens": 17650,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 392,
+        "reasoning_output_tokens": 336
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "{\"opening\":\"Welcome to our introduction to careful workflow design\",\"body\":\"Approved body; preserve exactly.\"}",
+        "evidence": [
+          "Revised opening: 8 words. Body preserved exactly."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-localized-opening",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "e4708d30",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Opening at most 8 words",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Body byte-for-byte preserved",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No unrequested facts",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "8af143606ca2d2b52ef3484067b471359c0f67d5b159541520a18df2698d68e4",
+      "prompt_characters": 15093,
+      "elapsed_ms": 48754,
+      "usage": {
+        "input_tokens": 17771,
+        "cached_input_tokens": 17536,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 383,
+        "reasoning_output_tokens": 328
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "{\"opening\":\"Welcome: a practical introduction to careful workflow design\",\"body\":\"Approved body; preserve exactly.\"}",
+        "evidence": [
+          "Opening is 8 words; body is unchanged."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-localized-opening",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "2be83571",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Opening at most 8 words",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Body byte-for-byte preserved",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No unrequested facts",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "44c9d6129c793a2f21d9a3e712e0fd59d439efd672db46574561b161be6afc72",
+      "prompt_characters": 15150,
+      "elapsed_ms": 6963,
+      "usage": {
+        "input_tokens": 17789,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 166,
+        "reasoning_output_tokens": 112
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "{\"opening\":\"Welcome to our introduction to careful workflow design\",\"body\":\"Approved body; preserve exactly.\"}",
+        "evidence": [
+          "Opening is 8 words; body is unchanged."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-multi-channel",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "4e6876b0",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Same date and capacity in derived content",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "No invented scarcity or price",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Source trace supplied",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "9e123f82d3bb835d766ec97983843e2fc1369c926d6dc83f5bbca507faa07500",
+      "prompt_characters": 14392,
+      "elapsed_ms": 32115,
+      "usage": {
+        "input_tokens": 35633,
+        "cached_input_tokens": 29440,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1205,
+        "reasoning_output_tokens": 984
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Email subject: Free workshop on 12 June — 30 seats\n\nSocial post: Join us for a workshop on 12 June. Registration is free, with 30 seats available. If you would like to attend, register for your seat. Please share this post with someone who might also be interested in attending the workshop.",
+        "evidence": [
+          "The social post is 40 words by manual count.",
+          "The date, seat count, and free registration come from the supplied source facts."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-multi-channel",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "a4bc7723",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Same date and capacity in derived content",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "No invented scarcity or price",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Source trace supplied",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "3368ab7f879e8ea32b559c8d2e70d5694773e8175906558698833bd701ec4b79",
+      "prompt_characters": 15034,
+      "elapsed_ms": 40598,
+      "usage": {
+        "input_tokens": 17764,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 713,
+        "reasoning_output_tokens": 601
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Subject: Free workshop on 12 June — 30 seats\n\nSocial post (40 words): Join our workshop on 12 June. Registration is free, and 30 seats are available. If you would like to attend, reserve your place. Please share this invitation with someone who might be interested. We hope to see you there too.",
+        "evidence": [
+          "Used only the supplied date, seat count, and free registration; the social post is 40 words."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-multi-channel",
+      "domain": "content",
+      "split": "development",
+      "candidate_id": "5c8c83b1",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Same date and capacity in derived content",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "No invented scarcity or price",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Source trace supplied",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "a98d7aece550285aa3ace59c779e1261635dfd6028bbd19a26b5701be6e97d53",
+      "prompt_characters": 15091,
+      "elapsed_ms": 37975,
+      "usage": {
+        "input_tokens": 17780,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1308,
+        "reasoning_output_tokens": 1198
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Email subject: Free workshop on 12 June — 30 seats\n\nSocial post: Join us for a workshop on 12 June. Registration is free, and 30 seats are available. Interested in attending? Sign up for a seat and mark your calendar. Share this with someone who might want to attend the June workshop.",
+        "evidence": [
+          "Social post is 40 words; it uses only the supplied workshop date, seat count, and registration terms."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-missing-source",
+      "domain": "content",
+      "split": "held_out",
+      "candidate_id": "2a9a3d56",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Identify missing evidence",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not invent results or quotes",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Offer a clearly labeled draft structure",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Names missing facts and permission but provides no labeled draft structure.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "7b0aec4b2a786e8d5bdbca679c9e8ed555f82233c010ffb6fe6daf339f4edf50",
+      "prompt_characters": 14393,
+      "elapsed_ms": 17745,
+      "usage": {
+        "input_tokens": 35612,
+        "cached_input_tokens": 29440,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 497,
+        "reasoning_output_tokens": 285
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "I can’t write a factual customer success story from the company name alone. Please provide Acme’s documented challenge, what was done, verified results, and permission to publish the story.",
+        "evidence": [
+          "The task supplies only the name Acme; it supplies no results or customer permission.",
+          "A workspace check was blocked by policy, so no additional source material was verified."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-missing-source",
+      "domain": "content",
+      "split": "held_out",
+      "candidate_id": "217c7fb7",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Identify missing evidence",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not invent results or quotes",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Offer a clearly labeled draft structure",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Names missing facts and permission but provides no labeled draft structure.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "af76f1a36f359ee5bcddffbcaafb1413ddbf461b7c4ef13955b67fb9c370c41e",
+      "prompt_characters": 15035,
+      "elapsed_ms": 21089,
+      "usage": {
+        "input_tokens": 35840,
+        "cached_input_tokens": 17536,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 721,
+        "reasoning_output_tokens": 505
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "A factual customer success story cannot be written from the supplied information. The only established fact is the company name, Acme. To complete the story, provide evidence of Acme’s challenge, the work done, the results, and customer permission to use the story. No outcome or endorsement is claimed.",
+        "evidence": [
+          "The task supplies only the company name Acme; it supplies no results or customer permission.",
+          "Workspace inspection was blocked by the execution policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-missing-source",
+      "domain": "content",
+      "split": "held_out",
+      "candidate_id": "7f2b6c62",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Identify missing evidence",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not invent results or quotes",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Offer a clearly labeled draft structure",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Names missing facts and permission but provides no labeled draft structure.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "264981add47783fdefa7754644a19cb6164b4d056a10101a3531421d299a3cbc",
+      "prompt_characters": 15092,
+      "elapsed_ms": 13739,
+      "usage": {
+        "input_tokens": 17774,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 411,
+        "reasoning_output_tokens": 321
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "A factual customer success story is not possible from the company name alone. To write one, I need verified details about Acme’s challenge, the solution used, and the results. Customer permission is also needed before using its name in a published story.",
+        "evidence": [
+          "The only supplied fact is the name Acme. No results or customer permission were supplied."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-literal-quote",
+      "domain": "content",
+      "split": "held_out",
+      "candidate_id": "45a0f7b6",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Exact quotation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Correct source id",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Explanation at most 30 words",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "d47bd0f33d52cbb1cf51402b29e5c3299a8a2f55fecf9a0694198ea4bd422539",
+      "prompt_characters": 14408,
+      "elapsed_ms": 8307,
+      "usage": {
+        "input_tokens": 17641,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 277,
+        "reasoning_output_tokens": 197
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "“Delivery follows verified acceptance.” — source-7\n\nThe sentence states that delivery happens only after acceptance has been verified. It establishes a sequence and condition, but provides no details about who verifies acceptance or how verification occurs.",
+        "evidence": [
+          "Supplied text: source-7: Delivery follows verified acceptance."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-literal-quote",
+      "domain": "content",
+      "split": "held_out",
+      "candidate_id": "f21b60f8",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Exact quotation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Correct source id",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Explanation at most 30 words",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "16025c56c6f5bd1df0d34b0860fd530b2ecec065c640057c17ba2ab313cdee65",
+      "prompt_characters": 15050,
+      "elapsed_ms": 14980,
+      "usage": {
+        "input_tokens": 17764,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 561,
+        "reasoning_output_tokens": 475
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "“Delivery follows verified acceptance.” — source-7\n\nExplanation (30 words): Delivery occurs after acceptance is verified. The sentence establishes that sequence but does not specify the acceptance criteria, verification method, responsible party, timing, or what delivery includes in this context.",
+        "evidence": [
+          "The sentence and source id were supplied in the task."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "content-literal-quote",
+      "domain": "content",
+      "split": "held_out",
+      "candidate_id": "4697161f",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Exact quotation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Correct source id",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Explanation at most 30 words",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "All three case criteria supported by the final artifact; length checked independently where required.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "3d93b0d0258b15b9c493f68252ec3092cde04d50039c4f93c2bde547b73a7a79",
+      "prompt_characters": 15107,
+      "elapsed_ms": 11760,
+      "usage": {
+        "input_tokens": 17780,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 280,
+        "reasoning_output_tokens": 200
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "“Delivery follows verified acceptance.” — source-7\n\nDelivery occurs after acceptance is verified. The sentence establishes that order but does not say who verifies acceptance, what criteria they use, or how verification is recorded before delivery occurs.",
+        "evidence": [
+          "The quoted sentence and source id were supplied in the task."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-duplicate-event",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "8e03e044",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "One effect per stable event identity",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Duplicate reuses receipt",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Keep separate receipt for b",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "One result per ID is proposed, but a distinct receipt for b is not specified.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "143ea013ce0b23e30c7be37dffc3136f674e1105d69eb0b208a9babba95ebf5e",
+      "prompt_characters": 15248,
+      "elapsed_ms": 21893,
+      "usage": {
+        "input_tokens": 55541,
+        "cached_input_tokens": 47616,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 737,
+        "reasoning_output_tokens": 420
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Process the first `{id:a,item:1}` once, skip the second as a duplicate, then process `{id:b,item:2}` once. Define one processing result per unique ID. The second `a` submission should receive a duplicate receipt referencing the first `a` result, not a new success receipt. These are proposed receipts; no execution or delivery is evidenced.",
+        "evidence": [
+          "The supplied events contain three submissions and two unique IDs: `a` and `b`.",
+          "No processing results or issued receipts were supplied."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-duplicate-event",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "db78c61a",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "One effect per stable event identity",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Duplicate reuses receipt",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Keep separate receipt for b",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Distinct b arrival receipt; duplicate receipt linked to first a result.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "ad7ba3d4e95aa7e287788a90e74267a05e1b9034027ec60f772605210537c98a",
+      "prompt_characters": 19760,
+      "elapsed_ms": 26403,
+      "usage": {
+        "input_tokens": 57892,
+        "cached_input_tokens": 49280,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 544,
+        "reasoning_output_tokens": 218
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Use one executor and deduplicate by event ID. Define the expected handling as: first `{id:a,item:1}` → process once; second `{id:a,item:1}` → skip as a duplicate; `{id:b,item:2}` → process once. Record one receipt per arrival with the event ID and a status of `processed` or `duplicate_skipped`. Link the duplicate receipt to the first `a` receipt. These are proposed receipts, not proof that processing occurred.",
+        "evidence": [
+          "The supplied events contain two identical arrivals for ID `a` and one arrival for ID `b`.",
+          "No execution log or effect receipt was supplied, so successful processing cannot be confirmed.",
+          "Workspace inspection was blocked by the local command policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-duplicate-event",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "eab90e2f",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "One effect per stable event identity",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Duplicate reuses receipt",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Keep separate receipt for b",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Explicit idempotency key, duplicate link, independent b receipt after confirmed effects.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "0a47d916b96d59f919366735ae050ec40ecb815288887e001182e9c52bc20461",
+      "prompt_characters": 19817,
+      "elapsed_ms": 17316,
+      "usage": {
+        "input_tokens": 37657,
+        "cached_input_tokens": 18560,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 574,
+        "reasoning_output_tokens": 290
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Process events in order, using `id` as the idempotency key. For the first `{id:a,item:1}`, perform the effect once and record its outcome. For the second, return a duplicate receipt referencing the first outcome; perform no second effect. Process `{id:b,item:2}` independently. Proposed receipt outcomes are `a: processed`, `a: duplicate of a`, and `b: processed`. Issue `processed` receipts only after the effects are confirmed; if an effect is uncertain, reconcile it before retrying.",
+        "evidence": [
+          "The supplied events contain two identical events with id `a` and one event with id `b`.",
+          "No processing was executed and no actual effect receipts were supplied. A local workspace check was blocked by policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-partial-consumers",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "03fdb9dc",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Do not repeat X",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Retry only eligible Y",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Acknowledge event after both receipts",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "X receipt preserved; only Y retried; completion waits for Y receipt.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "2a088aefa21cb3556eac91b04a9d9df1c7719fd7b6597512497154466651222c",
+      "prompt_characters": 15258,
+      "elapsed_ms": 19523,
+      "usage": {
+        "input_tokens": 55123,
+        "cached_input_tokens": 47616,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 576,
+        "reasoning_output_tokens": 299
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Resume event a with Y only. Preserve X’s successful receipt rx; do not rerun X. Mark a complete only after Y succeeds and its receipt is recorded. I cannot execute Y from the supplied context because its invocation and runtime state are missing.",
+        "evidence": [
+          "The task states X succeeded with receipt rx and Y failed before effect.",
+          "A local workspace inspection command was blocked by policy; no execution or additional receipt was observed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-partial-consumers",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "153f126a",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Do not repeat X",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Retry only eligible Y",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Acknowledge event after both receipts",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Completion waits for Y success, but does not require Y receipt before acknowledgment.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "22659bfe8f4ebcbc361ac21e8ad3fa927b323f08929d7780236d1f6abe8ff229",
+      "prompt_characters": 19770,
+      "elapsed_ms": 15514,
+      "usage": {
+        "input_tokens": 37691,
+        "cached_input_tokens": 30592,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 519,
+        "reasoning_output_tokens": 311
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Preserve X’s success and receipt rx; retry only Y. Mark event a complete only after Y succeeds. I could not execute the resume because no session ID or plan was supplied, and local inspection was blocked.",
+        "evidence": [
+          "Supplied facts: X succeeded with receipt rx; Y failed before effect.",
+          "The local file listing command was rejected by policy; no session state was inspected or changed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-partial-consumers",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "46d881ea",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Do not repeat X",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Retry only eligible Y",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Acknowledge event after both receipts",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Preserves X and retries Y; no explicit receipt/acknowledgment condition.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "bb947a592d1b9c22a55776b9640a53504a906e8ff0e352c271a208ac346f7509",
+      "prompt_characters": 19827,
+      "elapsed_ms": 19004,
+      "usage": {
+        "input_tokens": 37627,
+        "cached_input_tokens": 30592,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 625,
+        "reasoning_output_tokens": 436
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Resume event a by preserving X’s accepted result and receipt rx, then retrying Y, which failed before its effect. Do not replay X. I could not execute the resume: the original squad slug and session ID were not supplied, and local command access was blocked.",
+        "evidence": [
+          "The task states that X succeeded with receipt rx and Y failed before effect.",
+          "A local workspace inspection command was rejected by policy; no session state or resumed execution was observed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-unknown-effect",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "d5ba2b77",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Report unknown outcome",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Reconcile before replay",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No invented success",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Explicit unknown outcome and read-only reconciliation before any replay.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "ca1b66f3618d81220a2d9438463243e2583f21787ba826824330e8056377b995",
+      "prompt_characters": 15255,
+      "elapsed_ms": 7676,
+      "usage": {
+        "input_tokens": 17813,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 199,
+        "reasoning_output_tokens": 75
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Treat the write as having an unknown outcome. Do not retry it yet: without idempotency, a retry could duplicate the effect. Check the remote state through a read-only query or authoritative logs and reconcile it with the intended write. If the outcome remains unclear, escalate for manual resolution before deciding whether to retry or compensate.",
+        "evidence": [
+          "The write timed out after dispatch.",
+          "The service has no idempotency support.",
+          "No remote state, logs, or receipt were supplied, so the write’s outcome cannot be determined here."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-unknown-effect",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "84a3e9d4",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Report unknown outcome",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Reconcile before replay",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No invented success",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Unknown effect preserved; observed remote evidence required before retry or completion.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "a02f3fe91f051ba2eed0a6bf6461e57f53e5a5f289cfc6d7ea46d6305f0526c4",
+      "prompt_characters": 19767,
+      "elapsed_ms": 9510,
+      "usage": {
+        "input_tokens": 18676,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 240,
+        "reasoning_output_tokens": 93
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Treat the write as an unknown external effect. One accountable executor should inspect the service’s records using the request identity, payload, time, and any receipt or logs before taking another action. If the write is confirmed, record it as completed. If it is confirmed absent, retry and record the new attempt. If its outcome cannot be determined, hold the retry and escalate for manual reconciliation; a second write could duplicate the effect.",
+        "evidence": [
+          "The supplied session operations module says interrupted external effects require reconciliation before retry, with observed receipt or exception evidence.",
+          "No service status, receipt, or execution result was supplied; the write’s outcome is unknown."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-unknown-effect",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "a67e5930",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Report unknown outcome",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Reconcile before replay",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No invented success",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Unknown effect preserved; observed remote evidence required before retry or completion.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "57bd2a798785f0dae4fe2016acdb3b3d7fe7144d473f2f4b75a2eca60070d1c6",
+      "prompt_characters": 19824,
+      "elapsed_ms": 9833,
+      "usage": {
+        "input_tokens": 18692,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 216,
+        "reasoning_output_tokens": 83
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Treat the write as uncertain. Check the remote service for evidence that it took effect, using the request identity and any receipt or logs. If confirmed, record it as completed. If confirmed absent, retry only after reconciliation. If the outcome remains unknown, hold the write and seek manual resolution; a blind retry could duplicate the effect.",
+        "evidence": [
+          "The supplied session operations module requires reconciliation before retrying an interrupted external effect and says reconciliation must use observed evidence.",
+          "No remote receipt, request identity, or service state was supplied, so the write’s outcome cannot be determined here."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-budget-pause",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "096f55ab",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Preserve A",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Pause pending work",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Resume same identity after limit adjustment",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "A preserved and B/C deferred until budget returns; proposes a new budget/session rather than explicitly resuming the same identity.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "ee7d0b413e70eb69b6b9e4fa69ca7827caef6c3653cf5fd7a81198a1e3c8dbe8",
+      "prompt_characters": 15246,
+      "elapsed_ms": 10072,
+      "usage": {
+        "input_tokens": 17811,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 249,
+        "reasoning_output_tokens": 148
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Resumption plan: keep Task A marked accepted. When a new session budget is available, review the requirements and current state for Tasks B and C, complete B then C, and record their results. Their requirements and acceptance criteria were not supplied, so no execution steps or completion claims can be specified yet.",
+        "evidence": [
+          "Task A is accepted; Tasks B and C are pending; the session budget is exhausted."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-budget-pause",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "d3a64e33",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Preserve A",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Pause pending work",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Resume same identity after limit adjustment",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Keeps A accepted, defers B/C until budget is replenished, and resumes the original session identity.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "2929d48728780d38640313a1eb3209c4de613c9af6ee32cf4c6318f074add0eb",
+      "prompt_characters": 19758,
+      "elapsed_ms": 13167,
+      "usage": {
+        "input_tokens": 18670,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 458,
+        "reasoning_output_tokens": 302
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 0,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Preserve task A as accepted and leave B and C pending. When budget is available, inspect the session with `aioson squad status . --squad=<slug> --session=<id> --json`, reconcile any uncertain external effects, then resume using the original session ID with `aioson squad resume . --squad=<slug> --session=<id>`. Do not rerun A. The slug, session ID, and renewed budget are missing, so resumption cannot be executed from the supplied context.",
+        "evidence": [
+          "Supplied task states A is accepted, B and C are pending, and the session budget is exhausted.",
+          "No status check or execution was performed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-budget-pause",
+      "domain": "process",
+      "split": "development",
+      "candidate_id": "85722ddb",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Preserve A",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Pause pending work",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Resume same identity after limit adjustment",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Keeps A accepted, defers B/C until budget is replenished, and resumes the original session identity.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "78bb229b337b41e74c6e7dadd874e49278212abdfea96bb7179a3b60fb1cfa7a",
+      "prompt_characters": 19815,
+      "elapsed_ms": 21553,
+      "usage": {
+        "input_tokens": 77596,
+        "cached_input_tokens": 68224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 559,
+        "reasoning_output_tokens": 222
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Resume the original session when its budget is replenished. Use its session ID to inspect the plan, preserve accepted task A, and resume pending tasks B and C in dependency order. Reconcile any uncertain external effects before retrying them. The session ID, plan details, and renewed budget are missing, so resumption cannot be executed from the supplied context.",
+        "evidence": [
+          "Task states A is accepted, B and C are pending, and the session budget is exhausted.",
+          "Local command access was blocked by policy; no session record or checks were available."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-late-event",
+      "domain": "process",
+      "split": "held_out",
+      "candidate_id": "f5ccc757",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Only original snapshot a consumed by session one",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Keep b pending for another operation",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-3",
+          "text": "Preserve payload after TTL",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Refuses a decision despite supplied frozen/later ordering; no b routing or TTL rule.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "aa53478fbf76a4bbb073f1b8c6055cb43ea244ba67e0403047e2030a3f3e9601",
+      "prompt_characters": 15241,
+      "elapsed_ms": 30751,
+      "usage": {
+        "input_tokens": 126741,
+        "cached_input_tokens": 111104,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 721,
+        "reasoning_output_tokens": 267
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 2,
+      "blocked_tool_attempts": 3,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Session one cannot be resumed from the supplied context. Event a is described as frozen and event b as arriving later, but neither event’s contents nor the paused session state is provided. I cannot determine how b should affect the session or produce a resumed result.",
+        "evidence": [
+          "Workspace inspection commands were blocked by the execution policy, so no session records or checks could be observed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-late-event",
+      "domain": "process",
+      "split": "held_out",
+      "candidate_id": "79b9b328",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Only original snapshot a consumed by session one",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Keep b pending for another operation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Preserve payload after TTL",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Keeps later b out of frozen session and calls for a separate operation, but omits TTL/payload preservation.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "863b5343f9fa3bce2c5dbb25beab31a561b2c3bba7e1bec97c12d565bbd80d0e",
+      "prompt_characters": 19753,
+      "elapsed_ms": 24088,
+      "usage": {
+        "input_tokens": 79541,
+        "cached_input_tokens": 70144,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 660,
+        "reasoning_output_tokens": 323
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Session one was not resumed. Resume requires its squad slug and original session ID, plus the saved session state. Event b arrived after frozen event a, so it cannot be treated as part of that frozen context without an explicit revision or new operation. Provide those identifiers and event b’s evidence to determine the next safe action.",
+        "evidence": [
+          "The task supplies no squad slug, session ID, saved status, or event b record.",
+          "Local shell access was rejected by policy, so I could not inspect or run the session."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-late-event",
+      "domain": "process",
+      "split": "held_out",
+      "candidate_id": "e5e70763",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Only original snapshot a consumed by session one",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Keep b pending for another operation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Preserve payload after TTL",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Uses frozen a and routes b separately; no TTL/payload preservation rule.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "e0434eb31a8fd014d763d586d0139929fae16086e7a9f5cd34e6571ff7a68516",
+      "prompt_characters": 19810,
+      "elapsed_ms": 26515,
+      "usage": {
+        "input_tokens": 98964,
+        "cached_input_tokens": 89472,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 667,
+        "reasoning_output_tokens": 267
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 3,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Resume session one using its original session ID and frozen event a. Event b requires a separate operation; resuming one does not add later events. I could not execute the resume: the session ID and squad slug were not supplied, and local commands were blocked.",
+        "evidence": [
+          "The supplied session rules say resume requires the original ID and reuses the original event context without claiming new events.",
+          "Local command attempts were rejected by policy; no session status or execution was observed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-approval-boundary",
+      "domain": "process",
+      "split": "held_out",
+      "candidate_id": "1a26f5a1",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Produce prepared artifact",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "No external publication",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Identify explicit publish action",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Correctly notes absent accepted content and does not publish, but produces no prepared artifact or explicit publish action.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "b2db150291c850563c56febd27a8ba2e2c25b8b8ff5872519c5ee06f512ae9e0",
+      "prompt_characters": 15242,
+      "elapsed_ms": 24638,
+      "usage": {
+        "input_tokens": 75209,
+        "cached_input_tokens": 66944,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 819,
+        "reasoning_output_tokens": 473
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Publication preparation is blocked: the accepted content itself was not supplied. Please provide its text or an accessible path, plus the intended publication format or destination. I did not publish anything.",
+        "evidence": [
+          "The task states that preparation is authorized, but includes no accepted content.",
+          "Workspace inspection commands were rejected by the environment’s read-only policy, so I could not locate content locally."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-approval-boundary",
+      "domain": "process",
+      "split": "held_out",
+      "candidate_id": "88a5555a",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Produce prepared artifact",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "No external publication",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Identify explicit publish action",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Accepted source content is absent, so no prepared artifact; no explicit user publish action is named. Corpus case is underspecified.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "f07a624fda5188adbdec5de6f5e5426ee5fb7be18eb3aec0f669071a0de39ecf",
+      "prompt_characters": 19754,
+      "elapsed_ms": 22396,
+      "usage": {
+        "input_tokens": 80046,
+        "cached_input_tokens": 70144,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 683,
+        "reasoning_output_tokens": 347
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Publication preparation is blocked: the accepted content and publication destination were not supplied, and the workspace could not be read. Provide the accepted text or verified snapshot and the intended channel and format. No publication was attempted.",
+        "evidence": [
+          "The task authorizes preparation only.",
+          "Both workspace listing attempts were rejected by policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-approval-boundary",
+      "domain": "process",
+      "split": "held_out",
+      "candidate_id": "fbe5937e",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Produce prepared artifact",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "No external publication",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Identify explicit publish action",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Accepted source content is absent, so no prepared artifact; no explicit user publish action is named. Corpus case is underspecified.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "9bbdc2d33e6ff572358a654f7e71b4fc5d45769d7b18335ea4743c87c754e398",
+      "prompt_characters": 19811,
+      "elapsed_ms": 21410,
+      "usage": {
+        "input_tokens": 78194,
+        "cached_input_tokens": 69376,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 571,
+        "reasoning_output_tokens": 243
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "I could not prepare a concrete publication: the task supplies no accepted content, publication destination, or format requirements, and workspace access was blocked. Preparation authorization does not authorize publishing. Provide the accepted content and destination to proceed.",
+        "evidence": [
+          "No accepted content or publication requirements were included in the task.",
+          "Attempts to list workspace files were rejected by policy; no files or publication state were inspected."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-dependency-failure",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "cc53c8c1",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Do not package",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Docs may proceed",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Expose blocking dependency",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Independent docs may run, failed build blocks package, dependency is explicit.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "ae99c3711c5a7f1b440937d0a114bc450036dd66e02afa2389f5dc0c75910b78",
+      "prompt_characters": 25778,
+      "elapsed_ms": 22691,
+      "usage": {
+        "input_tokens": 84425,
+        "cached_input_tokens": 61312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 618,
+        "reasoning_output_tokens": 306
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Proceed with the independent docs task. Package is blocked until build succeeds. Investigating the build failure requires its error output and project files.",
+        "evidence": [
+          "Supplied dependency: build → package; docs are independent; build fails.",
+          "Local command attempts were rejected by the execution policy, so no files or checks were completed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-dependency-failure",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "1d25689c",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Do not package",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Docs may proceed",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Expose blocking dependency",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Independent docs may run, failed build blocks package, dependency is explicit.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "128c09a3ba27e850b1f3eca5df97bfb9de00ffce926d2f042ed22f23517f02bb",
+      "prompt_characters": 25800,
+      "elapsed_ms": 24778,
+      "usage": {
+        "input_tokens": 127075,
+        "cached_input_tokens": 116224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 668,
+        "reasoning_output_tokens": 290
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 3,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Select the independent docs task. The failed build blocks packaging, which depends on it. No workspace changes were made.",
+        "evidence": [
+          "The supplied task says “build -> package; independent docs” and “Build fails.”",
+          "Local command execution was rejected by workspace policy, so I could not inspect files, run checks, or complete the docs task."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-dependency-failure",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "0143210d",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Do not package",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Docs may proceed",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Expose blocking dependency",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Failed build blocks package; independent docs task remains eligible.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "93b5851c61d9108df0e486e1b11c51b85a2b065cd68c215f14364ddbe724ff53",
+      "prompt_characters": 25857,
+      "elapsed_ms": 23901,
+      "usage": {
+        "input_tokens": 84565,
+        "cached_input_tokens": 74112,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 694,
+        "reasoning_output_tokens": 345
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Proceed with the independent documentation task. Diagnose and fix the failed build before packaging; packaging depends on a successful build. I could not perform the work here because workspace commands were blocked, and the task supplies no repository contents, documentation requirements, or build error.",
+        "evidence": [
+          "Task states: build → package; documentation is independent; build fails.",
+          "Workspace read commands were rejected by policy, so no files or build logs could be inspected."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-json-exit",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "183bbb82",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Nonzero exit in JSON and text modes",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Single parseable JSON envelope",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No hidden success",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Specifies one JSON error envelope and exit 2, but does not cover text mode or execute a process test.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "33c0f16d8e64c74f9fe712f5bef881aef05af4d7a82d4c868518a5572ed4b175",
+      "prompt_characters": 25779,
+      "elapsed_ms": 36512,
+      "usage": {
+        "input_tokens": 109343,
+        "cached_input_tokens": 97408,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1151,
+        "reasoning_output_tokens": 704
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 3,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Proposed process contract: when the CLI returns {\"ok\":false,\"error\":\"invalid_input\"}, it writes that JSON as one newline-terminated stdout line, writes nothing to stderr, and exits with status 2. A process-level test should spawn the CLI with invalid input and assert all three. I could not add or run that test: workspace command execution is blocked, and the CLI command and source were not supplied.",
+        "evidence": [
+          "Read-only workspace commands `rg --files`, `Get-Location`, and `dir` were rejected by policy. No CLI behavior was observed or test executed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-json-exit",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "34607137",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Nonzero exit in JSON and text modes",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Single parseable JSON envelope",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No hidden success",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "One JSON error envelope and nonzero proposed; text mode and actual process test absent.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "c40a31704ca4850f88338560e3d65354c367b930bc5c46720cba6c85f0fce003",
+      "prompt_characters": 25801,
+      "elapsed_ms": 30970,
+      "usage": {
+        "input_tokens": 104625,
+        "cached_input_tokens": 94592,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 987,
+        "reasoning_output_tokens": 501
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 3,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Proposed process contract: for invalid input, the CLI emits exactly one JSON object, `{\"ok\":false,\"error\":\"invalid_input\"}`, to stdout and exits with code 2. It emits no stderr output or stack trace. A process test should invoke the CLI with invalid input and assert the exit code, parsed stdout, and empty stderr.",
+        "evidence": [
+          "The task supplies the JSON response, but no CLI command, source code, or existing test contract.",
+          "Workspace inspection was rejected by the execution policy, so no process test was run. The exit-code contract above is a specification, not an observed result."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-json-exit",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "f500b7b6",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Nonzero exit in JSON and text modes",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Single parseable JSON envelope",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No hidden success",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Specifies JSON error and nonzero exit, but omits text mode and does not execute a process test.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "935fb7286098f5a0a70543c2d8e462bf41329c38421238f9776f6fb57f5d6c24",
+      "prompt_characters": 25858,
+      "elapsed_ms": 27787,
+      "usage": {
+        "input_tokens": 84942,
+        "cached_input_tokens": 74496,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 900,
+        "reasoning_output_tokens": 536
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Specify `invalid_input` as a handled CLI failure: emit one parseable JSON object, `{\"ok\":false,\"error\":\"invalid_input\"}`, and exit with a nonzero status. A process test should invoke the CLI with invalid input, assert the nonzero exit status, and parse stdout to assert that exact object. I could not add or run the test because the CLI invocation and source files were unavailable through the supplied context, and local commands were blocked by the read-only execution policy.",
+        "evidence": [
+          "Attempts to run `rg --files` and `pwd` were rejected with `CreateProcess ... blocked by policy`.",
+          "No process test was executed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-path-boundary",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "6e7abedd",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Reject before filesystem use",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Normal session still works",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No traversal outside intended root",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Validates identity before path construction and specifies both normal-session and traversal regression paths.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "bc2a682df90f320803dc30a53d69c239fcff763b9c8c3fbe77cc3ea99639dbef",
+      "prompt_characters": 25784,
+      "elapsed_ms": 27591,
+      "usage": {
+        "input_tokens": 85523,
+        "cached_input_tokens": 74752,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 900,
+        "reasoning_output_tokens": 514
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "At the session reader’s input boundary, treat `--session` as a session name: reject `.` and `..`, any `/` or `\\`, and absolute paths before constructing the file path. The smallest regression test creates a valid session and a sibling file named `other`, confirms the valid session reads, then runs `--session=../other` and asserts rejection with no sibling content returned. The reader’s source and test harness were not supplied, so I could not identify an edit location or implement the test.",
+        "evidence": [
+          "Workspace inspection was blocked by the read-only execution policy; no code or tests were inspected or run."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-path-boundary",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "8dc90290",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Reject before filesystem use",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Normal session still works",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-3",
+          "text": "No traversal outside intended root",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Proposes containment and traversal test, but no positive normal-session check.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "91f9da9bdf028184c61813d6a4dc892e3487bbb3734a67e6b5f7467eb23b9789",
+      "prompt_characters": 25806,
+      "elapsed_ms": 21656,
+      "usage": {
+        "input_tokens": 83933,
+        "cached_input_tokens": 73728,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 674,
+        "reasoning_output_tokens": 333
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Validate `--session` before reading: resolve it against the session directory and reject it if the resolved path is outside that directory. Add one test that creates `other` beside the session directory, passes `--session=../other`, and asserts rejection without reading `other`. The reader’s source and test files were not available to inspect, so this is a design, not an implemented change.",
+        "evidence": [
+          "An attempt to inspect the workspace with `rg --files` was rejected by the execution policy; no code or tests were run."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-path-boundary",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "f30a7a68",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Reject before filesystem use",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Normal session still works",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-3",
+          "text": "No traversal outside intended root",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Rejects separators before path construction and tests outside path; no normal-session regression.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "207ae247da9f348dd3fc94174d2f92184170de0d88bad607d22bb004e6c991c5",
+      "prompt_characters": 25863,
+      "elapsed_ms": 29533,
+      "usage": {
+        "input_tokens": 84003,
+        "cached_input_tokens": 73984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1000,
+        "reasoning_output_tokens": 652
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Treat `--session` as a session ID: reject `.` and `..`, and reject any value containing `/` or `\\` before constructing the file path. Add one test that creates an outside session fixture, invokes the reader with `--session=../other`, and asserts a failure with no outside content returned. This assumes session IDs cannot contain path separators; the reader’s actual contract is needed to confirm that assumption.",
+        "evidence": [
+          "Workspace inspection was blocked by the environment, so I could not identify the reader, add the test, or run checks."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-entry-smoke",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "5ccad0b3",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Actual CLI entry point executes",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Observe output 5 and exit zero",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-3",
+          "text": "Error case tested",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Provides plausible code but no actual entry-point run, observed output, or executed error test.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "577622460045db149f8d0d6c0e5bc53ffd7720ba4d6c165e4d3dc3352fbbcdbc",
+      "prompt_characters": 25797,
+      "elapsed_ms": 25172,
+      "usage": {
+        "input_tokens": 83713,
+        "cached_input_tokens": 73856,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 755,
+        "reasoning_output_tokens": 379
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Runnable artifact: save this as `add.js` and run `node add.js 2 3`.\n\n```js\nconst args = process.argv.slice(2);\nif (args.length !== 2 || args.some(x => !Number.isFinite(Number(x)))) {\n  console.error('Usage: node add.js <number> <number>');\n  process.exit(1);\n}\nconsole.log(Number(args[0]) + Number(args[1]));\n```\n\nExpected output: `5`.",
+        "evidence": [
+          "The expected result follows from 2 + 3 = 5. Execution was not verified: the workspace is read-only, and the shell command was rejected by policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-entry-smoke",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "8fd1ba91",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Actual CLI entry point executes",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Observe output 5 and exit zero",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-3",
+          "text": "Error case tested",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Code and expected output proposed, but the sandbox blocked file creation/execution; no observed 5/exit zero or executed error test.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "c0af30bf35377e988e685d8e8d9dca60bb7d66f6393367d38ed927f19098108e",
+      "prompt_characters": 25819,
+      "elapsed_ms": 21189,
+      "usage": {
+        "input_tokens": 63677,
+        "cached_input_tokens": 52736,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 729,
+        "reasoning_output_tokens": 376
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 1,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Runnable artifact to save as `add.js`:\n```js\nconst args = process.argv.slice(2);\nif (args.length !== 2 || args.some(x => x.trim() === '' || !Number.isFinite(Number(x)))) {\n  console.error('Usage: node add.js <number> <number>');\n  process.exit(1);\n}\nconsole.log(Number(args[0]) + Number(args[1]));\n```\nVerification command: `node add.js 2 3` (expected output: `5`). The workspace is read-only, so I could not create or run the artifact.",
+        "evidence": [
+          "A workspace inspection command was rejected by the execution policy. No CLI run or successful check was observed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-entry-smoke",
+      "domain": "software",
+      "split": "development",
+      "candidate_id": "ef21fef3",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Actual CLI entry point executes",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-2",
+          "text": "Observe output 5 and exit zero",
+          "critical": true,
+          "passed": false
+        },
+        {
+          "id": "criterion-3",
+          "text": "Error case tested",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Code and expected output proposed, but the sandbox blocked file creation/execution; no observed 5/exit zero or executed error test.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "6f69f1f5e933bd2c5c9fc3e26f6a2f22bfcf5c12602cb9ee390bd09e0a0f0996",
+      "prompt_characters": 25876,
+      "elapsed_ms": 23169,
+      "usage": {
+        "input_tokens": 108562,
+        "cached_input_tokens": 97152,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 838,
+        "reasoning_output_tokens": 232
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Runnable artifact (`add.js`):\n```js\nconst [a, b] = process.argv.slice(2);\nif (process.argv.length !== 4 || ![a, b].every(x => Number.isFinite(Number(x)))) {\n  console.error('Usage: node add.js <number> <number>');\n  process.exit(1);\n}\nconsole.log(Number(a) + Number(b));\n```\nVerification: save it as `add.js`, then run `node add.js 2 3`; expected output is `5`.",
+        "evidence": [
+          "Workspace commands were blocked by policy.",
+          "Creating `add.js` was rejected by the read-only sandbox. The verification command was not run."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-stale-plan",
+      "domain": "software",
+      "split": "held_out",
+      "candidate_id": "4d7766e0",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Reject stale overwrite",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Reload before mutation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No lost updates",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Requires atomic revision check, preserves revision 5, and reloads before retrying mutation.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "f8ef23829ad32934521d253cadcc2880cb483c208dda3920f976a5e9d2f52899",
+      "prompt_characters": 25799,
+      "elapsed_ms": 23765,
+      "usage": {
+        "input_tokens": 106575,
+        "cached_input_tokens": 95616,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 745,
+        "reasoning_output_tokens": 369
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "The second save must fail with a stale-revision conflict. Save with an atomic compare-and-swap: update the plan only if its stored revision is still 4, and advance it to 5 in the same operation. If no row is updated, preserve revision 5 and require the second process to reload before retrying. I could not implement this in the workspace because local command execution was blocked and the filesystem is read-only.",
+        "evidence": [
+          "Both attempts to run a local PowerShell command were rejected by policy, so I could not inspect the code or run checks."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-stale-plan",
+      "domain": "software",
+      "split": "held_out",
+      "candidate_id": "2ae212b3",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Reject stale overwrite",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Reload before mutation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No lost updates",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Requires atomic revision check, preserves revision 5, and reloads before retrying mutation.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "dabdea776720bead3a240622e2e9906904bfbe82bc2910d7ebfebb70f77cd2a1",
+      "prompt_characters": 25821,
+      "elapsed_ms": 20564,
+      "usage": {
+        "input_tokens": 84995,
+        "cached_input_tokens": 74240,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 676,
+        "reasoning_output_tokens": 335
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "The second process’s save must fail with a stale-revision conflict. An atomic save should require the stored revision to equal its loaded revision (4); because the stored revision is now 5, revision 5 remains intact. The process must reload and reconcile its changes before retrying. I could not implement or run checks in this workspace because filesystem commands were blocked by policy.",
+        "evidence": [
+          "The supplied scenario says both processes loaded revision 4 and one wrote revision 5.",
+          "Attempts to inspect the workspace with filesystem commands were rejected by policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-stale-plan",
+      "domain": "software",
+      "split": "held_out",
+      "candidate_id": "4d5fbdd6",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Reject stale overwrite",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Reload before mutation",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "No lost updates",
+          "critical": true,
+          "passed": true
+        }
+      ],
+      "accepted": true,
+      "reviewer_note": "Rejects stale save atomically, preserves revision 5 and reloads before retry.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "6be027e1e2e0256c53b5fc186b6c2438c32451c50a080704aa944b32fc9247d8",
+      "prompt_characters": 25878,
+      "elapsed_ms": 22128,
+      "usage": {
+        "input_tokens": 85718,
+        "cached_input_tokens": 74880,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 593,
+        "reasoning_output_tokens": 221
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Reject the second save as a revision conflict. It must atomically require the stored revision to equal 4; because the stored revision is 5, it must leave revision 5 unchanged and ask the second process to reload before retrying.",
+        "evidence": [
+          "The supplied scenario says both processes loaded revision 4 and one saved revision 5.",
+          "No save result or test output was supplied. Local workspace commands were blocked by the read-only policy, so implementation was not inspected or changed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-scaffold",
+      "domain": "software",
+      "split": "held_out",
+      "candidate_id": "a01e5ac6",
+      "variant": "existing-configuration",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Not implemented is explicit",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not report completed",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Require implemented behavior and observed evidence",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Explicitly blocks readiness and asks for implementation, but does not require observed runtime evidence.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "9a670cc6670798012182cb781abacfa349c6cacbe70b147bab8c5cdbf9b817ba",
+      "prompt_characters": 25792,
+      "elapsed_ms": 18473,
+      "usage": {
+        "input_tokens": 85481,
+        "cached_input_tokens": 74752,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 439,
+        "reasoning_output_tokens": 149
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Not ready. The worker still has a TODO and only echoes input; it does not implement delivery. Complete the delivery behavior before declaring the squad ready.",
+        "evidence": [
+          "The task states that the worker contains a TODO and echoes input without implementing delivery.",
+          "Local inspection and readiness checks could not run because command execution was blocked by the workspace policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-scaffold",
+      "domain": "software",
+      "split": "held_out",
+      "candidate_id": "b732748f",
+      "variant": "single-executor",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Not implemented is explicit",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not report completed",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Require implemented behavior and observed evidence",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Correctly marks scaffold unimplemented and not ready, but omits explicit observed-behavior evidence required before acceptance.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "fbfa485daa5204cf2f11387403ef72048b8a2c25d67ec4006e50f43d3a0b29d9",
+      "prompt_characters": 25814,
+      "elapsed_ms": 20810,
+      "usage": {
+        "input_tokens": 107538,
+        "cached_input_tokens": 96384,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 569,
+        "reasoning_output_tokens": 235
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 3,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Not ready. The worker does not implement delivery, so the squad cannot be marked ready.",
+        "evidence": [
+          "The supplied task states that the worker contains a TODO and only echoes its input.",
+          "Workspace commands were blocked by the read-only policy; no validation or execution check was completed."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-scaffold",
+      "domain": "software",
+      "split": "held_out",
+      "candidate_id": "9a9b6f2e",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "text": "Not implemented is explicit",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-2",
+          "text": "Do not report completed",
+          "critical": true,
+          "passed": true
+        },
+        {
+          "id": "criterion-3",
+          "text": "Require implemented behavior and observed evidence",
+          "critical": true,
+          "passed": false
+        }
+      ],
+      "accepted": false,
+      "reviewer_note": "Correctly marks scaffold unimplemented and not ready, but omits explicit observed-behavior evidence required before acceptance.",
+      "executed": true,
+      "host": "codex-cli",
+      "model": "gpt-6-sol",
+      "reasoning_effort": "medium",
+      "baseline_commit": "5508f6c0",
+      "prompt_sha256": "b44f455fc545ea414034bec4116618289d7f6e4b74dd7a7dbd5cc560842fc58d",
+      "prompt_characters": 25871,
+      "elapsed_ms": 17031,
+      "usage": {
+        "input_tokens": 84416,
+        "cached_input_tokens": 73216,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 475,
+        "reasoning_output_tokens": 214
+      },
+      "tool_commands": 0,
+      "mcp_tool_calls": 0,
+      "blocked_tool_attempts": 2,
+      "measured_cost": null,
+      "human_rework": null,
+      "final": {
+        "answer": "Not ready. The worker still contains a TODO and only echoes input, so delivery is unimplemented.",
+        "evidence": [
+          "The task states that the worker contains a TODO and echoes input without implementing delivery.",
+          "Local inspection and validation could not run because command execution was blocked by policy."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    }
+  ],
+  "followup": [
+    {
+      "case_id": "process-partial-consumers",
+      "variant": "single-executor",
+      "criteria": [
+        true,
+        true,
+        true
+      ],
+      "accepted": true,
+      "reviewer_note": "Keeps rx, retries only Y, and waits for Y receipt before event acknowledgment.",
+      "prompt_sha256": "03fe05d02497b6bcb14c3035b37e4f1254d4a6ae88c50ec3630385d446ed3508",
+      "elapsed_ms": 22840,
+      "usage": {
+        "input_tokens": 76742,
+        "cached_input_tokens": 68352,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 592,
+        "reasoning_output_tokens": 264
+      },
+      "final": {
+        "answer": "Resume event a by retaining X’s accepted receipt rx and retrying only Y, which failed before its effect. Acknowledge the event only after Y’s receipt is recorded. I could not execute the resume: the session ID and local plan state were not supplied, and local commands were blocked.",
+        "evidence": [
+          "Supplied facts: event a requires X and Y; X succeeded with receipt rx; Y failed before effect.",
+          "Local command execution was rejected by policy; no resume or receipt check occurred."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "process-partial-consumers",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        true,
+        true,
+        true
+      ],
+      "accepted": true,
+      "reviewer_note": "Keeps rx, retries only Y, and waits for Y receipt before event acknowledgment.",
+      "prompt_sha256": "0c827053a5a77fc774b40904a23ee504dae7f8ed8581afcead923bddb19e635d",
+      "elapsed_ms": 11089,
+      "usage": {
+        "input_tokens": 18721,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 279,
+        "reasoning_output_tokens": 192
+      },
+      "final": {
+        "answer": "Keep X’s successful receipt rx. Retry only Y for event a; acknowledge the event only after Y succeeds and its receipt is recorded. An actual resume cannot be executed without a session identifier or process access.",
+        "evidence": [
+          "The task states that X succeeded with receipt rx and Y failed before effect. No resume handle or process access was supplied."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-path-boundary",
+      "variant": "single-executor",
+      "criteria": [
+        true,
+        true,
+        true
+      ],
+      "accepted": true,
+      "reviewer_note": "Rejects traversal before filesystem access and requires valid ID through the same CLI entry point.",
+      "prompt_sha256": "1ca888c5680fe3b3a4d736d22198e6737c9ac2f7f77567fd97ebd43c87b6616a",
+      "elapsed_ms": 22712,
+      "usage": {
+        "input_tokens": 84082,
+        "cached_input_tokens": 73984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 669,
+        "reasoning_output_tokens": 309
+      },
+      "final": {
+        "answer": "Validate `--session` as a single canonical session ID before any filesystem access. If IDs use letters, digits, `_` and `-`, require `^[A-Za-z0-9][A-Za-z0-9_-]*$`; this rejects `../other` and path separators. Test through the session reader’s CLI: `--session=../other` must fail before reading a file, and a valid fixture ID must read successfully through the same entry point.",
+        "evidence": [
+          "Workspace inspection was blocked by the read-only execution policy, so the reader’s actual ID format and test framework could not be verified. No check was run."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    },
+    {
+      "case_id": "software-path-boundary",
+      "variant": "adaptive-specialization",
+      "criteria": [
+        true,
+        true,
+        true
+      ],
+      "accepted": true,
+      "reviewer_note": "Rejects traversal before filesystem access and requires valid ID through the same CLI entry point.",
+      "prompt_sha256": "638b216688d78a5e2d77d0c68a8ba9726b7d08237c2daaf5fb3c5b36cdd993d4",
+      "elapsed_ms": 24354,
+      "usage": {
+        "input_tokens": 83494,
+        "cached_input_tokens": 53248,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 780,
+        "reasoning_output_tokens": 417
+      },
+      "final": {
+        "answer": "At the `--session` entry point, validate the value as one session ID before any filesystem access. Reject `.` and `..`, both `/` and `\\` separators, and absolute paths; preserve the reader’s existing valid ID format. Test through that same entry point: `--session=../other` must be rejected before opening a file, and a known valid session ID must still open successfully.",
+        "evidence": [
+          "The supplied case establishes that `--session=../other` is accepted.",
+          "Workspace inspection was blocked by the read-only execution policy, so no code was inspected and no test was run."
+        ],
+        "files": []
+      },
+      "artifacts": []
+    }
+  ]
+}

@@ -220,6 +220,8 @@ Create `.aioson/squads/{squad-slug}/agents/orquestrador.md`. It must include: sq
 
 The orchestrator is responsible for synthesis and the final delivery in its requested format. When session HTML is applicable under `content-output.md`, reuse the existing presentation and keep it synchronized with accepted artifacts.
 
+When a generated software executor validates a session ID or another path boundary, reject invalid input before filesystem access and test a valid ID through the same entry point. The valid case prevents an over-broad rejection from looking like a security fix.
+
 ## Gateway registration
 
 Register the squad in both root gateway files:
