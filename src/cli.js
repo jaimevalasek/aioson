@@ -85,6 +85,7 @@ const { runSquadRoleScan } = require('./commands/squad-role-scan');
 const { runSquadPlaybook } = require('./commands/squad-playbook');
 const { runSquadExport } = require('./commands/squad-export');
 const { runSquadPipeline } = require('./commands/squad-pipeline');
+const { runSquadSession } = require('./commands/squad-session');
 const { runSquadAgentCreate } = require('./commands/squad-agent-create');
 const { runSquadInvestigate } = require('./commands/squad-investigate');
 const { runImplementationPlan } = require('./commands/implementation-plan');
@@ -294,6 +295,7 @@ const {
 const { runCompressAgents } = require('./commands/compress-agents');
 
 const JSON_SUPPORTED_COMMANDS = new Set([
+  'squad',
   'init',
   'install',
   'setup',
@@ -1749,6 +1751,8 @@ async function main() {
       result = await runGenomeApprove({ args, options, logger: commandLogger });
     } else if (command === 'genome:migrate' || command === 'genome-migrate') {
       result = await runGenomeMigrate({ args, options, logger: commandLogger, t });
+    } else if (command === 'squad') {
+      result = await runSquadSession({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:status' || command === 'squad-status') {
       result = await runSquadStatus({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:doctor' || command === 'squad-doctor') {

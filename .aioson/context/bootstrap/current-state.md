@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-session-entry · 2026-09-25] `feat(squad): unify session CLI entry points` conecta run/status/resume ao plano autorun, expõe evidências e reconciliação sem mutar consultas; 7 testes de CLI/status passaram.
+
 - [squad-prepared-state · 2026-09-25] `fix(squad): distinguish preparation from execution` persiste prepared sem falsa conclusão; hooks usam shell nativo e falham fechados em interrupção; exemplos learning verificados pelo CLI; 46 testes passaram.
 
 - [squad-guided-pipeline · 2026-09-25] `fix(squad): keep pipeline guidance read-only` impede consumo antecipado e conclusão por transporte; conexões completas, dependências e skips verificados em 14 testes.

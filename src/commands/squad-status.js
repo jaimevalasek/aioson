@@ -2,6 +2,8 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const os = require('node:os');
+const Database = require('better-sqlite3');
 const { flattenGenomeBindings, mergeGenomeBindings } = require('../genomes/bindings');
 const { resolveTargetDir } = require('../lib/project-root');
 
@@ -371,8 +373,67 @@ async function buildFallbackSquadRecords(targetDir, metadataSlugs) {
   return squads;
 }
 
-async function runSquadStatus({ args, logger, t }) {
+function validSessionIdentity(value) {
+  return typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value);
+}
+
+async function readSessionStatus(targetDir, squad, session) {
+  if (!validSessionIdentity(squad) || !validSessionIdentity(session)) return { ok: false, error: 'invalid_identity' };
+  const planPath = path.join(targetDir, SQUADS_DIR, squad, 'sessions', session, 'plan.json');
+  let plan;
+  try { plan = JSON.parse(await fs.readFile(planPath, 'utf8')); }
+  catch (error) { return { ok: false, error: error.code === 'ENOENT' ? 'plan_not_found' : 'plan_unreadable', session_id: session, squad }; }
+  if (!Array.isArray(plan.tasks) || (plan.session_id && plan.session_id !== session) || (plan.squad_slug && plan.squad_slug !== squad)) {
+    return { ok: false, error: 'invalid_plan', session_id: session, squad };
+  }
+  const completed = plan.tasks.filter(task => ['completed', 'done'].includes(task.status));
+  const unfinished = plan.tasks.filter(task => !completed.includes(task));
+  let status = plan.execution_status === 'completed' && unfinished.length ? 'incomplete' : plan.execution_status || 'prepared';
+  let ownerState = 'none';
+  if (status === 'running') {
+    let db;
+    try {
+      db = new Database(path.join(path.dirname(planPath), 'coordination.sqlite'), { readonly: true, fileMustExist: true });
+      const owner = db.prepare('SELECT pid, host FROM execution_owner WHERE id = 1').get();
+      if (owner?.host === os.hostname()) {
+        try { process.kill(owner.pid, 0); ownerState = 'alive'; }
+        catch (error) { ownerState = error.code === 'ESRCH' ? 'missing' : 'unknown'; }
+      } else ownerState = owner ? 'remote' : 'missing';
+    } catch { ownerState = 'unknown'; }
+    finally { db?.close(); }
+    if (ownerState === 'missing' || ownerState === 'unknown') status = 'reconciliation_required';
+  }
+  return {
+    ok: true, squad, session_id: session, goal: plan.goal || null, status,
+    plan_path: path.relative(targetDir, planPath).replace(/\\/g, '/'),
+    revision: plan.revision || 0,
+    tasks: { total: plan.tasks.length, completed: completed.length, pending: unfinished.length },
+    active_tasks: plan.tasks.filter(task => ['running', 'in_progress'].includes(task.status)).map(task => task.id),
+    blockers: unfinished.map(task => ({ id: task.id, status: task.status, reason: task.result?.error || task.result?.reflection?.summary || null,
+      waiting_for: (task.dependencies || []).filter(id => !completed.some(done => done.id === id)) })),
+    evidence: completed.map(task => ({ task_id: task.id, execution: task.result?.execution_evidence || null, completed_at: task.result?.completed_at || null })),
+    budget_usage: plan.budget_state || null,
+    heartbeat: null,
+    execution_owner: ownerState,
+    next_action: status === 'completed' ? null : status === 'reconciliation_required'
+      ? 'Reconcile interrupted task effects before resuming this session.'
+      : status === 'running' ? 'Wait for the active executor; query this session again.'
+        : `aioson squad resume . --squad=${squad} --session=${session}`
+  };
+}
+
+async function runSquadStatus({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
+  if (options.session || options.plan) {
+    const result = await readSessionStatus(targetDir, options.squad || options.s, options.session || options.plan);
+    if (result.ok) {
+      logger.log(`Session ${result.session_id}: ${result.status}; ${result.tasks.completed}/${result.tasks.total} completed`);
+      logger.log(`Goal: ${result.goal || '(unspecified)'}`);
+      for (const blocker of result.blockers) logger.log(`  ${blocker.id}: ${blocker.status}; ${blocker.reason || blocker.waiting_for.join(', ')}`);
+      if (result.next_action) logger.log(`Next: ${result.next_action}`);
+    } else logger.error(result.error);
+    return result;
+  }
   const squadsDir = path.join(targetDir, SQUADS_DIR);
   const metadataEntries = await fs.readdir(squadsDir, { withFileTypes: true }).catch(() => []);
   const packageDirs = metadataEntries
@@ -409,13 +470,16 @@ async function runSquadStatus({ args, logger, t }) {
     squad.autorun_sessions = [];
     for (const entry of entries.filter((item) => item.isDirectory())) {
       try {
-        const plan = JSON.parse(await fs.readFile(path.join(sessionsDir, entry.name, 'plan.json'), 'utf8'));
+        const session = await readSessionStatus(targetDir, squad.slug, entry.name);
+        if (!session.ok) {
+          if (session.error !== 'plan_not_found') squad.autorun_sessions.push({ session_id: entry.name, status: 'unreadable', error: session.error });
+          continue;
+        }
         squad.autorun_sessions.push({
+          ...session,
           session_id: entry.name,
-          status: plan.execution_status || 'unknown',
-          budget_usage: plan.budget_state || null,
-          completed: (plan.tasks || []).filter((task) => ['completed', 'done'].includes(task.status)).length,
-          total: (plan.tasks || []).length
+          completed: session.tasks.completed,
+          total: session.tasks.total
         });
       } catch (error) {
         if (error.code !== 'ENOENT') squad.autorun_sessions.push({ session_id: entry.name, status: 'unreadable', error: error.message });
@@ -508,4 +572,4 @@ async function runSquadStatus({ args, logger, t }) {
   };
 }
 
-module.exports = { runSquadStatus };
+module.exports = { runSquadStatus, readSessionStatus, validSessionIdentity };

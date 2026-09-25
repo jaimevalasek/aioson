@@ -9,6 +9,16 @@ triggers: [squad session, ephemeral, learnings]
 
 Use this module for ongoing orchestration and maintenance concerns around the squad.
 
+## Run, inspect and resume
+
+- Start: `aioson squad run . --squad=<slug> --goal="<delivery>"`.
+- Inspect: `aioson squad status . --squad=<slug> --session=<id> --json`.
+- Resume: `aioson squad resume . --squad=<slug> --session=<id>`.
+- Existing `squad:autorun --plan=<id>` and `squad:status --session=<id>` use the same portable session plan. Resume requires the original ID; a new goal starts a new operation.
+- Status includes the goal, task counts, blockers, execution evidence, known budget usage and next action. `ok` on a query means the query succeeded, not that the work completed. `prepared` means no execution has been confirmed.
+- Process ownership is checked locally when a session says running. Missing/unknown owners require reconciliation, not automatic replay. Remote process ownership cannot be verified locally. Heartbeat is unavailable (`null`) until a timestamp is actually recorded; never invent freshness.
+- Retrying an interrupted external effect requires reconciliation. Completed tasks remain accepted and are not rerun by resume.
+
 ## Ephemeral squads
 
 Trigger on:
