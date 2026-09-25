@@ -20,10 +20,11 @@ const {
 } = require('../lib/security/findings-writer');
 const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const { resolveTargetDir } = require('../lib/project-root');
+const { canonicalAgentId } = require('../agents');
 
 const VERSION = '1.0.0';
 const GENERATOR = `aioson security:scan@${VERSION}`;
-const VALID_STAGES = new Set(['analyst', 'dev', 'qa', 'all']);
+const VALID_STAGES = new Set(['product', 'dev', 'qa', 'all']);
 
 const SCAN_EXTENSIONS = new Set([
   '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx',
@@ -39,7 +40,7 @@ const SKIP_DIRS = new Set([
 const MAX_FILE_BYTES = 512 * 1024; // 512 KB per file
 
 function defaultRuntimeAgentName(stage) {
-  if (stage === 'analyst') return 'analyst';
+  if (stage === 'product') return 'product';
   if (stage === 'qa') return 'qa';
   return 'dev';
 }
@@ -245,7 +246,7 @@ async function gatherFindings({ targetDir, stage }) {
 
 async function runSecurityScan({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
-  const stage = String(options.stage || 'all').toLowerCase();
+  const stage = canonicalAgentId(options.stage || 'all');
   const slug = options.feature || options.slug || null;
   const classification = String(options.classification || 'MEDIUM').toUpperCase();
   const strict = Boolean(options.strict);

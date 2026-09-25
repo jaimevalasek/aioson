@@ -38,8 +38,9 @@ function outlineMarkdown(content) {
   lines.forEach((line, index) => {
     const fenceMatch = line.match(/^\s*(```+|~~~+)/);
     if (fenceMatch) {
-      if (!fence) fence = fenceMatch[1][0];
-      else if (fenceMatch[1][0] === fence) fence = null;
+      const marker = fenceMatch[1];
+      if (!fence) fence = marker;
+      else if (marker[0] === fence[0] && marker.length >= fence.length && /^\s*$/.test(line.slice(fenceMatch[0].length))) fence = null;
     }
     const heading = !fence && line.match(/^(#{2,3})\s+(.+?)\s*#*\s*$/);
     if (heading) {
@@ -68,14 +69,19 @@ function outlineMarkdown(content) {
     .filter((section) => section.heading !== '(preamble)' || section.text.trim().length > 0);
 }
 
+function containsTerm(text, term) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaped}`, 'u').test(text);
+}
+
 function scoreSection(section, terms) {
   const heading = fold(section.heading);
   const body = fold(section.text);
   let score = 0;
   const matched = [];
   for (const term of terms) {
-    const inHeading = heading.includes(term);
-    const inBody = body.includes(term);
+    const inHeading = containsTerm(heading, term);
+    const inBody = containsTerm(body, term);
     if (!inHeading && !inBody) continue;
     matched.push(term);
     score += inHeading ? 3 : 1;
@@ -104,7 +110,7 @@ function focusFile(content, terms, options = {}) {
     .filter((entry) => entry.score > 0 && entry.section.heading !== '(preamble)')
     // Two distinct terms, or one in the heading: a single body mention of a
     // common word is not a reason to read a section.
-    .filter((entry) => entry.matched.length >= 2 || fold(entry.section.heading).includes(entry.matched[0]))
+    .filter((entry) => entry.matched.length >= 2 || containsTerm(fold(entry.section.heading), entry.matched[0]))
     .sort((a, b) => (b.score - a.score) || (a.section.chars - b.section.chars))
     .slice(0, options.maxSections || MAX_FOCUS_SECTIONS)
     .sort((a, b) => a.section.start_line - b.section.start_line);

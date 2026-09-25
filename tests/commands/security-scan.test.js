@@ -206,9 +206,10 @@ describe('security:scan', () => {
 
   it('strict flag elevates non-blocking findings to BLOCKING', async () => {
     root = await makeProject();
+    const syntheticCredential = require('node:crypto').randomBytes(18).toString('hex');
     await fs.writeFile(
       path.join(root, 'config.js'),
-      "const password = 'longenoughpassword123';\n"
+      `const password = '${syntheticCredential}';\n`
     );
     const r = await runSecurityScan({
       args: [root],
@@ -242,6 +243,18 @@ describe('security:scan', () => {
     assert.equal(cli.status, EXIT_CODES.BLOCKING);
     const parsed = JSON.parse(cli.stdout);
     assert.equal(parsed.exitCode, EXIT_CODES.BLOCKING);
+  });
+
+  it('accepts the product stage through both the command and CLI', async () => {
+    root = await makeProject();
+    const result = await runSecurityScan({
+      args: [root], options: { stage: 'product', json: true }, logger: silentLogger()
+    });
+    assert.equal(result.exitCode, EXIT_CODES.PASS);
+    assert.equal(result.stage, 'product');
+    const cli = runCli(['security:scan', root, '--stage=product', '--json']);
+    assert.equal(cli.status, EXIT_CODES.PASS, cli.stderr);
+    assert.equal(JSON.parse(cli.stdout).stage, 'product');
   });
 
   it('preserves BLOCKING exit code through CLI without --json', async () => {
@@ -293,7 +306,7 @@ describe('security:scan', () => {
       assert.equal(event.status, 'completed');
       const payload = JSON.parse(event.payload_json);
       assert.equal(payload.slug, 'my-feature');
-      assert.equal(payload.stage, 'analyst');
+      assert.equal(payload.stage, 'product');
       assert.equal(payload.exitCode, r.exitCode);
     } finally {
       runtime.db.close();

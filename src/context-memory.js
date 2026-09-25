@@ -527,16 +527,13 @@ function buildMemoryIndexMarkdown({ generatedAt, catalog }) {
     '',
     '## Start here',
     `- Read \`${PROJECT_CONTEXT_FILE}\` first for stack, classification, framework state and language.`,
-    `- Read \`${MEMORY_INDEX_FILE}\` when you need to decide the smallest useful context pack.`,
-    `- Read \`${SKELETON_FILE}\` before \`${DISCOVERY_FILE}\` when you only need quick orientation.`,
-    `- Treat \`${DISCOVERY_FILE}\` + \`${SPEC_FILE}\` as the full project memory pair.`,
-    `- Prefer \`${SPEC_CURRENT_FILE}\` for the active state and \`${SPEC_HISTORY_FILE}\` for historical decisions.`,
+    '- Run `aioson context:brief . --agent=<agent> --task="<concrete task>" --paths=<relevant paths>`; load every `must_load` item and consult optional documents only for the named decision.',
+    '- This index inventories existing documents; it does not require reading every listed file.',
     '',
-    '## Suggested reading order by task',
-    `- Code change: \`${PROJECT_CONTEXT_FILE}\` -> \`${SKELETON_FILE}\` -> \`${DISCOVERY_FILE}\` -> \`${SPEC_CURRENT_FILE}\` -> \`${ARCHITECTURE_FILE}\``,
-    `- Regression / bugfix: \`${PROJECT_CONTEXT_FILE}\` -> \`${SKELETON_FILE}\` -> \`${DISCOVERY_FILE}\` -> \`${SPEC_CURRENT_FILE}\` -> \`${SPEC_HISTORY_FILE}\``,
-    `- Product / planning: \`${PROJECT_CONTEXT_FILE}\` -> \`${DISCOVERY_FILE}\` -> \`${PRD_FILE}\` -> \`${DESIGN_DOC_FILE}\` -> \`${READINESS_FILE}\``,
-    `- Brownfield deep dive: \`${SCAN_INDEX_FILE}\` -> module memory -> folder scan -> \`${DISCOVERY_FILE}\``,
+    '## Reading by task',
+    '- Bounded fix: inspect the selected context, affected implementation and focused tests.',
+    '- Tracked feature: read its PRD and implementation plan according to the active role; historical specifications are supporting evidence only.',
+    '- Brownfield investigation: use the relevant bootstrap/module/scan entry below; expand only when it leaves a concrete question unanswered.',
     ''
   ];
 

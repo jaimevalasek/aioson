@@ -90,6 +90,26 @@ test('a single body mention of one term is not a reason to read a section', () =
   assert.deepEqual(focusFile(content, ['customer', 'invoice']).focus, []);
 });
 
+test('section focus matches word prefixes without reading unrelated infix hits', () => {
+  const content = [
+    '## Observers', 'stable observers notes '.repeat(500),
+    '## Server tables', 'The server stores customer tables.'
+  ].join('\n');
+  assert.deepEqual(focusFile(content, ['server', 'table']).focus.map((entry) => entry.heading), ['Server tables']);
+  assert.deepEqual(focusFile(content, ['customer']).focus, [], 'one body hit remains insufficient');
+});
+
+test('shorter fences and code with a fence prefix do not expose fake headings', () => {
+  for (const marker of ['`', '~']) {
+    const content = [
+      '## Example', marker.repeat(4) + 'md', marker.repeat(3),
+      '## Fake customer heading', marker.repeat(4) + 'still code',
+      '## Another fake heading', marker.repeat(4), '## Real section'
+    ].join('\n');
+    assert.deepEqual(outlineMarkdown(content).map((entry) => entry.heading), ['Example', 'Real section']);
+  }
+});
+
 test('the brief annotates large should_load items with line ranges and reports the load budget', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-section-focus-'));
   try {

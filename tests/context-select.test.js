@@ -570,6 +570,27 @@ test('context:select semantic search loads eligible rules by body content withou
   }
 });
 
+test('archived instructions require an explicit routing signal, not semantic similarity', async () => {
+  const dir = await makeTmpDir();
+  try {
+    const legacyPath = '.aioson/docs/legacy-gateway.md';
+    await writeFile(dir, legacyPath, [
+      '---', 'load_tier: archive', 'task_types: [legacy-gateway-reference]', '---',
+      '# Historical gateway', 'Customer billing invoices refunds validation routing.'
+    ].join('\n'));
+    const normal = await selectContext(dir, {
+      agent: 'dev', mode: 'executing', task: 'Customer billing invoices refunds validation routing'
+    });
+    assert.equal(normal.selected.some((item) => item.path === legacyPath), false);
+    const archaeology = await selectContext(dir, {
+      agent: 'dev', mode: 'executing', task: 'legacy-gateway-reference'
+    });
+    assert.ok(archaeology.selected.some((item) => item.path === legacyPath));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:select loads implementation structure rules for Laravel data-access tasks', async () => {
   const dir = await makeTmpDir();
   try {

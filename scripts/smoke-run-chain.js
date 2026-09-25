@@ -221,8 +221,8 @@ async function smokeF3PendingBlocks() {
         throw err;
       }
     }
-    if (blocked && /architect/.test(errMessage)) ok('blocks + suggests @architect');
-    else ko(`F3 pending expected throw with @architect recommendation, got blocked=${blocked} msg="${errMessage}"`);
+    if (blocked && /planner/.test(errMessage)) ok('blocks + suggests @planner for the retired architect stage');
+    else ko(`F3 pending expected throw with @planner recommendation, got blocked=${blocked} msg="${errMessage}"`);
   } finally {
     await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
   }
@@ -253,10 +253,10 @@ async function smokeT5DriftCaught() {
   const dir = await makeProject('t5-drift');
   try {
     // Workspace has a section that template doesn't (the 981a8fd pattern).
-    await writeFile(dir, '.aioson/agents/pm.md',
+    await writeFile(dir, '.aioson/agents/planner.md',
       '## Mission\nPM owns plans.\n\n## MEDIUM implementation plan\nMust produce.\n'
     );
-    await writeFile(dir, 'template/.aioson/agents/pm.md',
+    await writeFile(dir, 'template/.aioson/agents/planner.md',
       '## Mission\nPM does not silently produce plans.\n'
     );
     const issues = checkSemanticParity(dir);
@@ -273,8 +273,8 @@ async function smokeT5PrepublishMode() {
   step('T5 AIOSON_PREPUBLISH=true elevates severity to error');
   const dir = await makeProject('t5-prepub');
   try {
-    await writeFile(dir, '.aioson/agents/pm.md', '## A\nws\n');
-    await writeFile(dir, 'template/.aioson/agents/pm.md', '## A\ntpl\n');
+    await writeFile(dir, '.aioson/agents/planner.md', '## A\nws\n');
+    await writeFile(dir, 'template/.aioson/agents/planner.md', '## A\ntpl\n');
     const before = process.env.AIOSON_PREPUBLISH;
     process.env.AIOSON_PREPUBLISH = 'true';
     try {
@@ -295,8 +295,8 @@ async function smokeT5NoFalsePositive() {
   const dir = await makeProject('t5-clean');
   try {
     const content = '## Mission\nIdentical\n## Hard constraints\nAlso identical\n';
-    await writeFile(dir, '.aioson/agents/pm.md', content);
-    await writeFile(dir, 'template/.aioson/agents/pm.md', content);
+    await writeFile(dir, '.aioson/agents/planner.md', content);
+    await writeFile(dir, 'template/.aioson/agents/planner.md', content);
     const issues = checkSemanticParity(dir);
     if (issues.length === 0) ok('no false positives');
     else ko(`T5 clean expected 0 issues, got ${issues.length}`);

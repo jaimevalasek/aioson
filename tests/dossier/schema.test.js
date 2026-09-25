@@ -44,8 +44,12 @@ describe('dossier/schema — constants', () => {
   });
 
   it('canonical agent set includes core SDLC chain', () => {
-    for (const id of ['product', 'sheldon', 'analyst', 'architect', 'pm', 'orchestrator', 'dev', 'qa', 'ux-ui']) {
+    for (const id of ['product', 'sheldon', 'planner', 'orchestrator', 'dev', 'qa']) {
       assert.ok(CANONICAL_AGENT_IDS.has(id), `expected canonical agent: ${id}`);
+    }
+    for (const id of ['analyst', 'architect', 'pm', 'ux-ui']) {
+      assert.equal(CANONICAL_AGENT_IDS.has(id), false, `retired agent: ${id}`);
+      assert.equal(isCanonicalAgent(id), true, `historical author remains readable: ${id}`);
     }
   });
 

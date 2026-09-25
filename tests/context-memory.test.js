@@ -122,6 +122,9 @@ describe('context-memory.js — buildMemoryIndexMarkdown', () => {
     assert.ok(result.includes('discovery.md'));
     assert.ok(result.includes('Foundation Docs'));
     assert.ok(result.includes('System Memory'));
+    assert.ok(result.includes('context:brief'));
+    assert.ok(!result.includes('full project memory pair'));
+    assert.ok(!result.includes('readiness.md'), 'missing legacy artifacts must not be prescribed');
     // prd.md exists=false, so it should not appear in a group table row
     const lines = result.split('\n');
     const tableLines = lines.filter((l) => l.startsWith('| ') && l.includes('.md'));

@@ -815,6 +815,11 @@ function evaluateCandidate(candidate, context) {
     || matchedRetrievalIntents.length > 0
     || featureRouted;
   const weakJustifiedSemanticHit = candidate.loadTier === 'justified' && semanticHit && semanticHit.terms.length < 3;
+  // Historical instructions remain discoverable for explicit archaeology,
+  // but similarity alone must never reactivate a retired operating contract.
+  if (candidate.loadTier === 'archive' && !hardRoutingHit) {
+    return { excluded: { cause: 'archive_requires_explicit_signal' } };
+  }
   const weakPureSemanticHit = semanticHit && !hardRoutingHit && semanticHit.terms.length < semanticMinimumTerms(candidate);
   if (semanticHit && effectiveLoadTier !== 'always' && !weakJustifiedSemanticHit && !weakPureSemanticHit) {
     score += semanticHit.score;
