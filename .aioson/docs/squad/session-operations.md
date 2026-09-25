@@ -18,6 +18,8 @@ Use this module for ongoing orchestration and maintenance concerns around the sq
 - Status includes the goal, task counts, blockers, execution evidence, known budget usage and next action. `ok` on a query means the query succeeded, not that the work completed. `prepared` means no execution has been confirmed.
 - Process ownership is checked locally when a session says running. Missing/unknown owners require reconciliation, not automatic replay. Remote process ownership cannot be verified locally. Heartbeat is unavailable (`null`) until a timestamp is actually recorded; never invent freshness.
 - Retrying an interrupted external effect requires reconciliation. Completed tasks remain accepted and are not rerun by resume.
+- Successful worker output is preserved in session `deliveries/<sha256>.json`; the accepted task references its exact snapshot in `result.delivery_evidence`, also exposed by status. Candidates from unsuccessful reviews remain candidates; a snapshot alone never grants acceptance. If snapshot persistence fails, the task stays unverified.
+- These snapshots preserve the returned value, including long content and structured receipts. Paths inside that value still refer to external files: their contents are not implicitly backed up. Verify referenced files separately and do not claim semantic correctness from a hash.
 
 ## Ephemeral squads
 

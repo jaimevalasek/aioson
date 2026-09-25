@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-delivery-artifacts · 2026-09-25] `feat(squad): preserve complete delivery outputs` guarda respostas completas por hash, mantém candidatos separados do aceite e expõe referências no status; 46 testes passaram.
+
 - [squad-proportional-instructions · 2026-09-25] `refactor(squad): make role depth proportional` retira cotas de papéis/frameworks e biografias inventadas, mantém fontes e critérios; perfis opcionais; 29 testes passaram.
 
 - [squad-session-entry · 2026-09-25] `feat(squad): unify session CLI entry points` conecta run/status/resume ao plano autorun, expõe evidências e reconciliação sem mutar consultas; 7 testes de CLI/status passaram.

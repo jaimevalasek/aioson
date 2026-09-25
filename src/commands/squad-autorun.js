@@ -60,6 +60,7 @@ const { validateBrief, autoFixBrief } = require('../squad/brief-validator');
 const { resolveEngine, translateToTeamConfig, writeTeamConfig } = require('../squad/agent-teams-adapter');
 const { resolveTargetDir } = require('../lib/project-root');
 const { acquireExecution, sessionDirectory, mutatePlan } = require('../squad/plan-store');
+const { preserveOutput } = require('../squad/delivery-artifacts');
 
 const STATUS_ICON = {
   pending: '○',
@@ -321,6 +322,16 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     finalStatus = 'unverified';
   }
 
+  let deliveryEvidence = null;
+  let deliveryError = null;
+  if (workerResult.ok) {
+    try { deliveryEvidence = await preserveOutput(projectDir, squadSlug, sessionId, task.id, workerResult.output); }
+    catch (error) {
+      deliveryError = `evidence_persistence_failed: ${error.message}`;
+      finalStatus = 'unverified';
+    }
+  }
+
   // Candidate execution is not acceptance: voting and review own the final write.
   const persistedStatus = finalStatus === 'completed' && task._defer_acceptance ? 'awaiting_review' : finalStatus;
 
@@ -341,6 +352,8 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     finished_at: finishedAt
   };
   const persistedResult = {
+    delivery_evidence: deliveryEvidence,
+    ...(deliveryError ? { error: deliveryError } : {}),
     worker_ran: workerRan,
     output_summary: String(taskOutput || '').slice(0, 500),
     execution_evidence: workerResult.ok
