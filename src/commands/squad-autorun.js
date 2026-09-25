@@ -60,7 +60,7 @@ const { validateBrief, autoFixBrief } = require('../squad/brief-validator');
 const { resolveEngine, translateToTeamConfig, writeTeamConfig } = require('../squad/agent-teams-adapter');
 const { resolveTargetDir } = require('../lib/project-root');
 const { acquireExecution, sessionDirectory, mutatePlan } = require('../squad/plan-store');
-const { preserveOutput } = require('../squad/delivery-artifacts');
+const { preserveOutput, readPreservedOutput } = require('../squad/delivery-artifacts');
 
 const STATUS_ICON = {
   pending: '○',
@@ -162,6 +162,15 @@ async function checkAntiLoop(projectDir, squadSlug, sessionId, task, enableBus, 
  */
 async function runTask(projectDir, squadSlug, task, sessionId, options, logger) {
   const { enableBus, enableReflect, timeoutMs } = options;
+  if (task.revision_context) {
+    try { await readPreservedOutput(projectDir, task.revision_context.previous_delivery); }
+    catch (error) {
+      const result = { error: `revision_evidence_invalid: ${error.message}`, worker_ran: false, completed_at: null };
+      await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'unverified', result);
+      return { task, finalStatus: 'unverified', workerResult: { ok: false, ...result }, reflectionResult: null, persistedResult: result };
+    }
+  }
+  const currentPlan = await loadPlan(projectDir, squadSlug, sessionId);
   const specialist = task.specialist?.slug && task.specialist.persistent !== true
     ? task.specialist
     : null;
@@ -189,6 +198,10 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
 
   // Build worker input with fresh context pointers (2.2: paths, not inline content)
   const workerInput = {
+    project_dir: projectDir,
+    revision_context: task.revision_context || null,
+    dependency_deliveries: (task.dependencies || []).map(id => ({ task_id: id,
+      delivery: currentPlan.tasks.find(dependency => dependency.id === id)?.result?.delivery_evidence || null })),
     task_id: task.id,
     title: task.title,
     description: task.description,
@@ -1081,10 +1094,11 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   } catch { /* manifest is optional */ }
 
   const savedEventSession = await interSquadEvents.getSession(targetDir, { toSquad: squadSlug, sessionId });
+  const dependencySnapshot = plan.revision_of ? (plan.inter_squad_events || []) : savedEventSession?.events;
 
   // ── Inter-squad dependency validation ─────────────────────────────────────
   if (!ignoreDeps && (squadManifest.depends_on || []).length > 0) {
-    const depResult = await validateInterSquadDependencies(targetDir, squadManifest, savedEventSession?.events);
+    const depResult = await validateInterSquadDependencies(targetDir, squadManifest, dependencySnapshot);
     if (!depResult.satisfied) {
       const depList = depResult.unmet.map((d) => `${d.squad}/${d.event}`).join(', ');
       if (waitDeps) {
@@ -1093,7 +1107,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
         let resolved = false;
         while (Date.now() < deadline) {
           await sleep(3000);
-          const retry = await validateInterSquadDependencies(targetDir, squadManifest, savedEventSession?.events);
+          const retry = await validateInterSquadDependencies(targetDir, squadManifest, dependencySnapshot);
           if (retry.satisfied) { resolved = true; break; }
         }
         if (!resolved) {
@@ -1114,10 +1128,10 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     toSquad: squadSlug, sessionId,
     subscriptions: squadManifest.subscriptions || [], dependencies: squadManifest.depends_on || [],
     ignoreDependencies: ignoreDeps,
-    acceptNew: plan.tasks.length > 0 && plan.tasks.every((task) => task.status === 'pending')
+    acceptNew: !plan.revision_of && plan.tasks.length > 0 && plan.tasks.every((task) => task.status === 'pending')
   });
   if (!eventSession.ok) return eventSession;
-  const incomingEvents = eventSession.events;
+  const incomingEvents = plan.revision_of ? (plan.inter_squad_events || []) : eventSession.events;
   plan = mutatePlan(sessionDirectory(targetDir, squadSlug, sessionId), (current) => {
     current.inter_squad_events = incomingEvents;
   });

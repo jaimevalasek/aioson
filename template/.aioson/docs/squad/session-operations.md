@@ -21,6 +21,12 @@ Use this module for ongoing orchestration and maintenance concerns around the sq
 - Successful worker output is preserved in session `deliveries/<sha256>.json`; the accepted task references its exact snapshot in `result.delivery_evidence`, also exposed by status. Candidates from unsuccessful reviews remain candidates; a snapshot alone never grants acceptance. If snapshot persistence fails, the task stays unverified.
 - These snapshots preserve the returned value, including long content and structured receipts. Paths inside that value still refer to external files: their contents are not implicitly backed up. Verify referenced files separately and do not claim semantic correctness from a hash.
 
+## Localized revision
+
+`aioson squad revise . --squad=<slug> --session=<accepted-id> --tasks=<id,id> --feedback="<requested change>"` prepares a new session. It requires a completed source session with verified output snapshots. The original plan and accepted outputs remain unchanged; only selected tasks and their transitive dependents become pending. Preparation executes nothing: inspect the affected task list, then use the returned resume command.
+
+Workers receive `revision_context` (feedback and previous snapshot), `dependency_deliveries` (current dependency snapshots) and `project_dir` to resolve references. Honor the requested change and preserve unrelated content. A dependent output stays pending until regenerated and accepted. Revision reuses the original event context without claiming new events. External files/effects still require domain-specific controls; do not infer that a saved JSON response backs up a file or permits replaying a payment or publication.
+
 ## Ephemeral squads
 
 Trigger on:
