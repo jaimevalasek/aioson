@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-event-sessions · 2026-09-25] `fix(squad): acknowledge events after execution` vincula eventos ao plano autorun, preserva payload e identidade em pausas/interrupções e retoma o mesmo plano no persistent; 88 testes focados passaram.
+
 - [context-routing · 2026-09-25] `fix(context): tighten routing and retired stages` corrige seleção de contexto e referências a agentes aposentados (`e2452027`).
 - [squad-execution · 2026-09-25] `fix(squad): persist and verify task execution` preserva planos concorrentes, dependências, evidência de conclusão e orçamento retomável (`dfff698f`).
 - [squad-event-delivery · 2026-09-25] `fix(squad): recover daemon deliveries safely` registra recibos por consumidor, reconciliação e exclusão de cron (`c4ff9816`).

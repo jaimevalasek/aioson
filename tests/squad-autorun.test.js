@@ -58,6 +58,41 @@ async function readEventRows(fixture) {
   finally { db.close(); }
 }
 
+test('event remains pending across budget pause and reaches the resumed worker with its payload', async (t) => {
+  const fixture = await makeFixture({ workerScript: "const input=JSON.parse(process.argv[2]);require('fs').writeFileSync(require('path').join(__dirname,'input.json'),JSON.stringify(input));process.stdout.write(JSON.stringify({result:'delivered'}));" });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [{ squad: 'source', event: 'asset.ready' }]);
+  const events = require('../src/squad/inter-squad-events');
+  const id = await events.publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.ready', payload: { file: 'asset.txt' } });
+  await configureBudget(fixture, { max_tokens_per_session: 0 });
+  assert.equal((await runFixture(fixture)).status, 'paused_budget');
+  assert.equal((await readEventRows(fixture))[0].consumed_by, '[]');
+  const pausedPlan = await loadPlan(fixture.projectDir, fixture.squadSlug, fixture.sessionId);
+  assert.equal(pausedPlan.inter_squad_events[0].id, id);
+  await configureBudget(fixture, { max_tokens_per_session: null });
+  const resumed = await runFixture(fixture);
+  assert.equal(resumed.ok, true);
+  const input = JSON.parse(await fs.readFile(path.join(path.dirname(effectsFile(fixture)), 'input.json'), 'utf8'));
+  assert.deepEqual(input.inter_squad_events[0].payload, { file: 'asset.txt' });
+  assert.equal((await readEventRows(fixture))[0].consumed_by, JSON.stringify([fixture.squadSlug]));
+});
+
+test('failed event execution is not acknowledged and another session cannot steal it', async (t) => {
+  const fixture = await makeFixture({ workerScript: 'process.exit(1);' });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [], { subscriptions: ['asset.*'] });
+  await require('../src/squad/inter-squad-events').publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.ready' });
+  assert.equal((await runFixture(fixture)).ok, false);
+  assert.equal((await readEventRows(fixture))[0].consumed_by, '[]');
+  const other = await loadPlan(fixture.projectDir, fixture.squadSlug, fixture.sessionId);
+  other.session_id = 'competing';
+  other.tasks[0].status = 'pending';
+  await savePlan(fixture.projectDir, fixture.squadSlug, 'competing', other);
+  const result = await runFixture(fixture, { plan: 'competing' });
+  assert.equal(result.error, 'event_session_conflict');
+  assert.equal(result.session_id, fixture.sessionId);
+});
+
 test('dependency checks preserve available events while another dependency is missing', async (t) => {
   const fixture = await makeFixture({ workerScript: countedWorker });
   t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));

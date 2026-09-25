@@ -59,7 +59,7 @@ const { extractLearnings, persistAgentMemory } = require('../squad/learning-extr
 const { validateBrief, autoFixBrief } = require('../squad/brief-validator');
 const { resolveEngine, translateToTeamConfig, writeTeamConfig } = require('../squad/agent-teams-adapter');
 const { resolveTargetDir } = require('../lib/project-root');
-const { acquireExecution, sessionDirectory } = require('../squad/plan-store');
+const { acquireExecution, sessionDirectory, mutatePlan } = require('../squad/plan-store');
 
 const STATUS_ICON = {
   pending: '○',
@@ -195,6 +195,7 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     read_first_hints: task.read_first_hints || [],  // executor reads these, not coordinator
     must_haves: task.must_haves || null,
     session_id: sessionId,
+    inter_squad_events: options.incomingEvents || [],
     bus_enabled: enableBus,
     execution_owner: task.executor || null,
     ...(task._eval_artifact !== undefined ? { artifact: task._eval_artifact } : {}),
@@ -376,7 +377,7 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
  * Validate inter-squad dependencies declared in manifest.depends_on.
  * Returns { satisfied: boolean, unmet: Array<{squad, event}> }
  */
-async function validateInterSquadDependencies(projectDir, manifest) {
+async function validateInterSquadDependencies(projectDir, manifest, savedEvents = null) {
   const deps = manifest.depends_on || [];
   if (deps.length === 0) return { satisfied: true, unmet: [] };
 
@@ -384,7 +385,8 @@ async function validateInterSquadDependencies(projectDir, manifest) {
   for (const dep of deps) {
     if (!dep.event) continue;
     try {
-      const events = await interSquadEvents.peek(projectDir, {
+      const events = savedEvents ? savedEvents.filter((event) =>
+        (!dep.squad || event.fromSquad === dep.squad) && interSquadEvents.matchesPattern(event.event, dep.event)) : await interSquadEvents.peek(projectDir, {
         toSquad: manifest.slug,
         fromSquad: dep.squad,
         subscriptions: [dep.event]
@@ -1065,9 +1067,11 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     squadManifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
   } catch { /* manifest is optional */ }
 
+  const savedEventSession = await interSquadEvents.getSession(targetDir, { toSquad: squadSlug, sessionId });
+
   // ── Inter-squad dependency validation ─────────────────────────────────────
   if (!ignoreDeps && (squadManifest.depends_on || []).length > 0) {
-    const depResult = await validateInterSquadDependencies(targetDir, squadManifest);
+    const depResult = await validateInterSquadDependencies(targetDir, squadManifest, savedEventSession?.events);
     if (!depResult.satisfied) {
       const depList = depResult.unmet.map((d) => `${d.squad}/${d.event}`).join(', ');
       if (waitDeps) {
@@ -1076,7 +1080,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
         let resolved = false;
         while (Date.now() < deadline) {
           await sleep(3000);
-          const retry = await validateInterSquadDependencies(targetDir, squadManifest);
+          const retry = await validateInterSquadDependencies(targetDir, squadManifest, savedEventSession?.events);
           if (retry.satisfied) { resolved = true; break; }
         }
         if (!resolved) {
@@ -1113,33 +1117,19 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     }
   }
 
-  // ── 3.1 Inter-Squad Event Streaming — consume pending events ───────────────
-  const subscriptions = [
-    ...(squadManifest.subscriptions || []),
-    ...(squadManifest.depends_on || []).map((d) => d.event).filter(Boolean)
-  ];
-  let incomingEvents = [];
-  if (subscriptions.length > 0) {
-    incomingEvents = await interSquadEvents
-      .consume(targetDir, { toSquad: squadSlug, subscriptions })
-      .catch(() => []);
-    if (incomingEvents.length > 0) {
-      logger.log(`Inter-squad events received: ${incomingEvents.length}`);
-      for (const ev of incomingEvents) {
-        logger.log(`  ← [${ev.fromSquad}] ${ev.event}${ev.payload ? ' · ' + JSON.stringify(ev.payload).slice(0, 80) : ''}`);
-      }
-      logger.log('');
-    }
-  }
-
-  // Inject incoming events into the plan goal context so executors are aware
-  if (incomingEvents.length > 0 && plan.tasks.length > 0) {
-    const firstTask = plan.tasks[0];
-    const eventSummary = incomingEvents
-      .map((e) => `[${e.fromSquad}] ${e.event}: ${JSON.stringify(e.payload || {})}`)
-      .join('\n');
-    firstTask._inter_squad_events = eventSummary;
-  }
+  // Freeze event identity before dispatch. Resumes recover this snapshot, even after TTL.
+  const eventSession = await interSquadEvents.bindSession(targetDir, {
+    toSquad: squadSlug, sessionId,
+    subscriptions: squadManifest.subscriptions || [], dependencies: squadManifest.depends_on || [],
+    ignoreDependencies: ignoreDeps,
+    acceptNew: plan.tasks.length > 0 && plan.tasks.every((task) => task.status === 'pending')
+  });
+  if (!eventSession.ok) return eventSession;
+  const incomingEvents = eventSession.events;
+  plan = mutatePlan(sessionDirectory(targetDir, squadSlug, sessionId), (current) => {
+    current.inter_squad_events = incomingEvents;
+  });
+  if (incomingEvents.length) logger.log(`Inter-squad events bound to session ${sessionId}: ${incomingEvents.length}`);
 
   // ── Record session start in STATE.md ───────────────────────────────────────
   await stateManager.recordSessionStart(targetDir, squadSlug, sessionId, plan.goal).catch(() => {});
@@ -1188,7 +1178,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   const startedAt = Date.now();
 
   const executionBudget = createExecutionBudget(targetDir, squadSlug, sessionId, budget);
-  const runOptions = { enableBus, enableReflect, timeoutMs, executionBudget };
+  const runOptions = { enableBus, enableReflect, timeoutMs, executionBudget, incomingEvents };
 
   // Readiness is authoritative, including when saved parallel groups are stale.
   let group = 0;
@@ -1318,6 +1308,9 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   const usage = executionBudget.snapshot();
   const executionStatus = usage.pause ? 'paused_budget' : completedCount === plan.tasks.length ? 'completed' : 'incomplete';
   executionBudget.finish(executionStatus);
+  if (executionStatus === 'completed' && plan.tasks.length > 0) {
+    await interSquadEvents.acknowledgeSession(targetDir, { toSquad: squadSlug, sessionId });
+  }
   const pendingMarker = `[autorun:${sessionId}]`;
   if (executionStatus === 'completed' && results.length > 0) {
     await stateManager.recordSessionEnd(targetDir, squadSlug, sessionId, results).catch(() => {});

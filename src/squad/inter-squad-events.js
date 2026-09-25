@@ -14,10 +14,109 @@
  * Table: inter_squad_events (created in runtime-store.js)
  */
 
-const { randomUUID } = require('node:crypto');
+const { randomUUID, createHash } = require('node:crypto');
 const { openRuntimeDb } = require('../runtime-store');
 
 function nowIso() { return new Date().toISOString(); }
+
+function migrateSessions(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS inter_squad_event_sessions (
+      squad_slug TEXT NOT NULL, session_id TEXT NOT NULL, events_json TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL, completed_at TEXT,
+      PRIMARY KEY (squad_slug, session_id)
+    );
+    CREATE TABLE IF NOT EXISTS inter_squad_event_claims (
+      event_id TEXT NOT NULL, squad_slug TEXT NOT NULL, session_id TEXT NOT NULL,
+      PRIMARY KEY (event_id, squad_slug)
+    );
+  `);
+}
+
+function decodeSession(row) {
+  return row ? { sessionId: row.session_id, status: row.status, events: JSON.parse(row.events_json) } : null;
+}
+
+async function withSessions(projectDir, action) {
+  const handle = await openRuntimeDb(projectDir);
+  if (!handle) throw new Error('Event session store unavailable');
+  try { migrateSessions(handle.db); return action(handle.db); }
+  finally { handle.db.close(); }
+}
+
+async function getSession(projectDir, { toSquad, sessionId }) {
+  return withSessions(projectDir, (db) => decodeSession(db.prepare(
+    'SELECT * FROM inter_squad_event_sessions WHERE squad_slug = ? AND session_id = ?'
+  ).get(toSquad, sessionId)));
+}
+
+function pendingRows(db, toSquad) {
+  return db.prepare(`SELECT e.*, c.session_id AS claimed_session FROM inter_squad_events e
+    LEFT JOIN inter_squad_event_claims c ON c.event_id = e.id AND c.squad_slug = ?
+    WHERE datetime(e.created_at, '+' || e.ttl_hours || ' hours') >= datetime('now')
+    ORDER BY e.created_at, e.id`).all(toSquad)
+    .filter((row) => !JSON.parse(row.consumed_by || '[]').includes(toSquad));
+}
+
+function decodeEvent(row) {
+  return { id: row.id, fromSquad: row.from_squad, event: row.event,
+    payload: row.payload ? JSON.parse(row.payload) : null, createdAt: row.created_at };
+}
+
+function matchesSubscription(row, subscriptions, dependencies) {
+  return subscriptions.some((pattern) => matchesPattern(row.event, pattern)) || dependencies.some((dep) =>
+    dep.event && (!dep.squad || dep.squad === row.from_squad) && matchesPattern(row.event, dep.event));
+}
+
+async function bindSession(projectDir, { toSquad, sessionId, subscriptions = [], dependencies = [], ignoreDependencies = false, acceptNew = true }) {
+  return withSessions(projectDir, (db) => db.transaction(() => {
+    const existing = decodeSession(db.prepare('SELECT * FROM inter_squad_event_sessions WHERE squad_slug = ? AND session_id = ?').get(toSquad, sessionId));
+    if (existing) return { ok: true, ...existing };
+    const rows = acceptNew ? pendingRows(db, toSquad).filter((row) => matchesSubscription(row, subscriptions, dependencies)) : [];
+    const conflict = rows.find((row) => row.claimed_session && row.claimed_session !== sessionId);
+    if (conflict) return { ok: false, error: 'event_session_conflict', session_id: conflict.claimed_session };
+    const unmet = acceptNew && !ignoreDependencies ? dependencies.filter((dep) => dep.event && !rows.some((row) =>
+      (!dep.squad || dep.squad === row.from_squad) && matchesPattern(row.event, dep.event))) : [];
+    if (unmet.length) return { ok: false, error: 'unmet_dependencies', unmet };
+    // Decode the whole batch before mutating ownership; malformed payloads never get acknowledged.
+    const events = rows.map(decodeEvent);
+    db.prepare('INSERT INTO inter_squad_event_sessions (squad_slug,session_id,events_json,created_at) VALUES (?,?,?,?)')
+      .run(toSquad, sessionId, JSON.stringify(events), nowIso());
+    for (const row of rows) db.prepare('INSERT INTO inter_squad_event_claims (event_id,squad_slug,session_id) VALUES (?,?,?)').run(row.id, toSquad, sessionId);
+    return { ok: true, sessionId, status: 'pending', events };
+  }).immediate());
+}
+
+async function acknowledgeSession(projectDir, { toSquad, sessionId }) {
+  return withSessions(projectDir, (db) => db.transaction(() => {
+    const session = decodeSession(db.prepare('SELECT * FROM inter_squad_event_sessions WHERE squad_slug = ? AND session_id = ?').get(toSquad, sessionId));
+    if (!session) throw new Error('Event session not found');
+    if (session.status === 'completed') return;
+    for (const event of session.events) {
+      const claim = db.prepare('SELECT session_id FROM inter_squad_event_claims WHERE event_id = ? AND squad_slug = ?').get(event.id, toSquad);
+      if (claim?.session_id !== sessionId) throw new Error('Event session ownership mismatch');
+      const row = db.prepare('SELECT consumed_by FROM inter_squad_events WHERE id = ?').get(event.id);
+      if (!row) throw new Error('Claimed event missing; reconcile before acknowledgement');
+      const consumed = JSON.parse(row.consumed_by || '[]');
+      if (!consumed.includes(toSquad)) consumed.push(toSquad);
+      db.prepare('UPDATE inter_squad_events SET consumed_by = ? WHERE id = ?').run(JSON.stringify(consumed), event.id);
+    }
+    db.prepare("UPDATE inter_squad_event_sessions SET status = 'completed', completed_at = ? WHERE squad_slug = ? AND session_id = ?")
+      .run(nowIso(), toSquad, sessionId);
+  }).immediate());
+}
+
+async function nextSession(projectDir, { toSquad, subscriptions = [], dependencies = [] }) {
+  return withSessions(projectDir, (db) => {
+    const existing = decodeSession(db.prepare("SELECT * FROM inter_squad_event_sessions WHERE squad_slug = ? AND status = 'pending' AND events_json <> '[]' ORDER BY created_at, session_id LIMIT 1").get(toSquad));
+    if (existing) return existing;
+    const rows = pendingRows(db, toSquad).filter((row) => !row.claimed_session && matchesSubscription(row, subscriptions, dependencies));
+    if (!rows.length) return null;
+    // The oldest event gives persistent mode the same plan identity after a pre-dispatch crash.
+    const sessionId = 'event-' + createHash('sha256').update(JSON.stringify([toSquad, rows[0].id])).digest('hex').slice(0, 32);
+    return { sessionId, status: 'pending', events: rows.map(decodeEvent) };
+  });
+}
 
 /**
  * Publish an event from a squad.
@@ -92,14 +191,19 @@ async function consume(projectDir, { toSquad, subscriptions = [] }) {
   const { db } = handle;
 
   try {
+    migrateSessions(db);
+    return db.transaction(() => {
     // TTL cleanup: remove events older than their ttl_hours
     db.prepare(`
       DELETE FROM inter_squad_events
       WHERE datetime(created_at, '+' || ttl_hours || ' hours') < datetime('now')
+      AND id NOT IN (SELECT event_id FROM inter_squad_event_claims)
     `).run();
 
     const rows = db.prepare(`
-      SELECT * FROM inter_squad_events ORDER BY created_at ASC
+      SELECT * FROM inter_squad_events
+      WHERE datetime(created_at, '+' || ttl_hours || ' hours') >= datetime('now')
+      ORDER BY created_at ASC
     `).all();
 
     const matching = [];
@@ -107,6 +211,7 @@ async function consume(projectDir, { toSquad, subscriptions = [] }) {
     for (const row of rows) {
       const consumed = JSON.parse(row.consumed_by || '[]');
       if (consumed.includes(toSquad)) continue;
+      if (db.prepare('SELECT 1 FROM inter_squad_event_claims WHERE event_id = ? AND squad_slug = ?').get(row.id, toSquad)) continue;
 
       const matched = subscriptions.some((pattern) => matchesPattern(row.event, pattern));
       if (!matched) continue;
@@ -125,6 +230,7 @@ async function consume(projectDir, { toSquad, subscriptions = [] }) {
     }
 
     return matching;
+    }).immediate();
   } finally {
     db.close();
   }
@@ -201,4 +307,5 @@ async function publishWithA2A(projectDir, eventData, options = {}) {
   return { localId, remoteResults };
 }
 
-module.exports = { publish, peek, consume, matchesPattern, publishWithA2A, publishRemote };
+module.exports = { publish, peek, consume, matchesPattern, publishWithA2A, publishRemote,
+  getSession, bindSession, acknowledgeSession, nextSession };

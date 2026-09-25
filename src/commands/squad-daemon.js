@@ -4,7 +4,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { SquadDaemon } = require('../squad-daemon');
 const { openRuntimeDb } = require('../runtime-store');
-const { consume: consumeInterSquadEvents } = require('../squad/inter-squad-events');
+const interSquadEvents = require('../squad/inter-squad-events');
+const { acquireExecution, sessionDirectory } = require('../squad/plan-store');
+const { loadPlan, decompose } = require('../squad/task-decomposer');
 const { resolveTargetDir } = require('../lib/project-root');
 const deliveryStore = require('../squad/event-delivery');
 
@@ -241,6 +243,35 @@ function parseLoopDelay(str, defaultMs = 30_000) {
  *
  * Exits gracefully on SIGTERM (waits for current iteration to finish).
  */
+async function runPersistentIteration(projectDir, squadSlug, manifest, logger) {
+  const release = acquireExecution(path.join(projectDir, '.aioson', 'squads', squadSlug, 'persistent'));
+  if (!release) return { ok: false, error: 'persistent_in_use' };
+  try {
+    const next = await interSquadEvents.nextSession(projectDir, {
+      toSquad: squadSlug, subscriptions: manifest.subscriptions || [], dependencies: manifest.depends_on || []
+    });
+    if (!next) return { ok: true, status: 'idle' };
+    let plan = await loadPlan(projectDir, squadSlug, next.sessionId);
+    if (!plan) {
+      // A bound session without its plan cannot be reconstructed without risking replay.
+      const saved = await interSquadEvents.getSession(projectDir, { toSquad: squadSlug, sessionId: next.sessionId });
+      if (saved) return { ok: false, error: 'event_plan_missing', session_id: next.sessionId };
+      const releasePlan = acquireExecution(sessionDirectory(projectDir, squadSlug, next.sessionId));
+      if (!releasePlan) return { ok: false, error: 'session_in_use', session_id: next.sessionId };
+      try {
+        plan = await loadPlan(projectDir, squadSlug, next.sessionId);
+        if (!plan) await decompose(projectDir, squadSlug,
+          next.events.map((event) => `Process event: ${event.event} from ${event.fromSquad}`).join('; '),
+          { sessionId: next.sessionId, mode: 'heuristic', save: true });
+      } finally { releasePlan(); }
+    }
+    logger.log(`Processing event session ${next.sessionId}`);
+    const { runSquadAutorun } = require('./squad-autorun');
+    return await runSquadAutorun({ args: [projectDir],
+      options: { squad: squadSlug, plan: next.sessionId, reflect: true, json: true }, logger });
+  } finally { release(); }
+}
+
 async function handlePersistent(projectDir, squadSlug, options, { logger }) {
   if (!squadSlug) {
     logger.error('Error: --squad is required for --persistent');
@@ -270,11 +301,14 @@ async function handlePersistent(projectDir, squadSlug, options, { logger }) {
   logger.log('');
 
   let running = true;
-  process.on('SIGTERM', () => { running = false; });
-  process.on('SIGINT', () => { running = false; });
+  let wake = null;
+  const stop = () => { running = false; if (wake) wake(); };
+  process.on('SIGTERM', stop);
+  process.on('SIGINT', stop);
 
   let iteration = 0;
 
+  try {
   while (running) {
     iteration++;
     const now = new Date().toISOString();
@@ -290,56 +324,26 @@ async function handlePersistent(projectDir, squadSlug, options, { logger }) {
     }, null, 2), 'utf8').catch(() => {});
 
     // Check inter-squad events
-    if (subscriptions.length > 0) {
-      const events = await consumeInterSquadEvents(projectDir, {
-        toSquad: squadSlug,
-        subscriptions
-      }).catch(() => []);
-
-      if (events.length > 0) {
-        logger.log(`[${now.slice(11, 19)}] ${events.length} inter-squad event(s) received:`);
-        for (const ev of events) {
-          logger.log(`  ← [${ev.fromSquad}] ${ev.event}`);
-        }
-        logger.log(`  → Triggering squad:autorun for "${squadSlug}"...`);
-
-        // Trigger autorun via CLI subprocess
-        const { spawnSync } = require('node:child_process');
-        const goal = events.map((e) => `Process event: ${e.event} from ${e.fromSquad}`).join('; ');
-        const autorunResult = spawnSync('aioson', [
-          'squad:autorun', projectDir,
-          `--squad=${squadSlug}`,
-          `--goal=${goal}`,
-          '--reflect'
-        ], {
-          encoding: 'utf8',
-          timeout: 300_000, // 5 min per autorun
-          stdio: 'pipe'
-        });
-
-        if (autorunResult.status === 0) {
-          logger.log('  ✓ Autorun completed');
-        } else {
-          logger.log(`  ✗ Autorun exited ${autorunResult.status}: ${(autorunResult.stderr || '').trim().slice(0, 100)}`);
-        }
-      } else {
-        logger.log(`[${now.slice(11, 19)}] No pending events for "${squadSlug}" — sleeping ${loopDelayMs / 1000}s`);
-      }
-    } else {
-      logger.log(`[${now.slice(11, 19)}] Iteration ${iteration} — no subscriptions configured, heartbeat only`);
-    }
+    const result = await runPersistentIteration(projectDir, squadSlug, manifest, logger);
+    logger.log(`[${now.slice(11, 19)}] ${result.status || result.error || 'incomplete'}${result.session_id ? `; session ${result.session_id}` : ''}`);
 
     // Sleep loop-delay (interruptible)
     if (running) {
-      await new Promise((resolve) => setTimeout(resolve, loopDelayMs));
+      await new Promise((resolve) => {
+        const timer = setTimeout(() => { wake = null; resolve(); }, loopDelayMs);
+        wake = () => { clearTimeout(timer); wake = null; resolve(); };
+      });
     }
   }
 
   logger.log('');
   logger.log(`Persistent daemon stopped (${iteration} iteration(s) completed)`);
-  await fs.unlink(aliveJsonPath).catch(() => {});
-
   return { ok: true, iterations: iteration };
+  } finally {
+    process.removeListener('SIGTERM', stop);
+    process.removeListener('SIGINT', stop);
+    await fs.unlink(aliveJsonPath).catch(() => {});
+  }
 }
 
 async function runSquadDaemon({ args, options, logger, t }) {
@@ -370,4 +374,4 @@ async function runSquadDaemon({ args, options, logger, t }) {
   }
 }
 
-module.exports = { runSquadDaemon };
+module.exports = { runSquadDaemon, runPersistentIteration };
