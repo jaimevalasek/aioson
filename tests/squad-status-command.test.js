@@ -25,6 +25,31 @@ function createCollectLogger() {
   };
 }
 
+test('squad:status exposes paused autorun and unavailable measured usage without changing its plan', async (t) => {
+  const dir = await makeTempDir();
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const sessionDir = path.join(dir, '.aioson/squads/budget-team/sessions/session-1');
+  await fs.mkdir(sessionDir, { recursive: true });
+  await fs.writeFile(path.join(dir, '.aioson/squads/budget-team/squad.manifest.json'), JSON.stringify({ slug: 'budget-team', name: 'Budget team' }));
+  const planFile = path.join(sessionDir, 'plan.json');
+  const contents = JSON.stringify({
+    execution_status: 'paused_budget', tasks: [{ id: 'one', status: 'completed' }, { id: 'two', status: 'paused_budget' }],
+    budget_state: { estimated_tokens: 560, measured_tokens: null, measurement: 'unavailable', pause: { scope: 'session', task_id: 'two', limit: 900 } }
+  });
+  await fs.writeFile(planFile, contents);
+  const logger = createCollectLogger();
+  const { t: translate } = createTranslator('pt-BR');
+  const result = await runSquadStatus({ args: [dir], logger, t: translate });
+  const session = result.squads[0].autorun_sessions[0];
+  assert.equal(result.ok, true); // The query succeeded; execution is still paused.
+  assert.equal(session.status, 'paused_budget');
+  assert.equal(session.completed, 1);
+  assert.equal(session.budget_usage.measured_tokens, null);
+  assert.ok(logger.lines.some((line) => line.includes('--plan=session-1')));
+  assert.ok(logger.lines.some((line) => line.includes('measurement unavailable')));
+  assert.equal(await fs.readFile(planFile, 'utf8'), contents);
+});
+
 test('squad:status reads metadata, sessions, latest html and logs', async () => {
   const dir = await makeTempDir();
   const { t } = createTranslator('pt-BR');

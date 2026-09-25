@@ -529,11 +529,15 @@ async function runWorker(projectDir, squadSlug, workerSlug, inputPayload, option
 
   // Skill worker — external skill execution (Plan 81 §2.2)
   if (config.type === 'skill') {
+    const admission = await options.beforeAttempt?.(inputPayload || {});
+    if (admission && !admission.ok) return { ...admission, attempts: 0 };
     return runSkillWorker(projectDir, config, inputPayload || {});
   }
 
   // Research worker — special handler (4.1)
   if (config.type === 'research') {
+    const admission = await options.beforeAttempt?.(inputPayload || {});
+    if (admission && !admission.ok) return { ...admission, attempts: 0 };
     return runResearchWorker(projectDir, config, inputPayload || {}, {
       ...options,
       squadSlug,
@@ -569,6 +573,10 @@ async function runWorker(projectDir, squadSlug, workerSlug, inputPayload, option
   }
 
   // Resolve env vars
+  const source = await fs.readFile(scriptPath, 'utf8');
+  if (source.includes('// TODO: Implement worker logic here')) {
+    return { ok: false, error: 'not_implemented', attempts: 0, retryable: false };
+  }
   const env = resolveEnvVars(config.env);
 
   // Expose agent memory path as env var so workers can read it directly
@@ -590,13 +598,15 @@ async function runWorker(projectDir, squadSlug, workerSlug, inputPayload, option
 
   // Timeout and retry config
   const timeoutMs = options.timeoutMs || config.timeout_ms || DEFAULT_TIMEOUT;
-  const maxAttempts = (config.retry && config.retry.attempts) || (options.noRetry ? 1 : DEFAULT_RETRY_ATTEMPTS);
+  const maxAttempts = options.noRetry ? 1 : (config.retry && config.retry.attempts) || DEFAULT_RETRY_ATTEMPTS;
   const triggerType = options.triggerType || 'manual';
 
   let lastResult;
   const startTime = Date.now();
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const admission = await options.beforeAttempt?.(inputPayload || {});
+    if (admission && !admission.ok) return { ...admission, attempts: attempt - 1, lastAttempt: lastResult || null };
     lastResult = await spawnWorker(scriptPath, inputPayload || {}, env, timeoutMs);
     lastResult.attempt = attempt;
     lastResult.triggerType = triggerType;
@@ -658,8 +668,8 @@ function generateRunJs(slug, config) {
     : '  // No inputs defined';
 
   const outputReturn = Object.keys(config.outputs || {}).length > 0
-    ? '    ' + Object.keys(config.outputs).map(k => `${k}: null`).join(',\n    ')
-    : '    result: "ok"';
+    ? Object.keys(config.outputs).map(k => `  // Output field: ${k}`).join('\n')
+    : '  // Return evidence of the implemented effect.';
 
   return `#!/usr/bin/env node
 'use strict';
@@ -690,9 +700,8 @@ ${inputParsing}
   //   - Move a lead in CRM
   //   - Send email via SMTP
 
-  return {
 ${outputReturn}
-  };
+  throw new Error('not_implemented');
 }
 
 execute(input)
@@ -729,6 +738,9 @@ ${Object.entries(config.outputs || {}).map(([k, v]) => `- \`${k}\` (${v.type})`)
 ${envSection}
 
 ## Usage
+
+Implement execute(), remove the generated TODO marker and replace the
+not_implemented error with the actual result before running this worker.
 
 \`\`\`bash
 # Run manually

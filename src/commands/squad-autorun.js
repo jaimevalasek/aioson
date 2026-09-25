@@ -44,6 +44,7 @@ const {
   getReadyTasks,
   isPlanComplete,
   updateTaskStatus,
+  validatePlanDependencies,
   loadPlan,
   formatPlan
 } = require('../squad/task-decomposer');
@@ -58,6 +59,7 @@ const { extractLearnings, persistAgentMemory } = require('../squad/learning-extr
 const { validateBrief, autoFixBrief } = require('../squad/brief-validator');
 const { resolveEngine, translateToTeamConfig, writeTeamConfig } = require('../squad/agent-teams-adapter');
 const { resolveTargetDir } = require('../lib/project-root');
+const { acquireExecution, sessionDirectory } = require('../squad/plan-store');
 
 const STATUS_ICON = {
   pending: '○',
@@ -65,7 +67,11 @@ const STATUS_ICON = {
   completed: '✓',
   failed: '✗',
   escalated: '⚠',
-  skipped: '–'
+  skipped: '–',
+  needs_iteration: '↩',
+  unverified: '?',
+  awaiting_review: '◌',
+  paused_budget: 'Ⅱ'
 };
 
 function icon(status) {
@@ -76,37 +82,7 @@ function nowIso() { return new Date().toISOString(); }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-// ─── Budget helpers ───────────────────────────────────────────────────────────
-
-/**
- * Load token budget from squad manifest (optional field).
- * Returns Infinity if not configured.
- */
-async function loadBudget(projectDir, squadSlug) {
-  const manifestPath = path.join(
-    projectDir, '.aioson', 'squads', squadSlug, 'squad.manifest.json'
-  );
-  try {
-    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-    const budget = manifest.budget || {};
-    return {
-      maxTokensPerSession: budget.max_tokens_per_session || Infinity,
-      maxTokensPerTask: budget.max_tokens_per_task || Infinity,
-      actionOnExceed: budget.action_on_exceed || 'pause'
-    };
-  } catch {
-    return { maxTokensPerSession: Infinity, maxTokensPerTask: Infinity, actionOnExceed: 'pause' };
-  }
-}
-
-/**
- * Estimate tokens a task will consume (heuristic: chars/4 + overhead).
- */
-function estimateTaskTokens(task) {
-  const descLen = (task.description || '').length;
-  const criteriaLen = (task.acceptance_criteria || []).join(' ').length;
-  return Math.ceil((descLen + criteriaLen) / 4) + 500; // 500 base overhead
-}
+const { loadBudget, createExecutionBudget } = require('../squad/execution-budget');
 
 function hasExecutionEvidence(output) {
   if (output === null || output === undefined) return false;
@@ -221,6 +197,9 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     session_id: sessionId,
     bus_enabled: enableBus,
     execution_owner: task.executor || null,
+    ...(task._eval_artifact !== undefined ? { artifact: task._eval_artifact } : {}),
+    ...(task._eval_feedback ? { review_feedback: task._eval_feedback } : {}),
+    ...(task._voting_instance ? { voting_instance: task._voting_instance } : {}),
     ...(specialist
       ? {
           specialist: {
@@ -248,8 +227,21 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     workerRan = true;
     workerResult = await runWorker(projectDir, squadSlug, workerConfig.slug, workerInput, {
       timeoutMs,
-      triggerType: 'autorun'
+      triggerType: 'autorun',
+      beforeAttempt: options.executionBudget
+        ? (input) => options.executionBudget.reserve(task._budget_task_id || task.id, input)
+        : undefined
     });
+    if (workerResult.attempts === 0) workerRan = false;
+    if (workerResult.budgetBlocked) {
+      const latest = await loadPlan(projectDir, squadSlug, sessionId);
+      const saved = latest.tasks.find((item) => item.id === task.id)?.result || {};
+      const pausedResult = { ...saved, budget_pause: workerResult.budget_pause,
+        ...(workerResult.lastAttempt ? { last_worker_attempt: workerResult.lastAttempt } : {}), completed_at: null };
+      if (task._voting_instance) delete pausedResult.budget_resume;
+      if (!task._voting_instance) await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'paused_budget', pausedResult);
+      return { task, finalStatus: 'paused_budget', workerResult, reflectionResult: null, persistedResult: pausedResult };
+    }
     taskOutput = workerResult.ok
       ? JSON.stringify(workerResult.output || '')
       : `Worker failed: ${workerResult.error}`;
@@ -282,12 +274,22 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
 
   // Reflection pass — pass full task object so verify-gate can check must_haves
   let reflectionResult = null;
-  if (enableReflect && taskOutput && workerResult.ok) {
-    reflectionResult = await reflect(taskOutput, {
+  if (taskOutput && workerResult.ok) {
+    try {
+      reflectionResult = await reflect(taskOutput, {
       ...taskCtx,
       iteration: task._attempt || 1,
       task                            // enables must_haves verification
-    });
+      }, enableReflect ? {} : {
+        fallbackChecklist: [{ id: 'non_empty', label: 'Output is not empty', critical: true }]
+      });
+    } catch (error) {
+      reflectionResult = {
+        verdict: 'UNVERIFIED', passed: false, score: null,
+        issues: [error.message], critical_failures: [], needs_llm_review: [],
+        summary: `Evaluation failed: ${error.message}`
+      };
+    }
 
     if (enableBus) {
       await bus.post(projectDir, squadSlug, sessionId, {
@@ -304,11 +306,22 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
   let finalStatus;
   if (!workerResult.ok) {
     finalStatus = 'failed';
-  } else if (reflectionResult && reflectionResult.verdict === 'ESCALATE') {
-    finalStatus = 'escalated';
+  } else if (reflectionResult) {
+    switch (reflectionResult.verdict) {
+      case 'DONE':
+      case 'DONE_WITH_CONCERNS':
+        finalStatus = reflectionResult.passed === true ? 'completed' : 'unverified';
+        break;
+      case 'NEEDS_ITERATION': finalStatus = 'needs_iteration'; break;
+      case 'ESCALATE': finalStatus = 'escalated'; break;
+      default: finalStatus = 'unverified';
+    }
   } else {
-    finalStatus = 'completed';
+    finalStatus = 'unverified';
   }
+
+  // Candidate execution is not acceptance: voting and review own the final write.
+  const persistedStatus = finalStatus === 'completed' && task._defer_acceptance ? 'awaiting_review' : finalStatus;
 
   const attemptHistory = await loadAttemptHistory(
     projectDir,
@@ -319,14 +332,14 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
   const finishedAt = nowIso();
   const attemptRecord = {
     attempt: task._attempt || workerResult.attempt || 1,
-    status: finalStatus,
+    status: persistedStatus,
     worker_ran: workerRan,
     error: workerResult.ok ? null : workerResult.error,
     timed_out: Boolean(workerResult.timedOut),
     output_summary: String(taskOutput || '').slice(0, 500),
     finished_at: finishedAt
   };
-  await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, finalStatus, {
+  const persistedResult = {
     worker_ran: workerRan,
     output_summary: String(taskOutput || '').slice(0, 500),
     execution_evidence: workerResult.ok
@@ -338,12 +351,11 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
         }
       : null,
     attempt_history: [...attemptHistory, attemptRecord],
-    reflection: reflectionResult
-      ? { verdict: reflectionResult.verdict, score: reflectionResult.score }
-      : null,
+    reflection: reflectionResult,
     finished_at: finishedAt,
-    completed_at: finalStatus === 'completed' ? finishedAt : null
-  });
+    completed_at: persistedStatus === 'completed' ? finishedAt : null
+  };
+  if (!task._voting_instance) await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, persistedStatus, persistedResult);
 
   if (enableBus) {
     await bus.post(projectDir, squadSlug, sessionId, {
@@ -355,7 +367,7 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     }).catch(() => {});
   }
 
-  return { task, finalStatus, workerResult, reflectionResult };
+  return { task, finalStatus, workerResult, reflectionResult, persistedResult };
 }
 
 // ─── Inter-squad dependency validation ───────────────────────────────────────
@@ -558,12 +570,12 @@ async function runTaskWithGapClosure(
     }
 
     // Don't retry escalated tasks — they need human/coordinator attention
-    if (result.finalStatus === 'escalated') {
+    if (['escalated', 'unverified', 'paused_budget'].includes(result.finalStatus) || result.workerResult?.retryable === false) {
       return result;
     }
 
     // Capture failure context for next attempt
-    lastError = result.workerResult?.error || `task failed on attempt ${attempt}`;
+    lastError = result.workerResult?.error || result.reflectionResult?.summary || `task failed on attempt ${attempt}`;
     currentTask = {
       ...currentTask,
       _failure_context: lastError
@@ -615,13 +627,15 @@ async function runTaskWithGapClosure(
  * Synthesize votes from multiple worker instances.
  * Returns { consensus, winningOutput, allVotes }.
  *
- * Consensus is the fraction of instances that agree on the same status.
- * For completed tasks, compares output similarity via a simple hash.
+ * Agreement requires identical output from accepted candidates. Matching status
+ * alone says nothing about content; this is not a semantic consensus evaluator.
  */
 function synthesizeVotes(votes) {
   const statusCounts = {};
   for (const v of votes) {
-    const s = v.finalStatus || 'unknown';
+    const s = v.finalStatus === 'completed'
+      ? JSON.stringify(v.workerResult?.output)
+      : `status:${v.finalStatus || 'unknown'}`;
     statusCounts[s] = (statusCounts[s] || 0) + 1;
   }
 
@@ -632,15 +646,20 @@ function synthesizeVotes(votes) {
   }
 
   const consensus = bestCount / votes.length;
-  const winningVotes = votes.filter((v) => v.finalStatus === bestStatus);
+  const winningVotes = votes.filter((v) => (v.finalStatus === 'completed'
+    ? JSON.stringify(v.workerResult?.output)
+    : `status:${v.finalStatus || 'unknown'}`) === bestStatus);
 
   return {
     consensus,
-    bestStatus,
+    bestStatus: winningVotes[0]?.finalStatus || 'unknown',
+    tied: Object.values(statusCounts).filter((count) => count === bestCount).length > 1,
+    agreement_kind: 'exact_output',
     winningOutput: winningVotes[0],
     allVotes: votes.map((v) => ({
       finalStatus: v.finalStatus,
-      outputSummary: String(v.workerResult?.output || '').slice(0, 200)
+      evidence: v.persistedResult || null,
+      outputSummary: JSON.stringify(v.workerResult?.output || '').slice(0, 200)
     }))
   };
 }
@@ -674,7 +693,12 @@ async function runTaskWithVoting(
   // Spawn N instances in parallel
   const instancePromises = [];
   for (let i = 1; i <= instances; i++) {
-    const instanceTask = { ...task, _attempt: 1, _voting_instance: i };
+    const previousVote = task.result?.budget_resume?.kind === 'voting' ? task.result.budget_resume.votes[i - 1] : null;
+    if (previousVote && previousVote.finalStatus !== 'paused_budget') {
+      instancePromises.push(Promise.resolve({ ...previousVote, task }));
+      continue;
+    }
+    const instanceTask = { ...task, _attempt: 1, _voting_instance: i, _defer_acceptance: true };
     instancePromises.push(
       runTaskWithHeartbeat(
         projectDir, squadSlug, instanceTask, sessionId, options,
@@ -689,6 +713,14 @@ async function runTaskWithVoting(
   }
 
   const votes = await Promise.all(instancePromises);
+  if (votes.some((vote) => vote.finalStatus === 'paused_budget')) {
+    const pausedResult = {
+      budget_pause: options.executionBudget.snapshot().pause, completed_at: null,
+      budget_resume: { kind: 'voting', votes: votes.map(({ finalStatus, workerResult, reflectionResult, persistedResult }) => ({ finalStatus, workerResult, reflectionResult, persistedResult })) }
+    };
+    await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'paused_budget', pausedResult);
+    return { task, finalStatus: 'paused_budget', workerResult: null, reflectionResult: null };
+  }
   const result = synthesizeVotes(votes);
 
   if (enableBus) {
@@ -702,12 +734,13 @@ async function runTaskWithVoting(
   }
 
   // If consensus below threshold, escalate
-  if (result.consensus < threshold) {
-    logger.log(`    ⚠ Voting: consensus ${(result.consensus * 100).toFixed(0)}% < ${(threshold * 100).toFixed(0)}% threshold — escalating`);
+  if (result.consensus < threshold || result.tied || result.bestStatus !== 'completed') {
+    logger.log(`    ⚠ Voting not accepted: agreement=${(result.consensus * 100).toFixed(0)}%, threshold=${(threshold * 100).toFixed(0)}%, status=${result.bestStatus}, tied=${result.tied} — escalating`);
 
     await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'escalated', {
-      voting: { consensus: result.consensus, threshold, allVotes: result.allVotes },
-      completed_at: nowIso()
+      voting: { agreement_kind: result.agreement_kind, consensus: result.consensus, threshold, allVotes: result.allVotes },
+      finished_at: nowIso(),
+      completed_at: null
     });
 
     if (enableBus) {
@@ -715,7 +748,7 @@ async function runTaskWithVoting(
         from: 'coordinator',
         to: '*',
         type: 'block',
-        content: `Task "${task.title}" — voting consensus too low (${(result.consensus * 100).toFixed(0)}%). Requires human review.`,
+        content: `Task "${task.title}" — voting did not establish an accepted output. Requires human review.`,
         metadata: { task_id: task.id, voting_escalated: true }
       }).catch(() => {});
     }
@@ -723,12 +756,17 @@ async function runTaskWithVoting(
     return {
       task,
       finalStatus: 'escalated',
-      workerResult: { ok: false, error: 'voting_consensus_below_threshold', voting: result },
+      workerResult: { ok: false, error: 'voting_not_accepted', voting: result },
       reflectionResult: null
     };
   }
 
   // Use the winning vote as the result
+  await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'completed', {
+    ...result.winningOutput.persistedResult,
+    voting: { agreement_kind: result.agreement_kind, consensus: result.consensus, allVotes: result.allVotes },
+    completed_at: nowIso()
+  });
   return result.winningOutput;
 }
 
@@ -751,6 +789,16 @@ async function runWithEvalOptimize(
   const { enableBus } = options;
   let lastFeedback = null;
   let lastResult = null;
+  let iterationsRun = 0;
+  let lastEvaluation = null;
+  const checkpoint = task.result?.budget_resume?.kind === 'review' ? task.result.budget_resume : null;
+
+  if ((task.reviewer || 'qa') === (task.specialist?.slug || task.executor)) {
+    await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'unverified', {
+      error: 'independent_reviewer_required', completed_at: null
+    });
+    return { task, finalStatus: 'unverified', workerResult: null, reflectionResult: null };
+  }
 
   if (enableBus) {
     await bus.post(projectDir, squadSlug, sessionId, {
@@ -762,15 +810,17 @@ async function runWithEvalOptimize(
     }).catch(() => {});
   }
 
-  for (let iteration = 1; iteration <= maxIterations; iteration++) {
+  for (let iteration = checkpoint?.iteration || 1; iteration <= maxIterations; iteration++) {
+    iterationsRun = iteration;
     // ── Generator phase ──────────────────────────────────────────────────────
     const generatorTask = {
       ...task,
       _attempt: iteration,
+      _defer_acceptance: true,
       ...(lastFeedback ? { _eval_feedback: lastFeedback, _eval_iteration: iteration } : {})
     };
 
-    lastResult = await runTaskWithHeartbeat(
+    lastResult = checkpoint && iteration === checkpoint.iteration ? checkpoint.generatedResult : await runTaskWithHeartbeat(
       projectDir, squadSlug, generatorTask, sessionId, options,
       () => runTask(projectDir, squadSlug, generatorTask, sessionId, options, logger)
     );
@@ -799,14 +849,31 @@ async function runWithEvalOptimize(
       acceptance_criteria: ['Output either PASS or FAIL with structured feedback'],
       _eval_artifact: lastResult.workerResult?.output || null
     };
+    reviewTask._budget_task_id = task.id;
 
     const evalResult = await runTaskWithHeartbeat(
       projectDir, squadSlug, reviewTask, sessionId, options,
       () => runTask(projectDir, squadSlug, reviewTask, sessionId, options, logger)
     );
 
-    const evalOutput = String(evalResult.workerResult?.output || '');
-    const passed = /\bPASS\b/i.test(evalOutput) && !/\bFAIL\b/i.test(evalOutput);
+    if (evalResult.finalStatus === 'paused_budget') {
+      await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'paused_budget', {
+        ...lastResult.persistedResult, completed_at: null,
+        budget_pause: evalResult.workerResult.budget_pause,
+        budget_resume: { kind: 'review', iteration, generatedResult: {
+          finalStatus: lastResult.finalStatus, workerResult: lastResult.workerResult,
+          reflectionResult: lastResult.reflectionResult, persistedResult: lastResult.persistedResult
+        } }
+      });
+      return { task, finalStatus: 'paused_budget', workerResult: evalResult.workerResult, reflectionResult: null };
+    }
+
+    const reviewOutput = evalResult.workerResult?.output;
+    lastEvaluation = evalResult.persistedResult || { error: evalResult.workerResult?.error || 'evaluation_unavailable' };
+    const verdict = typeof reviewOutput === 'string' ? reviewOutput.trim()
+      : reviewOutput?.verdict || reviewOutput?.result;
+    const evalOutput = typeof reviewOutput === 'string' ? reviewOutput : JSON.stringify(reviewOutput || {});
+    const passed = evalResult.finalStatus === 'completed' && verdict === 'PASS';
 
     if (enableBus) {
       await bus.post(projectDir, squadSlug, sessionId, {
@@ -821,22 +888,31 @@ async function runWithEvalOptimize(
     if (passed) {
       logger.log(`    ↳ Eval-Optimize PASS at iteration ${iteration}`);
       await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'completed', {
-        eval_optimize: { iterations: iteration, verdict: 'PASS' },
+        ...lastResult.persistedResult,
+        eval_optimize: { iterations: iteration, verdict: 'PASS', reviewer: reviewTask.executor, evaluation: evalResult.persistedResult },
         completed_at: nowIso()
       });
       return lastResult;
     }
 
     lastFeedback = evalOutput.slice(0, 1000);
+    await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'needs_iteration', {
+      ...lastResult.persistedResult,
+      eval_optimize: { iterations: iteration, verdict: 'FAIL', reviewer: reviewTask.executor, last_feedback: lastFeedback, evaluation: lastEvaluation },
+      completed_at: null
+    });
+    if (evalResult.finalStatus !== 'completed') break;
     logger.log(`    ↳ Eval-Optimize FAIL at iteration ${iteration} — applying feedback`);
   }
 
   // Max iterations reached — escalate
-  logger.log(`    ✗ Eval-Optimize: ${maxIterations} iterations exhausted — escalating`);
+  logger.log(`    ✗ Eval-Optimize: stopped after ${iterationsRun}/${maxIterations} iterations without acceptance — escalating`);
 
   await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'escalated', {
-    eval_optimize: { iterations: maxIterations, verdict: 'FAIL', last_feedback: lastFeedback },
-    completed_at: nowIso()
+    ...lastResult?.persistedResult,
+    eval_optimize: { iterations: iterationsRun, verdict: 'FAIL', last_feedback: lastFeedback, evaluation: lastEvaluation },
+    finished_at: nowIso(),
+    completed_at: null
   });
 
   if (enableBus) {
@@ -890,8 +966,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
 
   // ── Load token budget ──────────────────────────────────────────────────────
   const budget = await loadBudget(targetDir, squadSlug);
-  let sessionTokensUsed = 0;
-  let budgetExceeded = false;
+
 
   // ── Load or create plan ────────────────────────────────────────────────────
   let plan;
@@ -916,6 +991,12 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     logger.log(`Decomposing goal for squad "${squadSlug}" [${mode}]...`);
     plan = await decompose(targetDir, squadSlug, goal, { sessionId, mode, save: !dryRun });
     logger.log(`Plan ready: ${plan.tasks.length} tasks across ${Object.keys(plan.parallel_groups).length} parallel group(s)`);
+  }
+
+  const invalidPlan = validatePlanDependencies(plan);
+  if (invalidPlan) {
+    logger.error(`Invalid plan: ${invalidPlan}`);
+    return { ok: false, error: 'invalid_plan', detail: invalidPlan };
   }
 
   // ── Show plan ──────────────────────────────────────────────────────────────
@@ -958,6 +1039,22 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     logger.log('Activate your agent to fill in the plan, then resume with:');
     logger.log(`  aioson squad:autorun . --squad=${squadSlug} --plan=${sessionId}`);
     return { ok: true, mode: 'structured', sessionId, promptPath: path.relative(targetDir, promptPath), plan };
+  }
+
+  const releaseExecution = acquireExecution(sessionDirectory(targetDir, squadSlug, sessionId));
+  if (!releaseExecution) {
+    logger.error(`Session ${sessionId} already has an active executor. Wait for it to finish before resuming.`);
+    return { ok: false, error: 'session_in_use', session_id: sessionId };
+  }
+  try {
+  // Reload after claiming: another run may have completed while this one loaded.
+  plan = await loadPlan(targetDir, squadSlug, sessionId);
+  const currentPlanError = plan ? validatePlanDependencies(plan) : 'plan missing';
+  if (currentPlanError) return { ok: false, error: 'invalid_plan', detail: currentPlanError };
+  const interrupted = plan.tasks.filter((task) => ['in_progress', 'running'].includes(task.status));
+  if (interrupted.length) {
+    logger.error(`Session ${sessionId} has interrupted tasks: ${interrupted.map((task) => task.id).join(', ')}. Reconcile their effects before marking them completed or resetting them to pending.`);
+    return { ok: false, error: 'reconciliation_required', session_id: sessionId, tasks: interrupted.map((task) => task.id) };
   }
 
   // ── Load squad manifest (for inter-squad config and hooks) ─────────────────
@@ -1089,46 +1186,20 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   let escalatedCount = 0;
   const startedAt = Date.now();
 
-  const runOptions = { enableBus, enableReflect, timeoutMs };
+  const executionBudget = createExecutionBudget(targetDir, squadSlug, sessionId, budget);
+  const runOptions = { enableBus, enableReflect, timeoutMs, executionBudget };
 
-  // Run in parallel group waves (or sequentially if --sequential)
-  const groups = Object.keys(plan.parallel_groups).map(Number).sort((a, b) => a - b);
+  // Readiness is authoritative, including when saved parallel groups are stale.
+  let group = 0;
+  while (true) {
+    if (executionBudget.snapshot().pause) break;
 
-  for (const group of groups) {
-    if (budgetExceeded) {
-      logger.log(`⚠ Session budget exceeded (${sessionTokensUsed.toLocaleString()} tokens used). Stopping.`);
-      break;
-    }
-
-    const groupTaskIds = plan.parallel_groups[group];
-    const groupTasks = groupTaskIds
-      .map((id) => plan.tasks.find((t) => t.id === id))
-      .filter((t) => t && t.status === 'pending');
-
-    if (groupTasks.length === 0) continue;
+    plan = await loadPlan(targetDir, squadSlug, sessionId);
+    const groupTasks = getReadyTasks(plan);
+    if (groupTasks.length === 0) break;
+    group++;
 
     logger.log(`── Group ${group} (${groupTasks.length} task${groupTasks.length > 1 ? 's' : ''})${groupTasks.length > 1 && !sequential ? ' — running in parallel' : ''}`);
-
-    // ── Budget gate: check before running this group ────────────────────────
-    const groupEstimatedTokens = groupTasks.reduce((sum, t) => sum + estimateTaskTokens(t), 0);
-    if (sessionTokensUsed + groupEstimatedTokens > budget.maxTokensPerSession) {
-      logger.log(`  ⚠ Budget gate: estimated ${(sessionTokensUsed + groupEstimatedTokens).toLocaleString()} tokens would exceed session limit of ${budget.maxTokensPerSession.toLocaleString()}.`);
-      if (budget.actionOnExceed === 'abort') {
-        logger.log('  Budget action: abort — stopping execution.');
-        budgetExceeded = true;
-        break;
-      }
-      // Default: 'pause' — warn and continue (user can see in summary)
-      logger.log('  Budget action: pause — marking remaining tasks as skipped.');
-      for (const task of groupTasks) {
-        await updateTaskStatus(targetDir, squadSlug, sessionId, task.id, 'skipped', {
-          skip_reason: 'budget_exceeded',
-          estimated_tokens: estimateTaskTokens(task)
-        });
-      }
-      budgetExceeded = true;
-      break;
-    }
 
     // ── Run tasks in this group ────────────────────────────────────────────
     const runTask_ = async (task) => {
@@ -1161,8 +1232,8 @@ async function runSquadAutorun({ args, options = {}, logger }) {
 
       // Sampling-and-Voting path (Plan 81 §Sprint 4)
       if (task.voting) {
-        const votingInstances = task.voting.instances || 3;
-        const votingThreshold = task.voting.threshold || 0.66;
+        const votingInstances = Number.isInteger(task.voting.instances) && task.voting.instances > 0 ? Math.min(task.voting.instances, 5) : 3;
+        const votingThreshold = Number.isFinite(task.voting.threshold) && task.voting.threshold > 0 && task.voting.threshold <= 1 ? task.voting.threshold : 0.66;
         logger.log(`    ↳ Voting: ${votingInstances} instances, threshold ${(votingThreshold * 100).toFixed(0)}%`);
         const runner = runTaskWithVoting(
           targetDir, squadSlug, task, sessionId, runOptions, logger,
@@ -1176,7 +1247,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
 
       // Evaluator-Optimizer path (Plan 82 §ITEM 4)
       if (task.review_loop) {
-        const maxReviewIter = task.max_review_iterations || 3;
+        const maxReviewIter = Number.isInteger(task.max_review_iterations) && task.max_review_iterations > 0 ? Math.min(task.max_review_iterations, 5) : 3;
         logger.log(`    ↳ Eval-Optimize: max ${maxReviewIter} iterations, reviewer=${task.reviewer || 'qa'}`);
         return runWithEvalOptimize(
           targetDir, squadSlug, task, sessionId, runOptions, logger, maxReviewIter
@@ -1200,17 +1271,23 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     if (sequential || groupTasks.length === 1) {
       groupResults = [];
       for (const task of groupTasks) {
+        if (executionBudget.snapshot().pause) break;
         groupResults.push(await runTask_(task));
       }
     } else {
-      groupResults = await Promise.all(groupTasks.map(runTask_));
+      // Keep session ownership until every in-flight task has settled, even if
+      // one task throws while its siblings are still producing effects.
+      const settled = await Promise.allSettled(groupTasks.map(runTask_));
+      const rejected = settled.filter((result) => result.status === 'rejected');
+      if (rejected.length) throw new AggregateError(rejected.map((result) => result.reason), 'Task execution failed');
+      groupResults = settled.map((result) => result.value);
     }
 
     results.push(...groupResults);
 
     // Accumulate token usage estimate for budget tracking
     for (const r of groupResults) {
-      sessionTokensUsed += estimateTaskTokens(r.task);
+
       if (r.finalStatus === 'completed') completedCount++;
       else if (r.finalStatus === 'failed') failedCount++;
       else if (r.finalStatus === 'escalated') escalatedCount++;
@@ -1222,11 +1299,36 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     }
 
     // Short pause between waves to allow bus writes to flush
-    if (groups.length > 1) await sleep(100);
+    if (groupTasks.length > 1) await sleep(100);
   }
 
+  plan = await loadPlan(targetDir, squadSlug, sessionId);
+  completedCount = plan.tasks.filter((task) => ['completed', 'done'].includes(task.status)).length;
+  failedCount = plan.tasks.filter((task) => task.status === 'failed').length;
+  escalatedCount = plan.tasks.filter((task) => task.status === 'escalated').length;
+  const blockedTasks = plan.tasks.filter((task) => task.status === 'pending').map((task) => ({
+    id: task.id,
+    waiting_for: (task.dependencies || []).filter((id) => !plan.tasks.some((dependency) => dependency.id === id && ['completed', 'done'].includes(dependency.status)))
+  }));
+  const evaluationPending = plan.tasks.filter((task) => ['needs_iteration', 'unverified', 'awaiting_review'].includes(task.status))
+    .map((task) => ({ id: task.id, status: task.status, reason: task.result?.reflection?.summary || task.result?.error || 'Awaiting acceptance' }));
+
   // ── Record session end in STATE.md ─────────────────────────────────────────
-  await stateManager.recordSessionEnd(targetDir, squadSlug, sessionId, results).catch(() => {});
+  const usage = executionBudget.snapshot();
+  const executionStatus = usage.pause ? 'paused_budget' : completedCount === plan.tasks.length ? 'completed' : 'incomplete';
+  executionBudget.finish(executionStatus);
+  const pendingMarker = `[autorun:${sessionId}]`;
+  if (executionStatus === 'completed' && results.length > 0) {
+    await stateManager.recordSessionEnd(targetDir, squadSlug, sessionId, results).catch(() => {});
+  }
+  await stateManager.updateState(targetDir, squadSlug, { resolvePending: [pendingMarker] }).catch(() => {});
+  await stateManager.updateState(targetDir, squadSlug, {
+    meta: { execution_status: executionStatus },
+    ...(executionStatus !== 'completed' ? {
+      tasksCompleted: results.filter((result) => result.finalStatus === 'completed').length,
+      addPending: [`${pendingMarker} ${executionStatus}; resume with --plan=${sessionId}`]
+    } : {})
+  }).catch(() => {});
 
   // ── 5.1 Automatic Learning Extraction ─────────────────────────────────────
   if (completedCount > 0) {
@@ -1258,13 +1360,18 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     : null;
 
   const summary = {
-    ok: failedCount === 0 && escalatedCount === 0,
+    ok: completedCount === plan.tasks.length && !usage.pause,
     session_id: sessionId,
     squad: squadSlug,
     goal: plan.goal,
     elapsed_s: elapsed,
-    budget_used: sessionTokensUsed,
-    budget_limit: budget.maxTokensPerSession,
+    budget_used: usage.estimated_tokens,
+    budget_usage: usage,
+    status: executionStatus,
+    budget_limit: Number.isFinite(budget.maxTokensPerSession) ? budget.maxTokensPerSession : null,
+    blocked_tasks: blockedTasks,
+    evaluation_pending: evaluationPending,
+    paused_tasks: plan.tasks.filter((task) => task.status === 'paused_budget').map((task) => task.id),
     tasks: {
       total: plan.tasks.length,
       completed: completedCount,
@@ -1279,12 +1386,15 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   if (options.json) return summary;
 
   logger.log('');
-  logger.log('── Autorun complete ─────────────────────────────────────────');
+  logger.log(`── Autorun ${executionStatus} ─────────────────────────────────────────`);
+  if (usage.pause) logger.log(`Budget pause (${usage.pause.scope}): ${usage.pause.task_id}; next attempt needs ~${usage.pause.required_estimate} tokens. Increase the configured limit and resume with --plan=${sessionId}.`);
+  for (const task of blockedTasks) logger.log(`Blocked: ${task.id}; waiting for: ${task.waiting_for.join(', ')}`);
+  for (const task of evaluationPending) logger.log(`Evaluation pending: ${task.id} (${task.status}); ${task.reason}`);
   logger.log(`Session:   ${sessionId}`);
   logger.log(`Elapsed:   ${elapsed}s`);
   logger.log(`Tasks:     ${completedCount}/${plan.tasks.length} completed  ${failedCount > 0 ? `| ${failedCount} failed` : ''}  ${escalatedCount > 0 ? `| ${escalatedCount} escalated` : ''}`);
   if (budget.maxTokensPerSession !== Infinity) {
-    logger.log(`Tokens:    ~${sessionTokensUsed.toLocaleString()} used / ${budget.maxTokensPerSession.toLocaleString()} budget`);
+    logger.log(`Tokens:    ~${usage.estimated_tokens.toLocaleString()} reserved (estimate) / ${budget.maxTokensPerSession.toLocaleString()} budget; provider measurement unavailable`);
   }
   if (busSummary && busSummary.total > 0) {
     logger.log(`Bus:       ${busSummary.total} messages${busSummary.blocks.length > 0 ? ` | ⚠ ${busSummary.blocks.length} block(s)` : ''}`);
@@ -1303,6 +1413,9 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   if (enableBus) logger.log(`Bus:       .aioson/squads/${squadSlug}/sessions/${sessionId}/bus.jsonl`);
 
   return summary;
+  } finally {
+    releaseExecution();
+  }
 }
 
 module.exports = { runSquadAutorun };

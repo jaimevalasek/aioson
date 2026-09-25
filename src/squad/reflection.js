@@ -14,8 +14,8 @@
  *   - The squad:autorun command is invoked with --reflect
  *
  * Checklist sources (in priority order):
- *   1. squad.json → executors[slug].reflection.checklist
- *   2. .aioson/squads/{slug}/quality.md (freeform checklist file)
+ *   1. squad.manifest.json → executor.reflection.checklist (squad.json legacy)
+ *   2. checklists/quality.md (quality.md legacy)
  *   3. Built-in generic quality criteria (fallback)
  *
  * Verdict:
@@ -23,6 +23,7 @@
  *   DONE_WITH_CONCERNS — passed minimally but has minor issues (flagged)
  *   NEEDS_ITERATION   — failed critical checks, should retry
  *   ESCALATE          — exhausted iterations, coordinator must decide
+ *   UNVERIFIED        — required evaluation is unavailable or inconclusive
  */
 
 const fs = require('node:fs/promises');
@@ -33,31 +34,39 @@ const { checkMustHaves } = require('./verify-gate');
 
 const GENERIC_CHECKLIST = [
   { id: 'non_empty',     label: 'Output is not empty',                  critical: true  },
-  { id: 'on_topic',      label: 'Output addresses the task objective',  critical: true  },
+  { id: 'output_length', label: 'Output has at least 50 characters (lint only)', critical: true },
   { id: 'no_truncation', label: 'Output is not abruptly cut off',       critical: true  },
   { id: 'no_filler',     label: 'Output has no generic filler content', critical: false },
-  { id: 'actionable',    label: 'Output contains concrete information', critical: false }
+  { id: 'word_count',    label: 'Output has at least 10 words (lint only)', critical: false }
 ];
 
 // ─── Checklist loading ────────────────────────────────────────────────────────
 
 async function loadSquadJson(projectDir, squadSlug) {
-  const p = path.join(projectDir, '.aioson', 'squads', squadSlug, 'squad.json');
-  try {
-    return JSON.parse(await fs.readFile(p, 'utf8'));
-  } catch {
-    return null;
+  for (const name of ['squad.manifest.json', 'squad.json']) {
+    try {
+      const value = JSON.parse(await fs.readFile(path.join(projectDir, '.aioson', 'squads', squadSlug, name), 'utf8'));
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`Invalid reflection manifest: ${name}`);
+      return value;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   }
+  return null;
 }
 
 async function loadQualityFile(projectDir, squadSlug) {
-  const p = path.join(projectDir, '.aioson', 'squads', squadSlug, 'quality.md');
-  try {
-    const raw = await fs.readFile(p, 'utf8');
-    return parseQualityMarkdown(raw);
-  } catch {
-    return null;
+  for (const name of ['checklists/quality.md', 'quality.md']) {
+    try {
+      const raw = await fs.readFile(path.join(projectDir, '.aioson', 'squads', squadSlug, name), 'utf8');
+      const criteria = parseQualityMarkdown(raw);
+      if (!criteria) throw new Error(`No evaluable checklist entries in ${name}`);
+      return criteria;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   }
+  return null;
 }
 
 function parseQualityMarkdown(content) {
@@ -67,7 +76,7 @@ function parseQualityMarkdown(content) {
 
   for (const line of lines) {
     // Support: "- [critical] Label" or "- Label" or "* Label"
-    const match = line.match(/^[-*]\s+(?:\[(\w+)\]\s+)?(.+)$/);
+    const match = line.match(/^\s*[-*]\s+(?:\[([\w ]*)\]\s+)?(.+)$/);
     if (!match) continue;
 
     const tag = (match[1] || '').toLowerCase();
@@ -84,12 +93,19 @@ function parseQualityMarkdown(content) {
   return criteria.length > 0 ? criteria : null;
 }
 
-async function loadChecklist(projectDir, squadSlug, executorSlug) {
-  // 1. squad.json executor-specific checklist
+function executorConfig(manifest, slug) {
+  return Array.isArray(manifest?.executors)
+    ? manifest.executors.find((executor) => executor.slug === slug)
+    : manifest?.executors?.[slug];
+}
+
+async function loadChecklist(projectDir, squadSlug, executorSlug, fallback = GENERIC_CHECKLIST) {
+  // 1. Canonical manifest executor checklist, with explicit legacy fallback
   const squadJson = await loadSquadJson(projectDir, squadSlug);
   if (squadJson) {
-    const executorConfig = squadJson.executors && squadJson.executors[executorSlug];
-    const checklist = executorConfig && executorConfig.reflection && executorConfig.reflection.checklist;
+    const config = executorConfig(squadJson, executorSlug);
+    const checklist = config?.reflection?.checklist;
+    if (checklist !== undefined && (!Array.isArray(checklist) || !checklist.length)) throw new Error('Invalid reflection checklist');
     if (Array.isArray(checklist) && checklist.length > 0) {
       return checklist.map((item, i) => {
         if (typeof item === 'string') {
@@ -100,18 +116,18 @@ async function loadChecklist(projectDir, squadSlug, executorSlug) {
     }
   }
 
-  // 2. quality.md file
+  // 2. Canonical checklist file, with explicit legacy fallback
   const fromFile = await loadQualityFile(projectDir, squadSlug);
   if (fromFile) return fromFile;
 
   // 3. Generic fallback
-  return GENERIC_CHECKLIST;
+  return fallback;
 }
 
 function loadMaxIterations(squadJson, executorSlug) {
-  const config = squadJson && squadJson.executors && squadJson.executors[executorSlug];
+  const config = executorConfig(squadJson, executorSlug);
   const val = config && config.reflection && config.reflection.max_iterations;
-  return Number.isFinite(val) && val > 0 ? Math.min(val, 5) : 2;
+  return Number.isFinite(val) && val > 0 ? Math.max(1, Math.min(Math.floor(val), 5)) : 2;
 }
 
 // ─── Deterministic checks ────────────────────────────────────────────────────
@@ -132,7 +148,7 @@ function runBuiltinCheck(id, output) {
   switch (id) {
     case 'non_empty':
       return text.length > 0;
-    case 'on_topic':
+    case 'output_length':
       // heuristic: output has at least 50 chars and is not just whitespace
       return text.length >= 50;
     case 'no_truncation':
@@ -140,7 +156,7 @@ function runBuiltinCheck(id, output) {
       return !/[,(\[{]$/.test(text.replace(/\s+$/, ''));
     case 'no_filler':
       return !FILLER_PATTERNS.some((re) => re.test(text));
-    case 'actionable':
+    case 'word_count':
       // heuristic: contains at least one noun or verb indicator
       return text.split(/\s+/).length >= 10;
     default:
@@ -162,9 +178,9 @@ function runBuiltinCheck(id, output) {
  *
  * ReflectionResult:
  *   {
- *     verdict: 'DONE' | 'DONE_WITH_CONCERNS' | 'NEEDS_ITERATION' | 'ESCALATE',
+ *     verdict: 'DONE' | 'DONE_WITH_CONCERNS' | 'NEEDS_ITERATION' | 'ESCALATE' | 'UNVERIFIED',
  *     passed: boolean,
- *     score: number,          // 0.0–1.0
+ *     score: number | null,   // deterministic checks only; null when none evaluated
  *     iteration: number,      // current iteration number
  *     max_iterations: number,
  *     issues: string[],       // failed criteria labels
@@ -186,18 +202,21 @@ async function reflect(output, context, options = {}) {
           ? { id: `opt_${i}`, label: item, critical: false }
           : item
       ))
-    : await loadChecklist(projectDir, squadSlug, executorSlug);
+    : await loadChecklist(projectDir, squadSlug, executorSlug, options.fallbackChecklist);
 
   const results = [];
   const issues = [];
   const criticalFailures = [];
   const needsLlmReview = [];
+  const unverifiedCritical = [];
 
   for (const criterion of checklist) {
     const checkResult = runBuiltinCheck(criterion.id, output);
 
     if (checkResult === null) {
       needsLlmReview.push(criterion.label);
+      issues.push(`Not evaluated: ${criterion.label}`);
+      if (criterion.critical) unverifiedCritical.push(criterion.label);
       results.push({ ...criterion, result: 'needs_review', passed: null });
       continue;
     }
@@ -213,7 +232,11 @@ async function reflect(output, context, options = {}) {
   // ── must_haves verification (4-tier gate) ─────────────────────────────────
   let mustHavesResult = null;
   if (task && task.must_haves) {
-    mustHavesResult = await checkMustHaves(task.must_haves, output, projectDir).catch(() => null);
+    try {
+      mustHavesResult = await checkMustHaves(task.must_haves, output, projectDir);
+    } catch (error) {
+      unverifiedCritical.push(`must_haves verification error: ${error.message}`);
+    }
 
     if (mustHavesResult) {
       // Artifact failures are critical (file must exist and be substantive)
@@ -225,16 +248,27 @@ async function reflect(output, context, options = {}) {
       for (const warning of mustHavesResult.warnings) {
         issues.push(`[must_have] ${warning}`);
       }
+      // Keyword mentions cannot prove a promised behavior. Missing evaluators
+      // and skipped wiring checks must not become acceptance evidence.
+      for (const detail of mustHavesResult.details) {
+        if (detail.type === 'truth' || detail.skipped) {
+          unverifiedCritical.push(`[must_have] Not verified: ${detail.statement || detail.descriptor}`);
+        } else if (detail.passed === false && ['key_link', 'artifact_wired'].includes(detail.type)) {
+          criticalFailures.push(`[must_have] ${detail.reason || detail.descriptor}`);
+        }
+      }
     }
   }
 
   const evaluated = results.filter((r) => r.passed !== null);
   const passedCount = evaluated.filter((r) => r.passed).length;
-  const score = evaluated.length > 0 ? passedCount / evaluated.length : 1.0;
-  const passed = criticalFailures.length === 0;
+  const score = evaluated.length > 0 ? passedCount / evaluated.length : null;
+  const passed = criticalFailures.length === 0 && unverifiedCritical.length === 0 && evaluated.length > 0;
 
   let verdict;
-  if (criticalFailures.length > 0 && iteration < maxIterations) {
+  if (unverifiedCritical.length > 0 || evaluated.length === 0) {
+    verdict = 'UNVERIFIED';
+  } else if (criticalFailures.length > 0 && iteration < maxIterations) {
     verdict = 'NEEDS_ITERATION';
   } else if (criticalFailures.length > 0 && iteration >= maxIterations) {
     verdict = 'ESCALATE';
@@ -249,12 +283,14 @@ async function reflect(output, context, options = {}) {
   return {
     verdict,
     passed,
-    score: Math.round(score * 100) / 100,
+    score: score === null ? null : Math.round(score * 100) / 100,
+    score_scope: 'deterministic_checks_only',
     iteration,
     max_iterations: maxIterations,
     issues,
     critical_failures: criticalFailures,
     needs_llm_review: needsLlmReview,
+    unverified_critical: unverifiedCritical,
     must_haves_result: mustHavesResult,
     summary,
     checklist: results
@@ -264,6 +300,8 @@ async function reflect(output, context, options = {}) {
 function buildSummary(verdict, score, issues, criticalFailures, taskTitle, iteration, maxIterations) {
   const scoreStr = `${Math.round(score * 100)}%`;
   switch (verdict) {
+    case 'UNVERIFIED':
+      return `[UNVERIFIED] "${taskTitle}" requires evaluation before acceptance`;
     case 'DONE':
       return `[DONE] "${taskTitle}" passed all checks (${scoreStr})`;
     case 'DONE_WITH_CONCERNS':
@@ -330,7 +368,7 @@ function formatReport(result, executorSlug) {
   const lines = [
     `## Reflection: ${result.verdict}`,
     `Executor: ${executorSlug || 'unknown'}`,
-    `Score: ${Math.round(result.score * 100)}%  |  Iteration: ${result.iteration}/${result.max_iterations}`,
+    `Deterministic checks: ${result.score === null ? 'not evaluated' : `${Math.round(result.score * 100)}%`}  |  Iteration: ${result.iteration}/${result.max_iterations}`,
     '',
     `**Summary:** ${result.summary}`
   ];

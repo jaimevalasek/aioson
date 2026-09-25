@@ -402,6 +402,27 @@ async function runSquadStatus({ args, logger, t }) {
   );
   squads.push(...fallbackSquads);
 
+  // Autorun state comes from its portable plan, independently of rendered HTML.
+  for (const squad of squads) {
+    const sessionsDir = path.join(targetDir, SQUADS_DIR, squad.slug, 'sessions');
+    const entries = await fs.readdir(sessionsDir, { withFileTypes: true }).catch(() => []);
+    squad.autorun_sessions = [];
+    for (const entry of entries.filter((item) => item.isDirectory())) {
+      try {
+        const plan = JSON.parse(await fs.readFile(path.join(sessionsDir, entry.name, 'plan.json'), 'utf8'));
+        squad.autorun_sessions.push({
+          session_id: entry.name,
+          status: plan.execution_status || 'unknown',
+          budget_usage: plan.budget_state || null,
+          completed: (plan.tasks || []).filter((task) => ['completed', 'done'].includes(task.status)).length,
+          total: (plan.tasks || []).length
+        });
+      } catch (error) {
+        if (error.code !== 'ENOENT') squad.autorun_sessions.push({ session_id: entry.name, status: 'unreadable', error: error.message });
+      }
+    }
+  }
+
   if (squads.length === 0) {
     logger.log(t('squad_status.no_squad'));
     logger.log(t('squad_status.hint'));
@@ -424,6 +445,14 @@ async function runSquadStatus({ args, logger, t }) {
     logger.log(t('squad_status.name', { value: squad.squadName }));
     logger.log(t('squad_status.mode', { value: squad.mode }));
     logger.log(t('squad_status.goal', { value: squad.goal }));
+    for (const session of squad.autorun_sessions) {
+      logger.log(`  Autorun ${session.session_id}: ${session.status}; ${session.completed ?? '?'}/${session.total ?? '?'} completed`);
+      if (session.budget_usage) {
+        logger.log(`    Estimated token reservations: ${session.budget_usage.estimated_tokens}; provider measurement unavailable`);
+        const pause = session.budget_usage.pause;
+        if (pause) logger.log(`    Budget pause: ${pause.scope}, task ${pause.task_id}, limit ${pause.limit}; resume with --plan=${session.session_id} after adjusting the limit`);
+      }
+    }
     logger.log(
       t('squad_status.agents', {
         specialists: squad.specialistCount,

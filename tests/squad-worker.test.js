@@ -208,6 +208,22 @@ test('listWorkers returns empty for squad without workers', async () => {
 
 // --- Integration tests: runWorker ---
 
+test('generated and legacy unimplemented workers are rejected before spawn', async (t) => {
+  const root = await makeTempDir();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const { workerDir } = await scaffoldWorker(root, 'team', 'stub');
+  const result = await runWorker(root, 'team', 'stub', {});
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'not_implemented');
+  assert.equal(result.attempts, 0);
+  assert.equal(result.retryable, false);
+  // The marker is also present in older generated scripts that returned "ok".
+  await fs.writeFile(path.join(workerDir, 'run.js'), '// TODO: Implement worker logic here\nprocess.stdout.write(JSON.stringify({result:"ok"}));');
+  assert.equal((await runWorker(root, 'team', 'stub', {})).error, 'not_implemented');
+  await fs.writeFile(path.join(workerDir, 'run.js'), 'process.stdout.write(JSON.stringify({result:"implemented delivery"}));');
+  assert.equal((await runWorker(root, 'team', 'stub', {})).ok, true);
+});
+
 test('runWorker executes JS script and returns output', async () => {
   const tmpDir = await makeTempDir();
   try {

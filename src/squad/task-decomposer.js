@@ -561,39 +561,24 @@ Rules:
 // ─── Plan persistence ─────────────────────────────────────────────────────────
 
 async function savePlan(projectDir, squadSlug, sessionId, plan) {
-  const planDir = path.join(
-    projectDir, '.aioson', 'squads', squadSlug, 'sessions', sessionId
-  );
-  await fs.mkdir(planDir, { recursive: true });
-  const planPath = path.join(planDir, 'plan.json');
-  await fs.writeFile(planPath, JSON.stringify(plan, null, 2), 'utf8');
-  return planPath;
+  const store = require('./plan-store');
+  return store.saveSnapshot(store.sessionDirectory(projectDir, squadSlug, sessionId), plan);
 }
 
 async function loadPlan(projectDir, squadSlug, sessionId) {
-  const planPath = path.join(
-    projectDir, '.aioson', 'squads', squadSlug, 'sessions', sessionId, 'plan.json'
-  );
-  try {
-    return JSON.parse(await fs.readFile(planPath, 'utf8'));
-  } catch {
-    return null;
-  }
+  const store = require('./plan-store');
+  return store.readPlan(store.sessionDirectory(projectDir, squadSlug, sessionId));
 }
 
 async function updateTaskStatus(projectDir, squadSlug, sessionId, taskId, status, result = null) {
-  const plan = await loadPlan(projectDir, squadSlug, sessionId);
-  if (!plan) return null;
-
-  const task = plan.tasks.find((t) => t.id === taskId);
-  if (!task) return null;
-
-  task.status = status;
-  if (result !== null) task.result = result;
-  task.updated_at = new Date().toISOString();
-
-  await savePlan(projectDir, squadSlug, sessionId, plan);
-  return plan;
+  const store = require('./plan-store');
+  return store.mutatePlan(store.sessionDirectory(projectDir, squadSlug, sessionId), (plan) => {
+    const task = plan.tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+    task.status = status;
+    if (result !== null) task.result = result;
+    task.updated_at = new Date().toISOString();
+  });
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -667,8 +652,38 @@ function getReadyTasks(plan) {
 
   return plan.tasks.filter((t) => {
     if (t.status !== 'pending') return false;
-    return t.dependencies.every((dep) => completed.has(dep));
+    return (t.dependencies || []).every((dep) => completed.has(dep));
   });
+}
+
+function validatePlanDependencies(plan) {
+  if (!Array.isArray(plan.tasks)) return 'tasks must be an array';
+  const tasks = new Map();
+  for (const task of plan.tasks) {
+    if (!task || typeof task.id !== 'string' || !task.id || tasks.has(task.id)) return 'task IDs must be unique non-empty strings';
+    if (task.dependencies != null && !Array.isArray(task.dependencies)) return `invalid dependencies: ${task.id}`;
+    tasks.set(task.id, task);
+  }
+  const visiting = new Set();
+  const visited = new Set();
+  function visit(id) {
+    if (!tasks.has(id)) return `unknown dependency: ${id}`;
+    if (visiting.has(id)) return `dependency cycle: ${id}`;
+    if (visited.has(id)) return null;
+    visiting.add(id);
+    for (const dependency of tasks.get(id).dependencies || []) {
+      const error = visit(dependency);
+      if (error) return error;
+    }
+    visiting.delete(id);
+    visited.add(id);
+    return null;
+  }
+  for (const id of tasks.keys()) {
+    const error = visit(id);
+    if (error) return error;
+  }
+  return null;
 }
 
 /**
@@ -732,6 +747,7 @@ function formatPlan(plan) {
 module.exports = {
   decompose,
   getReadyTasks,
+  validatePlanDependencies,
   isPlanComplete,
   updateTaskStatus,
   loadPlan,
