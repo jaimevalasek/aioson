@@ -46,6 +46,70 @@ function effectsFile(fixture, worker = 'executor') {
   return path.join(fixture.projectDir, '.aioson/squads', fixture.squadSlug, 'workers', worker, 'effects.txt');
 }
 
+async function configureDependencies(fixture, dependencies, extra = {}) {
+  const file = path.join(fixture.projectDir, '.aioson/squads', fixture.squadSlug, 'squad.manifest.json');
+  const manifest = JSON.parse(await fs.readFile(file, 'utf8'));
+  await fs.writeFile(file, JSON.stringify({ ...manifest, depends_on: dependencies, ...extra }));
+}
+
+async function readEventRows(fixture) {
+  const { db } = await require('../src/runtime-store').openRuntimeDb(fixture.projectDir);
+  try { return db.prepare('SELECT * FROM inter_squad_events ORDER BY id').all(); }
+  finally { db.close(); }
+}
+
+test('dependency checks preserve available events while another dependency is missing', async (t) => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [{ squad: 'source', event: 'asset.ready' }, { squad: 'review', event: 'review.ready' }]);
+  await require('../src/squad/inter-squad-events').publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.ready', payload: { file: 'asset.txt' } });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await runFixture(fixture);
+    assert.equal(result.error, 'unmet_dependencies');
+    assert.deepEqual(result.unmet, [{ squad: 'review', event: 'review.ready' }]);
+    assert.equal((await readEventRows(fixture))[0].consumed_by, '[]');
+  }
+  await assert.rejects(fs.access(effectsFile(fixture)), { code: 'ENOENT' });
+});
+
+test('dependency event from a different squad cannot authorize execution', async (t) => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [{ squad: 'expected', event: 'asset.ready' }]);
+  await require('../src/squad/inter-squad-events').publish(fixture.projectDir, { fromSquad: 'other', event: 'asset.ready' });
+  assert.equal((await runFixture(fixture)).error, 'unmet_dependencies');
+  assert.equal((await readEventRows(fixture))[0].consumed_by, '[]');
+  await assert.rejects(fs.access(effectsFile(fixture)), { code: 'ENOENT' });
+});
+
+test('overlapping dependency patterns can observe the same source event', async (t) => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [{ squad: 'source', event: 'asset.*' }, { squad: 'source', event: 'asset.ready' }]);
+  await require('../src/squad/inter-squad-events').publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.ready' });
+  assert.equal((await runFixture(fixture)).ok, true);
+  assert.equal(await fs.readFile(effectsFile(fixture), 'utf8'), 'task-1\n');
+});
+
+test('peek filters expired and consumed events without changing stored rows', async (t) => {
+  const fixture = await makeFixture();
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  const events = require('../src/squad/inter-squad-events');
+  const expired = await events.publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.old' });
+  const consumed = await events.publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.used' });
+  const pending = await events.publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.ready', payload: { file: 'asset.txt' } });
+  const { db } = await require('../src/runtime-store').openRuntimeDb(fixture.projectDir);
+  try {
+    db.prepare('UPDATE inter_squad_events SET created_at = ? WHERE id = ?').run('2000-01-01T00:00:00.000Z', expired);
+    db.prepare('UPDATE inter_squad_events SET consumed_by = ? WHERE id = ?').run(JSON.stringify([fixture.squadSlug]), consumed);
+  } finally { db.close(); }
+  const before = await readEventRows(fixture);
+  const selected = await events.peek(fixture.projectDir, { toSquad: fixture.squadSlug, subscriptions: ['asset.*'], fromSquad: 'source' });
+  assert.deepEqual(selected.map((event) => event.id), [pending]);
+  assert.deepEqual(selected[0].payload, { file: 'asset.txt' });
+  assert.deepEqual(await readEventRows(fixture), before);
+});
+
 test('zero budget pauses without effects; null limits stay unlimited and invalid limits fail closed', async (t) => {
   const fixture = await makeFixture({ workerScript: countedWorker });
   t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));

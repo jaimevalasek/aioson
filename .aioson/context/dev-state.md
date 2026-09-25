@@ -2,7 +2,7 @@
 last_updated: 2026-09-25
 active_feature: squad-event-delivery
 active_phase: 1
-next_step: "Concluido primeiro trecho do item 1.5: handoffs e cron. Proximo: inter_squad_events de autorun/persistent e inbox."
+next_step: "Concluidos handoffs/cron e consulta de dependencias sem consumo. Proximo: vincular inter_squad_events a sessao duravel no autorun/persistent; depois inbox."
 status: in_progress
 ---
 
@@ -10,7 +10,7 @@ status: in_progress
 
 **Feature:** squad-event-delivery
 **Status:** in_progress
-**Next step:** Concluido primeiro trecho do item 1.5: handoffs e cron. Proximo: inter_squad_events de autorun/persistent e inbox.
+**Next step:** Concluidos handoffs/cron e consulta de dependencias sem consumo. Proximo: vincular inter_squad_events a sessao duravel no autorun/persistent; depois inbox.
 
 ## Context package
 
@@ -19,8 +19,8 @@ status: in_progress
 
 ## History
 
-- 2026-09-25: phase 1 — Concluido item 1.3: avaliacao e evidencia antes de concluir. Proximo: item 1.4, pausa por orcamento e retomada.
 - 2026-09-25: phase 1 — Implementar reserva por tentativa, pausa e retomada do orçamento
 - 2026-09-25: phase 1 — Concluido item 1.4: pausa e retomada com orçamento persistido. Proximo: item 1.5, recuperacao e confirmacao de eventos.
 - 2026-09-25: phase 1 — Corrigir ack de handoffs e recuperacao por consumidor
 - 2026-09-25: phase 1 — Concluido primeiro trecho do item 1.5: handoffs e cron. Proximo: inter_squad_events de autorun/persistent e inbox.
+- 2026-09-25: phase 1 — Concluidos handoffs/cron e consulta de dependencias sem consumo. Proximo: vincular inter_squad_events a sessao duravel no autorun/persistent; depois inbox.

@@ -43,6 +43,35 @@ async function publish(projectDir, { fromSquad, event, payload = null }) {
 }
 
 /**
+ * Inspect pending events without acknowledging or deleting them.
+ * Dependency checks must not steal events from the execution that needs them.
+ */
+async function peek(projectDir, { toSquad, subscriptions = [], fromSquad } = {}) {
+  if (subscriptions.length === 0) return [];
+  const handle = await openRuntimeDb(projectDir, { mustExist: true });
+  if (!handle) return [];
+  const { db } = handle;
+  try {
+    const rows = db.prepare(`
+      SELECT * FROM inter_squad_events
+      WHERE datetime(created_at, '+' || ttl_hours || ' hours') >= datetime('now')
+      ORDER BY created_at ASC
+    `).all();
+    return rows.filter((row) =>
+      (!fromSquad || row.from_squad === fromSquad) &&
+      !JSON.parse(row.consumed_by || '[]').includes(toSquad) &&
+      subscriptions.some((pattern) => matchesPattern(row.event, pattern))
+    ).map((row) => ({
+      id: row.id,
+      fromSquad: row.from_squad,
+      event: row.event,
+      payload: row.payload ? JSON.parse(row.payload) : null,
+      createdAt: row.created_at
+    }));
+  } finally { db.close(); }
+}
+
+/**
  * Consume pending events for a squad.
  * Marks consumed events so they are not returned again for this squad.
  *
@@ -172,4 +201,4 @@ async function publishWithA2A(projectDir, eventData, options = {}) {
   return { localId, remoteResults };
 }
 
-module.exports = { publish, consume, matchesPattern, publishWithA2A, publishRemote };
+module.exports = { publish, peek, consume, matchesPattern, publishWithA2A, publishRemote };

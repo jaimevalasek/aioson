@@ -8,6 +8,11 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [context-routing · 2026-09-25] `fix(context): tighten routing and retired stages` corrige seleção de contexto e referências a agentes aposentados (`e2452027`).
+- [squad-execution · 2026-09-25] `fix(squad): persist and verify task execution` preserva planos concorrentes, dependências, evidência de conclusão e orçamento retomável (`dfff698f`).
+- [squad-event-delivery · 2026-09-25] `fix(squad): recover daemon deliveries safely` registra recibos por consumidor, reconciliação e exclusão de cron (`c4ff9816`).
+- [squad-dependency-checks · 2026-09-25] `fix(squad): inspect dependencies without consuming` consulta eventos pendentes sem confirmação e confere a origem declarada; 54 testes focados passaram.
+
 - [tutorials · 2026-09-21] `docs(tutorials): refresh interactive learning surfaces` refreshes the Portuguese tutorial hub, adds interactive JS/CSS surfaces, and ships Feature, Jev, and web research learning paths.
 - [jev · 2026-09-21] `feat(jev): add typed reviews and web research` adds typed Jev judgments, visual and agent review routes, web discovery/collection, privacy-safe research artifacts, synchronized guidance, evaluations, and localized CLI coverage.
 - [execution · 2026-09-21] `feat(execution): add Cursor lane safeguards` adds the Cursor execution lane, automatic host-signature refresh, run-owned temporary-artifact cleanup, dashboard routing updates, and focused regression coverage.

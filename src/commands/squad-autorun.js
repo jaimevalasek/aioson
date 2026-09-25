@@ -384,8 +384,9 @@ async function validateInterSquadDependencies(projectDir, manifest) {
   for (const dep of deps) {
     if (!dep.event) continue;
     try {
-      const events = await interSquadEvents.consume(projectDir, {
+      const events = await interSquadEvents.peek(projectDir, {
         toSquad: manifest.slug,
+        fromSquad: dep.squad,
         subscriptions: [dep.event]
       });
       if (events.length === 0) {

@@ -194,3 +194,11 @@ Revisão técnica em duas passagens, sem alegar revisão independente ou aprova�
 Pendências de implementação que exigem inspeção localizada: migração exata do esquema de entregas por consumidor; contrato dos leitores legados de status; reuso seguro do mecanismo de lock. São escolhas técnicas a resolver com código e testes no incremento correspondente, não motivos para começar uma reescrita.
 
 **Primeira entrega recomendada:** 1.1 e 1.2, preservação de estado e despacho por dependências, em incrementos verificáveis. Em seguida concluir 1.3–1.6 antes de ampliar autonomia. Correções limitadas podem seguir Dev Simple Plan quando couberem no gate; capacidades novas entram no fluxo de feature com escopo próprio. Este plano não substitui essas aprovações nem altera o onboarding em andamento.
+
+## Progresso de implementação — 25/09/2026
+
+- Itens 1.1–1.4 implementados nos Simple Plans de estado/dependências, conclusão verificada e orçamento/retomada. Commit `dfff698f`.
+- Item 1.5, trecho SquadDaemon: recibos por consumidor, recuperação/reconciliação e exclusão de cron. Commit `c4ff9816`. Suíte completa dessa base: 5411 testes passaram, quatro ignorados, zero falhas.
+- Item 1.5, consulta de dependências: `peek` consulta eventos pendentes e não expirados sem confirmar nem limpar a fila; autorun filtra pelo squad de origem declarado. Quatro regressões reproduzidas antes da correção; 54 testes de autorun e security-scan passaram após a mudança. Incluem ausência de outra dependência, origem errada, padrões sobrepostos e preservação dos registros expirados/consumidos durante consulta.
+- Próximo trecho: associar eventos consumidos por autorun/persistent a uma sessão durável, preservar seu contexto na retomada e confirmar somente após execução aceita. O `consume` usado no despacho ainda confirma antecipadamente; inbox/HTTP também permanece pendente. A correção da consulta não encerra o item 1.5.
+- Item 1.6 e ciclos seguintes permanecem pendentes. Commits locais autorizados pelo operador; publicação não realizada.
