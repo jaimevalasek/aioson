@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-guided-pipeline · 2026-09-25] `fix(squad): keep pipeline guidance read-only` impede consumo antecipado e conclusão por transporte; conexões completas, dependências e skips verificados em 14 testes.
+
 - [squad-preflight-coverage · 2026-09-25] `fix(squad): map all public preflight operations` adiciona cinco operações anunciadas pelo kernel, alias explícito e limites entre suporte CLI e execução guiada; 16 testes passaram pelo resolver, template e CLI real.
 
 - [squad-inbox-delivery · 2026-09-25] `fix(squad): deduplicate inbox and HTTP calls` compartilha identidade e recibos entre HTTP e inbox, recupera chamadas aceitas após reinício e preserva resultados desconhecidos para reconciliação; 5439 testes passaram na suíte completa e 73 na verificação final focada.

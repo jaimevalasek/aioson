@@ -1,12 +1,12 @@
 # Task: Squad Pipeline
 
-> Inter-squad pipeline management. Connects squads into autonomous production flows through a DAG.
+> Inter-squad pipeline management. Connects squads through a DAG; the CLI run command prepares guided activation, not autonomous execution.
 
 ## When To Use
 - `@squad pipeline create <name>` — create a new pipeline
 - `@squad pipeline connect <pipeline> <source-squad>:<port> → <target-squad>:<port>` — connect squads
 - `@squad pipeline show <pipeline>` — show the DAG with nodes, edges, and status
-- `@squad pipeline run <pipeline>` — run the pipeline and trigger handoffs
+- `@squad pipeline run <pipeline>` — inspect inputs and guide the next ready activation
 
 ## Concept
 
@@ -83,15 +83,13 @@ If a cycle is detected, state in the selected project language that the pipeline
 
 ## Step 5 - Run Pipeline
 
-When running `@squad pipeline run <pipeline>`:
-1. Calculate topological order.
-2. For each squad in order:
-   - Read `pending` handoffs with `to_squad = squad_slug`.
-   - Create execution context with handoff payloads.
-   - Notify the user in the selected project language that `@<squad>` is being activated with input from `@<source>`.
-3. After each squad processes its output:
-   - Create `pending` handoffs for connected downstream squads.
-   - Mark consumed handoffs as `consumed`.
+Run `aioson squad:pipeline . --sub=run --pipeline=<slug>` (or `--sub=continue`).
+1. Inspect the topological order and all required incoming connections, matching both squads and both ports.
+2. `prepared` means the CLI suggests the next activation; it did not dispatch a squad. Pass the listed handoff IDs and payloads to the actual executor.
+3. Guidance never consumes handoffs. The executing consumer owns acknowledgement after all required work is accepted, using its durable delivery protocol. Never acknowledge by ad hoc SQL before execution.
+4. Output handoffs mean `produced`, not accepted completion. Legacy consumed inputs without execution evidence remain `unverified`. Inspect the actual session results before claiming delivery.
+5. `skip` creates explicit skipped markers; these are not usable inputs and do not satisfy downstream dependencies. A terminal skip without a receipt is refused.
+6. Repeat the guided command after actual work. It must not re-execute work or invent a completed result from transport state. The CLI currently has no pipeline-wide acceptance receipt; report this limitation when completion remains unverified.
 
 ## Handoff Format
 

@@ -11,90 +11,35 @@ const {
 } = require('../runtime-store');
 const { resolveTargetDir } = require('../lib/project-root');
 
-/**
- * Determine node completion status by checking handoffs.
- * A node is "complete" if all its outgoing edges have consumed handoffs,
- * or if it has no outgoing edges and has at least one incoming consumed handoff
- * (or is the first node with no incoming edges and has produced output handoffs).
- */
+// Handoff transport state is not evidence that a node's output was accepted.
 function classifyNodes(db, pipelineSlug, order, edges) {
-  const handoffs = db
-    .prepare('SELECT * FROM squad_handoffs WHERE pipeline_slug = ? ORDER BY created_at DESC')
-    .all(pipelineSlug);
-
-  const outgoing = {};
-  const incoming = {};
-  for (const slug of order) {
-    outgoing[slug] = [];
-    incoming[slug] = [];
-  }
-  for (const edge of edges) {
-    if (outgoing[edge.source_squad]) outgoing[edge.source_squad].push(edge);
-    if (incoming[edge.target_squad]) incoming[edge.target_squad].push(edge);
-  }
-
+  const handoffs = db.prepare('SELECT * FROM squad_handoffs WHERE pipeline_slug = ? ORDER BY created_at DESC, rowid DESC').all(pipelineSlug);
+  const latest = edge => handoffs.find(h => h.from_squad === edge.source_squad
+    && h.from_port === edge.source_port && h.to_squad === edge.target_squad
+    && h.to_port === edge.target_port);
+  const usable = handoff => {
+    if (!handoff || !['pending', 'consumed'].includes(handoff.status)) return false;
+    try { return JSON.parse(handoff.payload_json)?.skipped !== true; } catch { return false; }
+  };
   const nodeStatus = {};
-
   for (const slug of order) {
-    const outEdges = outgoing[slug];
-    const inEdges = incoming[slug];
-
-    // Check if all outgoing handoffs are consumed
-    if (outEdges.length > 0) {
-      const allProduced = outEdges.every(edge =>
-        handoffs.some(h =>
-          h.from_squad === edge.source_squad &&
-          h.from_port === edge.source_port &&
-          (h.status === 'consumed' || h.status === 'pending')
-        )
-      );
-      const allConsumed = outEdges.every(edge =>
-        handoffs.some(h =>
-          h.from_squad === edge.source_squad &&
-          h.from_port === edge.source_port &&
-          h.status === 'consumed'
-        )
-      );
-
-      if (allConsumed) {
-        nodeStatus[slug] = 'completed';
-      } else if (allProduced) {
-        nodeStatus[slug] = 'produced';
-      } else {
-        nodeStatus[slug] = 'pending';
-      }
-    } else {
-      // Terminal node — check if all incoming handoffs are consumed
-      if (inEdges.length === 0) {
-        // Root node with no edges — mark pending
-        nodeStatus[slug] = 'pending';
-      } else {
-        const allInConsumed = inEdges.every(edge =>
-          handoffs.some(h =>
-            h.to_squad === edge.target_squad &&
-            h.to_port === edge.target_port &&
-            h.status === 'consumed'
-          )
-        );
-        nodeStatus[slug] = allInConsumed ? 'completed' : 'pending';
-      }
-    }
+    const outgoing = edges.filter(edge => edge.source_squad === slug);
+    const incoming = edges.filter(edge => edge.target_squad === slug);
+    const outputs = outgoing.map(latest);
+    const inputs = incoming.map(latest);
+    const skipped = outputs.length > 0 && outputs.every(h => {
+      try { return JSON.parse(h?.payload_json)?.skipped === true; } catch { return false; }
+    });
+    if (skipped) nodeStatus[slug] = 'skipped';
+    else if (outputs.length && outputs.every(usable)) nodeStatus[slug] = 'produced';
+    else if (!inputs.every(usable)) nodeStatus[slug] = 'blocked';
+    else if (inputs.length && inputs.every(h => h.status === 'consumed')) nodeStatus[slug] = 'unverified';
+    else nodeStatus[slug] = 'pending';
   }
-
-  // First node with no incoming edges: if it has produced outputs, mark completed
-  for (const slug of order) {
-    if (incoming[slug].length === 0 && outgoing[slug].length > 0) {
-      if (nodeStatus[slug] === 'produced' || nodeStatus[slug] === 'completed') {
-        nodeStatus[slug] = 'completed';
-      }
-    }
-  }
-
   return { nodeStatus, handoffs };
 }
 
 function findNextPendingNode(order, nodeStatus) {
-  // Find first node that is pending and whose dependencies are all completed
   return order.find(slug => nodeStatus[slug] === 'pending') || null;
 }
 
@@ -134,7 +79,7 @@ async function runSquadPipeline({ args = [], options = {}, logger = console } = 
     if (subcommand === 'list') {
       const pipelines = listPipelines(db);
       if (pipelines.length === 0) {
-        logger.log('No pipelines found. Create one with: aioson squad:pipeline show --sub=create');
+        logger.log('No pipelines found. Use @squad pipeline create <name> to prepare one.');
         return { ok: true, pipelines: [] };
       }
       logger.log(`Pipelines (${pipelines.length}):`);
@@ -233,31 +178,16 @@ async function runSquadPipeline({ args = [], options = {}, logger = console } = 
       const nextNode = findNextPendingNode(order, nodeStatus);
 
       if (!nextNode) {
-        // All nodes completed
-        const allCompleted = order.every(s => nodeStatus[s] === 'completed');
-        if (allCompleted) {
-          logger.log('Pipeline completed! All nodes have been executed.');
-          return { ok: true, pipeline: slug, status: 'completed', nextNode: null };
-        }
-        logger.log('No actionable node found. Check pending handoffs.');
-        return { ok: true, pipeline: slug, status: 'blocked', nextNode: null };
+        const status = Object.values(nodeStatus).some(value => value === 'unverified' || value === 'produced') ? 'unverified' : 'blocked';
+        logger.log('No ready node. Verify execution evidence; handoff transport does not prove pipeline completion.');
+        return { ok: true, pipeline: slug, status, nextNode: null, nodeStatus };
       }
 
-      // Check if next node has pending incoming handoffs to consume
-      const pendingIncoming = handoffs.filter(h =>
-        h.to_squad === nextNode && h.status === 'pending'
-      );
-
-      // Consume pending incoming handoffs for this node
-      if (pendingIncoming.length > 0) {
-        const updateStmt = db.prepare(
-          'UPDATE squad_handoffs SET status = ?, consumed_at = ? WHERE id = ?'
-        );
-        for (const h of pendingIncoming) {
-          updateStmt.run('consumed', new Date().toISOString(), h.id);
-        }
-        logger.log(`Consumed ${pendingIncoming.length} incoming handoff(s) for ${nextNode}.`);
-      }
+      // Guidance is read-only: the executing consumer owns acknowledgement.
+      const pendingIncoming = handoffs.filter(h => h.to_squad === nextNode && h.status === 'pending'
+        && dag.edges.some(edge => edge.source_squad === h.from_squad && edge.source_port === h.from_port
+          && edge.target_squad === h.to_squad && edge.target_port === h.to_port));
+      logger.log('Prepared guidance only; no squad was executed and no handoff was consumed.');
 
       const orchestratorAgent = findSquadOrchestratorAgent(projectDir, nextNode);
       logger.log(`Next: activate squad "${nextNode}"`);
@@ -270,7 +200,8 @@ async function runSquadPipeline({ args = [], options = {}, logger = console } = 
       return {
         ok: true,
         pipeline: slug,
-        status: 'running',
+        status: 'prepared',
+        incomingHandoffIds: pendingIncoming.map(h => h.id),
         nextNode,
         orchestratorAgent,
         nodeStatus
@@ -304,6 +235,10 @@ async function runSquadPipeline({ args = [], options = {}, logger = console } = 
 
       // Create synthetic handoffs for all outgoing edges of the skipped node
       const outEdges = dag.edges.filter(e => e.source_squad === nextNode);
+      if (!outEdges.length) {
+        logger.error('Cannot record a terminal skip without an execution receipt; no state changed.');
+        return { ok: false, error: 'skip_requires_receipt', pipeline: slug, node: nextNode };
+      }
       const insertHandoff = db.prepare(`
         INSERT INTO squad_handoffs (id, pipeline_slug, from_squad, from_port, to_squad, to_port, payload_json, status, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)

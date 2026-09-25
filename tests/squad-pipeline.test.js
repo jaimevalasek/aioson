@@ -271,3 +271,83 @@ test('handoff lifecycle: pending → consumed', async () => {
     db.close();
   }
 });
+
+const { runSquadPipeline } = require('../src/commands/squad-pipeline');
+const { spawnSync } = require('node:child_process');
+const quiet = { log() {}, error() {} };
+
+async function guidedFixture(t, edges) {
+  const dir = await makeTempDir();
+  const db = await openDb(dir);
+  t.after(async () => { db.close(); await fs.rm(dir, { recursive: true, force: true }); });
+  upsertPipeline(db, { slug: 'guided', name: 'Guided' });
+  for (const slug of new Set(edges.flat())) {
+    insertSquad(db, slug);
+    addPipelineNode(db, { pipelineSlug: 'guided', squadSlug: slug });
+  }
+  for (const [source, target] of edges) addPipelineEdge(db, {
+    pipelineSlug: 'guided', sourceSquad: source, sourcePort: 'out', targetSquad: target, targetPort: 'in'
+  });
+  const handoff = (id, from, to, status = 'pending', payload = {}) => db.prepare(`
+    INSERT INTO squad_handoffs (id, pipeline_slug, from_squad, from_port, to_squad, to_port, payload_json, status, created_at)
+    VALUES (?, 'guided', ?, 'out', ?, 'in', ?, ?, ?)
+  `).run(id, from, to, JSON.stringify(payload), status, new Date().toISOString());
+  const run = (sub = 'run') => runSquadPipeline({ args: [dir], options: { sub, pipeline: 'guided' }, logger: quiet });
+  return { dir, db, handoff, run };
+}
+
+test('guided CLI repeats preparation without consuming or dispatching', async t => {
+  const { dir, db, handoff, run } = await guidedFixture(t, [['a', 'b']]);
+  handoff('ab', 'a', 'b');
+  for (const sub of ['run', 'continue']) {
+    const result = await run(sub);
+    assert.equal(result.status, 'prepared');
+    assert.equal(result.nextNode, 'b');
+    assert.deepEqual(result.incomingHandoffIds, ['ab']);
+    assert.equal(result.nodeStatus.a, 'produced');
+    assert.equal(db.prepare('SELECT status FROM squad_handoffs WHERE id = ?').get('ab').status, 'pending');
+  }
+  const cli = spawnSync(process.execPath, [path.resolve(__dirname, '../bin/aioson.js'), 'squad:pipeline', dir,
+    '--sub=run', '--pipeline=guided', '--json'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.equal(JSON.parse(cli.stdout).status, 'prepared');
+  assert.equal(db.prepare('SELECT consumed_at FROM squad_handoffs WHERE id = ?').get('ab').consumed_at, null);
+});
+
+test('legacy consumed handoffs do not prove terminal completion', async t => {
+  const { handoff, run } = await guidedFixture(t, [['a', 'b']]);
+  handoff('ab', 'a', 'b', 'consumed');
+  const result = await run();
+  assert.equal(result.status, 'unverified');
+  assert.equal(result.nodeStatus.b, 'unverified');
+  assert.equal(result.nextNode, null);
+});
+
+test('fan-out matches destinations and fan-in requires every source', async t => {
+  const { handoff, run } = await guidedFixture(t, [['a', 'b'], ['a', 'c'], ['b', 'd'], ['c', 'd']]);
+  handoff('ab', 'a', 'b');
+  handoff('bd', 'b', 'd');
+  let result = await run();
+  assert.equal(result.nodeStatus.a, 'pending');
+  assert.equal(result.nodeStatus.c, 'blocked');
+  assert.equal(result.nodeStatus.d, 'blocked');
+  handoff('ac', 'a', 'c');
+  result = await run();
+  assert.equal(result.nextNode, 'c');
+  handoff('cd', 'c', 'd');
+  result = await run();
+  assert.equal(result.nextNode, 'd');
+});
+
+test('latest failed input and skipped output cannot satisfy dependencies', async t => {
+  const { handoff, run } = await guidedFixture(t, [['a', 'b']]);
+  handoff('old', 'a', 'b', 'consumed');
+  handoff('new', 'a', 'b', 'failed');
+  assert.equal((await run()).nodeStatus.b, 'blocked');
+  const skipped = await run('skip');
+  assert.equal(skipped.skipped, 'a');
+  const result = await run();
+  assert.equal(result.nodeStatus.a, 'skipped');
+  assert.equal(result.nodeStatus.b, 'blocked');
+  assert.equal(result.status, 'blocked');
+});
