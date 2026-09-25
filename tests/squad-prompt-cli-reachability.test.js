@@ -11,6 +11,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { resolveSquadPreflight, OPERATIONS, OPERATION_ALIASES } = require('../src/lib/squad-preflight');
 
 const ROOT = path.join(__dirname, '..');
 const TEMPLATE = path.join(ROOT, 'template', '.aioson');
@@ -58,4 +59,33 @@ test('the executor generator answers to both spellings the docs ever used', () =
   const registered = registeredCommands();
   assert.ok(registered.has('squad:agent-create'));
   assert.ok(registered.has('squad:agent:create'));
+});
+
+test('every explicit squad operation in the shipped kernel resolves its declared task and shipped modules', () => {
+  const kernel = fs.readFileSync(path.join(TEMPLATE, 'agents/squad.md'), 'utf8');
+  const routes = [...kernel.matchAll(/- `@squad ([a-z-]+) [^`]*` → `([^`]+)`/g)];
+  assert.ok(routes.length >= 17, 'the test must inspect the actual public routing table');
+  for (const [, operation, task] of routes) {
+    const result = resolveSquadPreflight({ operation });
+    assert.equal(result.ok, true, `public operation ${operation} must resolve`);
+    assert.ok(result.tasks.includes(task), `${operation} must select ${task}`);
+    for (const file of [...result.tasks, ...result.modules.map((module) => module.file)]) {
+      assert.ok(fs.existsSync(path.join(ROOT, 'template', file)), `${operation}: missing ${file}`);
+    }
+  }
+});
+
+test('preflight support and completion commands are registered and aliases have explicit canonical targets', () => {
+  const registered = registeredCommands();
+  for (const operation of OPERATIONS) {
+    const result = resolveSquadPreflight({ operation });
+    for (const command of [...result.doneGate, ...(result.execution?.commands || [])]) {
+      const match = command.match(/^aioson ([a-z0-9:-]+)/);
+      if (match) assert.ok(registered.has(match[1]), `${operation}: unregistered ${match[1]}`);
+    }
+  }
+  for (const [alias, canonical] of Object.entries(OPERATION_ALIASES)) {
+    assert.ok(OPERATIONS.includes(canonical));
+    assert.equal(resolveSquadPreflight({ operation: alias }).operation, canonical);
+  }
 });

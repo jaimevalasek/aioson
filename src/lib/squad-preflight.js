@@ -21,8 +21,21 @@ const path = require('node:path');
 const OPERATIONS = [
   'default-create', 'design', 'create', 'validate', 'eval', 'pilot', 'analyze',
   'extend', 'repair', 'refresh', 'export', 'investigate', 'plan',
-  'configure-output', 'session-run'
+  'configure-output', 'session-run', 'review', 'profile', 'learning-review', 'task-decompose', 'pipeline'
 ];
+const OPERATION_ALIASES = { 'learning review': 'learning-review' };
+const EXECUTION_BY_OPERATION = {
+  review: { kind: 'agent-guided', commands: ['aioson squad:review . --squad=<slug> --output=<file>'],
+    note: 'Follow the phase review task. Cross-AI review is CLI support for an existing output, not automatic phase acceptance.' },
+  profile: { kind: 'agent-guided', commands: [],
+    note: 'With user consent, follow profiler-researcher, profiler-enricher and profiler-forge. There is no squad:profile CLI command.' },
+  'learning-review': { kind: 'agent-guided', commands: ['aioson squad:learning . --sub=list --squad=<slug>', 'aioson squad:learning . --sub=stats --squad=<slug>'],
+    note: 'Inventory supports the review; consolidation and promotion still require the task protocol and evidence.' },
+  'task-decompose': { kind: 'agent-authored', commands: ['aioson squad:validate . --squad=<slug> --strict --json'],
+    note: 'Author executor task files using the task protocol. squad:plan decomposes an execution goal and is not an alias for this operation.' },
+  pipeline: { kind: 'guided', commands: ['aioson squad:pipeline . --sub=show --pipeline=<slug>', 'aioson squad:pipeline . --sub=run --pipeline=<slug>'],
+    note: 'The CLI run command guides the next activation; it does not execute the squads. Verify actual delivery before reporting completion.' }
+};
 const LANES = ['quick', 'standard', 'premium', 'regulated'];
 const MODES = ['content', 'software', 'research', 'mixed'];
 const SIGNALS = [
@@ -49,6 +62,11 @@ const TASK_BY_OPERATION = {
   investigate: ['squad-investigate.md'],
   plan: ['squad-execution-plan.md'],
   'configure-output': ['squad-output-config.md'],
+  review: ['squad-review.md'],
+  profile: ['squad-profile.md'],
+  'learning-review': ['squad-learning-review.md'],
+  'task-decompose': ['squad-task-decompose.md'],
+  pipeline: ['squad-pipeline.md'],
   'session-run': []
 };
 
@@ -98,7 +116,8 @@ function isCreateLike(op) {
  * Pure resolver: which modules an activation must load, and why.
  */
 function resolveSquadPreflight({ operation, lane = 'standard', mode = 'mixed', signals = {} } = {}) {
-  const op = String(operation || '').trim();
+  const requestedOperation = String(operation || '').trim();
+  const op = Object.hasOwn(OPERATION_ALIASES, requestedOperation) ? OPERATION_ALIASES[requestedOperation] : requestedOperation;
   if (!OPERATIONS.includes(op)) {
     return { ok: false, error: 'invalid_operation', operation: op, operations: OPERATIONS };
   }
@@ -108,13 +127,13 @@ function resolveSquadPreflight({ operation, lane = 'standard', mode = 'mixed', s
   const deliverable = modeKey === 'software' || modeKey === 'mixed';
   const modules = [];
   const add = (file, reason) => {
-    if (!modules.some((m) => m.file === file)) modules.push({ file: `${DOCS}/${file}`, reason });
+    if (!modules.some((m) => m.file === `${DOCS}/${file}`)) modules.push({ file: `${DOCS}/${file}`, reason });
   };
 
-  if (['default-create', 'create', 'extend', 'repair', 'refresh', 'validate'].includes(op)) {
+  if (['default-create', 'create', 'extend', 'repair', 'refresh', 'validate', 'task-decompose'].includes(op)) {
     add('package-contract.md', `operation ${op} touches the package`);
   }
-  if (['default-create', 'design', 'create', 'extend', 'refresh'].includes(op)) {
+  if (['default-create', 'design', 'create', 'extend', 'refresh', 'task-decompose'].includes(op)) {
     add('creation-flow.md', `operation ${op} shapes executors`);
   }
   if (op === 'default-create' || op === 'design' || sig.regulated || sig['new-domain'] || laneKey === 'regulated') {
@@ -127,7 +146,7 @@ function resolveSquadPreflight({ operation, lane = 'standard', mode = 'mixed', s
   if (researchOps.includes(op) && laneKey !== 'quick') {
     add('research-loop.md', `lane ${laneKey} grounds executors in evidence`);
   }
-  if (researchOps.includes(op)) {
+  if (researchOps.includes(op) || op === 'review') {
     add('quality-lens.md', 'review scorecard');
   }
   if (op === 'eval' || sig['quality-gate'] || (laneKey !== 'quick' && (isCreateLike(op) || op === 'validate'))) {
@@ -136,27 +155,27 @@ function resolveSquadPreflight({ operation, lane = 'standard', mode = 'mixed', s
   if (op === 'pilot' || (isCreateLike(op) && deliverable) || (op === 'session-run' && deliverable)) {
     add('pilot-gate.md', op === 'pilot' ? 'operation pilot' : `mode ${modeKey} is deliverable-class`);
   }
-  if ((['default-create', 'create', 'extend', 'refresh'].includes(op) || sig.sources) && laneKey !== 'quick') {
+  if ((['default-create', 'create', 'extend', 'refresh', 'profile'].includes(op) || sig.sources) && laneKey !== 'quick') {
     add('persona-grounding.md', 'executor expertise mined from sources');
   }
   if (sig.content || (op === 'session-run' && sig.content) || op === 'configure-output') {
     add('content-output.md', 'content deliverables');
   }
-  if (sig.workflow || isCreateLike(op)) {
+  if (sig.workflow || isCreateLike(op) || ['review', 'pipeline', 'task-decompose'].includes(op)) {
     add('workflow-quality.md', sig.workflow ? 'workflows, gates or review loops requested' : 'create registers the default workflow');
   }
-  if (sig.session || op === 'session-run' || op === 'investigate') {
+  if (sig.session || ['session-run', 'investigate', 'pipeline', 'learning-review', 'review'].includes(op)) {
     add('session-operations.md', op === 'session-run' ? 'session run' : 'session, investigation or routing');
   }
-  if (sig.genomes || isCreateLike(op)) {
+  if (sig.genomes || isCreateLike(op) || op === 'profile') {
     add('genome-bindings.md', sig.genomes ? 'genomes in play' : 'create-phase genome pass (Step 5.5)');
   }
-  const skillRouter = researchOps.includes(op) || sig.content || sig.workflow;
+  const skillRouter = researchOps.includes(op) || op === 'task-decompose' || sig.content || sig.workflow;
 
   const tasks = (TASK_BY_OPERATION[op] || []).map((name) => `${TASKS}/${name}`);
 
   const doneGate = [];
-  if (op !== 'export' && op !== 'investigate' && op !== 'session-run') {
+  if (!['export', 'investigate', 'session-run', 'review', 'profile', 'learning-review', 'pipeline'].includes(op)) {
     doneGate.push('aioson squad:validate . --squad=<slug> --strict --json');
     if (laneKey === 'quick') {
       doneGate.push('# quick lane: record evaluation.deferReason instead of running squad:eval');
@@ -168,11 +187,13 @@ function resolveSquadPreflight({ operation, lane = 'standard', mode = 'mixed', s
     }
     doneGate.push('aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory');
   }
-  doneGate.push('aioson agent:done . --agent=squad --slug=<slug> --summary="Squad <slug>: <N> agents assembled"');
+  doneGate.push(`aioson agent:done . --agent=squad --slug=<slug> --summary="Squad <slug>: ${op}; <verified outcome>"`);
 
   return {
     ok: true,
     operation: op,
+    requestedOperation,
+    execution: EXECUTION_BY_OPERATION[op] || null,
     lane: laneKey,
     mode: modeKey,
     signals: Object.keys(sig).filter((k) => sig[k]),
@@ -212,6 +233,7 @@ function measurePreflight(targetDir, resolved) {
 
 module.exports = {
   OPERATIONS,
+  OPERATION_ALIASES,
   LANES,
   MODES,
   SIGNALS,

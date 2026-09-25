@@ -48,6 +48,11 @@ async function runSquadPreflight({ args = [], options = {}, logger = console } =
   logger.log('');
   logger.log(`  Total: ${result.totalBytes} bytes (~${result.estimatedTokens} tokens)${result.missing.length ? ` · ${result.missing.length} file(s) missing` : ''}`);
   logger.log('');
+  if (result.execution) {
+    logger.log(`  Execution: ${result.execution.kind} — ${result.execution.note}`);
+    for (const command of result.execution.commands) logger.log(`    ${command}`);
+    logger.log('');
+  }
   logger.log('  Done gate:');
   for (const cmd of result.doneGate) logger.log(`    ${cmd}`);
   logger.log('');

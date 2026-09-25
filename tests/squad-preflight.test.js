@@ -101,3 +101,37 @@ test('squad:preflight is a JSON CLI command and refuses a missing operation', as
   assert.equal(parsed.operation, 'eval');
   assert.ok(parsed.modules.some((m) => m.file.endsWith('eval-gate.md')));
 });
+
+test('new public operations and the documented learning alias work through the real CLI', () => {
+  for (const operation of ['review', 'profile', 'learning-review', 'task-decompose', 'pipeline', 'learning review']) {
+    const result = spawnSync(process.execPath, [path.join(ROOT, 'bin/aioson.js'), 'squad:preflight',
+      path.join(ROOT, 'template'), `--operation=${operation}`, '--json'], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${operation}: ${result.stderr}`);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.requestedOperation, operation);
+    assert.deepEqual(parsed.missing, []);
+    assert.equal(parsed.tasks.length, 1);
+    assert.equal(new Set(parsed.load.map((entry) => entry.file)).size, parsed.load.length);
+    assert.ok(!parsed.doneGate.some((command) => command.includes('agents assembled')));
+  }
+});
+
+test('review and maintenance do not imply rebuilding or evaluating the entire squad package', () => {
+  for (const operation of ['review', 'profile', 'learning-review', 'pipeline']) {
+    const result = resolveSquadPreflight({ operation });
+    assert.ok(!result.doneGate.some((command) => /squad:eval|squad:validate|kind=squad-package/.test(command)), operation);
+    assert.ok(result.execution.note);
+  }
+  assert.deepEqual(resolveSquadPreflight({ operation: 'profile' }).execution.commands, []);
+  assert.ok(resolveSquadPreflight({ operation: 'task-decompose' }).execution.note.includes('not an alias'));
+});
+
+test('text preflight exposes guided execution boundaries and supported commands', async () => {
+  const lines = [];
+  await runSquadPreflight({ args: [path.join(ROOT, 'template')], options: { operation: 'pipeline' },
+    logger: { log: (line) => lines.push(line), error() {} } });
+  assert.ok(lines.some((line) => line.includes('Execution: guided')));
+  assert.ok(lines.some((line) => line.includes('does not execute the squads')));
+  assert.ok(lines.some((line) => line.includes('squad:pipeline . --sub=show')));
+});

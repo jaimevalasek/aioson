@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-preflight-coverage · 2026-09-25] `fix(squad): map all public preflight operations` adiciona cinco operações anunciadas pelo kernel, alias explícito e limites entre suporte CLI e execução guiada; 16 testes passaram pelo resolver, template e CLI real.
+
 - [squad-inbox-delivery · 2026-09-25] `fix(squad): deduplicate inbox and HTTP calls` compartilha identidade e recibos entre HTTP e inbox, recupera chamadas aceitas após reinício e preserva resultados desconhecidos para reconciliação; 5439 testes passaram na suíte completa e 73 na verificação final focada.
 
 - [squad-event-sessions · 2026-09-25] `fix(squad): acknowledge events after execution` vincula eventos ao plano autorun, preserva payload e identidade em pausas/interrupções e retoma o mesmo plano no persistent; 88 testes focados passaram.
