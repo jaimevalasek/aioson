@@ -27,6 +27,14 @@ Use this module for ongoing orchestration and maintenance concerns around the sq
 
 Workers receive `revision_context` (feedback and previous snapshot), `dependency_deliveries` (current dependency snapshots) and `project_dir` to resolve references. Honor the requested change and preserve unrelated content. A dependent output stays pending until regenerated and accepted. Revision reuses the original event context without claiming new events. External files/effects still require domain-specific controls; do not infer that a saved JSON response backs up a file or permits replaying a payment or publication.
 
+## Evidence by delivery type
+
+- Content: retain source references next to factual claims, the requested voice/format and the accepted full text. Missing or conflicting sources stay explicit. Revise a bounded task, preserve unaffected content and regenerate dependent formats. A hash or word count does not evaluate factual or editorial quality.
+- Processes: retain event identity, consumer, attempts, effect receipt and exception/reconciliation evidence. Inspect uncertain external effects before retrying. Daemon deliveries can be inspected with `squad:daemon --sub=deliveries --squad=<slug>` and reconciled with `--sub=reconcile --delivery=<key> --resolution=retry|completed|failed --evidence="<checked receipt or reason>"`. Reconciliation requires observed evidence.
+- Software: include an executable verification task that depends on implementation, runs the actual entry point with representative input and fails on an unexpected exit/output. Return the command, observed exit/output and artifact references. File existence and an implementation worker's narrative cannot replace this check. A failed verifier keeps the session incomplete. After repair, explicitly rearm the safe verification task using the plan-store task update API; resume preserves accepted independent work and does not automatically retry failed effects.
+
+Use the existing worker/acceptance contracts for these checks. Semantic judgments require an identified reviewer/evaluator; unknown criteria remain unverified. Do not add presentation-only workers to prove delivery. Publish only under the user's existing authorization.
+
 ## Ephemeral squads
 
 Trigger on:
@@ -116,15 +124,15 @@ If the user asks for a dashboard or panel:
 
 When the user brings a challenge:
 
-- present each relevant specialist in sequence
+- involve specialists only when their distinct contribution is needed
 - require concrete reasoning, tradeoffs, and next steps
 - synthesize convergences and tensions at the end
-- ask which specialist the user wants to push further
+- continue the authorized work; ask for a decision only when it changes the outcome
 
 If a specialist produces a final artifact:
 
 - save a draft `.md` in `output/{squad-slug}/`
-- then let the orchestrator fold it into the session HTML
+- reference the artifact from the session record; update an existing HTML view when the delivery contract calls for it
 
 ## Recurring tasks
 

@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-domain-deliveries · 2026-09-25] Contratos por domínio documentam fontes, recibos e verificação executável. Smoke real cria programa inválido, bloqueia conclusão, corrige e retoma verificador explicitamente rearmado sem repetir construção; 19 testes passaram.
+
 - [squad-pipeline-sessions · 2026-09-25] `feat(squad): bind pipelines to verified sessions` congela DAG/objetivo por run-id, prepara sessões estáveis e passa evidências verificadas entre nós; conclusão exige aceite de todos. Consulta não cria sessões e instruções diferenciam contratos heurísticos. 61 regressões e 4 testes próprios passaram.
 
 - [squad-empty-plan · 2026-09-25] `fix(squad): reject empty execution completion` impede completed por zero tarefas e padroniza prepared/session_id na preparação estruturada; 2 regressões passaram.
