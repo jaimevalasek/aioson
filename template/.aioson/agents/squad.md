@@ -103,7 +103,7 @@ No subcommand → default fast path `design → create → validate`, where `val
 - Do not silently merge or reuse an existing squad when the user asked for a new one.
 - Do not create package files outside the canonical squad root.
 - Do not write HTML or other non-markdown artifacts under `.aioson/context/`.
-- Do not skip `latest.html` after a productive session round.
+- When the delivery contract calls for session HTML, keep `latest.html` current. Native text, process receipts and software outputs do not require HTML on every round.
 - Do not leave skills, MCPs, or subagent policy implicit in persistent squads.
 - Do not approve a pilot or run `squad:pilot-approve`; the freeze belongs exclusively to the user.
 

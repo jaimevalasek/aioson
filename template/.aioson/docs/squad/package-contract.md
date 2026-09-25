@@ -218,7 +218,7 @@ If `uiCapability.mode = "executor"`:
 
 Create `.aioson/squads/{squad-slug}/agents/orquestrador.md`. It must include: squad mission, members, routing guide, genomes, skills, MCPs, subagent policy, inter-squad awareness, execution plan awareness, learnings protocol, hard constraints, and output contract.
 
-The orchestrator is responsible for the final session HTML and for synthesis across specialists.
+The orchestrator is responsible for synthesis and the final delivery in its requested format. When session HTML is applicable under `content-output.md`, reuse the existing presentation and keep it synchronized with accepted artifacts.
 
 ## Gateway registration
 

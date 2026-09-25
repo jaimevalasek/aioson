@@ -60,10 +60,12 @@ Reuse those skills if they already imply known output patterns or blueprints.
 
 ## Session HTML deliverable
 
-After every productive response round, write:
+Create a session HTML view when the user requests it, the squad's delivery contract requires it, or a multi-part package benefits from a browsable presentation. A one-off text, process receipt or software artifact can use its native format. When HTML is applicable, write:
 
 - `output/{squad-slug}/{session-id}.html`
 - update `output/{squad-slug}/latest.html`
+
+Use the accepted files and structured session data as the source. Reuse the existing output skill/template and update changed sections; do not regenerate the presentation on every response. HTML is a view, not evidence of acceptance.
 
 The HTML should capture the actual session work:
 
@@ -96,6 +98,6 @@ Never:
 
 - overwrite another squad's output
 - write HTML under `.aioson/`
-- skip `latest.html`
+- leave `latest.html` stale when maintaining a session HTML view
 - use SQLite as the sole copy of generated content
 - reduce structured content to a single blob if the domain naturally wants sections
