@@ -37,8 +37,8 @@ Present summary:
 - Archived: A
 
 ## CLI support
-- `aioson squad:learning list <slug>` — list active learnings
-- `aioson squad:learning stats <slug>` — statistics by type and status
-- `aioson squad:learning archive <slug>` — archive stale learnings
-- `aioson squad:learning promote <slug> <id>` — promote learning to rule
-- `aioson squad:learning export <slug>` — export learnings as JSON
+- `aioson squad:learning . --sub=list --squad=<slug>` — list active learnings
+- `aioson squad:learning . --sub=stats --squad=<slug>` — statistics by type and status
+- `aioson squad:learning . --sub=archive --squad=<slug>` — archive stale learnings
+- `aioson squad:learning . --sub=promote --squad=<slug> --id=<id>` — promote learning to rule
+- `aioson squad:learning . --sub=export --squad=<slug>` — export learnings as JSON

@@ -813,3 +813,50 @@ test('AC-premium-07 legacy autorun executes an available task-bound specialist a
   assert.equal(task.result.execution_evidence.worker, 'specialist-domain');
   assert.match(task.result.output_summary, /"integration_owner":"executor"/);
 });
+
+test('Agent Teams preparation persists prepared without completion, hooks or event acknowledgement', async t => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [], { subscriptions: ['asset.*'],
+    hooks: { pre_run: 'node -e "process.exit(2)"' } });
+  await require('../src/squad/inter-squad-events').publish(fixture.projectDir, { fromSquad: 'source', event: 'asset.ready' });
+  const script = `
+    const adapter=require('./src/squad/agent-teams-adapter');
+    adapter.resolveEngine=()=>({engine:'agent-teams',version:'test-boundary'});
+    const {runSquadAutorun}=require('./src/commands/squad-autorun');
+    runSquadAutorun({args:[process.argv[1]], options:{squad:'premium-fixture',plan:'truth-session',json:true},
+      logger:{log(){},warn(){},error(){}}}).then(result=>process.stdout.write(JSON.stringify(result))).catch(e=>{console.error(e);process.exit(1)});
+  `;
+  const child = require('node:child_process').spawnSync(process.execPath, ['-e', script, fixture.projectDir], {
+    cwd: path.resolve(__dirname, '..'), encoding: 'utf8'
+  });
+  assert.equal(child.status, 0, child.stderr);
+  const result = JSON.parse(child.stdout);
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 'prepared');
+  assert.equal((await loadPlan(fixture.projectDir, fixture.squadSlug, fixture.sessionId)).execution_status, 'prepared');
+  assert.equal((await readTask(fixture)).status, 'pending');
+  const state = await require('../src/squad/state-manager').readState(fixture.projectDir, fixture.squadSlug);
+  assert.equal(state.meta.sessions_completed, 0);
+  assert.equal(state.meta.execution_status, 'prepared');
+  assert.equal((await readEventRows(fixture))[0].consumed_by, '[]');
+  await assert.rejects(fs.access(effectsFile(fixture)), { code: 'ENOENT' });
+});
+
+
+test('legacy execution still enforces the pre-run hook before worker effects', async t => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await configureDependencies(fixture, [], { hooks: { pre_run: 'node -e "process.exit(2)"' } });
+  assert.equal((await runFixture(fixture, { engine: 'legacy' })).error, 'hook_denied');
+  await assert.rejects(fs.access(effectsFile(fixture)), { code: 'ENOENT' });
+});
+
+test('hook interruption fails closed instead of authorizing worker dispatch', () => {
+  const { runHook } = require('../src/lib/hook-protocol');
+  const result = runHook('node -e "setTimeout(()=>{},5000)"', {}, { timeoutMs: 20 });
+  assert.equal(result.denied, true);
+  assert.equal(result.allowed, false);
+  assert.equal(result.exitCode, null);
+  assert.ok(result.stderr);
+});

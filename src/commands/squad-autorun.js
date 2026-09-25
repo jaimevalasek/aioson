@@ -1096,27 +1096,6 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     }
   }
 
-  // ── 3.3 Hook Exit Code Protocol — pre_run hook ─────────────────────────────
-  const preRunHook = squadManifest.hooks?.pre_run;
-  if (preRunHook) {
-    logger.log(`Running pre_run hook: ${preRunHook.slice(0, 60)}${preRunHook.length > 60 ? '...' : ''}`);
-    const hookResult = runHook(preRunHook, {
-      squad: squadSlug,
-      session_id: sessionId,
-      goal: plan.goal,
-      project_dir: targetDir
-    });
-    if (hookResult.denied) {
-      logger.error(`✗ Pre-run hook denied execution${hookResult.stderr ? ': ' + hookResult.stderr : ''}`);
-      return { ok: false, error: 'hook_denied', hook: preRunHook, reason: hookResult.stderr };
-    }
-    if (hookResult.warn) {
-      logger.log(`  ⚠ Pre-run hook exited ${hookResult.exitCode} (non-fatal)${hookResult.stderr ? ': ' + hookResult.stderr : ''}`);
-    } else {
-      logger.log('  ✓ Pre-run hook passed');
-    }
-  }
-
   // Freeze event identity before dispatch. Resumes recover this snapshot, even after TTL.
   const eventSession = await interSquadEvents.bindSession(targetDir, {
     toSquad: squadSlug, sessionId,
@@ -1145,20 +1124,47 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     logger.log(`Teammates: ${teamConfig.teammates.map((t) => t.name).join(', ')}`);
     logger.log(`Tasks: ${teamConfig.tasks.length}`);
     logger.log('');
-    logger.log('Agent Teams execution is configured. Use:');
+    logger.log('Agent Teams configuration prepared; no tasks executed. Use:');
     logger.log(`  claude --team ${path.relative(targetDir, configPath)}`);
     logger.log('');
 
-    await stateManager.recordSessionEnd(targetDir, squadSlug, sessionId, []).catch(() => {});
+    mutatePlan(sessionDirectory(targetDir, squadSlug, sessionId), (current) => {
+      current.execution_status = 'prepared';
+    });
+    await stateManager.updateState(targetDir, squadSlug, {
+      meta: { execution_status: 'prepared' }
+    }).catch(() => {});
 
     return {
       ok: true,
+      status: 'prepared',
       engine: 'agent-teams',
       session_id: sessionId,
       squad: squadSlug,
       configPath: path.relative(targetDir, configPath),
       teamConfig
     };
+  }
+
+  // ── 3.3 Hook Exit Code Protocol — pre_run hook ─────────────────────────────
+  const preRunHook = squadManifest.hooks?.pre_run;
+  if (preRunHook) {
+    logger.log(`Running pre_run hook: ${preRunHook.slice(0, 60)}${preRunHook.length > 60 ? '...' : ''}`);
+    const hookResult = runHook(preRunHook, {
+      squad: squadSlug,
+      session_id: sessionId,
+      goal: plan.goal,
+      project_dir: targetDir
+    });
+    if (hookResult.denied) {
+      logger.error(`✗ Pre-run hook denied execution${hookResult.stderr ? ': ' + hookResult.stderr : ''}`);
+      return { ok: false, error: 'hook_denied', hook: preRunHook, reason: hookResult.stderr };
+    }
+    if (hookResult.warn) {
+      logger.log(`  ⚠ Pre-run hook exited ${hookResult.exitCode} (non-fatal)${hookResult.stderr ? ': ' + hookResult.stderr : ''}`);
+    } else {
+      logger.log('  ✓ Pre-run hook passed');
+    }
   }
 
   // ── Execute tasks (legacy engine) ─────────────────────────────────────────

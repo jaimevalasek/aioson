@@ -89,3 +89,30 @@ test('preflight support and completion commands are registered and aliases have 
     assert.equal(resolveSquadPreflight({ operation: alias }).operation, canonical);
   }
 });
+
+test('learning review examples pass explicit project and subcommand arguments to the CLI', async t => {
+  const os = require('node:os');
+  const { spawnSync } = require('node:child_process');
+  const { openRuntimeDb } = require('../src/runtime-store');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-learning-doc-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const { db } = await openRuntimeDb(dir);
+  db.close();
+  const doc = fs.readFileSync(path.join(TEMPLATE, 'tasks/squad-learning-review.md'), 'utf8');
+  const commands = [...doc.matchAll(/`aioson squad:learning ([^`]+)`/g)].map(match => match[1]);
+  assert.equal(commands.length, 5);
+  for (const command of commands) {
+    assert.ok(command.startsWith('. --sub='));
+    assert.ok(command.includes('--squad=<slug>'));
+    if (command.includes('--sub=promote')) {
+      assert.ok(command.includes('--id=<id>'));
+      continue;
+    }
+    const args = command.replace('<slug>', 'fixture').split(' ');
+    args[0] = dir;
+    const child = spawnSync(process.execPath, [path.join(ROOT, 'bin/aioson.js'), 'squad:learning', ...args, '--json'], { encoding: 'utf8' });
+    assert.equal(child.status, 0, child.stderr);
+    const result = JSON.parse(child.stdout);
+    assert.ok(result.found === true || result.exported === true || result.archived === 0, child.stdout);
+  }
+});

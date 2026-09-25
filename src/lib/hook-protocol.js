@@ -51,14 +51,20 @@ function runHook(script, context = {}, opts = {}) {
     )
   };
 
-  const result = spawnSync('sh', ['-c', script], {
+  const shell = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'sh';
+  const result = spawnSync(script, {
+    shell,
     env,
     timeout: timeoutMs,
     encoding: 'utf8',
     stdio: 'pipe'
   });
 
-  const exitCode = result.status ?? 1;
+  if (result.error || result.signal || result.status === null) {
+    return { allowed: false, denied: true, exitCode: null, stdout: result.stdout || '',
+      stderr: result.error?.message || `Hook interrupted: ${result.signal || 'unknown outcome'}` };
+  }
+  const exitCode = result.status;
   const stdout = (result.stdout || '').trim();
   const stderr = (result.stderr || '').trim();
 
