@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-proportional-instructions · 2026-09-25] `refactor(squad): make role depth proportional` retira cotas de papéis/frameworks e biografias inventadas, mantém fontes e critérios; perfis opcionais; 29 testes passaram.
+
 - [squad-session-entry · 2026-09-25] `feat(squad): unify session CLI entry points` conecta run/status/resume ao plano autorun, expõe evidências e reconciliação sem mutar consultas; 7 testes de CLI/status passaram.
 
 - [squad-prepared-state · 2026-09-25] `fix(squad): distinguish preparation from execution` persiste prepared sem falsa conclusão; hooks usam shell nativo e falham fechados em interrupção; exemplos learning verificados pelo CLI; 46 testes passaram.

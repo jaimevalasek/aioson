@@ -184,7 +184,7 @@ Show the classification review to the user before the warm-up round.
 
 ## Assistant behavioral profiles
 
-When a role becomes `type: assistant`, assign one of:
+Behavioral profiles are optional communication preferences. Assign one only when the user requests it or a concrete interaction requirement benefits from it:
 
 - `dominant-driver`
 - `influential-expressive`
@@ -195,11 +195,11 @@ When a role becomes `type: assistant`, assign one of:
 - `steady-compliant`
 - `compliant-dominant`
 
-The chosen profile must shape communication style and decision-making.
+An explicit profile shapes communication style; it never substitutes for expertise, permissions or evidence. Omit it when it adds no observable behavior.
 
 ## Executor count
 
-Prefer 3 to 5 specialized roles.
+Start with one accountable executor. Add a specialist only for independent work, a distinct tool or permission boundary, or a review that must be independent. Reuse the existing integration owner; do not add a coordinator whose only job is forwarding messages.
 Do not create extra executors just to look comprehensive.
 
 ## Generation playbook (learn from past eval-gates)
@@ -216,11 +216,13 @@ The capture-and-promote side of the loop is `eval-gate.md` § Learning.
 
 ## Pre-write depth gate
 
-Depth is forced **before** the prompt is written, not scored after. For each executor, fill the whole Variant A depth block (`package-contract.md` § Executor depth block) — `persona`, `expertise.frameworks`, `expertise.vocabulary`, `signature_moves`, `anti_patterns` — *before* writing its `.md`. Calibration: fewer than two named frameworks means the role is underspecified; no vocabulary extracted when the blueprint had sources means you have not read them; a persona a senior in this role would not recognize means you do not understand the role yet — investigate before writing. Each anti-pattern becomes a `## Hard constraints` line.
+Before writing an executor, establish its outcome, source-grounded expertise, allowed scope, output contract and concrete failure modes. Keep the Variant A/B field names for package compatibility; their content must explain decisions, not fill a biography quota.
 
-If any field is empty for a non-trivial executor, **stop and fill it before writing the prompt**. A prompt written without them is the basic-agent failure by construction. Customer-facing executors fill the Variant B block (`backstory` + `operational_breadth`) instead.
+Use a named framework only when it changes how this task is performed. There is no minimum framework count. If sources contain relevant terms or constraints, extract and cite those; never invent sources, credentials, work history or expertise to fill a field. A concise operating stance is sufficient for persona/backstory; real-person fidelity requires supplied evidence and the profile protocol.
 
-This gate is generative — it shapes what you write. The `quality-lens.md` scorecard is evaluative — it catches what slipped through. Run both.
+Stop only for a missing contract, essential source, unresolved scope or quality criterion that prevents a reliable delivery. Explain the missing evidence. Do not stop merely because an optional style field or redundant method is absent. Preserve role-specific anti-patterns in hard constraints.
+
+The quality-lens review checks the same operational evidence. Neither prompt length nor vivid persona proves quality.
 
 ## Creation outcome
 

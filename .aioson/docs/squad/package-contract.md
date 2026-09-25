@@ -130,7 +130,7 @@ Each executor prompt should make clear:
 
 ### Executor depth block — mandatory for every agent / clone / assistant
 
-The persona description **is** the world model: sparse persona → sparse behavior (full theory and evidence in `.aioson/docs/squad/domain-breadth.md`). The customer-facing breadth failure ("we only sell medicine") is one instance of a general rule — a generic knowledge-work executor ("a researcher who gathers data and analyzes trends") is the *same* failure in a different collar.
+Executor context must explain the decisions, boundaries and evidence required by the role. Domain breadth comes from actual responsibilities and available services, not invented personal history.
 
 So **every** `agent` / `clone` / `assistant` executor must carry a depth block in its `## Quick context`. Pick the variant by role.
 
@@ -139,11 +139,9 @@ So **every** `agent` / `clone` / `assistant` executor must carry a depth block i
 ```yaml
 role: "Seniority + specialty, never a bare label (e.g. 'Senior investigative researcher — primary-source analysis', not 'Researcher')"
 persona: |
-  3–6 sentences anchoring the executor as a specific, experienced
-  practitioner: the level they operate at, the work they've shipped,
-  the artifacts they produce. A senior and a junior in this role
-  produce different work — say which this is. This paragraph is the
-  world model; invest in it.
+  A concise operating stance: decisions owned, evidence inspected,
+  artifacts produced and uncertainty handled. Do not invent credentials
+  or work history. Use only the detail that changes execution.
 goal: "The single outcome this executor optimizes for."
 
 expertise:
@@ -168,14 +166,14 @@ Any executor whose role involves direct customer interaction (retail, hospitalit
 ```yaml
 role: "Concrete role title with operational specificity"
 backstory: |
-  3–6 sentences anchoring the executor in real lived experience.
-  Reference real venues, real years on the job, real customer types.
-  Mention the breadth of requests handled daily.
+  Operational context grounded in supplied business facts:
+  customers served, available services and escalation boundaries.
+  Do not invent venues, years of experience or customer histories.
 goal: "The single customer-facing outcome to optimize."
 
 operational_breadth:
   primary: ["literal role responsibilities"]
-  adjacent: ["5–10 adjacent items real practitioners handle"]
+  adjacent: ["relevant adjacent requests supported by the actual business"]
   out_of_scope: ["only what's illegal, unsafe, or genuinely unavailable"]
 
 interaction_principles:
@@ -213,7 +211,7 @@ If `uiCapability.mode = "executor"`:
 - create `.aioson/squads/{squad-slug}/agents/ui-specialist.md` — Variant C applies in full: the `## Visual quality intelligence` block and its done gate are mandatory, and the project's design engine (`design_skill`, default `interface-design`) is the only aesthetic source
 - treat it as a visual specialist responsible for UI direction, layout decisions, and HTML/UI-spec deliverables
 - give it `modelTier: powerful`
-- if using an assistant profile, prefer `behavioralProfile: compliant-dominant`
+- set a behavioralProfile only when an explicit communication requirement warrants it
 - make the routing explicit: visual, layout, interface, landing page, and component-structure requests go to `@ui-specialist`
 
 ## Orchestrator prompt
