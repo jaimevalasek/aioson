@@ -389,6 +389,7 @@ async function readSessionStatus(targetDir, squad, session) {
   const completed = plan.tasks.filter(task => ['completed', 'done'].includes(task.status));
   const unfinished = plan.tasks.filter(task => !completed.includes(task));
   let status = plan.execution_status === 'completed' && unfinished.length ? 'incomplete' : plan.execution_status || 'prepared';
+  if (!plan.tasks.length && status === 'completed') status = 'unverified';
   let ownerState = 'none';
   if (status === 'running') {
     let db;

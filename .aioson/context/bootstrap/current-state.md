@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-empty-plan · 2026-09-25] `fix(squad): reject empty execution completion` impede completed por zero tarefas e padroniza prepared/session_id na preparação estruturada; 2 regressões passaram.
+
 - [squad-local-revision · 2026-09-25] `feat(squad): prepare localized session revisions` cria sessão derivada com feedback, invalida dependentes e preserva saídas aceitas; workers recebem referências e contexto; 45 testes passaram.
 
 - [squad-delivery-artifacts · 2026-09-25] `feat(squad): preserve complete delivery outputs` guarda respostas completas por hash, mantém candidatos separados do aceite e expõe referências no status; 46 testes passaram.

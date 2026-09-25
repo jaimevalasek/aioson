@@ -860,3 +860,23 @@ test('hook interruption fails closed instead of authorizing worker dispatch', ()
   assert.equal(result.exitCode, null);
   assert.ok(result.stderr);
 });
+
+test('an empty executable plan cannot report completion or consume events', async t => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await changePlan(fixture, plan => { plan.tasks = []; plan.parallel_groups = {}; plan.execution_status = 'completed'; });
+  assert.equal((await runFixture(fixture)).error, 'empty_plan');
+  const { readSessionStatus } = require('../src/commands/squad-status');
+  assert.equal((await readSessionStatus(fixture.projectDir, fixture.squadSlug, fixture.sessionId)).status, 'unverified');
+  await assert.rejects(fs.access(effectsFile(fixture)), { code: 'ENOENT' });
+});
+
+test('structured preparation reports the canonical session identity without executing', async t => {
+  const fixture = await makeFixture({ workerScript: countedWorker });
+  t.after(() => fs.rm(fixture.projectDir, { recursive: true, force: true }));
+  await changePlan(fixture, plan => { plan.structured_prompt = 'Fill in the executable plan.'; });
+  const result = await runFixture(fixture, { mode: 'structured' });
+  assert.equal(result.status, 'prepared');
+  assert.equal(result.session_id, fixture.sessionId);
+  await assert.rejects(fs.access(effectsFile(fixture)), { code: 'ENOENT' });
+});

@@ -1067,8 +1067,10 @@ async function runSquadAutorun({ args, options = {}, logger }) {
     logger.log(`[structured] Decomposition prompt saved to: ${path.relative(targetDir, promptPath)}`);
     logger.log('Activate your agent to fill in the plan, then resume with:');
     logger.log(`  aioson squad:autorun . --squad=${squadSlug} --plan=${sessionId}`);
-    return { ok: true, mode: 'structured', sessionId, promptPath: path.relative(targetDir, promptPath), plan };
+    return { ok: true, status: 'prepared', mode: 'structured', session_id: sessionId, sessionId, promptPath: path.relative(targetDir, promptPath), plan };
   }
+
+  if (!plan.tasks.length) return { ok: false, error: 'empty_plan', status: 'unverified', session_id: sessionId };
 
   const releaseExecution = acquireExecution(sessionDirectory(targetDir, squadSlug, sessionId));
   if (!releaseExecution) {
