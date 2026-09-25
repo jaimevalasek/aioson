@@ -6,6 +6,32 @@ const { SquadDaemon } = require('../squad-daemon');
 const { openRuntimeDb } = require('../runtime-store');
 const { consume: consumeInterSquadEvents } = require('../squad/inter-squad-events');
 const { resolveTargetDir } = require('../lib/project-root');
+const deliveryStore = require('../squad/event-delivery');
+
+async function handleDeliveries(projectDir, squadSlug, options, { logger }) {
+  if (!squadSlug) return { ok: false, error: 'squad_required' };
+  const handle = await openRuntimeDb(projectDir, { mustExist: true });
+  if (!handle) return { ok: false, error: 'runtime_not_found' };
+  try {
+    deliveryStore.recover(handle.db, squadSlug);
+    if (options.sub === 'reconcile') {
+      const result = deliveryStore.reconcile(handle.db, {
+        squad: squadSlug, key: options.delivery, resolution: options.resolution, evidence: options.evidence
+      });
+      logger.log(result.ok ? `Delivery ${result.delivery_key}: ${result.status}` : `Reconciliation refused: ${result.error}`);
+      return result;
+    }
+    const result = deliveryStore.list(handle.db, squadSlug);
+    for (const batch of result.batches) {
+      if (batch.error) logger.log(`Batch ${batch.source_id}: ${batch.error}`);
+    }
+    for (const row of result.deliveries) {
+      logger.log(`${row.delivery_key}: ${row.worker_slug} — ${row.status}; attempts=${row.attempts}/${row.max_attempts}${row.error ? `; ${row.error}` : ''}`);
+    }
+    logger.log('Reconcile after checking the effect: --sub=reconcile --delivery=<key> --resolution=retry|completed|failed --evidence="receipt or reason"');
+    return { ok: true, ...result };
+  } finally { handle.db.close(); }
+}
 
 async function handleStart(projectDir, squadSlug, options, { logger, t }) {
   if (!squadSlug) {
@@ -335,6 +361,9 @@ async function runSquadDaemon({ args, options, logger, t }) {
       return handleStop(targetDir, squadSlug, { logger, t });
     case 'logs':
       return handleLogs(targetDir, squadSlug, { logger, t });
+    case 'deliveries':
+    case 'reconcile':
+      return handleDeliveries(targetDir, squadSlug, options, { logger });
     default:
       logger.error(t('squad_daemon.unknown_sub', { sub }));
       return { ok: false };

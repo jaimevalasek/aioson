@@ -671,6 +671,7 @@ async function openRuntimeDb(targetDir, options = {}) {
 
   ensureLegacyColumns(db);
 
+  require('./squad/event-delivery').migrate(db);
   return { db, dbPath, runtimeDir };
 }
 

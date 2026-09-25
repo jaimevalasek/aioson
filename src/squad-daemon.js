@@ -5,6 +5,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { openRuntimeDb, insertWorkerRun } = require('./runtime-store');
 const { listWorkers, runWorker, loadWorkerConfig } = require('./worker-runner');
+const deliveries = require('./squad/event-delivery');
 
 const SQUADS_DIR = path.join('.aioson', 'squads');
 
@@ -90,6 +91,8 @@ class SquadDaemon {
     this.lastCronCheck = null;
     this.eventLog = [];
     this.startedAt = null;
+    this.eventPoll = null;
+    this.cronRuns = new Map();
   }
 
   log(level, message, data) {
@@ -171,6 +174,8 @@ class SquadDaemon {
       await new Promise((resolve) => this.httpServer.close(resolve));
       this.httpServer = null;
     }
+
+    await Promise.allSettled([this.eventPoll, ...this.cronRuns.values()].filter(Boolean));
 
     this._upsertDaemonRecord('stopped');
 
@@ -332,45 +337,73 @@ class SquadDaemon {
     if (!this.running || this.cronJobs.length === 0) return;
 
     const now = new Date();
+    deliveries.recover(this.db, this.squadSlug);
+    const started = [];
     for (const job of this.cronJobs) {
-      if (cronMatches(job.parsed, now)) {
-        this.log('info', `Cron triggered: ${job.workerSlug}`, { cron: job.cron });
-        this._executeWorker(job.workerSlug, {}, 'scheduled').catch(err => {
-          this.log('error', `Cron execution failed: ${job.workerSlug}`, { error: err.message });
-        });
-      }
+      if (this.cronRuns.has(job.workerSlug)) continue;
+      const outstanding = this.db.prepare(`SELECT d.* FROM squad_deliveries d JOIN squad_delivery_batches b ON b.source_key=d.source_key
+        WHERE d.squad_slug=? AND d.worker_slug=? AND b.source_type='cron' AND d.status IN ('pending','running','reconciliation_required') ORDER BY d.updated_at LIMIT 1`)
+        .get(this.squadSlug, job.workerSlug);
+      if (!outstanding && !cronMatches(job.parsed, now)) continue;
+      const operation = (async () => {
+        let row = outstanding;
+        if (!row) {
+          const config = await loadWorkerConfig(this.projectDir, this.squadSlug, job.workerSlug);
+          const batch = deliveries.prepareBatch(this.db, { type: 'cron', id: `${job.workerSlug}:${Math.floor(now.getTime() / 60000)}`, squad: this.squadSlug, workers: [{ ...config, slug: job.workerSlug }] });
+          row = this.db.prepare('SELECT * FROM squad_deliveries WHERE source_key=?').get(batch.source_key);
+        }
+        const owned = deliveries.claim(this.db, row.delivery_key);
+        if (owned) await this._runDelivery(owned, {}, 'scheduled');
+      })().catch((error) => this.log('error', `Cron execution failed: ${job.workerSlug}`, { error: error.message }))
+        .finally(() => this.cronRuns.delete(job.workerSlug));
+      this.cronRuns.set(job.workerSlug, operation);
+      started.push(operation);
     }
     this.lastCronCheck = now;
 
     // Update heartbeat
     this._updateHeartbeat();
+    await Promise.all(started);
   }
 
   async _pollEvents() {
     if (!this.running || !this.db) return;
+    if (this.eventPoll) return this.eventPoll;
+    this.eventPoll = this._deliverHandoffs();
+    try { await this.eventPoll; } finally { this.eventPoll = null; }
+  }
+
+  async _deliverHandoffs() {
 
     // Poll for pending handoffs targeted at this squad
     try {
+      deliveries.recover(this.db, this.squadSlug);
       const pending = this.db.prepare(
-        "SELECT * FROM squad_handoffs WHERE to_squad = ? AND status = 'pending' ORDER BY created_at ASC LIMIT 5"
+        "SELECT * FROM squad_handoffs WHERE to_squad = ? AND status IN ('pending','failed') ORDER BY created_at ASC"
       ).all(this.squadSlug);
+      const workers = await listWorkers(this.projectDir, this.squadSlug);
+      const consumers = workers.filter((worker) => worker.type === 'event' && worker.trigger?.source === 'handoff');
 
       for (const handoff of pending) {
-        const payload = handoff.payload_json ? JSON.parse(handoff.payload_json) : {};
+        if (!this.running) break;
         this.log('info', `Handoff received from ${handoff.from_squad}`, { handoffId: handoff.id });
 
         // Find event-triggered workers
-        const workers = await listWorkers(this.projectDir, this.squadSlug);
-        for (const w of workers) {
-          if (w.type === 'event' && w.trigger && w.trigger.source === 'handoff') {
-            await this._executeWorker(w.slug, payload, 'event');
-          }
+        const batch = deliveries.prepareBatch(this.db, { type: 'handoff', id: handoff.id, squad: this.squadSlug, workers: consumers });
+        let payload;
+        try {
+          payload = handoff.payload_json ? JSON.parse(handoff.payload_json) : {};
+          if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('Expected object payload');
+        } catch (error) {
+          this.db.prepare('UPDATE squad_delivery_batches SET error=? WHERE source_key=?').run(`invalid_payload: ${error.message}`, batch.source_key);
+          continue;
         }
-
-        // Mark handoff consumed
-        this.db.prepare(
-          "UPDATE squad_handoffs SET status = 'consumed', consumed_at = datetime('now') WHERE id = ?"
-        ).run(handoff.id);
+        const rows = this.db.prepare('SELECT * FROM squad_deliveries WHERE source_key=? ORDER BY worker_slug').all(batch.source_key);
+        for (const row of rows) {
+          if (!this.running) break;
+          const owned = deliveries.claim(this.db, row.delivery_key);
+          if (owned) await this._runDelivery(owned, payload, 'event');
+        }
       }
     } catch (err) {
       this.log('error', 'Poll error', { error: err.message });
@@ -379,10 +412,24 @@ class SquadDaemon {
     this._updateHeartbeat();
   }
 
-  async _executeWorker(workerSlug, inputPayload, triggerType) {
+  async _runDelivery(owned, payload, triggerType) {
+    let result;
+    try {
+      result = await this._executeWorker(owned.worker_slug, {
+        ...payload, _delivery: { idempotency_key: owned.delivery_key, attempt: owned.attempts, source_key: owned.source_key }
+      }, triggerType, { noRetry: true });
+    } catch (error) {
+      result = { ok: false, error: error.message };
+    }
+    deliveries.finish(this.db, owned, result);
+    return result;
+  }
+
+  async _executeWorker(workerSlug, inputPayload, triggerType, options = {}) {
     const result = await runWorker(this.projectDir, this.squadSlug, workerSlug, inputPayload, {
       triggerType,
-      noRetry: false
+      noRetry: false,
+      ...options
     });
 
     // Log to runtime store
