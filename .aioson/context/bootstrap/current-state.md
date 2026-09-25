@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-clean-install · 2026-09-25] Lockfile sincronizado com @cursor/sdk opcional e binário já declarados; npm ci voltou a aceitar instalação limpa em Linux, sem alterar versões do package.json.
+
 - [squad-proportional-output · 2026-09-25] Kernel, contrato e módulo de saída usam HTML quando aplicável à entrega; atualizam a apresentação existente a partir dos arquivos aceitos, sem reconstrução obrigatória a cada resposta.
 
 - [squad-domain-deliveries · 2026-09-25] Contratos por domínio documentam fontes, recibos e verificação executável. Smoke real cria programa inválido, bloqueia conclusão, corrige e retoma verificador explicitamente rearmado sem repetir construção; 19 testes passaram.
