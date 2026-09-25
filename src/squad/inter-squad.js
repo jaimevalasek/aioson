@@ -3,72 +3,79 @@ const { randomUUID } = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { openRuntimeDb, insertWorkerRun } = require('../runtime-store');
+const { normalizeCall, keyFor } = require('./event-delivery');
 
 const INBOX_DIR = (projectDir, squadSlug) =>
   path.join(projectDir, '.aioson', 'squads', squadSlug, 'inbox');
 
-async function callSquad({ projectDir, from, to, worker, payload, conversationId, depth = 0 }) {
-  // 1. Cascade guard
-  if (depth > 5) return { ok: false, error: 'cascade_guard' };
+async function enqueueCall(projectDir, request) {
+  const directory = INBOX_DIR(projectDir, request.to);
+  await fs.mkdir(directory, { recursive: true });
+  const destination = path.join(directory, `${keyFor(request.from, request.to, request.id)}.json`);
+  const temporary = path.join(directory, `.${randomUUID()}.tmp`);
+  const serialized = JSON.stringify(request);
+  try {
+    await fs.writeFile(temporary, serialized, { flag: 'wx' });
+    try {
+      // Publish complete bytes without overwriting a competing call with the same identity.
+      await fs.link(temporary, destination);
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      if (await fs.readFile(destination, 'utf8') !== serialized) throw new Error('call_identity_conflict', { cause: error });
+    }
+  } finally { await fs.unlink(temporary).catch(() => {}); }
+}
 
-  conversationId = conversationId || randomUUID();
+async function callSquad({ projectDir, from, to, worker, payload = {}, conversationId, callId, depth = 0 }) {
+  if (!Number.isInteger(depth) || depth < 0 || depth >= 5) return { ok: false, error: 'cascade_guard' };
+  callId = callId || randomUUID();
+  conversationId = conversationId || callId;
+  let request;
+  try { request = normalizeCall({ id: callId, from, to, worker, payload, conversationId, depth: depth + 1 }); }
+  catch (error) { return { ok: false, error: error.message, callId, conversationId }; }
 
-  // 2. Resolver porta do squad destino no SQLite (manter DB aberto para log)
   const handle = await openRuntimeDb(projectDir);
   const db = handle?.db;
-  const port = db
-    ?.prepare("SELECT port FROM squad_daemons WHERE squad_slug = ? AND status = 'running'")
-    .get(to)?.port;
-
-  let result;
-
-  // 3. Tentar chamada direta
-  if (port) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/webhook/${worker}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, _inter_squad: { from, conversationId, depth: depth + 1 } }),
-        signal: AbortSignal.timeout(10000)
-      });
-      const json = await res.json();
-      result = { ok: res.ok, result: json, conversationId };
-    } catch {
-      // cai para inbox
+  try {
+    const port = db?.prepare("SELECT port FROM squad_daemons WHERE squad_slug = ? AND status = 'running'").get(to)?.port;
+    let result;
+    if (port) {
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/call/${worker}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, _inter_squad: { id: callId, from, to, conversationId, depth: request.depth } }),
+          signal: AbortSignal.timeout(10000)
+        });
+        const json = await res.json();
+        result = { ok: res.ok && json.ok === true, result: json, error: json.ok === true ? undefined : json.error || json.status || 'call_failed',
+          status: json.status, delivery_key: json.delivery_key, callId, conversationId };
+      } catch {
+        // Outcome may be unknown. Inbox uses exactly the same identity as HTTP.
+      }
     }
-  }
-
-  // 4. Enfileirar na inbox do squad destino
-  if (!result) {
-    const inboxDir = INBOX_DIR(projectDir, to);
-    await fs.mkdir(inboxDir, { recursive: true });
-    const id = randomUUID();
-    await fs.writeFile(
-      path.join(inboxDir, `${id}.json`),
-      JSON.stringify({ id, from, to, worker, payload, conversationId, depth, created_at: new Date().toISOString() })
-    );
-    result = { ok: false, error: 'offline_queued', conversationId };
-  }
-
-  // 5. Gravar chamada emitida no runtime store (trigger_type = 'inter-squad')
-  if (db) {
-    try {
-      insertWorkerRun(db, {
-        squadSlug: from,
-        workerSlug: worker,
-        triggerType: 'inter-squad',
-        inputJson: JSON.stringify({ to, payload, conversationId }),
-        outputJson: result.ok ? JSON.stringify(result.result) : null,
-        status: result.ok ? 'completed' : 'failed',
-        errorMessage: result.ok ? null : result.error,
-        durationMs: 0,
-        attempt: 1
-      });
-    } catch { /* ignore */ }
-    db.close();
-  }
-
-  return result;
+    if (!result) {
+      try {
+        await enqueueCall(projectDir, request);
+        result = { ok: false, error: 'offline_queued', status: 'queued',
+          reason: port ? 'http_outcome_unknown' : 'daemon_offline', callId, conversationId };
+      } catch (error) {
+        if (error.message !== 'call_identity_conflict') throw error;
+        result = { ok: false, error: error.message, callId, conversationId };
+      }
+    }
+    if (db) {
+      try {
+        insertWorkerRun(db, {
+          squadSlug: from, workerSlug: worker, triggerType: 'inter-squad',
+          inputJson: JSON.stringify({ to, payload, conversationId, callId }),
+          outputJson: result.ok ? JSON.stringify(result.result) : null,
+          status: result.ok ? 'completed' : 'failed', errorMessage: result.ok ? null : result.error,
+          durationMs: 0, attempt: 1, conversationId
+        });
+      } catch { /* Telemetry does not determine delivery. */ }
+    }
+    return result;
+  } finally { if (db) db.close(); }
 }
 
 module.exports = { callSquad, INBOX_DIR };

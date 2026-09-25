@@ -22,12 +22,43 @@ function migrate(db) {
       FOREIGN KEY (source_key) REFERENCES squad_delivery_batches(source_key)
     );
     CREATE INDEX IF NOT EXISTS idx_squad_deliveries_pending ON squad_deliveries(squad_slug,status);
+    CREATE TABLE IF NOT EXISTS squad_call_requests (
+      source_key TEXT PRIMARY KEY, request_json TEXT NOT NULL,
+      FOREIGN KEY (source_key) REFERENCES squad_delivery_batches(source_key)
+    );
     INSERT OR IGNORE INTO squad_delivery_schema (version) VALUES (1);
   `);
 }
 
 const timestamp = () => new Date().toISOString();
 const keyFor = (...parts) => createHash('sha256').update(JSON.stringify(parts)).digest('hex');
+
+function normalizeCall(message) {
+  const identifier = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
+  if (!message || !['id', 'from', 'to', 'worker'].every((field) => typeof message[field] === 'string' && identifier.test(message[field])) ||
+      !message.payload || typeof message.payload !== 'object' || Array.isArray(message.payload) ||
+      Object.hasOwn(message.payload, '_inter_squad') || Object.hasOwn(message.payload, '_delivery') ||
+      typeof message.conversationId !== 'string' || !message.conversationId || message.conversationId.length > 200 ||
+      !Number.isInteger(message.depth) || message.depth < 1 || message.depth > 5) {
+    throw new Error('invalid_call_envelope');
+  }
+  return { protocol: 1, id: message.id, from: message.from, to: message.to, worker: message.worker,
+    payload: message.payload, conversationId: message.conversationId, depth: message.depth };
+}
+
+function prepareCall(db, message, worker) {
+  const request = normalizeCall(message);
+  const id = JSON.stringify([request.from, request.id]);
+  const sourceKey = keyFor('call', id, request.to);
+  const serialized = JSON.stringify(request);
+  return db.transaction(() => {
+    const saved = db.prepare('SELECT request_json FROM squad_call_requests WHERE source_key=?').get(sourceKey);
+    if (saved && saved.request_json !== serialized) throw new Error('call_identity_conflict');
+    const batch = prepareBatch(db, { type: 'call', id, squad: request.to, workers: worker ? [{ ...worker, slug: request.worker }] : [] });
+    db.prepare('INSERT OR IGNORE INTO squad_call_requests (source_key,request_json) VALUES (?,?)').run(sourceKey, serialized);
+    return batch;
+  }).immediate();
+}
 
 function alive(row) {
   if (row.owner_host !== os.hostname()) return true;
@@ -143,4 +174,4 @@ function list(db, squad) {
   };
 }
 
-module.exports = { migrate, prepareBatch, recover, claim, finish, reconcile, list };
+module.exports = { migrate, prepareBatch, recover, claim, finish, reconcile, list, normalizeCall, prepareCall, keyFor };

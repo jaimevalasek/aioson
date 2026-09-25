@@ -93,6 +93,8 @@ class SquadDaemon {
     this.startedAt = null;
     this.eventPoll = null;
     this.cronRuns = new Map();
+    this.inboxPoll = null;
+    this.httpRequests = new Set();
   }
 
   log(level, message, data) {
@@ -175,7 +177,7 @@ class SquadDaemon {
       this.httpServer = null;
     }
 
-    await Promise.allSettled([this.eventPoll, ...this.cronRuns.values()].filter(Boolean));
+    await Promise.allSettled([this.eventPoll, this.inboxPoll, ...this.cronRuns.values(), ...this.httpRequests].filter(Boolean));
 
     this._upsertDaemonRecord('stopped');
 
@@ -202,8 +204,14 @@ class SquadDaemon {
 
   _startWebhookServer() {
     return new Promise((resolve, reject) => {
-      const server = http.createServer(async (req, res) => {
-        await this._handleWebhook(req, res);
+      const server = http.createServer((req, res) => {
+        const request = this._handleWebhook(req, res).catch((error) => {
+          this.log('error', 'HTTP request failed', { error: error.message });
+          if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'request_failed' }));
+        });
+        this.httpRequests.add(request);
+        request.finally(() => this.httpRequests.delete(request));
       });
       server.on('error', reject);
       const bindAddr = this.config.webhook?.bind || '127.0.0.1';
@@ -272,14 +280,23 @@ class SquadDaemon {
 
     // POST /call/:worker (inter-squad)
     if (segments[0] === 'call' && segments[1]) {
+      if (req.method !== 'POST') {
+        res.writeHead(405, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Method not allowed' }));
+        return;
+      }
       const depth = payload?._inter_squad?.depth ?? 0;
       if (depth > 5) {
         res.writeHead(429, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'cascade_guard' }));
         return;
       }
-      const result = await this._executeWorker(segments[1], payload, 'inter-squad');
-      res.writeHead(result.ok ? 200 : 500, { 'Content-Type': 'application/json' });
+      const { _inter_squad: metadata, ...body } = payload || {};
+      const result = await this._acceptCall({ protocol: 1, id: metadata?.id, from: metadata?.from,
+        to: metadata?.to, worker: segments[1], payload: body, conversationId: metadata?.conversationId, depth });
+      const status = result.ok ? 200 : ['pending', 'running'].includes(result.status) ? 202
+        : result.error === 'invalid_call_envelope' ? 400 : 409;
+      res.writeHead(status, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
       return;
     }
@@ -409,6 +426,7 @@ class SquadDaemon {
       this.log('error', 'Poll error', { error: err.message });
     }
 
+    await this._processInbox().catch((error) => this.log('error', 'Inbox poll failed', { error: error.message }));
     this._updateHeartbeat();
   }
 
@@ -463,27 +481,83 @@ class SquadDaemon {
     return result;
   }
 
-  async _processInbox() {
-    const inboxDir = path.join(this.projectDir, '.aioson', 'squads', this.squadSlug, 'inbox');
-    let entries;
-    try { entries = await fs.readdir(inboxDir); } catch { return; }
+  async _acceptCall(message) {
+    let request;
+    try {
+      request = deliveries.normalizeCall(message);
+      if (request.to !== this.squadSlug) throw new Error('invalid_call_envelope');
+    } catch (error) { return { ok: false, error: error.message }; }
+    deliveries.recover(this.db, this.squadSlug);
+    let batch;
+    try { batch = deliveries.prepareCall(this.db, request, null); }
+    catch (error) { return { ok: false, error: error.message }; }
+    let row = this.db.prepare('SELECT * FROM squad_deliveries WHERE source_key=?').get(batch.source_key);
+    if (!row) {
+      let worker;
+      try { worker = await loadWorkerConfig(this.projectDir, this.squadSlug, request.worker); }
+      catch (error) {
+        this.db.prepare('UPDATE squad_delivery_batches SET error=? WHERE source_key=?').run('worker_config_invalid', batch.source_key);
+        this.log('error', 'Call worker configuration invalid', { worker: request.worker, error: error.message });
+        return { ok: false, status: 'pending', error: 'worker_config_invalid', callId: request.id };
+      }
+      batch = deliveries.prepareCall(this.db, request, worker);
+      row = this.db.prepare('SELECT * FROM squad_deliveries WHERE source_key=?').get(batch.source_key);
+    }
+    if (!row) return { ok: false, status: 'pending', error: 'no_consumers', callId: request.id };
+    const owned = deliveries.claim(this.db, row.delivery_key);
+    if (owned) await this._runDelivery(owned, {
+      ...request.payload, _inter_squad: { id: request.id, from: request.from, to: request.to,
+        conversationId: request.conversationId, depth: request.depth }
+    }, 'inter-squad');
+    row = this.db.prepare('SELECT * FROM squad_deliveries WHERE delivery_key=?').get(row.delivery_key);
+    return { ok: row.status === 'completed', status: row.status, error: row.error,
+      output: row.receipt_json ? JSON.parse(row.receipt_json) : null, callId: request.id, delivery_key: row.delivery_key };
+  }
 
-    for (const file of entries.filter(f => f.endsWith('.json'))) {
+  async _processInbox() {
+    if (!this.db) return;
+    if (this.inboxPoll) return this.inboxPoll;
+    this.inboxPoll = this._drainInbox();
+    try { await this.inboxPoll; } finally { this.inboxPoll = null; }
+  }
+
+  async _drainInbox() {
+    const inboxDir = path.join(this.projectDir, '.aioson', 'squads', this.squadSlug, 'inbox');
+    let entries = [];
+    try { entries = await fs.readdir(inboxDir, { withFileTypes: true }); } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+
+    for (const entry of entries.filter((entry) => entry.isFile() && entry.name.endsWith('.json'))) {
+      if (!this.running) break;
+      const file = entry.name;
       const filePath = path.join(inboxDir, file);
       try {
         const raw = await fs.readFile(filePath, 'utf8');
         const msg = JSON.parse(raw);
-        const result = await this._executeWorker(msg.worker, msg.payload, 'inter-squad');
+        const request = deliveries.normalizeCall({ ...msg, depth: msg.protocol === 1 ? msg.depth : (msg.depth ?? 0) + 1 });
+        const result = await this._acceptCall(request);
         if (result.ok) {
           await fs.unlink(filePath);
-        } else {
-          const failDir = path.join(inboxDir, 'failed');
-          await fs.mkdir(failDir, { recursive: true });
-          await fs.rename(filePath, path.join(failDir, file));
+        } else if (['invalid_call_envelope', 'call_identity_conflict'].includes(result.error)) {
+          throw new Error(result.error);
         }
-      } catch {
-        // arquivo corrompido — mover para failed
+      } catch (error) {
+        if (error.code === 'ENOENT') continue; // Another daemon may have removed a completed file.
+        this.log('error', 'Inbox message rejected', { file, error: error.message });
+        if (error instanceof SyntaxError || ['invalid_call_envelope', 'call_identity_conflict'].includes(error.message)) {
+          const failedDir = path.join(inboxDir, 'failed');
+          await fs.mkdir(failedDir, { recursive: true });
+          await fs.rename(filePath, path.join(failedDir, file)).catch(() => {});
+        }
       }
+    }
+    // HTTP-accepted calls survive loss of the connection and need no inbox file to resume.
+    const pending = this.db.prepare(`SELECT r.request_json FROM squad_call_requests r
+      JOIN squad_delivery_batches b ON b.source_key=r.source_key WHERE b.squad_slug=? AND b.status='pending'`).all(this.squadSlug);
+    for (const row of pending) {
+      if (!this.running) break;
+      await this._acceptCall(JSON.parse(row.request_json));
     }
   }
 

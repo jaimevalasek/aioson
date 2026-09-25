@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-inbox-delivery · 2026-09-25] `fix(squad): deduplicate inbox and HTTP calls` compartilha identidade e recibos entre HTTP e inbox, recupera chamadas aceitas após reinício e preserva resultados desconhecidos para reconciliação; 5439 testes passaram na suíte completa e 73 na verificação final focada.
+
 - [squad-event-sessions · 2026-09-25] `fix(squad): acknowledge events after execution` vincula eventos ao plano autorun, preserva payload e identidade em pausas/interrupções e retoma o mesmo plano no persistent; 88 testes focados passaram.
 
 - [context-routing · 2026-09-25] `fix(context): tighten routing and retired stages` corrige seleção de contexto e referências a agentes aposentados (`e2452027`).
