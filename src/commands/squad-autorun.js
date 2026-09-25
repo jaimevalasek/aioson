@@ -171,6 +171,24 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     }
   }
   const currentPlan = await loadPlan(projectDir, squadSlug, sessionId);
+  if (currentPlan.pipeline_context) {
+    try {
+      for (const input of currentPlan.pipeline_context.inputs || []) {
+        const source = await loadPlan(projectDir, input.from_squad, input.session_id);
+        if (source?.execution_status !== 'completed') throw new Error('Upstream session is not completed');
+        for (const reference of input.deliveries) {
+          const sourceTask = source.tasks.find(candidate => candidate.id === reference.task_id);
+          if (!['completed', 'done'].includes(sourceTask?.status)
+            || sourceTask.result?.delivery_evidence?.sha256 !== reference.sha256) throw new Error('Upstream acceptance changed');
+          await readPreservedOutput(projectDir, reference);
+        }
+      }
+    } catch (error) {
+      const result = { error: `pipeline_evidence_invalid: ${error.message}`, worker_ran: false, completed_at: null };
+      await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'unverified', result);
+      return { task, finalStatus: 'unverified', workerResult: { ok: false, ...result }, reflectionResult: null, persistedResult: result };
+    }
+  }
   const specialist = task.specialist?.slug && task.specialist.persistent !== true
     ? task.specialist
     : null;
@@ -199,6 +217,7 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
   // Build worker input with fresh context pointers (2.2: paths, not inline content)
   const workerInput = {
     project_dir: projectDir,
+    pipeline_context: currentPlan.pipeline_context || null,
     revision_context: task.revision_context || null,
     dependency_deliveries: (task.dependencies || []).map(id => ({ task_id: id,
       delivery: currentPlan.tasks.find(dependency => dependency.id === id)?.result?.delivery_evidence || null })),

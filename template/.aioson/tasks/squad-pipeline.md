@@ -89,9 +89,19 @@ Run `aioson squad:pipeline . --sub=run --pipeline=<slug>` (or `--sub=continue`).
 3. Guidance never consumes handoffs. The executing consumer owns acknowledgement after all required work is accepted, using its durable delivery protocol. Never acknowledge by ad hoc SQL before execution.
 4. Output handoffs mean `produced`, not accepted completion. Legacy consumed inputs without execution evidence remain `unverified`. Inspect the actual session results before claiming delivery.
 5. `skip` creates explicit skipped markers; these are not usable inputs and do not satisfy downstream dependencies. A terminal skip without a receipt is refused.
-6. Repeat the guided command after actual work. It must not re-execute work or invent a completed result from transport state. The CLI currently has no pipeline-wide acceptance receipt; report this limitation when completion remains unverified.
+6. Repeat the guided command after actual work. It must not re-execute work or invent a completed result from transport state. Without `--run-id`, the CLI has no pipeline-wide acceptance receipt; report this limitation when completion remains unverified.
 
-## Handoff Format
+## Session-backed pipeline runs
+
+For verifiable progress, start a named run:
+`aioson squad:pipeline . --sub=run --pipeline=<slug> --run-id=<id> --goal="<delivery>"`.
+This freezes the graph and goal, prepares the first ready node's autorun session and returns its `squad resume` command. Execute that session, then repeat the pipeline run command with the same run-id. Query with `--sub=status --run-id=<id>`; status never creates sessions.
+
+Each node keeps a stable session ID. Downstream preparation requires every upstream node's completed plan and intact accepted output snapshots. Workers receive `pipeline_context.inputs` with source sessions, ports and delivery references. Global completion requires verified completion of every node, including terminal nodes. Existing handoff queues are not consumed by this path, and daemon ownership is not assumed. Graph/goal changes require a new run-id; unsupported transforms fail explicitly. The CLI prepares and observes; it does not automatically dispatch the nodes.
+
+An existing node configuration may supply `task_plan: { tasks: [...] }` using the autorun task contract (IDs, executors, dependencies, acceptance criteria and applicable must_haves). The run freezes that plan, resets execution state and validates dependencies. Without it, the CLI prepares a heuristic plan and marks `requires_contract_review`; inspect and complete its criteria before execution. Unknown semantic criteria remain unverified, never silently waived.
+
+## Handoff payload
 
 ```json
 {

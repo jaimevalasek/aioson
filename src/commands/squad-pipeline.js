@@ -10,6 +10,7 @@ const {
   getTopologicalOrder
 } = require('../runtime-store');
 const { resolveTargetDir } = require('../lib/project-root');
+const { runPipelineSession } = require('../squad/pipeline-sessions');
 
 // Handoff transport state is not evidence that a node's output was accepted.
 function classifyNodes(db, pipelineSlug, order, edges) {
@@ -76,6 +77,13 @@ async function runSquadPipeline({ args = [], options = {}, logger = console } = 
   const { db } = result;
 
   try {
+    if (options['run-id']) {
+      const dag = getPipelineDAG(db, slugArg);
+      if (!dag) return { ok: false, error: 'not_found' };
+      const order = getTopologicalOrder(db, slugArg);
+      if (!order) return { ok: false, error: 'cycle_detected' };
+      return await runPipelineSession(projectDir, dag, order, { ...options, sub: subcommand }, logger);
+    }
     if (subcommand === 'list') {
       const pipelines = listPipelines(db);
       if (pipelines.length === 0) {
