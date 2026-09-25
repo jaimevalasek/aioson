@@ -8,6 +8,8 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [squad-optimization-audit · 2026-09-25] Inventário de 80 entradas CLI, 5 agentes, 50 skills e 15 scripts; corpus de 18 casos preparado. Relatório squad-optimization-progress.md consolida commits e limites: 173 testes Linux passaram; Windows final teve uma falha de paleta que passou isolada. Sem exclusões sem evidência. Benchmark aguarda modelos/consumo.
+
 - [squad-clean-install · 2026-09-25] Lockfile sincronizado com @cursor/sdk opcional e binário já declarados; npm ci voltou a aceitar instalação limpa em Linux, sem alterar versões do package.json.
 
 - [squad-proportional-output · 2026-09-25] Kernel, contrato e módulo de saída usam HTML quando aplicável à entrega; atualizam a apresentação existente a partir dos arquivos aceitos, sem reconstrução obrigatória a cada resposta.

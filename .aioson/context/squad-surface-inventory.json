@@ -1,0 +1,1568 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-25",
+  "method": "Static references plus local skill audit; absence of a reference is not proof of customer disuse.",
+  "commands": [
+    {
+      "name": "squad",
+      "decision": "primary_session_entry",
+      "references": [
+        "template/.aioson/agents/copywriter.md",
+        "template/.aioson/agents/genome.md",
+        "template/.aioson/agents/orache.md",
+        "template/.aioson/agents/orchestrator.md",
+        "template/.aioson/agents/profiler-enricher.md",
+        "template/.aioson/agents/profiler-forge.md",
+        "template/.aioson/agents/shakedown.md",
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/config/autonomy-protocol.json",
+        "template/.aioson/config.md",
+        "template/.aioson/design-docs/folder-structure.md",
+        "template/.aioson/docs/agent-help.md"
+      ]
+    },
+    {
+      "name": "squad-agent-create",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-autorun",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-daemon.js",
+        "src/commands/squad-session.js"
+      ]
+    },
+    {
+      "name": "squad-bus",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-card",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-daemon",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-daemon.js",
+        "src/context-writer.js"
+      ]
+    },
+    {
+      "name": "squad-dashboard",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/design-docs/folder-structure.md",
+        "src/cli.js",
+        "src/commands/context-monitor.js",
+        "src/commands/squad-dashboard.js",
+        "src/commands/squad-processes.js",
+        "src/mcp/resources/squad-state.js"
+      ]
+    },
+    {
+      "name": "squad-dependency-graph",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-deploy",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-doctor",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-eval",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/squad/eval-gate.md",
+        "template/.aioson/evals/docs-specialist.evals.json",
+        "template/.aioson/schemas/squad-eval-report.schema.json",
+        "src/cli.js",
+        "src/constants.js",
+        "src/lib/squad-preflight.js",
+        "src/squad/eval-contract.js"
+      ]
+    },
+    {
+      "name": "squad-export",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "src/cli.js",
+        "src/constants.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad-grant",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-install",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-investigate",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "src/cli.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad-learning",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/tasks/squad-execution-plan.md",
+        "src/cli.js",
+        "src/constants.js",
+        "src/learning-loop-migration.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad-list",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-mcp",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-mcp-call",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-merge",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-pilot-approve",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-pipeline",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "src/cli.js",
+        "src/constants.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad-plan",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-plan.js"
+      ]
+    },
+    {
+      "name": "squad-playbook",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-preflight",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad-processes",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-publish",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-recovery",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-repair-genomes",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-review",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "src/cli.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad-roi",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-role-scan",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-scaffold",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-scaffold.js",
+        "src/squad/squad-scaffold.js"
+      ]
+    },
+    {
+      "name": "squad-score",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-doctor.js"
+      ]
+    },
+    {
+      "name": "squad-status",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-session.js"
+      ]
+    },
+    {
+      "name": "squad-tool-register",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-validate",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/genome/legacy-command-contracts.md",
+        "template/.aioson/docs/profiler/legacy-forge-agent-contract.md",
+        "template/.aioson/docs/squad/package-contract.md",
+        "template/.aioson/schemas/squad-manifest.schema.json",
+        "template/.aioson/tasks/squad-extend.md",
+        "template/.aioson/tasks/squad-refresh.md",
+        "template/.aioson/tasks/squad-repair.md",
+        "src/cli.js",
+        "src/commands/squad-doctor.js",
+        "src/commands/squad-eval.js",
+        "src/commands/squad-score.js"
+      ]
+    },
+    {
+      "name": "squad-webhook",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad-worker",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js",
+        "src/squad/hooks-generator.js",
+        "src/worker-runner.js"
+      ]
+    },
+    {
+      "name": "squad-worktrees",
+      "decision": "retain_compatibility_alias",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad:agent-create",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/squad/package-contract.md",
+        "template/.aioson/tasks/squad-create.md",
+        "src/cli.js",
+        "src/commands/squad-agent-create.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:agent:create",
+      "decision": "retain",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad:autorun",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/docs/squad/session-operations.md",
+        "template/.aioson/schemas/squad-manifest.schema.json",
+        "src/cli.js",
+        "src/commands/squad-autorun.js",
+        "src/commands/squad-daemon.js",
+        "src/commands/squad-dependency-graph.js",
+        "src/commands/squad-tool-register.js",
+        "src/lib/hook-protocol.js",
+        "src/lib/squad-preflight.js",
+        "src/squad/agent-teams-adapter.js",
+        "src/squad/hooks-generator.js",
+        "src/squad/inter-squad-events.js"
+      ]
+    },
+    {
+      "name": "squad:bus",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-bus.js"
+      ]
+    },
+    {
+      "name": "squad:card",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-card.js"
+      ]
+    },
+    {
+      "name": "squad:daemon",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-deploy.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:dashboard",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:dependency-graph",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-dependency-graph.js"
+      ]
+    },
+    {
+      "name": "squad:deploy",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-deploy.js",
+        "src/commands/squad-doctor.js"
+      ]
+    },
+    {
+      "name": "squad:doctor",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/skills/squad/patterns/pipeline-pattern.md",
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:eval",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/squad/eval-gate.md",
+        "template/.aioson/docs/squad/pilot-gate.md",
+        "template/.aioson/tasks/squad-create.md",
+        "template/.aioson/tasks/squad-eval.md",
+        "template/.aioson/tasks/squad-pilot.md",
+        "template/.aioson/tasks/squad-validate.md",
+        "src/cli.js",
+        "src/commands/squad-eval.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js"
+      ]
+    },
+    {
+      "name": "squad:export",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-export.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:grant",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/docs/genome/legacy-command-contracts.md",
+        "src/cli.js",
+        "src/commands/store-squad.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:install",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/store-squad.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:investigate",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/orache.md",
+        "template/.aioson/docs/orache/investigation-strategy.md",
+        "template/.aioson/docs/orache/report-and-integration.md",
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:learning",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/tasks/squad-learning-review.md",
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad:list",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/store-squad.js",
+        "src/i18n/messages/en.js"
+      ]
+    },
+    {
+      "name": "squad:mcp",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:mcp:call",
+      "decision": "retain",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad:merge",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-worktrees.js"
+      ]
+    },
+    {
+      "name": "squad:pilot-approve",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/squad/pilot-gate.md",
+        "template/.aioson/docs/verify-artifact-gates.md",
+        "template/.aioson/schemas/squad-manifest.schema.json",
+        "template/.aioson/tasks/squad-pilot.md",
+        "src/cli.js",
+        "src/commands/genome-approve.js",
+        "src/commands/squad-pilot-approve.js",
+        "src/commands/verify-artifact.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js"
+      ]
+    },
+    {
+      "name": "squad:pipeline",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/tasks/squad-pipeline.md",
+        "src/cli.js",
+        "src/commands/squad-pipeline.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad:plan",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad:playbook",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/docs/squad/creation-flow.md",
+        "template/.aioson/docs/squad/eval-gate.md",
+        "src/cli.js",
+        "src/commands/squad-playbook.js"
+      ]
+    },
+    {
+      "name": "squad:preflight",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "src/cli.js",
+        "src/commands/squad-preflight.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad:processes",
+      "decision": "retain",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad:publish",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/config/autonomy-protocol.json",
+        "src/cli.js",
+        "src/commands/squad-dependency-graph.js",
+        "src/commands/store-squad.js",
+        "src/i18n/messages/en.js"
+      ]
+    },
+    {
+      "name": "squad:recovery",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-recovery.js"
+      ]
+    },
+    {
+      "name": "squad:repair-genomes",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-repair-genomes.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:review",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-review.js",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "name": "squad:roi",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-roi.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:role-scan",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/docs/squad/creation-flow.md",
+        "template/.aioson/tasks/squad-design.md",
+        "src/cli.js",
+        "src/commands/squad-role-scan.js"
+      ]
+    },
+    {
+      "name": "squad:scaffold",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/squad/package-contract.md",
+        "template/.aioson/tasks/squad-create.md",
+        "src/cli.js",
+        "src/commands/squad-scaffold.js"
+      ]
+    },
+    {
+      "name": "squad:score",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/docs/squad/workflow-quality.md",
+        "src/cli.js",
+        "src/commands/squad-score.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js"
+      ]
+    },
+    {
+      "name": "squad:status",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/docs/squad/session-operations.md",
+        "src/cli.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js",
+        "src/lib/hook-protocol.js"
+      ]
+    },
+    {
+      "name": "squad:tool:register",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-tool-register.js",
+        "src/lib/health-check.js"
+      ]
+    },
+    {
+      "name": "squad:validate",
+      "decision": "retain",
+      "references": [
+        "template/.aioson/agents/squad.md",
+        "template/.aioson/docs/squad/eval-gate.md",
+        "template/.aioson/docs/squad/pilot-gate.md",
+        "template/.aioson/docs/verify-artifact-gates.md",
+        "template/.aioson/tasks/squad-create.md",
+        "template/.aioson/tasks/squad-eval.md",
+        "template/.aioson/tasks/squad-pilot.md",
+        "template/.aioson/tasks/squad-validate.md",
+        "src/cli.js",
+        "src/commands/squad-validate.js",
+        "src/commands/verify-artifact.js",
+        "src/i18n/messages/en.js"
+      ]
+    },
+    {
+      "name": "squad:webhook",
+      "decision": "retain",
+      "references": [
+        "src/cli.js"
+      ]
+    },
+    {
+      "name": "squad:worker",
+      "decision": "retain",
+      "references": [
+        "src/cli.js",
+        "src/commands/squad-autorun.js",
+        "src/i18n/messages/en.js",
+        "src/i18n/messages/es.js",
+        "src/i18n/messages/fr.js",
+        "src/i18n/messages/pt-BR.js",
+        "src/worker-runner.js"
+      ]
+    },
+    {
+      "name": "squad:worktrees",
+      "decision": "retain",
+      "references": [
+        "src/cli.js"
+      ]
+    }
+  ],
+  "agents": [
+    {
+      "file": "template/.aioson/agents/orache.md",
+      "decision": "retain_specialist_on_demand",
+      "references": [
+        "template/.aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "template/.aioson/docs/gateway/legacy-claude-entrypoint.md",
+        "template/.aioson/tasks/squad-investigate.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "file": "template/.aioson/agents/profiler-enricher.md",
+      "decision": "retain_specialist_on_demand",
+      "references": [
+        "template/.aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "template/.aioson/docs/gateway/legacy-claude-entrypoint.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "file": "template/.aioson/agents/profiler-forge.md",
+      "decision": "retain_specialist_on_demand",
+      "references": [
+        "template/.aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "template/.aioson/docs/gateway/legacy-claude-entrypoint.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "file": "template/.aioson/agents/profiler-researcher.md",
+      "decision": "retain_specialist_on_demand",
+      "references": [
+        "template/.aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "template/.aioson/docs/gateway/legacy-claude-entrypoint.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "file": "template/.aioson/agents/squad.md",
+      "decision": "retain_specialist_on_demand",
+      "references": [
+        "template/.aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "template/.aioson/docs/gateway/legacy-claude-entrypoint.md",
+        "template/.aioson/docs/genome/legacy-command-contracts.md",
+        "template/.aioson/docs/squad/genome-bindings.md",
+        "template/.aioson/docs/squad/package-contract.md",
+        "template/.aioson/docs/squad/session-operations.md",
+        "template/.aioson/tasks/squad-create.md",
+        "template/.aioson/tasks/squad-execution-plan.md",
+        "template/.aioson/tasks/squad-refresh.md",
+        "template/.aioson/tasks/squad-repair.md",
+        "src/commands/cloud.js",
+        "src/commands/squad-doctor.js"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "aioson-design-system",
+      "path": ".aioson/installed-skills/aioson-design-system/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "aioson-spec-driven",
+      "path": ".aioson/skills/process/aioson-spec-driven/SKILL.md",
+      "decision": "retain",
+      "reachability": "runtime_observed",
+      "runtime_observations": 2,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/dev.md",
+        ".aioson/agents/planner.md",
+        ".aioson/agents/product.md",
+        ".aioson/agents/qa.md",
+        ".aioson/agents/sheldon.md",
+        ".aioson/docs/briefing/legacy-agent-contract.md",
+        ".aioson/docs/dev/continuity-recovery.md",
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        ".aioson/docs/gateway/legacy-claude-entrypoint.md",
+        ".aioson/docs/gateway/process-and-research.md",
+        ".aioson/docs/neo/legacy-routing-reference.md"
+      ]
+    },
+    {
+      "id": "briefing-expansion-scout",
+      "path": ".aioson/skills/process/briefing-expansion-scout/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/briefing.md",
+        ".aioson/agents/refiner.md",
+        ".aioson/docs/briefing/exploration-and-artifacts.md",
+        ".aioson/docs/briefing/legacy-agent-contract.md",
+        ".aioson/docs/briefing/legacy-refiner-agent-contract.md",
+        ".aioson/docs/briefing/refinement-loop.md",
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "cardano-docs",
+      "path": ".aioson/skills/dynamic/cardano-docs.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "context-budget-guide",
+      "path": ".aioson/skills/static/context-budget-guide.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "debugging-protocol",
+      "path": ".aioson/skills/static/debugging-protocol.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/dev/execution-discipline.md"
+      ]
+    },
+    {
+      "id": "decision-presentation",
+      "path": ".aioson/skills/process/decision-presentation/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/help.md",
+        ".aioson/agents/neo.md",
+        ".aioson/agents/product.md",
+        ".aioson/agents/setup.md",
+        ".aioson/docs/neo/legacy-routing-reference.md",
+        ".aioson/docs/pentester/legacy-agent-contract.md",
+        ".aioson/docs/product/conversation-playbook.md",
+        ".aioson/docs/setup/legacy-agent-contract.md",
+        ".aioson/docs/setup/onboarding-flow.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "design-hybrid-forge",
+      "path": ".aioson/skills/process/design-hybrid-forge/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/design-hybrid-forge.md",
+        ".aioson/agents/site-forge.md",
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        ".aioson/docs/verify-artifact-gates.md",
+        "src/commands/design-hybrid-options.js",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "django-patterns",
+      "path": ".aioson/skills/static/django-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "ethereum-docs",
+      "path": ".aioson/skills/dynamic/ethereum-docs.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "fastapi-patterns",
+      "path": ".aioson/skills/static/fastapi-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "filament-patterns",
+      "path": ".aioson/skills/static/filament-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "flux-ui-components",
+      "path": ".aioson/skills/static/flux-ui-components.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "flux-ui-docs",
+      "path": ".aioson/skills/dynamic/flux-ui-docs.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "git-conventions",
+      "path": ".aioson/skills/static/git-conventions.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "git-worktrees",
+      "path": ".aioson/skills/static/git-worktrees.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/dev/execution-discipline.md"
+      ]
+    },
+    {
+      "id": "harness-sensors",
+      "path": ".aioson/skills/static/harness-sensors.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "harness-validate",
+      "path": ".aioson/skills/static/harness-validate/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "interface-design",
+      "path": ".aioson/skills/design/interface-design/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/tasks/squad-create.md",
+        ".aioson/docs/dev/stack-conventions.md",
+        ".aioson/docs/setup/legacy-agent-contract.md",
+        ".aioson/docs/setup/onboarding-flow.md",
+        ".aioson/docs/squad/package-contract.md",
+        "src/commands/squad-agent-create.js",
+        "src/constants.js",
+        "src/install-wizard.js"
+      ]
+    },
+    {
+      "id": "jetstream-setup",
+      "path": ".aioson/skills/static/jetstream-setup.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "landing-page-deploy",
+      "path": ".aioson/skills/static/landing-page-deploy.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "landing-page-forge",
+      "path": ".aioson/skills/static/landing-page-forge.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/tasks/squad-create.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "laravel-conventions",
+      "path": ".aioson/skills/static/laravel-conventions.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "laravel-docs",
+      "path": ".aioson/skills/dynamic/laravel-docs.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "multi-agent-patterns",
+      "path": ".aioson/skills/static/multi-agent-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "nextjs-patterns",
+      "path": ".aioson/skills/static/nextjs-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "node-express-patterns",
+      "path": ".aioson/skills/static/node-express-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "node-typescript-patterns",
+      "path": ".aioson/skills/static/node-typescript-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "npm-packages",
+      "path": ".aioson/skills/dynamic/npm-packages.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "product-scope-expansion",
+      "path": ".aioson/skills/process/product-scope-expansion/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/product.md",
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        ".aioson/docs/product/quality-lens.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "prompt-sharpener",
+      "path": ".aioson/skills/process/prompt-sharpener/SKILL.md",
+      "decision": "retain",
+      "reachability": "runtime_observed",
+      "runtime_observations": 1,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        ".aioson/docs/gateway/process-and-research.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "prototype-forge",
+      "path": ".aioson/skills/process/prototype-forge/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/briefing/legacy-refiner-agent-contract.md",
+        ".aioson/docs/briefing/prototype-and-delegation.md",
+        ".aioson/docs/briefing/visual-exploration.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "rails-conventions",
+      "path": ".aioson/skills/static/rails-conventions.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "react-motion-patterns",
+      "path": ".aioson/skills/static/react-motion-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/dev/stack-conventions.md"
+      ]
+    },
+    {
+      "id": "reference-identity-extract",
+      "path": ".aioson/skills/process/reference-identity-extract/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/briefing/legacy-refiner-agent-contract.md",
+        ".aioson/docs/briefing/prototype-and-delegation.md",
+        ".aioson/docs/briefing/visual-exploration.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "review-intelligence",
+      "path": ".aioson/skills/process/review-intelligence/SKILL.md",
+      "decision": "retain",
+      "reachability": "runtime_observed",
+      "runtime_observations": 3,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/briefing.md",
+        ".aioson/agents/qa.md",
+        ".aioson/agents/refiner.md",
+        ".aioson/agents/sheldon.md",
+        ".aioson/docs/briefing/legacy-agent-contract.md",
+        ".aioson/docs/briefing/legacy-refiner-agent-contract.md",
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        ".aioson/docs/product/quality-lens.md",
+        "src/constants.js",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "OPENCODE.md"
+      ]
+    },
+    {
+      "id": "secure-tdd",
+      "path": ".aioson/skills/process/secure-tdd/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/dev.md",
+        "src/commands/context-load.js"
+      ]
+    },
+    {
+      "id": "sheldon-expansion-audit",
+      "path": ".aioson/skills/process/sheldon-expansion-audit/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/sheldon.md",
+        ".aioson/docs/gateway/legacy-agents-entrypoint.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "simplify",
+      "path": ".aioson/skills/process/simplify/SKILL.md",
+      "decision": "retain_deprecation_and_migration",
+      "reachability": "deprecated",
+      "runtime_observations": 0,
+      "replacement": "quality:audit plus bounded review-intelligence",
+      "references": []
+    },
+    {
+      "id": "solana-docs",
+      "path": ".aioson/skills/dynamic/solana-docs.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "squad-skills",
+      "path": ".aioson/skills/squad/SKILL.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/agents/orache.md",
+        ".aioson/agents/squad.md",
+        ".aioson/docs/orache/legacy-agent-contract.md",
+        "src/lib/squad-preflight.js"
+      ]
+    },
+    {
+      "id": "static-html-patterns",
+      "path": ".aioson/skills/static/static-html-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "tall-stack-patterns",
+      "path": ".aioson/skills/static/tall-stack-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "threejs-patterns",
+      "path": ".aioson/skills/static/threejs-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "catalog_match_only",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": []
+    },
+    {
+      "id": "ui-ux-modern",
+      "path": ".aioson/skills/static/ui-ux-modern.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "web-research-cache",
+      "path": ".aioson/skills/static/web-research-cache.md",
+      "decision": "load_on_demand",
+      "reachability": "direct_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        ".aioson/docs/briefing/legacy-agent-contract.md",
+        ".aioson/docs/product/research-loop.md",
+        ".aioson/docs/sheldon/research-loop.md",
+        ".aioson/docs/squad/research-loop.md",
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "web3-cardano-patterns",
+      "path": ".aioson/skills/static/web3-cardano-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "web3-ethereum-patterns",
+      "path": ".aioson/skills/static/web3-ethereum-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "web3-security-checklist",
+      "path": ".aioson/skills/static/web3-security-checklist.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    },
+    {
+      "id": "web3-solana-patterns",
+      "path": ".aioson/skills/static/web3-solana-patterns.md",
+      "decision": "load_on_demand",
+      "reachability": "contextual_reference",
+      "runtime_observations": 0,
+      "replacement": null,
+      "references": [
+        "src/constants.js"
+      ]
+    }
+  ],
+  "scripts": [
+    {
+      "file": "scripts/benchmark-optimizations.js",
+      "decision": "review_usage_before_removal",
+      "references": []
+    },
+    {
+      "file": "scripts/check-js.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json",
+        "src/verification/evidence-bundle.js"
+      ]
+    },
+    {
+      "file": "scripts/memory-budget-audit.js",
+      "decision": "review_usage_before_removal",
+      "references": []
+    },
+    {
+      "file": "scripts/smoke/genome-2.0-smoke.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/smoke-run-chain.js",
+      "decision": "review_usage_before_removal",
+      "references": []
+    },
+    {
+      "file": "scripts/testing/genome-2.0-rollout.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/jev-evals.js",
+      "decision": "retain_referenced",
+      "references": [
+        "template/.aioson/docs/jev-agent-review.md"
+      ]
+    },
+    {
+      "file": "scripts/testing/lint.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/quality-benchmark.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/quality-coverage.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/quality-mutations.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/quality-tests.js",
+      "decision": "review_usage_before_removal",
+      "references": []
+    },
+    {
+      "file": "scripts/testing/release-readiness.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/run-quality.js",
+      "decision": "retain_referenced",
+      "references": [
+        "package.json"
+      ]
+    },
+    {
+      "file": "scripts/testing/sdd-delivery-evals.js",
+      "decision": "review_usage_before_removal",
+      "references": []
+    }
+  ],
+  "skill_totals": {
+    "skills": 50,
+    "runtime_observed": 3,
+    "directly_referenced": 15,
+    "declared_only": 0,
+    "contextual_only": 31,
+    "deprecated": 1,
+    "orphans": 0,
+    "unregistered": 0,
+    "missing_frontmatter": 31
+  },
+  "physical_removals": [],
+  "limitations": [
+    "No customer usage telemetry",
+    "Static references are not execution evidence",
+    "No destructive catalog retirement without demonstrated replacement"
+  ]
+}

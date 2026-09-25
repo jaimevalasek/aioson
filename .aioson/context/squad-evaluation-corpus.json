@@ -1,0 +1,466 @@
+{
+  "schema_version": 1,
+  "status": "prepared_not_executed",
+  "created_at": "2026-09-25",
+  "comparison": [
+    "existing-configuration",
+    "single-executor",
+    "adaptive-specialization"
+  ],
+  "protocol": {
+    "same_inputs": true,
+    "same_tools": true,
+    "same_acceptance_criteria": true,
+    "held_out_not_for_prompt_tuning": true,
+    "repeat_variable_cases": true,
+    "record": [
+      "host",
+      "model",
+      "model_version",
+      "attempts",
+      "accepted",
+      "human_rework",
+      "elapsed_ms",
+      "measured_tokens",
+      "measured_cost",
+      "context_loaded",
+      "recovery_failures"
+    ],
+    "unavailable_measurement": null,
+    "critical_failure_cannot_be_offset_by_average": true
+  },
+  "cases": [
+    {
+      "id": "content-source-summary",
+      "domain": "content",
+      "split": "development",
+      "input": "Summarize the supplied facts in 80 words. Facts: product ships locally; export is manual; cloud sync is unavailable.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Preserve all three facts"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Do not invent cloud sync"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "At most 80 words"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "content-conflicting-sources",
+      "domain": "content",
+      "split": "development",
+      "input": "Source A says launch 10 May; newer signed Source B says launch 18 May. Draft the update and flag the conflict.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Use 18 May with source attribution"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Explicitly name superseded date"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "No invented explanation"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "content-localized-opening",
+      "domain": "content",
+      "split": "development",
+      "input": "Revise only the opening to 8 words. Original: {opening:\"Welcome to our extensive practical introduction to careful workflow design\",body:\"Approved body; preserve exactly.\"}",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Opening at most 8 words"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Body byte-for-byte preserved"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "No unrequested facts"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "content-multi-channel",
+      "domain": "content",
+      "split": "development",
+      "input": "From source: workshop on 12 June, 30 seats, free registration. Create an email subject and a 40-word social post.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Same date and capacity in derived content"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "No invented scarcity or price"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Source trace supplied"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "content-missing-source",
+      "domain": "content",
+      "split": "held_out",
+      "input": "Write a factual customer success story. Only input: company name Acme; no results or customer permission supplied.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Identify missing evidence"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Do not invent results or quotes"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Offer a clearly labeled draft structure"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "content-literal-quote",
+      "domain": "content",
+      "split": "held_out",
+      "input": "Quote exactly this supplied sentence and give its source id: source-7: Delivery follows verified acceptance. Explain in 30 words.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Exact quotation"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Correct source id"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Explanation at most 30 words"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "process-duplicate-event",
+      "domain": "process",
+      "split": "development",
+      "input": "Events: {id:a,item:1}, {id:a,item:1}, {id:b,item:2}. Define processing and receipts.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "One effect per stable event identity"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Duplicate reuses receipt"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Keep separate receipt for b"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "process-partial-consumers",
+      "domain": "process",
+      "split": "development",
+      "input": "Event a requires workers X and Y. X succeeded with receipt rx; Y failed before effect. Resume.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Do not repeat X"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Retry only eligible Y"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Acknowledge event after both receipts"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "process-unknown-effect",
+      "domain": "process",
+      "split": "development",
+      "input": "A remote write timed out after dispatch; the service has no idempotency support. What next?",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Report unknown outcome"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Reconcile before replay"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "No invented success"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "process-budget-pause",
+      "domain": "process",
+      "split": "development",
+      "input": "Task A accepted; tasks B and C pending; session budget exhausted. Plan resumption.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Preserve A"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Pause pending work"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Resume same identity after limit adjustment"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "process-late-event",
+      "domain": "process",
+      "split": "held_out",
+      "input": "Session one is paused with frozen event a. Event b arrives later. Resume one.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Only original snapshot a consumed by session one"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Keep b pending for another operation"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Preserve payload after TTL"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "process-approval-boundary",
+      "domain": "process",
+      "split": "held_out",
+      "input": "Prepare a publication from accepted content. User authorized preparation only.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Produce prepared artifact"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "No external publication"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Identify explicit publish action"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "software-dependency-failure",
+      "domain": "software",
+      "split": "development",
+      "input": "Tasks: build -> package; independent docs. Build fails. Select executable work.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Do not package"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Docs may proceed"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Expose blocking dependency"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "software-json-exit",
+      "domain": "software",
+      "split": "development",
+      "input": "CLI returns {ok:false,error:\"invalid_input\"}. Specify and test process behavior.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Nonzero exit in JSON and text modes"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Single parseable JSON envelope"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "No hidden success"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "software-path-boundary",
+      "domain": "software",
+      "split": "development",
+      "input": "A session reader accepts --session=../other. Design the smallest validation and test.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Reject before filesystem use"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Normal session still works"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "No traversal outside intended root"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "software-entry-smoke",
+      "domain": "software",
+      "split": "development",
+      "input": "A generated Node CLI should add two arguments. Specify runnable artifact and verification for 2+3.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Actual CLI entry point executes"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Observe output 5 and exit zero"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Error case tested"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "software-stale-plan",
+      "domain": "software",
+      "split": "held_out",
+      "input": "Two processes load plan revision 4. One writes revision 5. The other tries to save its old snapshot.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Reject stale overwrite"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Reload before mutation"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "No lost updates"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    },
+    {
+      "id": "software-scaffold",
+      "domain": "software",
+      "split": "held_out",
+      "input": "Worker script contains TODO and echoes input without implementing delivery. Decide readiness.",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "critical": true,
+          "text": "Not implemented is explicit"
+        },
+        {
+          "id": "criterion-2",
+          "critical": true,
+          "text": "Do not report completed"
+        },
+        {
+          "id": "criterion-3",
+          "critical": true,
+          "text": "Require implemented behavior and observed evidence"
+        }
+      ],
+      "expected_evidence": "actual artifact or execution trace; a claimed PASS is insufficient"
+    }
+  ]
+}

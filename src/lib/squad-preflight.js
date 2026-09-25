@@ -32,7 +32,7 @@ const EXECUTION_BY_OPERATION = {
   'learning-review': { kind: 'agent-guided', commands: ['aioson squad:learning . --sub=list --squad=<slug>', 'aioson squad:learning . --sub=stats --squad=<slug>'],
     note: 'Inventory supports the review; consolidation and promotion still require the task protocol and evidence.' },
   'task-decompose': { kind: 'agent-authored', commands: ['aioson squad:validate . --squad=<slug> --strict --json'],
-    note: 'Author executor task files using the task protocol. squad:plan decomposes an execution goal and is not an alias for this operation.' },
+    note: 'Author executor task files using the task protocol. squad:plan manages the documented execution plan and is not an alias for this operation; squad:autorun decomposes goals.' },
   pipeline: { kind: 'guided', commands: ['aioson squad:pipeline . --sub=show --pipeline=<slug>', 'aioson squad:pipeline . --sub=run --pipeline=<slug>'],
     note: 'The CLI run command guides the next activation; it does not execute the squads. Verify actual delivery before reporting completion.' }
 };
