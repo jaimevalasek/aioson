@@ -7,6 +7,7 @@ const { exists, ensureDir } = require('../utils');
 const { readConfig } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { resolveTargetDir } = require('../lib/project-root');
+const { collectStagedSecretFindings } = require('../lib/security/staged-secret-detector');
 
 let _terser = null;
 function getTerser() {
@@ -14,27 +15,11 @@ function getTerser() {
   return _terser;
 }
 
-// Detecta JS já minificado (bundle de frontend tipo vite/webpack): linhas muito
-// longas e poucas quebras. Não vale re-minificar — incha o pacote, pode quebrar o
-// React e o ganho é baixo. O alvo de valor é o backend (tsc/vite --ssr, código
-// legível).
-function looksMinified(code) {
-  const newlines = (code.match(/\n/g) || []).length;
-  const avgLineLen = code.length / (newlines + 1);
-  return code.length > 30000 && avgLineLen > 200;
-}
-
-// Bundle de servidor já minificado (vite --ssr com minify) cita builtins do Node;
-// bundle de frontend não. No nível `max` só o primeiro é ofuscado.
-function looksServerSide(code) {
-  return /\bfrom\s*["']node:|\brequire\(\s*["']node:|\bimport\(\s*["']node:/.test(code);
-}
-
 // Top level só é renomeado em módulo: num script solto os nomes de topo são
 // globais e outro arquivo pode depender deles. Em ESM os exports mantêm o nome
 // público; em CommonJS `require`/`module.exports` são livres e não são tocados.
 function detectModuleKind(code) {
-  if (/^\s*(?:import\s*[\w{*'"]|export\s)/m.test(code)) return 'esm';
+  if (/(?:^|[;}\n])\s*(?:import\s*[\w{*'"]|export\s*[\w{*])/m.test(code)) return 'esm';
   if (/\brequire\s*\(|\bmodule\.exports\b|\bexports\.\w/.test(code)) return 'cjs';
   return 'script';
 }
@@ -87,20 +72,18 @@ async function minifyForRuntime(code) {
     keep_classnames: true,
     format: { comments: false }
   });
-  if (!result.code) throw new Error('terser returned no code');
+  if (typeof result.code !== 'string') throw new Error('terser returned no code');
   return result.code;
 }
 
-// Devolve `{ code, protected, failed }`. Falha num arquivo devolve o compilado
-// original com `failed` — o chamador decide se isso derruba o publish.
+// Toda entrada JS passa pela transformação, inclusive bundles com linhas longas:
+// o formato do arquivo não prova que ele não contenha fonte legível. No nível
+// max, o ofuscador também recebe bundles de frontend.
+// Devolve `{ code, protected, failed }`. O publish bloqueia falhas por padrão.
 async function protectJs(code, { level = 'standard', obfuscator = null } = {}) {
-  const minified = looksMinified(code);
-  if (minified && !(level === 'max' && looksServerSide(code))) {
-    return { code, protected: false, failed: false };
-  }
   try {
-    let out = minified ? code : await minifyForRuntime(code);
-    if (level === 'max') {
+    let out = await minifyForRuntime(code);
+    if (level === 'max' && out.trim()) {
       out = obfuscator.obfuscate(out, MAX_OBFUSCATION_OPTIONS).getObfuscatedCode();
     }
     return { code: out, protected: true, failed: false };
@@ -158,10 +141,9 @@ function loadAppObfuscator(dir, t) {
   return api;
 }
 
-// TypeScript de runtime — `server/**/*.ts` que o app executa direto com `tsx`
-// em produção — não passa por build nenhum, então o `--build` embarcava esses
-// arquivos LEGÍVEIS (tipos, comentários, nomes), anulando a promessa "fonte
-// excluído". Node >= 22.13 traz `module.stripTypeScriptTypes` (amaro/swc):
+// TypeScript de runtime e vite.config.* — arquivos que o app executa ou lê
+// diretamente após o build. Node >= 22.13 traz `module.stripTypeScriptTypes`
+// (amaro/swc):
 // remove tipos e converte enums/parameter properties em JS puro; o resultado
 // passa pelo mesmo terser do código compilado e volta SOB O MESMO caminho
 // `.ts` — JS puro é TS válido, então `tsx server/server.ts` segue funcionando.
@@ -207,8 +189,8 @@ function rawSourceError(rawSource, options, t) {
   return new Error(t('system.error_raw_source', { count: rawSource.length, files: rawSource.join(', ') }));
 }
 
-function unprotectedJsError(unprotectedJs, level, options, t) {
-  if (level !== 'max' || !unprotectedJs.length || options['allow-raw-source']) return null;
+function unprotectedJsError(unprotectedJs, options, t) {
+  if (!unprotectedJs.length || options['allow-raw-source']) return null;
   return new Error(t('system.error_unprotected_js', { count: unprotectedJs.length, files: unprotectedJs.join(', ') }));
 }
 
@@ -271,7 +253,7 @@ const SYSTEM_BUILD_ALLOWED_EXTS = new Set([
   '.prisma',
 ]);
 
-const RUNTIME_SERVER_SOURCE_EXTS = new Set(['.ts', '.tsx']);
+const RUNTIME_SERVER_SOURCE_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts']);
 
 // Pastas que existem só pra desenvolver/medir o app — nunca são runtime. Sem
 // isto o pacote embarcava relatórios de QA (HTML com screenshots), config de
@@ -405,9 +387,8 @@ const TEST_DIRS = new Set(['__tests__', '__mocks__', '__snapshots__']);
 const TEST_FILE_RE = /\.(test|spec)\.[cm]?[jt]sx?$/i;
 
 // Config de runtime que PRECISA viajar mesmo no --build (mesmo sendo .ts, que
-// normalmente é excluído): o `vite preview` (frontend em produção) lê o
-// `vite.config.*` pra porta + proxy do /api. Sem ele, instalação limpa quebra o
-// frontend. NÃO é ofuscado (é config lida pelo vite, não lógica a proteger).
+// normalmente é excluído): o `vite preview` lê o `vite.config.*` para porta e
+// proxy do /api. A config também passa pela proteção antes de viajar.
 const RUNTIME_CONFIG_RE = /^vite\.config\.[cm]?[jt]s$/i;
 
 // Dentro das pastas de runtime do `.aioson`, os arquivos são majoritariamente
@@ -521,10 +502,11 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
 
   // Processa UM arquivo (checa skip/ignore/extensão/tamanho, lê, ofusca se build,
   // grava). Usado pelo walk e pelos includes pontuais do `.aioson` (que podem ser
-  // arquivo único). `forceInclude` = bypassa skip/ignore/extensão (pastas runtime).
+  // arquivo único). `forceInclude` bypassa ignore/extensão (pastas runtime),
+  // mas nunca a lista de arquivos sensíveis excluídos por nome.
   async function addFile(fullPath, relPath, forceInclude, entryName) {
     if (limitHit) return;
-    if (!forceInclude && SKIP_FILES.has(entryName)) return;
+    if (SKIP_FILES.has(entryName.toLowerCase())) return;
     if (!forceInclude && ig.ignores(relPath)) return;
     // Declarações de tipo não rodam — e descrevem a API do backend. Fora no --build.
     if (buildMode && /\.d\.[cm]?ts$/i.test(entryName)) return;
@@ -536,11 +518,14 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
       buildMode &&
       relPath.startsWith('server/') &&
       RUNTIME_SERVER_SOURCE_EXTS.has(ext);
+    const isRuntimeConfig = buildMode && RUNTIME_CONFIG_RE.test(entryName);
+    const isRuntimeTypeScript = isRuntimeServerSource ||
+      (isRuntimeConfig && RUNTIME_SERVER_SOURCE_EXTS.has(ext));
     const extAllowed =
       allowedExts.has(ext) ||
       isRuntimeServerSource ||
       (forceInclude && AIOSON_RUNTIME_EXTS.has(ext)) ||
-      RUNTIME_CONFIG_RE.test(entryName); // vite.config.* viaja mesmo no --build
+      isRuntimeConfig; // vite.config.* viaja mesmo no --build
     if (!extAllowed && ext !== '') return;
 
     try {
@@ -557,7 +542,16 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
         return;
       }
       let content = await fs.readFile(fullPath, 'utf8');
-      if (isRuntimeServerSource) {
+      if (buildMode) {
+        const detected = collectStagedSecretFindings(relPath, content).findings
+          .filter((finding) => finding.severity === 'error');
+        if (detected.length) {
+          const ids = [...new Set(detected.map((finding) => finding.id))].join(', ');
+          errors.push(`Recognized secret in "${relPath}" (${ids}); file excluded.`);
+          return;
+        }
+      }
+      if (isRuntimeTypeScript) {
         // Mesmo caminho `.ts`, sem tipos/comentários e com locais renomeados.
         const protectedCode = await protectRuntimeTypeScript(content, protection);
         if (protectedCode == null) {
@@ -568,20 +562,19 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
         }
       } else if (
         buildMode &&
-        (ext === '.js' || ext === '.mjs' || ext === '.cjs') &&
-        !RUNTIME_CONFIG_RE.test(entryName) // não ofuscar config lida pelo vite
+        (ext === '.js' || ext === '.jsx' || ext === '.mjs' || ext === '.cjs')
       ) {
         const result = await protectJs(content, protection);
         content = result.code;
         if (result.protected) protectedJs += 1;
         if (result.failed) unprotectedJs.push(relPath);
       }
-      if (buildMode && (ext === '.js' || ext === '.mjs' || ext === '.cjs' || ext === '.css')) {
+      if (buildMode && (ext === '.js' || ext === '.jsx' || ext === '.mjs' || ext === '.cjs' || ext === '.css')) {
         content = stripSourceMapComments(content);
       }
       files[relPath] = content;
-    } catch {
-      // binary or unreadable — skip silently
+    } catch (error) {
+      if (buildMode) errors.push(`Unable to package "${relPath}": ${error.message}`);
     }
   }
 
@@ -794,8 +787,8 @@ async function runSystemPackage({ args, options, logger, t }) {
 // ── system:publish ──────────────────────────────────────────────────────────
 
 async function runSystemPublish({ args, options, logger, t }) {
-  const config = await readConfig();
-  const token = requireToken(config, t);
+  const config = options['dry-run'] ? {} : await readConfig();
+  const token = options['dry-run'] ? null : requireToken(config, t);
   const dir = resolveTargetDir(args);
   const buildMode = Boolean(options.build);
 
@@ -845,11 +838,11 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (buildMode) {
     logger.log(t('system.publish_protection', { level: protection.level, count: protectedJs }));
   }
-  // Fonte de runtime legível no pacote derruba o publish (o dry-run só lista).
+  // Fonte de runtime legível no pacote derruba o publish.
   const rawError = buildMode ? rawSourceError(rawSource, options, t) : null;
-  // JS que a proteção não processou: no `max` derruba o publish; no `standard`
-  // viaja como saiu do build e fica registrado no log.
-  const unprotectedError = buildMode ? unprotectedJsError(unprotectedJs, protection.level, options, t) : null;
+  // Qualquer código JS que não passou pela proteção derruba o publish.
+  const unprotectedError = buildMode ? unprotectedJsError(unprotectedJs, options, t) : null;
+  const collectionError = buildMode && errors.length ? new Error(errors.join('; ')) : null;
   if (buildMode && unprotectedJs.length > 0 && !unprotectedError) {
     logger.log(`  [WARN] ${t('system.warn_unprotected_js', { count: unprotectedJs.length, files: unprotectedJs.join(', ') })}`);
   }
@@ -861,7 +854,7 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (!files['package.json']) {
     throw new Error(t('system.error_missing_package_json'));
   }
-  // Pacote --build que não sobe no Play também derruba o publish (o dry-run só lista).
+  // Pacote --build sem entrada básica de start também derruba o publish.
   const startError = buildMode ? startEntryError(files, t) : null;
 
   const visibility = options.private ? 'private' : 'public';
@@ -903,13 +896,16 @@ async function runSystemPublish({ args, options, logger, t }) {
     if (rawError) logger.log(`  [WARN] ${rawError.message}`);
     if (startError) logger.log(`  [WARN] ${startError.message}`);
     if (unprotectedError) logger.log(`  [WARN] ${unprotectedError.message}`);
+    if (collectionError) logger.log(`  [WARN] ${collectionError.message}`);
     return {
-      ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails,
-      rawSource, protectedTs, protectionLevel: protection.level, protectedJs, unprotectedJs
+      ok: !rawError && !startError && !unprotectedError && !collectionError,
+      dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails,
+      rawSource, protectedTs, protectionLevel: protection.level, protectedJs, unprotectedJs, errors
     };
   }
   if (rawError) throw rawError;
   if (unprotectedError) throw unprotectedError;
+  if (collectionError) throw collectionError;
   if (startError) throw startError;
   // `--allow-raw-source` é uma decisão, não um silêncio: os arquivos que
   // viajam legíveis são nomeados no log e registrados no resultado do publish
@@ -1063,7 +1059,6 @@ async function runSystemInstall({ args, options, logger, t }) {
 }
 
 module.exports = {
-  looksMinified,
   obfuscateJs,
   protectJs,
   resolveProtectionLevel,

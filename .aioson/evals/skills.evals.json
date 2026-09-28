@@ -2,6 +2,47 @@
   "version": 1,
   "scenarios": [
     {
+      "name": "a short kart prompt reaches experience discovery without asking for expansion",
+      "agent": "briefing",
+      "mode": "planning",
+      "task": "Quero um jogo de kart simples no navegador",
+      "expect": [
+        { "path": ".aioson/skills/process/briefing-expansion-scout/SKILL.md", "in": "skills" },
+        { "path": ".aioson/docs/feature-expansion-taxonomy.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "refiner independently discovers value in a racing experience",
+      "agent": "refiner",
+      "mode": "planning",
+      "task": "Revisar o briefing de um jogo de corrida simples e suas possibilidades",
+      "expect": [{ "path": ".aioson/skills/process/briefing-expansion-scout/SKILL.md", "in": "skills" }]
+    },
+    {
+      "name": "experience discovery applies beyond games",
+      "agent": "briefing",
+      "mode": "planning",
+      "task": "Explore a learning experience for practicing fractions with immediate feedback",
+      "expect": [
+        { "path": ".aioson/skills/process/briefing-expansion-scout/SKILL.md", "in": "skills" },
+        { "path": ".aioson/docs/feature-expansion-taxonomy.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "a settled wording correction does not route expansion even in refiner",
+      "agent": "refiner",
+      "mode": "planning",
+      "task": "Corrigir somente a grafia do titulo aprovado; nenhuma outra alteracao",
+      "absent": [{ "path": ".aioson/skills/process/briefing-expansion-scout/SKILL.md", "in": "skills" }]
+    },
+    {
+      "name": "a game implementation task does not load the discovery skill into dev",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix the kart game restart counter using the approved plan",
+      "absent": [{ "path": ".aioson/skills/process/briefing-expansion-scout/SKILL.md", "in": "skills" }]
+    },
+    {
       "name": "spec-driven route reaches dev on tracked feature work",
       "agent": "dev",
       "mode": "executing",

@@ -125,3 +125,41 @@ test('briefing, product, and sheldon agents wire feature expansion skills on dem
     assert.equal(content.includes(token), true, `missing agent expansion token: ${token}`);
   }
 });
+
+test('experience discovery reaches review and playable prototype without granting scope', async () => {
+  const base = 'template/.aioson/';
+  const scout = await read(`${base}skills/process/briefing-expansion-scout/SKILL.md`);
+  const taxonomy = await read(`${base}docs/feature-expansion-taxonomy.md`);
+  const loop = await read(`${base}docs/briefing/refinement-loop.md`);
+  const prototype = await read(`${base}docs/briefing/prototype-and-delegation.md`);
+  const build = await read(`${base}skills/process/prototype-forge/references/build-contract.md`);
+  assert.match(scout, /judge the experience, not the number of words/);
+  assert.match(scout, /tiny bugfix or a one-field CRUD addition, skip/);
+  assert.match(scout, /Experience Map for interaction-led products/);
+  assert.match(taxonomy, /category resemblance alone does not make them required/);
+  assert.match(taxonomy, /screenshots alone cannot prove/);
+  assert.match(taxonomy, /example is not a mandatory game template/);
+  assert.ok(loop.indexOf('Assess existing ideas') < loop.indexOf('refinement-findings.json'));
+  assert.match(loop, /nonblocking `scope-suggestion`/);
+  assert.match(loop, /`recommended: true` is advice, not consent/);
+  assert.match(loop, /Do not manufacture findings/);
+  assert.match(prototype, /action → feedback → outcome → restart/);
+  assert.match(prototype, /This adds no refinement round/);
+  assert.match(build, /A vehicle, obstacle, lesson or simulation element does not imply a CRUD screen/);
+  assert.match(build, /restart restores a valid initial state/);
+  assert.match(build, /Record non-applicability with a reason/);
+  assert.doesNotMatch(build, /Every Core object has reachable list\/index/);
+});
+
+test('expansion taxonomy, scout and routing scenarios stay synchronized with the installed workspace', async () => {
+  for (const relative of [
+    '.aioson/docs/feature-expansion-taxonomy.md',
+    '.aioson/skills/process/briefing-expansion-scout/SKILL.md',
+    '.aioson/evals/skills.evals.json',
+    '.aioson/skills/process/prototype-forge/SKILL.md',
+    '.aioson/skills/process/prototype-forge/references/build-contract.md',
+    '.aioson/skills/process/prototype-forge/references/quality-and-manifest.md'
+  ]) {
+    assert.equal(await read(relative), await read(`template/${relative}`), relative);
+  }
+});

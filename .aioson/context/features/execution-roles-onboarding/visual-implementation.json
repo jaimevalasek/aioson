@@ -24,7 +24,7 @@
     "generation tell: 7 zero-offset chromatic glow shadow(s) — a halo with no offset is decoration, not depth; shadows take offset and soft blur from the shadow vocabulary, and glow is reserved for live/focus states that mean something",
     "generation tell: 52 font-size declaration(s) under 11px (10.56px, 9.6px, 9.92px, 10.88px) — functional text floors at 11px; if it matters enough to render, it matters enough to read",
     "copy tell: 2 marketing buzzword(s) in visible copy (revolucionária, streamlined) — replace each with the concrete claim it is hiding: a number, a named capability, or delete the sentence",
-    "corpus truncated: 302 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
+    "corpus truncated: 309 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
     "visual conformance NOT measured: no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to — this surface was not held to any prototype floor; record the outcome instead of assuming it",
     "cross-project palette repetition / visual fingerprint: accent hue ~81° on a dark ground resembles recent project \"aioson-com\" (Δ1°, same accent family with the ground polarity flipped) — palette, type, material and motion fingerprints are compared so sameness cannot hide behind one changed color; draw a diversified start with `aioson design:seed` (or extract an identity from the owner's references), or record why these products genuinely share the family"
   ],
@@ -36,7 +36,7 @@
     }
   ],
   "metrics": {
-    "declarations": 8329,
+    "declarations": 8401,
     "token_adherence_pct": 38,
     "tokenized_values": 1086,
     "literal_values": 1756,
@@ -249,7 +249,7 @@
       ]
     },
     "utility_classes": {
-      "tokens": 2641,
+      "tokens": 2638,
       "utility": 3,
       "share": 0
     },
@@ -463,7 +463,7 @@
       "stylesheets": 15,
       "components": 367,
       "files_total": 400,
-      "truncated": 302
+      "truncated": 309
     },
     "conformance": {
       "prototype": null,
@@ -498,5 +498,5 @@
     }
   },
   "exitCode": 0,
-  "measured_at": "2026-09-24T20:57:57.809Z"
+  "measured_at": "2026-09-25T04:34:35.751Z"
 }

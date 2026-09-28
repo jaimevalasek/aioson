@@ -1057,6 +1057,66 @@ test('briefing:apply-feedback treats a pending blocking finding as a blocker', a
   assert.equal(registry.briefings.find((b) => b.slug === 'idea-one').refinement_status, 'blocked');
 });
 
+test('game enrichment stays optional and only the chosen baseline reaches confirmed authority', async (t) => {
+  const dir = await makeProject();
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const logger = { log() {}, error() {} };
+  const base = path.join(dir, '.aioson/briefings/idea-one');
+  const idea = BRIEFING.replace('Original solution.', 'A local kart time trial with restart.');
+  await fs.writeFile(path.join(base, 'briefings.md'), idea);
+  const choice = {
+    id: 'F-rivals', section_id: 'proposed-solution', category: 'scope-suggestion',
+    severity: 'low', blocking: false,
+    text: 'A rival may create racing tension but adds behavior and collision testing.',
+    question: 'Keep the time trial or introduce a rival?', selection_mode: 'single',
+    options: [
+      { id: 'rival', label: 'One rival', description: 'Race a simulated rival.',
+        impact: 'More tension; more balancing and testing.', recommended: true, evidence_refs: [] },
+      { id: 'baseline', label: 'Keep time trial', description: 'Race against the clock.',
+        impact: 'Smaller scope; focus on driving and replay.', recommended: false, evidence_refs: [] }
+    ], selected_option_ids: [], rationale: '', evidence_refs: []
+  };
+  const findings = [choice, ...['pending', 'rejected', 'deferred'].map((state) => ({
+    ...structuredClone(choice), id: `F-${state}`
+  }))];
+  await fs.writeFile(path.join(base, 'refinement-findings.json'), JSON.stringify(findings));
+  const review = await runBriefingReview({ args: [dir], options: { slug: 'idea-one' }, logger });
+  assert.equal(review.ok, true);
+  const feedbackPath = path.join(base, 'refinement-feedback.json');
+  const feedback = JSON.parse(await fs.readFile(feedbackPath, 'utf8'));
+  assert.deepEqual(collectApprovedReviewDecisions(feedback.findings), []);
+  assert.ok(feedback.findings.every((f) => f.status === 'pending' && f.selected_option_ids.length === 0));
+  assert.equal(await fs.readFile(path.join(base, 'briefings.md'), 'utf8'), idea);
+
+  // Exported owner feedback selects the non-recommended, smaller option.
+  feedback.export_method = 'download';
+  feedback.findings[0].status = 'accepted';
+  feedback.findings[0].selected_option_ids = ['baseline'];
+  feedback.findings[0].rationale = 'Focus on handling first.';
+  for (const state of ['pending', 'rejected', 'deferred']) {
+    feedback.findings.find((f) => f.id === `F-${state}`).status = state;
+  }
+  const solution = feedback.sections.find((s) => s.id === 'proposed-solution');
+  solution.status = 'change_requested';
+  solution.current_text = 'A local kart time trial with restart. Keep the clock challenge; no rival.';
+  await fs.writeFile(feedbackPath, JSON.stringify(feedback));
+  const dry = await runBriefingApplyFeedback({ args: [dir], options: { slug: 'idea-one' }, logger });
+  assert.equal(dry.ok, true);
+  assert.equal(dry.pending_confirmation, true);
+  assert.equal(await fs.readFile(path.join(base, 'briefings.md'), 'utf8'), idea);
+  const applied = await runBriefingApplyFeedback({ args: [dir], options: { slug: 'idea-one', confirm: true }, logger });
+  assert.equal(applied.ok, true);
+  assert.equal(applied.pendingBlockingFindings, 0);
+  assert.equal(applied.nextAction, 'build_prototype');
+  const authority = collectApprovedReviewDecisions(feedback.findings);
+  assert.deepEqual(authority.map((d) => d.id), ['F-rivals']);
+  assert.deepEqual(authority[0].selected_options.map((o) => o.id), ['baseline']);
+  const report = await fs.readFile(path.join(base, 'refinement-report.md'), 'utf8');
+  assert.match(report, /F-rivals \[structured_selection\] proposed-solution: baseline/);
+  assert.doesNotMatch(report, /F-(pending|rejected|deferred) \[structured_selection\]/);
+  assert.match(await fs.readFile(path.join(base, 'briefings.md'), 'utf8'), /Keep the clock challenge; no rival/);
+});
+
 test('briefing:apply-feedback --declined archives the feedback so the loop never dead-ends', async () => {
   const dir = await makeProject();
   const logger = { log() {}, error() {} };

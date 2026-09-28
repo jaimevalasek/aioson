@@ -16,21 +16,21 @@ Load after the source and slug are resolved. This module owns enrichment and wri
 3. Inspect `researchs/` before any web search. Load web-research guidance only when an external/time-sensitive claim could materially change risk, options, or questions. Persist fresh results to `researchs/{research-slug}/summary.md`.
 4. Load the SDD hardening reference only when classifying whether unresolved gaps can safely move forward.
 5. Use `.aioson/docs/feature-completeness-contract.md` as a discovery lens, not a PRD template. Trace candidate promised outcomes through interaction, lifecycle/state, validation, failures/recovery, permissions, integration/asynchrony, notifications, import/export, observability, scale/migration, accessibility/localization, and operational management only where material.
-6. For a rich surface, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md` and write `.aioson/briefings/{slug}/expansion-scout.md`.
+6. For a rich operational or experiential surface, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md` and write `.aioson/briefings/{slug}/expansion-scout.md`. Infer richness from the intended experience, not prompt length: a simple game or learning tool can need discovery without needing a large product. Summarize the strongest opportunities, their value and unresolved choices in the briefing; a detached ideas file is insufficient for handoff. Keep inferred proposals separate from source promises.
 
 Do not invent formal `CAP-*` identifiers; Product owns them.
 
 ## Horizontal solution exploration
 
-Run when more than one viable shape exists or the idea has workspaces, boards/cards, pipelines, CRM/Kanban, dashboards, builders/editors, automation, collaboration, admin/management, repeated CRUD, templates, or media output.
+Run when more than one viable shape exists or the idea has workspaces, boards/cards, pipelines, CRM/Kanban, dashboards, builders/editors, automation, collaboration, admin/management, repeated CRUD, templates, media output, games, simulations, or learning experiences. Use the taxonomy's experience lenses for non-management products.
 
-1. Create 3–5 materially different shapes, not cosmetic variants.
+1. Consider 3–5 materially different shapes when the product direction is open, not cosmetic variants or a quota to fill. With a fixed direction, explore useful interactions within it instead of proposing another product.
 2. For operational shapes, map every Core object to parent/owner, create, list/select, edit, archive/restore, management surface, first-use empty state, and material error/recovery state.
 3. Compare value, risk, effort, completeness, and implementation leverage.
 4. Recommend one for Product to weigh, while leaving every credible option visible.
 5. Ground claims in repository/research evidence and cite consulted sources.
 
-If the user fixed one specific solution and its operational surface is complete, replace the fan-out with a concise `Alternatives considered` note. This waives breadth, not completeness.
+If the user fixed one specific solution and its relevant operational or experiential surface is complete, replace the fan-out with a concise `Alternatives considered` note. This waives breadth, not completeness. Preserve explicit exclusions and bounded corrections; a richer result may come from removing friction rather than adding features.
 
 Write `.aioson/briefings/{slug}/solution-options.md`:
 
@@ -48,6 +48,7 @@ recommended: {option-id}
 ## Option A — {name}
 - Shape:
 - Operational surface:
+- Experience map (for interaction-led products; use the taxonomy's shape):
 - Capability candidates and conditional lenses:
 
 | Object | Parent / owner | Required actions | Management surface | Empty / error states |

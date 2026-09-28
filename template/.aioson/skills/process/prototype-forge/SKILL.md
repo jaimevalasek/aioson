@@ -8,13 +8,13 @@ triggers: [prototype, prototipo, clickable, visual exploration, exploracao visua
 
 # Prototype Forge
 
-Generate a clickable, self-contained prototype in exactly one mode. `canonical-briefing` validates a confirmed operational surface map for a refinable Briefing. `visual-exploration` tests a visual direction, screenshot reference, redesign, or model variant without making it canonical. Skip tiny non-visual work.
+Generate a clickable, self-contained prototype in exactly one mode. `canonical-briefing` validates the selected experience or operational map for a refinable Briefing. `visual-exploration` tests a visual direction, screenshot reference, redesign, or model variant without making it canonical. Skip tiny non-visual work.
 
 ## Ownership
 
-Prototype Forge owns screens, navigation, mock state, CRUD, and state coverage. The selected `design_skill` owns tokens, composition, component anatomy, and motion. Never invent a second visual system.
+Prototype Forge owns interaction, screens, navigation, local/mock state, and applicable state coverage. CRUD belongs only to promised management behavior. The selected `design_skill` owns tokens, composition, component anatomy, and motion. Never invent a second visual system.
 
-Apply quality in order: operational completeness → working behavior/states → product-specific visual craft → one surgical polish pass.
+Apply quality in order: selected experience completeness → working behavior/states → product-specific visual craft → one surgical polish pass. For a game, prove the playable loop before polishing the surrounding interface.
 
 ## Inputs
 
@@ -35,7 +35,7 @@ An identity file **overlays the one engine** and is not a **second visual system
 
 ## Execution
 
-Load `references/build-contract.md` and `references/quality-and-manifest.md` before UI coding. Use the quality reference at that point only to write the manifest skeleton and its decision-grade `## Visual direction`; defer every polish/check/evidence step under “After the functional build” until operational completeness is real. Then re-read that same reference for exactly one bounded polish pass and handoff evidence. This phase boundary prevents both late composition and premature polishing.
+Load `references/build-contract.md` and `references/quality-and-manifest.md` before UI coding. Use the quality reference at that point only to write the manifest skeleton and its decision-grade `## Visual direction`; defer every polish/check/evidence step under “After the functional build” until operational completeness or the selected playable loop is real. Then re-read that same reference for exactly one bounded polish pass and handoff evidence. This phase boundary prevents both late composition and premature polishing.
 
 The prototype is a development reference, not production proof. A canonical lock stays draft until the workflow freezes it. An exploration stays non-canonical even after selection.
 
@@ -65,4 +65,4 @@ In `visual-exploration`, write only the assigned immutable run's `prototype.html
 
 ## Gate
 
-Do not hand off until every Core object is reachable/manageable, every Core action mutates mock state, empty/error/permission states are demonstrable, authenticated chrome works when applicable, no native browser dialog or external dependency remains, the file is CSP-compatible and under 2,000,000 bytes, and visual evidence is honest. In `canonical-briefing`, also: the first-open explainer (`data-aioson-tour` + `?` control) exists, the `data-aioson-primary` marker sits on the briefing's #1 differentiator, the first-contact walkthrough matched the briefing's promises, the copy corpus stays inside the em-dash budget (`em_dash_prose` warning clean or each remaining instance deliberate), and the generation-tell scan is clean (`tells 0`, or each named tell carries a recorded brief/register reason in Quality evidence — the kicker never qualifies).
+Do not hand off until the selected core journey works, promised managed objects are reachable/manageable, actions produce their intended state/feedback, applicable empty/error/permission states are demonstrable, authenticated chrome works when applicable, no native browser dialog or external dependency remains, the file is CSP-compatible and under 2,000,000 bytes, and visual evidence is honest. In `canonical-briefing`, also: the first-open explainer (`data-aioson-tour` + `?` control) exists, the `data-aioson-primary` marker sits on the briefing's #1 differentiator, the first-contact walkthrough matched the briefing's promises, the copy corpus stays inside the em-dash budget (`em_dash_prose` warning clean or each remaining instance deliberate), and the generation-tell scan is clean (`tells 0`, or each named tell carries a recorded brief/register reason in Quality evidence — the kicker never qualifies).

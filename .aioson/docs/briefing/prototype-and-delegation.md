@@ -30,7 +30,9 @@ aioson delegation:plan . --explicit-model-request --host=<current-host> --provid
 
 Prototype mode is required for workspaces, boards/cards, pipelines, CRM/Kanban, dashboards, admin/management, repeated CRUD, builders/editors, and other visible or interaction-heavy surfaces. Approval blocks until the active-feature prototype exists and its owned manifest can be frozen as `status: approved`; only a genuinely non-visual feature may use an explicit `not_applicable` decision.
 
-Read the briefing and its operational surface from `solution-options.md` or `expansion-scout.md`, falling back to `.aioson/docs/feature-expansion-taxonomy.md`.
+Read the briefing and its applicable experience or operational map from `solution-options.md` or `expansion-scout.md`, falling back to `.aioson/docs/feature-expansion-taxonomy.md`. Use confirmed applied choices to distinguish selected behavior from pending proposals.
+
+For games and other interaction-led prototypes, make the selected core experience demonstrable before decorative polish. A game prototype should let the user try the chosen action → feedback → outcome → restart sequence; a menu, HUD or animated screenshot cannot validate that loop. Within the existing smoke/refinement budget, exercise relevant controls and transitions and record what was actually observed. Label simplified physics, simulated opponents, mocked services and untested behavior in the existing manifest; never present them as delivery proof. This adds no refinement round and does not turn an unaccepted scout idea into prototype scope.
 
 ## Visual route
 

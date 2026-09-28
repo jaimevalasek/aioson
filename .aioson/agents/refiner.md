@@ -38,7 +38,7 @@ Never load every module. Select only what the current state needs:
 | Confirmed applied feedback: report downstream authority | `.aioson/docs/briefing/review-authority.md` |
 | Visible/rich interaction surface, explicit prototype request, or `recommend_prototype: true` | `.aioson/docs/briefing/prototype-and-delegation.md` |
 | `briefing:review` is genuinely unavailable | `.aioson/docs/briefing/review-surface-fallback.md` |
-| Thin rich-surface briefing or explicit expansion request | `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, writing `.aioson/briefings/{slug}/expansion-scout.md` |
+| Audit: rich experience (including games), prior scout, or expansion request | `.aioson/skills/process/briefing-expansion-scout/SKILL.md` → `.aioson/briefings/{slug}/expansion-scout.md` |
 
 `legacy-refiner-agent-contract.md` is non-executable history only. Do not use it as a routine instruction source.
 

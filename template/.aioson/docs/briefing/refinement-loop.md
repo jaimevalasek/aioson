@@ -19,7 +19,7 @@ Use when `refinement-feedback.json` is absent or the user explicitly requests re
 
 1. Read the current `briefings.md`.
 2. Load `.aioson/docs/feature-completeness-contract.md` as a review lens. Challenge ambiguity, redundancy, missing decisions, unclear risks, vague questions, inconsistent terms, vanished promises, happy-path-only behavior, broad nouns/verbs, failure/recovery, and current-system assumptions contradicted by repository evidence. Apply operational CRUD/list/form/filter/pagination lenses only when operational management is relevant.
-3. Write `.aioson/briefings/{slug}/refinement-findings.json` as a JSON array:
+3. Before writing findings, for rich operational or experiential scope, prior scout evidence, or an explicit enrichment request, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`. Assess existing ideas and discover overlooked user value independently; update the scout only when evidence or conclusions change. A game needs an experience walkthrough, not only a list of screens. Then write `.aioson/briefings/{slug}/refinement-findings.json` as a JSON array:
 
 ```json
 [
@@ -65,7 +65,7 @@ For existing-system fit, include observed behavior and exact repository paths in
 
 If a visible surface lacks briefing- or project-level `identity.md` and no choice is already recorded, add at most one non-blocking `pending-decision` offering a reusable design system: create from references, consolidate from the prototype's accepted direction without references, or decide later. Explain that this saves colors, typography, spacing, and component rules for later screens; the client need not know the filename. Use stable option IDs `identity-references`, `identity-intent`, and `identity-later`. Follow the offer in `prototype-and-delegation.md`; an accepted, confirmed applied decision answers it, so do not ask again. A pending or merely recommended option is not authorization. Never force identity creation or block the review on it.
 
-4. If the rich-surface idea is thin or the user asks whether it is worth pursuing, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, write/update `.aioson/briefings/{slug}/expansion-scout.md`, and cite it in a finding. Preserve enough accepted evidence for Product's future capability map without assigning `CAP-*`.
+4. Translate the strongest unresolved scout candidates into actionable review findings before generation. Use nonblocking `scope-suggestion` for optional value, and `gap` or `pending-decision` with `blocking: true` only when a cited promised outcome cannot be responsibly specified without resolution. Explain the before/after benefit, downside and evidence or hypothesis in the existing fields; use two to four credible choices, including keeping the simpler baseline when viable. Leave `selected_option_ids` empty: `recommended: true` is advice, not consent. Cite `expansion-scout.md` and the relevant user intent; never fabricate a source promise for an agent idea. Do not manufacture findings when no useful proposal survives, or reopen accepted/rejected/deferred decisions without new evidence. Preserve enough accepted evidence for Product's future capability map without assigning `CAP-*`.
 5. Generate deterministically:
 
 ```bash

@@ -48,7 +48,7 @@ Never load every module. Load only what the current state selects:
 | The selected source pack contains SQL | `.aioson/docs/briefing/sql-as-documentation.md` after the generic source-pack module |
 | A source and slug are resolved and artifacts must be enriched/written | `.aioson/docs/briefing/exploration-and-artifacts.md` |
 | Generic problem, weak JTBD framing, more than three questions to classify, or theme-partitioning/switch-interview guidance needed | `.aioson/docs/briefing/briefing-craft.md` |
-| Rich operational surface or explicit request for broader options | `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, producing `.aioson/briefings/{slug}/expansion-scout.md` |
+| Rich operational/experiential idea (even a short game prompt) or expansion request | `.aioson/skills/process/briefing-expansion-scout/SKILL.md` → `.aioson/briefings/{slug}/expansion-scout.md` |
 
 `legacy-agent-contract.md` is non-executable history for compatibility archaeology only. It is never a normal context source.
 

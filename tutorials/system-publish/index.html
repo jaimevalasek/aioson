@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tutorial para iniciantes: instale o ofuscador no projeto do app, confira o build e publique com a proteção máxima do AIOSON.">
+  <meta name="color-scheme" content="dark light">
+  <title>Publicar um app com alta ofuscação — AIOSON</title>
+  <link rel="stylesheet" href="../memories/tokens.css">
+  <link rel="stylesheet" href="../memories/style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <a class="brand" href="../index.html" aria-label="Voltar ao hub de tutoriais">
+    <span class="brand-mark" aria-hidden="true">a.</span>
+    <span>AIOSON <span class="brand-divider">/</span> <span class="brand-section">Publicar app</span></span>
+  </a>
+  <div class="header-actions">
+    <a href="#passo-a-passo">Passo a passo</a>
+    <a href="#erros">Se algo falhar</a>
+    <button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button>
+    <button id="print-page" type="button" hidden>Imprimir / PDF</button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">Guia para iniciantes · publicação de apps</p>
+      <h1 id="hero-title">Publique o app.<br><span class="hero-emphasis">Dificulte a leitura do código.</span></h1>
+      <p class="hero-intro">Instale uma ferramenta no projeto do app, rode o build, confira o pacote e só então publique. Os comandos abaixo mostram cada passo e explicam o que acontece.</p>
+    </div>
+    <figure class="answer-figure">
+      <div class="figure-heading"><span class="status-dot" aria-hidden="true"></span> Resposta direta</div>
+      <strong>Instale no projeto do app.</strong>
+      <p>Entre na pasta que contém o <code>package.json</code> e o <code>system.json</code> do app que será publicado. O AIOSON procura o ofuscador no <code>node_modules</code> dessa pasta.</p>
+      <div class="answer-path"><span>meu-app</span><span aria-hidden="true">/</span><span>node_modules</span><span aria-hidden="true">/</span><strong>javascript-obfuscator</strong></div>
+      <figcaption>A instalação global no computador não atende ao comando <code>system:publish --protection=max</code>.</figcaption>
+    </figure>
+    <div class="hero-extras">
+      <div class="hero-actions">
+        <a class="primary-link" href="#onde-instalar">Começar pela pasta certa <span aria-hidden="true">↗</span></a>
+        <a class="text-link" href="#limites">O que a proteção não faz →</a>
+      </div>
+      <div class="edition">
+        <span>1 app por instalação</span>
+        <span>Diagnóstico sem login</span>
+        <span>Ofuscação máxima opcional</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="staff" aria-hidden="true"></div>
+  <ol class="publish-map" aria-label="Caminho do app até a publicação">
+    <li><span>01</span><strong>Seu app</strong><small>código e configuração</small></li>
+    <li><span>02</span><strong>Build</strong><small>gera dist ou outra saída</small></li>
+    <li><span>03</span><strong>Proteção</strong><small>minifica e ofusca o JS</small></li>
+    <li><span>04</span><strong>ZIP na Store</strong><small>instalável no Play</small></li>
+  </ol>
+
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do tutorial">
+        <p class="machine-label">Neste guia</p>
+        <ol>
+          <li><a href="#onde-instalar">Onde instalar</a></li>
+          <li><a href="#preparar">O que precisa existir</a></li>
+          <li><a href="#instalar">Instalar o ofuscador</a></li>
+          <li><a href="#configurar">Configurar o app</a></li>
+          <li><a href="#passo-a-passo">Conferir sem publicar</a></li>
+          <li><a href="#publicar">Publicar de verdade</a></li>
+          <li><a href="#limites">O que viaja no ZIP</a></li>
+          <li><a href="#erros">Se algo falhar</a></li>
+        </ol>
+      </nav>
+      <p class="sidebar-note">O nível <code>max</code> é a proteção mais forte oferecida por este comando. Ele aumenta o trabalho de quem tenta ler o JavaScript, mas não torna um app instalado impossível de copiar.</p>
+    </aside>
+
+    <article class="article">
+      <section id="onde-instalar" aria-labelledby="onde-title">
+        <p class="section-number">01 / A pasta certa</p>
+        <h2 id="onde-title">Projeto do app, não computador inteiro.</h2>
+        <p>O <strong>CLI do AIOSON</strong> é o programa que você digita no terminal. Ele pode estar instalado globalmente ou ser chamado por <code>npx</code>. Já o <strong>javascript-obfuscator</strong> é usado durante a publicação e precisa estar instalado <em>dentro de cada app</em> que você quer proteger.</p>
+        <p class="table-hint">No celular, deslize a tabela para os lados.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Onde cada ferramenta fica</caption>
+            <thead><tr><th>Ferramenta</th><th>Onde instalar</th><th>Por quê</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">AIOSON CLI</th><td>Globalmente, ou execute por <code>npx</code></td><td>É o comando que você usa.</td></tr>
+              <tr><th scope="row">javascript-obfuscator</th><td>Em cada projeto de app</td><td>O AIOSON carrega a versão exata do <code>node_modules</code> do app.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Exemplo no PowerShell: substitua o caminho pela pasta <strong>real</strong> do seu app. No macOS ou Linux, use um caminho como <code>~/projetos/minha-loja</code>.</p>
+        <div class="command-block">
+          <span class="command-label">PowerShell · exemplo de caminho</span>
+          <pre><code>cd C:\projetos\minha-loja
+dir package.json, system.json</code></pre>
+        </div>
+        <div class="command-block">
+          <span class="command-label">macOS ou Linux · exemplo de caminho</span>
+          <pre><code>cd ~/projetos/minha-loja
+ls package.json system.json</code></pre>
+        </div>
+        <p>Se os dois arquivos aparecem, você está na pasta certa. Se o projeto usa várias pastas, escolha a pasta do app que será publicado, não a pasta do código-fonte do AIOSON.</p>
+        <details>
+          <summary>Ainda não tenho o comando aioson no terminal. O que instalo?</summary>
+          <p>Você pode instalar somente o CLI no computador ou usar <code>npx @jaimevalasek/aioson</code> no lugar de <code>aioson</code> nos comandos deste guia:</p>
+          <div class="command-block" data-copy-block><span class="command-label">CLI global · opcional</span><button class="copy-button" type="button" hidden>Copiar</button><pre><code>npm install --global @jaimevalasek/aioson</code></pre></div>
+          <p>Isso é separado do <code>javascript-obfuscator</code>, que continua sendo instalado dentro do app. Para usar mudanças locais deste repositório antes do próximo release, execute seu <code>bin/aioson.js</code> com <code>node</code>.</p>
+        </details>
+      </section>
+
+      <section id="preparar" aria-labelledby="preparar-title">
+        <p class="section-number">02 / Antes de instalar</p>
+        <h2 id="preparar-title">Seu app precisa saber compilar e iniciar.</h2>
+        <p>Tenha Node.js e npm funcionando. No terminal aberto dentro do app, confira:</p>
+        <div class="command-block" data-copy-block>
+          <span class="command-label">Conferir ferramentas</span>
+          <button class="copy-button" type="button" hidden>Copiar</button>
+          <pre><code>node --version
+npm --version</code></pre>
+        </div>
+        <p>O <code>package.json</code> precisa ter scripts <code>build</code> e <code>start</code>. O <code>build</code> gera arquivos executáveis, como <code>dist/server.js</code>; o <code>start</code> inicia esses arquivos. Um exemplo de app Node que já compila TypeScript:</p>
+        <div class="file-example">
+          <span class="file-label">package.json · trecho ilustrativo</span>
+          <pre><code>{
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js"
+  }
+}</code></pre>
+        </div>
+        <p>Use os scripts reais do seu app. Se ele já compila corretamente, não substitua o <code>package.json</code> inteiro pelo exemplo. Antes de pensar na publicação, rode <code>npm run build</code> e confirme que o arquivo chamado por <code>start</code> foi gerado.</p>
+        <div class="callout"><strong>App com TypeScript executado diretamente?</strong><p>Se o <code>start</code> usa <code>tsx server/server.ts</code> ou o Vite lê <code>vite.config.ts</code>, o AIOSON precisa de uma versão do Node com <code>module.stripTypeScriptTypes</code> e modo <code>transform</code> para proteger esses arquivos. A série Node 22 a partir da versão 22.13 e a série 24 oferecem esse recurso; o diagnóstico abaixo confirma se ele funciona no seu ambiente.</p></div>
+      </section>
+
+      <section id="instalar" aria-labelledby="instalar-title">
+        <p class="section-number">03 / Instalação</p>
+        <h2 id="instalar-title">Instale a ofuscação no app.</h2>
+        <p>Execute <strong>dentro da pasta do app</strong>:</p>
+        <div class="command-block" data-copy-block>
+          <span class="command-label">Instalação local · PowerShell, macOS ou Linux</span>
+          <button class="copy-button" type="button" hidden>Copiar</button>
+          <pre><code>npm install --save-dev --save-exact --ignore-scripts javascript-obfuscator</code></pre>
+        </div>
+        <ul>
+          <li><code>--save-dev</code> registra a ferramenta para preparar a publicação; ela não precisa ser um arquivo do app distribuído.</li>
+          <li><code>--save-exact</code> grava uma versão fixa no <code>package.json</code>. O nível <code>max</code> exige essa versão exata.</li>
+          <li><code>--ignore-scripts</code> evita executar scripts de instalação de dependências nesse comando.</li>
+        </ul>
+        <p>Você não precisa instalar o Terser separadamente: o AIOSON já o usa no nível <code>standard</code> e antes da ofuscação <code>max</code>.</p>
+        <p>Confira se ela ficou no projeto:</p>
+        <div class="command-block" data-copy-block>
+          <span class="command-label">Verificar a instalação</span>
+          <button class="copy-button" type="button" hidden>Copiar</button>
+          <pre><code>npm ls javascript-obfuscator --depth=0</code></pre>
+        </div>
+        <p>O comando deve mostrar a versão instalada. Depois, abra o <code>package.json</code> e confira que a versão foi gravada sem <code>^</code> ou <code>~</code>. Guarde as mudanças em <code>package.json</code> e <code>package-lock.json</code> com o seu projeto; não copie <code>node_modules</code> para o ZIP.</p>
+      </section>
+
+      <section id="configurar" aria-labelledby="configurar-title">
+        <p class="section-number">04 / Configuração</p>
+        <h2 id="configurar-title">Peça o nível máximo ao AIOSON.</h2>
+        <p>Na raiz do app, o <code>system.json</code> identifica o pacote. Sem configuração extra, <code>--build</code> usa <code>standard</code> (minificação). Este exemplo escolhe <code>max</code> como padrão do app:</p>
+        <div class="file-example">
+          <span class="file-label">system.json · exemplo</span>
+          <pre><code>{
+  "slug": "minha-loja",
+  "name": "Minha Loja",
+  "version": "1.0.0",
+  "build_command": "npm run build",
+  "build_protection": "max"
+}</code></pre>
+        </div>
+        <p>Troque <code>slug</code> e <code>name</code> pelos dados do seu app. O <code>build_command</code> usa o script <code>build</code> do <code>package.json</code>. Se seu build grava em uma pasta diferente de <code>dist/</code>, <code>build/</code>, <code>out/</code> ou <code>.next/</code>, acrescente, por exemplo, <code>"build_output_dirs": ["dist-server"]</code> ao JSON.</p>
+        <details>
+          <summary>Exemplo completo para saída em dist-server</summary>
+          <pre><code>{
+  "slug": "minha-loja",
+  "name": "Minha Loja",
+  "version": "1.0.0",
+  "build_command": "npm run build",
+  "build_protection": "max",
+  "build_output_dirs": ["dist-server"]
+}</code></pre>
+          <p>Use essa opção apenas se o seu build realmente criar <code>dist-server/</code>.</p>
+        </details>
+        <div class="callout"><strong>O que significa max?</strong><p>O AIOSON minifica o JS com Terser e usa o <code>javascript-obfuscator</code> para embaralhar nomes, strings e fluxo de execução. É o nível mais forte deste comando, não um serviço de criptografia nem o produto Pro/VM da biblioteca. O resultado pode ficar maior ou mais lento; teste o app instalado.</p></div>
+      </section>
+
+      <section id="passo-a-passo" aria-labelledby="passos-title">
+        <p class="section-number">05 / Conferir sem enviar</p>
+        <h2 id="passos-title">Faça o ensaio antes da publicação.</h2>
+        <ol class="flow-list">
+          <li><strong>Gere o build.</strong><p>O diagnóstico também roda o build, mas executar este passo separado ajuda a reconhecer erros do próprio app.</p>
+            <div class="command-block" data-copy-block><span class="command-label">Na pasta do app</span><button class="copy-button" type="button" hidden>Copiar</button><pre><code>npm run build</code></pre></div>
+          </li>
+          <li><strong>Rode o diagnóstico do pacote protegido.</strong><p>Ele lista os caminhos coletados, informa o nível de proteção e sai com erro se a proteção, a coleta ou o <code>start</code> falhar. Não exige login nem envia o ZIP; pode atualizar a saída local do build.</p>
+            <div class="command-block" data-copy-block><span class="command-label">Não publica</span><button class="copy-button" type="button" hidden>Copiar</button><pre><code>aioson system:publish . --build --protection=max --dry-run</code></pre></div>
+          </li>
+          <li><strong>Leia a lista.</strong><p>Confirme que a saída compilada aparece e que <code>src/</code>, testes e arquivos <code>.map</code> ficaram fora. Recursos necessários em runtime, como <code>package.json</code>, <code>vite.config.*</code> e squads, podem aparecer. Corrija qualquer erro antes de publicar.</p></li>
+        </ol>
+        <p>Se o comando <code>aioson</code> não estiver instalado no computador, use <code>npx @jaimevalasek/aioson</code> no lugar de <code>aioson</code>. Para testar alterações deste repositório <em>antes</em> de uma versão nova chegar ao npm, chame o <code>bin/aioson.js</code> da sua cópia local do AIOSON com <code>node</code>. O ensaio ainda não verifica o tamanho final do ZIP.</p>
+        <div class="command-block" data-copy-block><span class="command-label">Mesmo diagnóstico, sem instalar o CLI globalmente</span><button class="copy-button" type="button" hidden>Copiar</button><pre><code>npx @jaimevalasek/aioson system:publish . --build --protection=max --dry-run</code></pre></div>
+      </section>
+
+      <section id="publicar" aria-labelledby="publicar-title">
+        <p class="section-number">06 / Publicação</p>
+        <h2 id="publicar-title">Depois do ensaio, publique.</h2>
+        <p>A publicação real exige login na sua conta AIOSON. Estes comandos enviam o pacote; execute-os somente quando estiver pronto para disponibilizar o app.</p>
+        <div class="command-block" data-copy-block>
+          <span class="command-label">Entrar na conta</span>
+          <button class="copy-button" type="button" hidden>Copiar</button>
+          <pre><code>aioson auth:login</code></pre>
+        </div>
+        <div class="command-block" data-copy-block>
+          <span class="command-label">Publicar como privado primeiro</span>
+          <button class="copy-button" type="button" hidden>Copiar</button>
+          <pre><code>aioson system:publish . --build --protection=max --private</code></pre>
+        </div>
+        <p>Instale e abra essa versão no AIOSON Play para conferir as telas, rotas e funções principais. O <code>npm start</code> na sua pasta testa o build local, mas <strong>não substitui</strong> esse teste: a ofuscação é aplicada ao pacote durante a publicação.</p>
+        <p>Para publicar com visibilidade pública, retire <code>--private</code>:</p>
+        <div class="command-block" data-copy-block>
+          <span class="command-label">Publicação pública</span>
+          <button class="copy-button" type="button" hidden>Copiar</button>
+          <pre><code>aioson system:publish . --build --protection=max</code></pre>
+        </div>
+        <p>A primeira publicação pública de uma conta nova pode ficar em rascunho na Store até ser liberada; leia a mensagem final do terminal para saber o estado do seu app.</p>
+        <div class="callout"><strong>Não use <code>--allow-raw-source</code> para resolver erros.</strong><p>Essa opção autoriza enviar código que não pôde ser protegido. Descubra o arquivo indicado, corrija o build e repita o diagnóstico.</p></div>
+      </section>
+
+      <section id="limites" aria-labelledby="limites-title">
+        <p class="section-number">07 / Segurança real</p>
+        <h2 id="limites-title">O que fica protegido e o que continua visível?</h2>
+        <p class="table-hint">No celular, deslize a tabela para os lados.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Conteúdo típico de um pacote com --build --protection=max</caption>
+            <thead><tr><th>Conteúdo</th><th>O que acontece</th></tr></thead>
+            <tbody>
+              <tr><th scope="row"><code>src/</code> e mapas <code>.map</code></th><td>Ficam fora do pacote.</td></tr>
+              <tr><th scope="row">JS/JSX incluído</th><td>Passa por minificação e ofuscação; o envio falha se a transformação não funcionar.</td></tr>
+              <tr><th scope="row">TypeScript executado em runtime e <code>vite.config.ts</code></th><td>Passa por remoção de tipos e proteção quando o Node suporta a transformação; caso contrário, o envio falha.</td></tr>
+              <tr><th scope="row">JSON, HTML, CSS, imagens e prompts de squads</th><td>Continuam legíveis quando o app precisa deles em runtime. Scripts embutidos no HTML também continuam legíveis.</td></tr>
+              <tr><th scope="row">ZIP recebido pelo instalador</th><td>É extraído no computador de quem instala. Quem tem acesso pode copiar os arquivos.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Ofuscação aumenta o esforço de leitura; não impede cópia.</strong> Regras, prompts ou segredos que ninguém pode receber devem ficar em um serviço seu, acessado pelo app, e não no ZIP. O AIOSON bloqueia alguns segredos reconhecidos, mas isso não substitui revisar a lista de arquivos.</p>
+      </section>
+
+      <section id="erros" aria-labelledby="erros-title">
+        <p class="section-number">08 / Diagnóstico</p>
+        <h2 id="erros-title">Se aparecer um erro, siga o arquivo citado.</h2>
+        <p class="table-hint">No celular, deslize a tabela para os lados.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Correções mais comuns</caption>
+            <thead><tr><th>Mensagem ou sintoma</th><th>O que fazer</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Ofuscador ausente</th><td>Volte à pasta do app e rode a instalação local. Confira se <code>node_modules/javascript-obfuscator</code> está nessa pasta; uma instalação global ou em uma pasta-pai não serve.</td></tr>
+              <tr><th scope="row">Versão não fixada</th><td>Reinstale com <code>--save-exact</code>. No <code>package.json</code>, a versão deve aparecer sem <code>^</code> ou <code>~</code>.</td></tr>
+              <tr><th scope="row">Arquivo JS/JSX não protegido</th><td>Compile JSX para JS no build e corrija a sintaxe do arquivo citado. Repita o <code>--dry-run</code>.</td></tr>
+              <tr><th scope="row">TypeScript de runtime legível</th><td>Use um Node compatível com a transformação de TypeScript ou compile esse arquivo no build.</td></tr>
+              <tr><th scope="row"><code>start</code> ausente ou aponta para arquivo que não viajou</th><td>Corrija o script <code>start</code> e, se necessário, declare <code>build_output_dirs</code> no <code>system.json</code>.</td></tr>
+              <tr><th scope="row">Segredo reconhecido</th><td>Remova a credencial do arquivo. Guarde segredos no servidor ou na configuração por instalação, nunca no pacote.</td></tr>
+              <tr><th scope="row">App instalado ficou lento ou falhou</th><td>Teste rotas e funções no Play, reduza o bundle ou escolha conscientemente <code>standard</code>. Esse nível minifica, mas não aplica a ofuscação extra.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="source-note">Referências: <a href="https://docs.npmjs.com/cli/install/" target="_blank" rel="noopener noreferrer">instalação local e versões exatas no npm</a>, <a href="https://github.com/javascript-obfuscator/javascript-obfuscator" target="_blank" rel="noopener noreferrer">documentação do javascript-obfuscator</a> e <a href="https://nodejs.org/download/release/v24.0.1/docs/api/module.html" target="_blank" rel="noopener noreferrer">transformação de TypeScript no Node</a>. Para detalhes das opções do AIOSON, consulte <a href="https://github.com/jaimevalasek/aioson/blob/main/docs/integrations/apps-publish-marketplace.md" target="_blank" rel="noopener noreferrer">a referência do comando no repositório</a>.</p>
+      </section>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="staff" aria-hidden="true"></div>
+  <p>AIOSON · Tutorial de publicação de apps com build e ofuscação.</p>
+  <a href="../index.html">Voltar aos tutoriais</a>
+</footer>
+<div id="copy-status" class="visually-hidden" role="status" aria-live="polite"></div>
+</body>
+</html>

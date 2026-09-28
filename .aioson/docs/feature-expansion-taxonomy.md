@@ -5,12 +5,12 @@ agents: [briefing, refiner, product, sheldon]
 modes: [planning, executing]
 task_types: [feature-expansion, product-discovery, prd-enrichment, briefing-refinement]
 load_tier: trigger
-triggers: [feature expansion, rich surface, MVP options, product scope, capability map, operational surface, CRUD surface, management surface, Trello, Kanban, CRM, workspace, board, dashboard, workflow, editor, collaboration]
+triggers: [feature expansion, rich surface, MVP options, product scope, capability map, operational surface, CRUD surface, management surface, Trello, Kanban, CRM, workspace, board, dashboard, workflow, editor, collaboration, kart game, jogo de kart, jogo de corrida, learning experience, simulador interativo]
 ---
 
 # Feature Expansion Taxonomy
 
-Use this shared vocabulary when a feature has a rich surface: workflow tools, collaboration, editors/builders, generators, media outputs, dashboards, CRM/Kanban-style systems, automation, templates, customization, workspaces, boards, operational CRUD, or repeated operational use.
+Use this shared vocabulary when a feature has a rich operational or experiential surface: workflow tools, collaboration, editors/builders, generators, media outputs, dashboards, CRM/Kanban-style systems, automation, templates, customization, workspaces, boards, operational CRUD, games, simulations, learning experiences, or repeated use. A short prompt can describe a rich experience; brevity alone is not a reason to skip discovery.
 
 Expansion is not approval. It reveals options, classifies value and risk, and makes scope easier to choose.
 
@@ -43,7 +43,7 @@ Check only lenses relevant to the feature:
 
 ## Operational Surface Map
 
-For rich-surface products, expansion is incomplete until the main objects have an operational surface map.
+Use this map when the promise includes operational management. For interaction-led products, use the Experience Map below; use both only when both kinds of behavior matter. A game does not acquire administration screens merely because it has objects.
 
 When the feature advances from exploration into a PRD/spec, load `.aioson/docs/feature-completeness-contract.md`. The taxonomy discovers operational possibilities; the generic contract turns every approved feature promise into deterministic product, requirements, architecture, plan, implementation, and QA evidence. Operational management remains only one conditional lens.
 
@@ -71,14 +71,35 @@ Candidate surfaces for Trello/Kanban/CRM/workspace-like products; select only th
 - Item detail surface: edit content, metadata, assignee/owner, labels/status, comments/notes when in scope.
 - Empty/error surfaces: no workspace, no board, no items, permission denied, validation failure.
 
+## Experience discovery
+
+Start from the intended user outcome and constraints. Walk through entry, first meaningful action, response, success/failure, recovery, and repeated use. Discover opportunities by connecting these moments, removing friction, or borrowing a mechanism from another domain with an explicit reason it fits. Do not reduce enrichment to missing fields or generic error states.
+
+For each promising mechanism, explain the concrete before/after experience, expected value, downside or effort, bucket, evidence or hypothesis, and a cheap observable check. Compare with the simplest coherent baseline. Keep only useful candidates; neither an idea quota nor a longer document demonstrates quality.
+
+### Experience Map
+
+| User moment / goal | Action or choice | System response / feedback | Success, failure and recovery | Evidence or hypothesis | Bucket / decision | Observable check |
+|---|---|---|---|---|---|---|
+
+Adapt the relevant lenses to the domain:
+
+- **Games:** player goal, discoverable controls, action → consequence → feedback, challenge and fairness, meaningful choices, progress, finish/failure, restart, and replay value. Consider responsive input, camera/readability, collisions, pacing, pause/focus loss, and audio only where the chosen experience needs them. Specify behavior worth testing; leave engine and algorithm choices to implementation owners.
+- **Learning:** learner goal, exercise, feedback that explains an error, retry, progress and transfer to a fresh example. Do not assume accounts, grading dashboards, or gamification.
+- **Creative tools and simulations:** creation/manipulation, immediate feedback, exploration, reversible mistakes, result and reuse. Do not add management flows when a local interaction meets the goal.
+
+For a short kart-racing idea, a useful candidate baseline is a controllable vehicle, readable course, start, valid lap completion, result and restart. Compare a time trial with opponents if that choice is open. Drifting, items or a rival can deepen a particular experience; explain the trade-off before recommending them. Accounts, online multiplayer, stores and a track editor are separate scope proposals, never genre obligations. Respect a request for a driving toy without races; the example is not a mandatory game template.
+
+An observed play session can prove controls and state transitions; screenshots alone cannot prove handling, collision behavior or replay value. Label untested experience claims as hypotheses. For a learning tool, likewise, a visible score is not proof of learning.
+
 ## Required Trace
 
 Every expansion artifact should state:
 
 - whether prior expansion artifacts were found
 - which bucket each suggestion belongs to
-- which Core objects were mapped in the operational surface map
-- which management surfaces are required for those Core objects
+- which user moments or Core objects were mapped in the applicable experience/operational map
+- which interactions or management surfaces are needed for the selected promise
 - which ideas need explicit user approval
 - which ideas are intentionally deferred
 - how the expansion affects project classification or delivery risk

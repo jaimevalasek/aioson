@@ -25,8 +25,8 @@ In `canonical-briefing`, the artifact belongs to `.aioson/briefings/{slug}/`. In
 
 ## State and navigation
 
-- Seed realistic data for every Core object, enough to show populated and empty states.
-- Every Core object has reachable list/index, detail, and management surface.
+- Seed realistic state for the selected experience; for managed data, demonstrate populated and applicable empty states.
+- Every Core object the promise requires users to manage has reachable list/index, detail, and management behavior as applicable. A vehicle, obstacle, lesson or simulation element does not imply a CRUD screen.
 - Authenticated products include functional account/user navigation and implied persistent chrome.
 - Assign stable `data-aioson-id` anchors to meaningful regions and Core actions.
 - Mark the one region rendering the briefing's #1 differentiator with `data-aioson-primary`. It must start inside the first viewport of its screen at desktop and mobile — the runtime fold check anchors on this marker, and a differentiator below the fold is a feature the owner never sees.
@@ -37,9 +37,11 @@ The prototype exists so the owner can validate how the app works; an owner who h
 
 ## Behavior
 
-Create, edit, delete, archive, and restore mutate in-memory state and re-render. Use design-system modals, drawers, inline forms, and toasts. Never use native `alert`, `confirm`, or `prompt`; dead controls are failures.
+When in scope, create, edit, delete, archive, and restore mutate in-memory state and re-render. Use design-system modals, drawers, inline forms, and toasts where those interactions belong. Never use native `alert`, `confirm`, or `prompt`; dead controls are failures.
 
-Render and make toggleable: loading, empty, error, populated, and permission-denied. An explicit approved defer may replace an operation, but silence may not.
+Render and make demonstrable the states applicable to the selected promise: loading, empty, error, populated, and permission-denied where those conditions exist. Record non-applicability with a reason instead of inventing accounts, permissions or fake loading. An explicit approved defer may replace an operation, but silence may not.
+
+For games, implement the selected playable interaction, not only its UI: input changes play state, consequences are legible, the objective can resolve, and restart restores a valid initial state. Test relevant control release/focus loss, timing, collision and progress behavior within the parent's authorized verification budget. A local playable simulation is appropriate; label simplifications and unobserved checks. Keep menus, tours and HUD readable without covering the play area. Genre examples in the taxonomy suggest choices; they do not approve rivals, items, audio or additional modes.
 
 ## Interaction patterns
 
@@ -60,4 +62,4 @@ Anti-slop is the subtractive half; the craft floor is the additive half, and hyg
 
 ## Blocking gaps
 
-A Core object without a reachable management surface, an action that does not mutate state, a missing required state, dead authenticated chrome, or a prohibited external dependency is blocking—not backlog polish.
+A promised management object without its required surface, a broken selected core loop, an action without its intended effect, a missing required state, dead authenticated chrome, or a prohibited external dependency is a blocking gap. Cite the selected promise; optional enhancements never become blockers merely by appearing in a scout.

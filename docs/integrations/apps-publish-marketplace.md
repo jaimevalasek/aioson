@@ -21,10 +21,10 @@ aioson system:publish [dir] [opções]
 | `--private` | Visibilidade privada (default é `public` → FREE no aioson-com) |
 | `--paid` | Marca como pago (requer plano Jedi) |
 | `--invite="email1,email2,..."` | Emails autorizados a instalar quando privado |
-| `--build` | Roda o `build_command` e publica só a saída: `src/` fica de fora, `.js` passa por terser, `server/**/*.ts` (runtime via `tsx`) viaja sem tipos/comentários e com locais renomeados (Node >= 22.13). Pastas de saída fora de `dist/build/out/.next` entram por `"build_output_dirs"` no `system.json`. Falha se algum fonte de runtime ficaria legível, se o `package.json` não tiver `start` ou se o `start` chamar arquivo que não viajou |
-| `--protection=standard\|max` | Com `--build`: nível de proteção do JS (default `standard`, ou `"build_protection"` no `system.json`). `max` adiciona `javascript-obfuscator`, carregado do `node_modules` do app com versão exata (`npm i -D -E --ignore-scripts javascript-obfuscator`) |
-| `--allow-raw-source` | Com `--build`: publica mesmo com arquivos `.ts` de runtime que não puderam ser protegidos, ou JS que o nível `max` não conseguiu ofuscar (decisão explícita do dono) |
-| `--dry-run` | Valida, roda o build (se `--build`) e lista todos os arquivos do pacote, sem publicar |
+| `--build` | Roda o `build_command` e publica a saída compilada mais arquivos necessários em runtime (por exemplo `package.json`, `vite.config.*` e `.aioson/squads/`). Exclui `src/`, sourcemaps e testes; transforma JS/JSX e TypeScript de runtime/config antes de empacotar. Pastas de saída fora de `dist/build/out/.next` entram por `"build_output_dirs"` no `system.json`. Falha se código não puder ser protegido, um segredo reconhecido aparecer no pacote, algum arquivo elegível for omitido por erro, ou a entrada básica de `start` estiver ausente |
+| `--protection=standard\|max` | Com `--build`: `standard` (padrão) minifica todo JS com Terser, inclusive bundles de frontend; `max` também ofusca todo JS com `javascript-obfuscator`, carregado do `node_modules` do app com versão exata (`npm i -D -E --ignore-scripts javascript-obfuscator`). `max` pode aumentar o pacote e o custo em runtime |
+| `--allow-raw-source` | Com `--build`: permite publicar código TS/JS/JSX que não pôde ser protegido. Reduz deliberadamente a proteção; não desativa o bloqueio de segredos reconhecidos nem de arquivos omitidos por erro |
+| `--dry-run` | Roda o build, lista todos os arquivos coletados e retorna erro se houver falha de proteção, coleta ou `start`. Não precisa de login e não envia o ZIP |
 
 ### Emails autorizados (privates)
 

@@ -22,14 +22,14 @@ Before UI coding — in every mode, identity included — write the manifest's `
 
 The manifest includes:
 
-- one screen-inventory row per Core object, including management surface
+- screen-inventory rows for the selected experience and its meaningful states; include management surfaces only for objects the promise requires users to manage
 - `## Core interactions`, one backticked interaction token per line so `aioson prototype:check` can trace it to acceptance criteria
 - selected `design_skill`
 - frontmatter `identity:` naming the exact record the prototype was built from — the feature-owned `.aioson/briefings/{slug}/identity.md`, the shared `.aioson/context/identity.md`, or `none` for an intent-first build. This is the provenance the PRD must carry forward; `aioson prototype:check` fails when the manifest names a record and the PRD drops it. Never name an exploration identity: it is non-canonical and cannot bind downstream.
 - explicit “mock only — refresh resets, no backend”
 - `draft` or `locked-at: {ref}`
 - `## Visual direction`: register, thesis, anti-goals, signature move (authored before layout — see above)
-- `## Runtime matrix`: one named route for entry/primary plus one named route per demonstrable loading, empty, error, and success state (`- loading: #/orders?state=loading`). `kind=visual --runtime` visits the matrix at mobile and desktop and refuses a declared state whose structural marker is not visible.
+- `## Runtime matrix`: one named route for entry/primary plus one named route per applicable demonstrable loading, empty, error, and success state (`- loading: #/orders?state=loading`). Record why a state is inapplicable; do not fabricate permission or loading screens for a local game. `kind=visual --runtime` visits the matrix at mobile and desktop and refuses a declared state whose structural marker is not visible. Record gameplay checks separately in Quality evidence: a route visit does not prove control response, collisions or a completed lap.
 - frontmatter `surface_mode:` — `operate`, `brand` (persuade/inhabit), or `read` — what the visitor came to do on this surface. The telemetry detects it from structure (sidebar + data table + toolbar reads as operate; hero + display type + marketing sections as brand); the declaration outranks the detection, and on an operate surface the premium bar is measured as precision (delivered workhorse face, tokened finish, state motion, themed chrome — `craft N/4 (operate)`) instead of display type and atmosphere, and scored as `precision N/100` (typeface, tokens, rhythm, states, chrome, tells, dialect) against the same 60 bar `briefing:approve` reads — restraint is a posture, never an exemption from the number
 - `## Quality evidence`: checks and limitations, including the tour, the `data-aioson-primary` fold outcome, the signature microinteractions, and the first-contact walkthrough. Its machine-bound core is exactly `verdict: pass|fail|unverified`, `evidence: .aioson/context/features/{slug}/visual-evidence.json`, `craft: N/N`, `runtime: measured` (or an explicit unavailable/waived decision and reason), and `routes: N`. Approval cross-checks these values against the persisted content-addressed report; prose length cannot make the section valid.
 - `## Delegation provenance` only when another model was explicitly used
@@ -39,8 +39,8 @@ Exploration mode writes no briefing manifest. Its append-only `report.md` carrie
 Final checks:
 
 - Core inventory and interactions match the surface map.
-- Empty and error states are visible.
+- Applicable empty and error states are visible; non-applicability has a reason.
 - No native dialogs, dead avatar/menu, or external dependencies.
 - Visual system is selected-skill-specific rather than generic.
 - Polish preserved functional completeness.
-- Any remaining management gap is reported as blocking.
+- Missing selected behavior is reported as blocking; optional ideas and inapplicable management flows are not.

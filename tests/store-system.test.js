@@ -8,6 +8,7 @@ const path = require('node:path');
 const {
   collectSystemFiles,
   createZipBuffer,
+  runSystemPublish,
   obfuscateJs,
   protectRuntimeTypeScript,
   rawSourceError,
@@ -169,6 +170,94 @@ test('build packages drop sourceMappingURL comments from JS and CSS, minified bu
   assert.equal(stripSourceMapComments('const x = 1;\n//@ sourceMappingURL=x.map'), 'const x = 1;\n');
 });
 
+test('build protection transforms long-line JS instead of trusting its layout', async (ctx) => {
+  const source = 'function readableBusinessRule(value) { return value + 1; } module.exports = readableBusinessRule; /*' +
+    'x'.repeat(31000) + '*/';
+  const dir = await makeApp(ctx, { 'server/rules.js': source });
+
+  const standard = await collectSystemFiles(dir, { buildMode: true });
+  assert.doesNotMatch(standard.files['server/rules.js'], /readableBusinessRule|\/\*x{100}/);
+  assert.deepEqual(standard.unprotectedJs, []);
+
+  const max = await collectSystemFiles(dir, {
+    buildMode: true,
+    protection: { level: 'max', obfuscator: fakeObfuscator }
+  });
+  assert.match(max.files['server/rules.js'], /^\/\*obfuscated:rc4\*\//);
+  assert.deepEqual(max.unprotectedJs, []);
+});
+
+test('build protects runtime JSX and Vite config code or names unprotectable files', { skip: !canStripTypes && 'Node without module.stripTypeScriptTypes' }, async (ctx) => {
+  const dir = await makeApp(ctx, {
+    'server/plain.jsx': 'function readableHandler(value) { return value + 1; } module.exports = readableHandler;',
+    'server/view.jsx': 'export const View = () => <main>private logic</main>;',
+    'vite.config.ts': 'const readablePort: number = 4173; // private comment\nexport default { server: { port: readablePort } };',
+    'vite.config.js': 'function readableConfig() { return { server: { port: 4173 } }; } module.exports = readableConfig;'
+  });
+
+  const result = await collectSystemFiles(dir, { buildMode: true });
+  assert.doesNotMatch(result.files['server/plain.jsx'], /readableHandler/);
+  assert.doesNotMatch(result.files['vite.config.ts'], /readablePort|: number|private comment/);
+  assert.doesNotMatch(result.files['vite.config.js'], /readableConfig/);
+  assert.deepEqual(result.rawSource, []);
+  assert.deepEqual(result.unprotectedJs, ['server/view.jsx']);
+  assert.match(unprotectedJsError(result.unprotectedJs, {}, t).message, /server\/view\.jsx/);
+});
+
+test('forced build output never restores known credential files', async (ctx) => {
+  const dir = await makeApp(ctx, {
+    '.gitignore': 'dist/\n',
+    'dist/index.js': 'module.exports = 1;',
+    'dist/aioson-models.json': '{"apiKey":"placeholder"}',
+    'dist/AIOSON-MODELS.JSON': '{"apiKey":"placeholder"}',
+    '.aioson/squads/demo/aioson-models.json': '{"apiKey":"placeholder"}'
+  });
+  const result = await collectSystemFiles(dir, { buildMode: true });
+  assert.equal(result.files['dist/aioson-models.json'], undefined);
+  assert.equal(result.files['dist/AIOSON-MODELS.JSON'], undefined);
+  assert.equal(result.files['.aioson/squads/demo/aioson-models.json'], undefined);
+  assert.equal(typeof result.files['dist/index.js'], 'string');
+});
+
+test('build rejects recognized secrets inside otherwise allowed runtime data', async (ctx) => {
+  const dir = await makeApp(ctx, {
+    'dist/runtime.json': '{"accessKey":"AKIA1234567890ABCDEF"}'
+  });
+  const result = await collectSystemFiles(dir, { buildMode: true });
+  assert.equal(result.files['dist/runtime.json'], undefined);
+  assert.ok(result.errors.some((error) => error.includes('dist/runtime.json') && error.includes('aws_access_key')));
+});
+
+test('publish dry-run lists unsafe build files and returns a failing result without an account token', async (ctx) => {
+  const dir = await makeApp(ctx, {
+    'system.json': JSON.stringify({ slug: 'probe', version: '1.0.0', name: 'Probe', build_command: 'node -e 0' }),
+    'package.json': JSON.stringify({ name: 'probe', scripts: { start: 'node dist/index.js' } }),
+    'dist/index.js': 'module.exports = 1;',
+    'server/view.jsx': 'export const View = () => <main>private logic</main>;'
+  });
+  const lines = [];
+  const result = await runSystemPublish({
+    args: [dir],
+    options: { build: true, 'dry-run': true },
+    logger: { log: (line) => lines.push(line) },
+    t
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.dryRun, true);
+  assert.deepEqual(result.unprotectedJs, ['server/view.jsx']);
+  assert.ok(lines.some((line) => line.includes('server/view.jsx')));
+
+  await fs.rm(path.join(dir, 'server/view.jsx'));
+  const safe = await runSystemPublish({
+    args: [dir],
+    options: { build: true, 'dry-run': true },
+    logger: { log: () => undefined },
+    t
+  });
+  assert.equal(safe.ok, true);
+  assert.deepEqual(safe.unprotectedJs, []);
+});
+
 test('start entry check flags a missing start script and entries that did not ship', () => {
   const pkg = (scripts) => JSON.stringify({ scripts });
 
@@ -210,6 +299,11 @@ test('standard protection renames top-level names in modules and keeps runtime b
   assert.match(protectedEsm, /export/);
   assert.match(protectedEsm, /price/);
 
+  const compactEsm = 'function secretPricing(value){return value*2}function publicPrice(value){return secretPricing(value)}export{publicPrice as price}';
+  const protectedCompactEsm = await obfuscateJs(compactEsm);
+  assert.doesNotMatch(protectedCompactEsm, /secretPricing|publicPrice/);
+  assert.match(protectedCompactEsm, /export\{.* as price\}/);
+
   const script = 'function globalHelper() { return 1; }\n';
   assert.match(await obfuscateJs(script), /globalHelper/);
 
@@ -217,7 +311,7 @@ test('standard protection renames top-level names in modules and keeps runtime b
   assert.equal(runCommonJs(await obfuscateJs(errorClass)).name, 'LicenseError');
 });
 
-test('max protection runs the app obfuscator on readable JS and server bundles, never on frontend bundles', async (ctx) => {
+test('max protection runs the app obfuscator on frontend and server bundles', async (ctx) => {
   const frontendBundle = `${'var a=1;'.repeat(5000)}\n`;
   const serverBundle = `import{join as j}from"node:path";${'var b=1;'.repeat(5000)}\n`;
   const dir = await makeApp(ctx, {
@@ -232,11 +326,11 @@ test('max protection runs the app obfuscator on readable JS and server bundles, 
     protection: { level: 'max', obfuscator: fakeObfuscator }
   });
 
-  assert.equal(files['dist/assets/index.js'], frontendBundle);
+  assert.match(files['dist/assets/index.js'], /^\/\*obfuscated:rc4\*\//);
   assert.match(files['dist-server/index.js'], /^\/\*obfuscated:rc4\*\//);
   assert.match(files['server/app.js'], /^\/\*obfuscated:rc4\*\//);
   assert.doesNotMatch(files['server/app.js'], /hidden/);
-  assert.equal(protectedJs, 2);
+  assert.equal(protectedJs, 3);
   assert.deepEqual(unprotectedJs, []);
 });
 
@@ -251,9 +345,8 @@ test('files the obfuscator rejects are reported and block max publishes unless e
 
   assert.deepEqual(unprotectedJs, ['server/app.js']);
   assert.equal(files['server/app.js'], 'module.exports = 1;\n');
-  assert.match(unprotectedJsError(unprotectedJs, 'max', {}, t).message, /system\.error_unprotected_js/);
-  assert.equal(unprotectedJsError(unprotectedJs, 'max', { 'allow-raw-source': true }, t), null);
-  assert.equal(unprotectedJsError(unprotectedJs, 'standard', {}, t), null);
+  assert.match(unprotectedJsError(unprotectedJs, {}, t).message, /system\.error_unprotected_js/);
+  assert.equal(unprotectedJsError(unprotectedJs, { 'allow-raw-source': true }, t), null);
 });
 
 test('protection level comes from --protection, then system.json build_protection, then standard', () => {
