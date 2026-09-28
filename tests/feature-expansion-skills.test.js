@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { MANAGED_FILES } = require('../src/constants');
+const { readWorkspaceMirror } = require('./helpers/workspace-mirror');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -160,6 +161,8 @@ test('expansion taxonomy, scout and routing scenarios stay synchronized with the
     '.aioson/skills/process/prototype-forge/references/build-contract.md',
     '.aioson/skills/process/prototype-forge/references/quality-and-manifest.md'
   ]) {
-    assert.equal(await read(relative), await read(`template/${relative}`), relative);
+    const installed = await readWorkspaceMirror(relative);
+    const shipped = await read(`template/${relative}`);
+    if (installed !== null) assert.equal(installed, shipped, relative);
   }
 });

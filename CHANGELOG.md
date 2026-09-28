@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Pinned the optional Cursor SDK's transitive HTTP client to patched `undici` 6.28.0 so production dependency audits pass without shipping the vulnerable 5.x copy.
 - Excluded local-only Squad benchmark runners from the npm tarball; they require a repository corpus and historical commits that are not part of an installed CLI.
+- Fixed the expansion-skill parity test for fresh checkouts, where ignored workspace mirrors are absent by design.
 - Added a beginner-friendly `system:publish --build` tutorial covering project-local installation, protection levels, dry runs, and the limits of code obfuscation.
 - Briefing and Refiner now discover useful interaction and learning opportunities from short prompts, carry choices through the review, and judge game prototypes by a playable core loop rather than visuals alone.
 - `system:publish --build` now transforms every shipped JS/JSX file, including compact frontend bundles and Vite configs, protects runtime TypeScript configs, blocks unprotected code and recognized secrets by default, and makes `--dry-run` report a failing exit status without login when publication would be unsafe.
