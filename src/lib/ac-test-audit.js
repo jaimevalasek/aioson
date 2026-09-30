@@ -36,7 +36,10 @@ const JS_TEST_FILE_RE = /(?:^|[\\/])(?:tests?|__tests__)[\\/].+\.(?:test|spec)\.
 function isTestFile(relPath) {
   const rel = String(relPath || '').replace(/\\/g, '/');
   if (JS_TEST_FILE_RE.test(rel)) return true;
-  if (/(?:^|\/)tests?\/.*\.rs$/i.test(rel) || /_test\.rs$/i.test(rel) || /^(?:src|crates|packages)\/.*\.rs$/i.test(rel)) return true;
+  // Rust keeps unit tests inline (`#[cfg(test)]`), so any source under a
+  // `src/`, `crates/` or `packages/` directory counts — including a nested
+  // crate such as Tauri's `src-tauri/src/`.
+  if (/(?:^|\/)tests?\/.*\.rs$/i.test(rel) || /_test\.rs$/i.test(rel) || /(?:^|\/)(?:src|crates|packages)\/.*\.rs$/i.test(rel)) return true;
   if (/_test\.go$/i.test(rel)) return true;
   if (/(?:^|\/)(?:test_.+|.+_test)\.py$/i.test(rel) || /(?:^|\/)tests?\/.*\.py$/i.test(rel)) return true;
   if (/(?:^|\/)tests?\/.*(?:Test\.php|\.php)$/i.test(rel)) return true;
@@ -58,14 +61,34 @@ function extractAcIds(content) {
   return [...new Set(String(content || '').match(AC_ID_RE) || [])].sort();
 }
 
+// A PRD's criteria are the first column of its Acceptance Criteria table. Prose
+// elsewhere may cite another feature's AC ("continues AC-billing-19") — that
+// id is not this feature's to prove. Without the table, every mention counts,
+// as before.
+function extractPrdAcIds(content) {
+  const section = extractSection(content, ['Acceptance Criteria', 'Criterios de Aceite', 'Critérios de Aceite']);
+  const table = section === null ? null : parseFirstMarkdownTable(section);
+  const declared = table ? table.rows.flatMap((row) => String(row[0] || '').match(AC_ID_RE) || []) : [];
+  return declared.length > 0 ? [...new Set(declared)].sort() : extractAcIds(content);
+}
+
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Whole-token match: the id must not be flanked by word chars or hyphens, so
 // AC-1 will not match inside AC-10 / AC-100 and AC-SDLC-1 not inside AC-SDLC-10.
-function mentionsAcId(text, acId) {
-  return new RegExp(`(?<![\\w-])${escapeRegExp(acId)}(?![\\w-])`).test(String(text || ''));
+// A Rust test name cannot hold a hyphen, so in a `.rs` file the id also counts
+// in its identifier form (`fn ac_orders_07_refunds()` → AC-orders-07), never
+// inside a longer number (`ac_orders_070`).
+function acMatchers(acId, file = null) {
+  const matchers = [new RegExp(`(?<![\\w-])${escapeRegExp(acId)}(?![\\w-])`, 'g')];
+  if (isRustSource(file)) matchers.push(new RegExp(`(?<![A-Za-z0-9])${escapeRegExp(String(acId).toLowerCase().replace(/-/g, '_'))}(?![0-9])`, 'gi'));
+  return matchers;
+}
+
+function mentionsAcId(text, acId, file = null) {
+  return acMatchers(acId, file).some((matcher) => matcher.test(String(text || '')));
 }
 
 async function readText(filePath) {
@@ -234,7 +257,10 @@ function maskNonCode(content, options = {}) {
 function hasAssertionNearAc(content, acId, options = {}) {
   const text = String(content || '');
   const code = maskNonCode(text, options);
-  const matcher = new RegExp(`(?<![\\w-])${escapeRegExp(acId)}(?![\\w-])`, 'g');
+  return acMatchers(acId, options.file).some((matcher) => assertionNearMatches(text, code, matcher, acId));
+}
+
+function assertionNearMatches(text, code, matcher, acId) {
   const testStarts = [];
   const testStartRe = /(?:^|\n)\s*(test|it|describe)(?:\.(only|skip|todo))?\s*\(/g;
   let testStart;
@@ -271,7 +297,7 @@ function hasAssertionNearAc(content, acId, options = {}) {
 
 function testEvidenceFor(acId, testContents, options = {}) {
   return testContents
-    .filter((item) => mentionsAcId(item.content, acId))
+    .filter((item) => mentionsAcId(item.content, acId, item.file))
     .filter((item) => !options.requireAssertions
       || hasAssertionNearAc(item.content, acId, { file: item.file }))
     .map((item) => ({
@@ -284,7 +310,7 @@ function testEvidenceFor(acId, testContents, options = {}) {
 
 function weakTestEvidenceFor(acId, testContents) {
   return testContents
-    .filter((item) => mentionsAcId(item.content, acId)
+    .filter((item) => mentionsAcId(item.content, acId, item.file)
       && !hasAssertionNearAc(item.content, acId, { file: item.file }))
     .map((item) => ({
       file: item.file,
@@ -465,7 +491,7 @@ async function collectAcceptanceCriteria(targetDir, slug) {
     }
     if (!content) continue;
     source.path = sourcePath;
-    for (const id of extractAcIds(content)) {
+    for (const id of source.kind === 'prd' ? extractPrdAcIds(content) : extractAcIds(content)) {
       if (!byId.has(id)) {
         byId.set(id, { id, sources: [] });
       }

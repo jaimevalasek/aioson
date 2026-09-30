@@ -164,6 +164,60 @@ fn renders_frame() {
   assert.equal(result.summary.covered, 1);
 });
 
+test('ac:test-audit reads inline Rust tests of a nested crate (Tauri src-tauri/src) and the identifier form of the AC id', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/prd-sync.md', [
+    '# PRD',
+    '',
+    '## Acceptance Criteria',
+    '| AC | CAP | Observable behavior | Evidence |',
+    '|---|---|---|---|',
+    '| AC-sync-07 | CAP-sync-guide | The guide block is written | Rust test |',
+    '| AC-sync-08 | CAP-sync-guide | Other bytes are preserved | Rust test |',
+    ''
+  ].join('\n'));
+  await writeFile(dir, 'src-tauri/src/sync/guide.rs', `
+pub fn write() {}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ac_sync_07_guide_is_written() {
+        assert!(true);
+    }
+
+    #[test]
+    fn ac_sync_070_is_another_criterion() {
+        assert!(true);
+    }
+}
+`);
+  const result = await auditAcceptanceCriteriaTests(dir, 'sync', { requireCriteria: true, requireAssertions: true });
+  const byAc = Object.fromEntries(result.items.map((item) => [item.ac, item]));
+  assert.equal(byAc['AC-sync-07'].status, 'covered', JSON.stringify(byAc['AC-sync-07']));
+  assert.equal(byAc['AC-sync-07'].evidence[0].file, 'src-tauri/src/sync/guide.rs');
+  assert.equal(byAc['AC-sync-08'].status, 'missing', 'ac_sync_070 never stands in for another id');
+});
+
+test('ac:test-audit takes a PRD\'s criteria from its Acceptance Criteria table, not from another feature\'s AC cited in prose', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/prd-sync.md', [
+    '# PRD',
+    '',
+    'This continues AC-legacy-19 from the first stage.',
+    '',
+    '## Acceptance Criteria',
+    '| AC | CAP | Observable behavior | Evidence |',
+    '|---|---|---|---|',
+    '| AC-sync-01 | CAP-sync-link | Link persists (continues AC-legacy-19) | unit test |',
+    ''
+  ].join('\n'));
+  await writeFile(dir, 'tests/sync.test.js', "test('AC-sync-01', () => { expect(1).toBe(1); });\n");
+  const result = await auditAcceptanceCriteriaTests(dir, 'sync', { requireCriteria: true, requireAssertions: true });
+  assert.deepEqual(result.items.map((item) => item.ac), ['AC-sync-01']);
+  assert.equal(result.ok, true, JSON.stringify(result.items));
+});
+
 test('ac:test-audit reads Rust assertions that follow a lifetime', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, '.aioson/context/prd-renderer.md', '# PRD\n\nAC-renderer-01\n');
