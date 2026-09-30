@@ -334,6 +334,7 @@ function unitContractLines(feature, unit, lane, maxWave) {
     `- Scope: ${unit.scope || '(see plan)'}`,
     `- Capabilities: ${unit.caps.length ? unit.caps.join(', ') : '(none cited — see scope)'}`,
     `- Acceptance criteria: ${unit.acs.length ? unit.acs.join(', ') : '(none cited)'}`,
+    ...(unit.capability_acs?.length ? [`- Other acceptance criteria of these capabilities (context only — sibling units or integration deliver them): ${unit.capability_acs.join(', ')}`] : []),
     '- Allowed files (create/modify ONLY these):',
     ...unit.files.map((file) => `  - ${file}`),
     `- Done when: ${unit.done || '(see plan)'}`
@@ -686,15 +687,19 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     if (!unitByPhase.has(label)) unitByPhase.set(label, unit);
     if (unit.phase_number !== null && !unitByPhase.has(`#${unit.phase_number}`)) unitByPhase.set(`#${unit.phase_number}`, unit);
   }
-  // A label names one row (`1-backend`); a bare phase number names every row
-  // of that phase — a phase cut per lane is still one phase to depend on.
+  // A label names one row (`1-backend`); a bare phase number (`2`, `Phase 2`)
+  // names every row of that phase — a phase cut per lane is still one phase to
+  // depend on. An unknown label that merely contains a digit (`1-backend-x`)
+  // is unknown, never "every row of phase 1": that silently wired a unit to
+  // itself and to its whole wave.
+  const BARE_PHASE_REF = /^(?:phase|fase|etapa)?\s*[-#]?\s*(\d+)$/i;
   const resolvePhaseRefs = (ref) => {
     const key = String(ref).trim().toLowerCase();
     if (unitByPhase.has(key)) return [unitByPhase.get(key)];
     const byId = units.find((unit) => unit.id === key);
     if (byId) return [byId];
-    const number = phaseNumberString(ref);
-    if (number !== null) return units.filter((unit) => unit.phase_number === number);
+    const bare = key.match(BARE_PHASE_REF);
+    if (bare) return units.filter((unit) => unit.phase_number === bare[1]);
     return [];
   };
   const edges = [];
@@ -751,7 +756,18 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
       unit.caps = [...new Set([...byPhase, ...byPaths])];
     }
     const capSet = new Set(unit.caps.map((cap) => cap.toLowerCase()));
-    unit.acs = [...new Set([...unit.acs, ...excerpts.acceptance.filter((row) => row.caps.some((cap) => capSet.has(cap.toLowerCase()))).map((row) => row.ac).filter(Boolean)])];
+    const capabilityAcs = excerpts.acceptance.filter((row) => row.caps.some((cap) => capSet.has(cap.toLowerCase()))).map((row) => row.ac).filter(Boolean);
+    // A row that names its own ACs owns exactly those (the same count
+    // execution:offer measures); the rest of its capabilities' ACs belong to
+    // sibling units or integration and travel as context. A row that names
+    // only a CAP owns every AC of it, as before.
+    if (unit.acs.length > 0) {
+      const owned = new Set(unit.acs.map((ac) => ac.toLowerCase()));
+      unit.capability_acs = [...new Set(capabilityAcs)].filter((ac) => !owned.has(ac.toLowerCase()));
+    } else {
+      unit.acs = [...new Set(capabilityAcs)];
+      unit.capability_acs = [];
+    }
     unit.verification = excerpts.delivery
       .filter((row) => row.verification && row.caps.some((cap) => capSet.has(cap.toLowerCase())))
       .map((row) => ({ cap: row.caps[0] || null, command: row.verification }));

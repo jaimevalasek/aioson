@@ -787,6 +787,49 @@ test('execution:compile — Depends on becomes typed edges: depends_on per unit,
   assert.deepEqual(quiet.warnings, []);
 });
 
+test('plan-waves: a parenthesis that is not a gate is the planner\'s note — its commas never split dependencies and it never joins the name', () => {
+  assert.deepEqual(parseDependsCell('2-frontend-drawer (use-model-link.ts, db-models.ts e strings), 2-frontend-lib (model-link-prompts.ts)'), [
+    { phase: '2-frontend-drawer', gate: 'after_qa', note: 'use-model-link.ts, db-models.ts e strings' },
+    { phase: '2-frontend-lib', gate: 'after_qa', note: 'model-link-prompts.ts' }
+  ]);
+  assert.deepEqual(parseDependsCell('1-backend (dev), 2 (qa); 3 (reviewed)'), [
+    { phase: '1-backend', gate: 'after_dev' },
+    { phase: '2', gate: 'after_qa' },
+    { phase: '3', gate: 'after_qa' }
+  ]);
+});
+
+test('execution:compile — a noted dependency resolves to its exact row, and an unknown label that merely contains a digit is unknown, never "every row of that phase"', async (t) => {
+  const noted = await setup(t, { plan: PLAN_DEPS.replace('| 2 (dev) |', '| 2 (dev), 1 (reads the orders contract, see IF-001) |') });
+  const compiled = await compile(noted.dir, noted.env);
+  assert.equal(compiled.ok, true, JSON.stringify(compiled.errors));
+  const { plan } = await readExecutionPlan(noted.dir, SLUG);
+  assert.deepEqual(plan.units.find((unit) => unit.id === 'phase-3').depends_on, [{ unit: 'phase-2', gate: 'after_dev' }, { unit: 'phase-1', gate: 'after_qa' }]);
+
+  // Before the fix "1-api-extra" matched every row of phase 1 by its digit.
+  const unknown = await setup(t, { plan: PLAN_DEPS.replace('| 1, Phase 2 |', '| 1-api-extra |') });
+  const refused = await compile(unknown.dir, unknown.env);
+  assert.equal(refused.reason, 'compile_refused');
+  assert.match(refused.errors.find((e) => e.check === 'dependency_unknown').message, /phase "4" depends on "1-api-extra"/);
+  assert.equal(refused.errors.some((e) => e.check === 'dependency_self' || e.check === 'dependency_wave_violation'), false, JSON.stringify(refused.errors));
+});
+
+test('execution:compile — a row that names its own ACs owns exactly those; the rest of its capability\'s ACs are context, and the unit ceiling counts what the row owns (the same number execution:offer measures)', async (t) => {
+  const manyAcs = Array.from({ length: 7 }, (_, index) => `| AC-orders-1${index} | CAP-orders-api | order rule ${index} | api test |`).join('\n');
+  const plan = PLAN.replace('| 1 | 1 | src/api/orders.ts, tests/api/orders.test.ts | CAP-orders-api | npm test -- orders.api passes |', '| 1 | 1 | src/api/orders.ts, tests/api/orders.test.ts | CAP-orders-api, AC-orders-01, AC-orders-10 | npm test -- orders.api passes |');
+  const { dir, env } = await setup(t, { plan, prd: `${PRD.trimEnd()}\n${manyAcs}\n` });
+  const result = await compile(dir, env);
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.warnings.some((warning) => warning.check === 'unit_over_budget'), false, JSON.stringify(result.warnings));
+  const compiled = (await readExecutionPlan(dir, SLUG)).plan;
+  const unit = compiled.units.find((item) => item.id === 'phase-1');
+  assert.deepEqual(unit.acs, ['AC-orders-01', 'AC-orders-10']);
+  assert.deepEqual(unit.capability_acs, ['AC-orders-11', 'AC-orders-12', 'AC-orders-13', 'AC-orders-14', 'AC-orders-15', 'AC-orders-16']);
+  const prompt = await fs.readFile(path.join(dir, unit.prompt), 'utf8');
+  assert.match(prompt, /- Acceptance criteria: AC-orders-01, AC-orders-10\n/);
+  assert.match(prompt, /- Other acceptance criteria of these capabilities \(context only — sibling units or integration deliver them\): AC-orders-11, /);
+});
+
 test('execution:compile refuses a broken graph with named findings — unknown phase, self-dependency, same-or-later wave, integration dependency, cycle', async (t) => {
   const unknown = await setup(t, { plan: PLAN_DEPS.replace('| 2 (dev) |', '| 9 |') });
   let result = await compile(unknown.dir, unknown.env);

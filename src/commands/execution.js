@@ -47,6 +47,7 @@ const {
   verifyExecutionPlan
 } = require('../agent-execution/execution-plan');
 const { runExecution, decideExecution, statusExecution, describeMs, describeAge, describeMeasuredOn } = require('../agent-execution/execution-run');
+const { launchDetachedRun } = require('../agent-execution/execution-detach');
 const { graphExecution, FORMATS: GRAPH_FORMATS } = require('../agent-execution/execution-graph');
 const { renderMonitor } = require('../agent-execution/execution-terminal');
 const { runExecutionProfileValidation } = require('./execution-profile-validation');
@@ -261,6 +262,46 @@ function logCompile(logger, result) {
   for (const warning of result.warnings || []) logger.error(`  ⚠ [${warning.check}] ${warning.message}`);
 }
 
+/**
+ * `execution:run --detach`: the same read-only preflight a foreground run does
+ * first, then the engine as its own process. A refused preflight returns here,
+ * so a detached launch never fails silently in the background.
+ */
+async function detachRun({ projectDir, feature, options, env, logger, engineOptions = {}, launch = launchDetachedRun }) {
+  const preflight = await runExecution({
+    projectDir,
+    feature,
+    resume: options.resume === true,
+    fresh: options.fresh === true,
+    step: options.step === true,
+    untilComplete: options['until-complete'] === true ? true : options['bounded-recovery'] === true ? false : null,
+    expectedRunId: typeof options['expect-run'] === 'string' ? options['expect-run'] : null,
+    preflightOnly: true,
+    env,
+    ...engineOptions
+  });
+  if (!preflight.ok) {
+    if (!options.json) logRun(logger, preflight);
+    return preflight;
+  }
+  let launched;
+  try {
+    launched = await launch({ projectDir, feature, options, env });
+  } catch (error) {
+    const refused = { ok: false, reason: 'detach_failed', feature, message: error.message, exitCode: 1 };
+    if (!options.json) logger.error(`Could not start the detached engine: ${error.message}`);
+    return refused;
+  }
+  const follow = `aioson execution:status . --feature=${feature} --watch`;
+  const result = { ok: true, status: 'detached', feature, pid: launched.pid, log: launched.log, follow_command: follow, dashboard_command: `aioson execution:dashboard . --feature=${feature}`, exitCode: 0 };
+  if (!options.json) {
+    logger.log(`Execution engine started in the background (pid ${launched.pid}); it keeps running after this terminal closes.`);
+    logger.log(`Follow: ${follow}`);
+    logger.log(`Log: ${launched.log}/stdout.log`);
+  }
+  return result;
+}
+
 async function runExecutionCommand({ args, options = {}, logger, env = process.env, now = Date.now(), engineOptions = {} }) {
   const projectDir = resolveTargetDir(args);
   applyProjectEnv(projectDir);
@@ -405,6 +446,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
   if (sub === 'run') {
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
     if (options['until-complete'] && options['bounded-recovery']) return { ok: false, reason: 'conflicting_recovery_options', message: 'Use either --until-complete or --bounded-recovery' };
+    if (options.detach === true && options.preflight !== true) return detachRun({ projectDir, feature, options, env, logger, engineOptions });
     // Live lines: stdout in human mode; stderr in --json mode so the JSON
     // document stays the only thing on stdout while a supervising terminal
     // still sees every event as it happens.
@@ -524,4 +566,4 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
   return { ok: false, reason: 'invalid_subcommand', valid: SUBCOMMANDS };
 }
 
-module.exports = { runExecution: runExecutionCommand, formatProgress, renderStatus, renderStatusLine, describeLive, SUBCOMMANDS, STATUS_FORMATS };
+module.exports = { runExecution: runExecutionCommand, detachRun, formatProgress, renderStatus, renderStatusLine, describeLive, SUBCOMMANDS, STATUS_FORMATS };

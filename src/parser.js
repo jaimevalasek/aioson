@@ -42,7 +42,7 @@ const BOOLEAN_FLAGS = new Set([
   // execution:run — pure booleans; `--preflight .` / `--resume .` / `--fresh .`
   // must not swallow the path positional.
   'preflight', 'resume', 'fresh', 'no-context-limit', 'context-limit',
-  'until-complete', 'bounded-recovery', 'refresh',
+  'until-complete', 'bounded-recovery', 'refresh', 'detach',
   // `--watch` alone is the default cadence (execution:status 5 s, live:status
   // and runtime:session:status 2 s); `--watch=<seconds>` carries its value
   // through the `=` branch above. Bare, it must not swallow the path

@@ -457,7 +457,7 @@ module.exports = {
     help_execution_compile:
       'aioson execution:compile [path] --feature=<slug> [--dry-run] [--json] [--locale=en]',
     help_execution_run:
-      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--wave=<n>] [--until-complete|--bounded-recovery] [--json] [--locale=en]',
+      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--wave=<n>] [--until-complete|--bounded-recovery] [--detach] [--json] [--locale=en]',
     help_execution_decide:
       'aioson execution:decide [path] --feature=<slug> --unit=<unit-id> --choice=retry|fallback:<host>/<model>[/<effort>]|skip|skip-qa|abort [--json] [--locale=en]',
     help_execution_status:

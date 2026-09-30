@@ -1022,6 +1022,121 @@ test('integration_dev runs one final correcting supervisor and independent QA af
   assert.ok(result.reports.some(report => report.unit === 'integration-supervisor'));
 });
 
+// ───────────────────────── manual checks never stall the final supervisor ─────────────────────────
+
+const { splitVerificationText, deferManualVerification } = require('../src/agent-execution/execution-run');
+const SUPERVISED_ROLES = { ...ROLES, roles: { ...ROLES.roles, integration_dev: { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' } } };
+
+async function withIntegrationVerification(ctx, verification) {
+  const planFile = path.join(ctx.dir, '.aioson', 'context', `execution-plan-${SLUG}.json`);
+  const plan = JSON.parse(await fs.readFile(planFile, 'utf8'));
+  plan.integration.verification = verification;
+  await fs.writeFile(planFile, `${JSON.stringify(plan, null, 2)}\n`);
+}
+
+test('a Verification cell splits into executable commands and the checks a person performs; plain legacy text stays a check the supervisor runs', () => {
+  assert.deepEqual(splitVerificationText('`cargo test db_models` + `npx vitest run src/lib` + smoke: link a model from the card in `npm run tauri dev`'), {
+    commands: ['cargo test db_models', 'npx vitest run src/lib'],
+    manual: ['smoke: link a model from the card in `npm run tauri dev`']
+  });
+  assert.deepEqual(splitVerificationText('`npm test` e `npm run i18n:check` passam; inspeção do pacote gerado pelo publish'), {
+    commands: ['npm test', 'npm run i18n:check'],
+    manual: ['inspeção do pacote gerado pelo publish']
+  });
+  assert.deepEqual(splitVerificationText('smoke com IA real (claude e codex): "Implementar" leva a contagem a 0'), { commands: [], manual: ['smoke com IA real (claude e codex): "Implementar" leva a contagem a 0'] });
+  assert.deepEqual(splitVerificationText('npm test -- orders.api passes'), { commands: ['npm test -- orders.api passes'], manual: [] });
+  assert.deepEqual(splitVerificationText('tests pass'), { commands: ['tests pass'], manual: [] }, 'a check without a human cue keeps its old meaning');
+});
+
+test('only a supervisor block made of manual checks with every executed command green is deferred to the owner', () => {
+  const supervisor = { owner: 'supervisor', manual_verification: [{ cap: 'CAP-a', check: 'desktop smoke' }] };
+  const green = [{ command: 'npm test', exit_code: 0 }];
+  const manual = { severity: 'high', kind: 'manual_verification_deferred', text: 'open the app and link a model' };
+  const deferred = deferManualVerification({ kind: 'blocked', verdict: 'BLOCKED', findings: [manual], evidence: green }, supervisor);
+  assert.equal(deferred.outcome.kind, 'passed');
+  assert.equal(deferred.outcome.verdict, 'PASS');
+  assert.equal(deferred.outcome.verdict_reported, 'BLOCKED');
+  assert.deepEqual(deferred.outcome.findings, [{ ...manual, severity: 'medium', to: 'owner', deferred: true }]);
+  assert.deepEqual(deferred.checks, ['open the app and link a model']);
+  // A failing command, a real defect next to the manual check, or a lane unit: the normal path.
+  assert.equal(deferManualVerification({ kind: 'blocked', verdict: 'BLOCKED', findings: [manual], evidence: [{ command: 'npm test', exit_code: 1 }] }, supervisor), null);
+  assert.equal(deferManualVerification({ kind: 'blocked', verdict: 'BLOCKED', findings: [manual, { severity: 'high', summary: 'API returns 500' }], evidence: green }, supervisor), null);
+  assert.equal(deferManualVerification({ kind: 'blocked', verdict: 'BLOCKED', findings: [manual], evidence: green }, { owner: 'lane' }), null);
+  assert.equal(deferManualVerification({ kind: 'blocked', verdict: 'BLOCKED', findings: [manual], evidence: ['npm test green'] }, supervisor), null, 'nothing proves a command ran');
+  // `verification_not_executable` may mean a missing tool; it defers only when the plan itself lists manual checks.
+  const notExecutable = { kind: 'blocked', verdict: 'BLOCKED', findings: [{ severity: 'high', kind: 'verification_not_executable', text: 'desktop smoke' }], evidence: green };
+  assert.ok(deferManualVerification(notExecutable, supervisor));
+  assert.equal(deferManualVerification(notExecutable, { owner: 'supervisor', manual_verification: [] }), null);
+  // The review of the supervisor reuses the implementer's measured commands.
+  const review = deferManualVerification({ kind: 'passed', verdict: 'PASS', findings: [manual], evidence: ['reviewed'] }, supervisor, green);
+  assert.equal(review.outcome.findings[0].severity, 'medium');
+});
+
+test('an integration supervisor that blocks only on checks a person performs hands them to the owner — the run completes instead of spinning into recovery_no_progress', async (t) => {
+  const ctx = await setup(t, { roles: SUPERVISED_ROLES });
+  await withIntegrationVerification(ctx, [{ cap: 'CAP-orders-api', command: '`npm test -- orders.api` + smoke: open the orders screen in the desktop app with a real AI session' }]);
+  const fakes = adapters({
+    'dev:integration-supervisor': input => {
+      const [commands, manual = ''] = input.prompt_text.split('## Manual and production checks');
+      assert.match(commands, /- npm test -- orders\.api \(CAP-orders-api\)/);
+      assert.doesNotMatch(commands, /open the orders screen/, 'the manual check is never presented as a command');
+      assert.match(manual, /open the orders screen in the desktop app/);
+      assert.match(manual, /manual_verification_deferred/);
+      return { verdict: 'BLOCKED', findings: [{ severity: 'high', kind: 'verification_not_executable', text: 'the desktop smoke cannot run unattended' }], evidence: [{ command: 'npm test -- orders.api', exit_code: 0, result: 'green' }] };
+    },
+    'qa:integration-supervisor': input => {
+      assert.match(input.prompt_text, /Manual\/production checks handed to the owner/);
+      assert.match(input.prompt_text, /open the orders screen/);
+      return {};
+    }
+  });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal(result.integration.status, 'passed');
+  assert.equal(fakes.log.filter(entry => entry.key === 'dev:integration-supervisor').length, 1, 'no rework round for a check no retry can change');
+  const state = await readState(ctx);
+  assert.equal(state.units['integration-supervisor'].dev.verdict, 'PASS');
+  assert.equal(state.units['integration-supervisor'].dev.verdict_reported, 'BLOCKED');
+  assert.deepEqual(state.integration.manual_verification, ['smoke: open the orders screen in the desktop app with a real AI session', 'the desktop smoke cannot run unattended']);
+  assert.ok(state.findings.some(finding => finding.check === 'manual_verification_deferred' && finding.unit === 'integration-supervisor' && finding.to === 'owner'));
+});
+
+test('a supervisor block with a failing command is never deferred — the run stops for a decision', async (t) => {
+  const ctx = await setup(t, { roles: SUPERVISED_ROLES });
+  await withIntegrationVerification(ctx, [{ cap: 'CAP-orders-api', command: '`npm test -- orders.api` + smoke: open the orders screen in the desktop app' }]);
+  const fakes = adapters({
+    'dev:integration-supervisor': { verdict: 'BLOCKED', findings: [{ severity: 'high', kind: 'verification_not_executable', text: 'desktop smoke' }], evidence: [{ command: 'npm test -- orders.api', exit_code: 1, result: '2 failing' }] }
+  });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.notEqual(result.status, 'completed', JSON.stringify(result));
+  const state = await readState(ctx);
+  assert.equal(state.findings.some(finding => finding.check === 'manual_verification_deferred'), false);
+});
+
+test('execution:run --detach runs the read-only preflight first, then starts the engine as its own process; a refused preflight never launches', async (t) => {
+  const { detachRun } = require('../src/commands/execution');
+  const { detachedRunArgs } = require('../src/agent-execution/execution-detach');
+  const ctx = await setup(t);
+  const engineOptions = { catalogLoader, resolverOptions: ctx.resolverOptions, gitBaseline: fakeBaseline };
+  const launches = [];
+  const launch = async (input) => { launches.push(input); return { pid: 4242, log: '.aioson/runtime/execution-detached/orders/run-1' }; };
+  const options = { detach: true, 'until-complete': true, json: true };
+  const started = await detachRun({ projectDir: ctx.dir, feature: SLUG, options, env: ctx.env, logger, engineOptions, launch });
+  assert.equal(started.ok, true, JSON.stringify(started));
+  assert.equal(started.status, 'detached');
+  assert.equal(started.pid, 4242);
+  assert.equal(started.follow_command, `aioson execution:status . --feature=${SLUG} --watch`);
+  assert.equal(launches.length, 1);
+  assert.equal(launches[0].feature, SLUG);
+  assert.equal((await readState(ctx).catch(() => null)), null, 'the preflight writes no run state; the detached engine does');
+
+  const refused = await detachRun({ projectDir: ctx.dir, feature: 'not-compiled', options, env: ctx.env, logger, engineOptions, launch: async () => { throw new Error('a refused preflight must not launch'); } });
+  assert.equal(refused.ok, false);
+
+  assert.deepEqual(detachedRunArgs('/p', SLUG, { resume: true, 'until-complete': true, 'expect-run': 'r1', wave: 2, detach: true }),
+    ['execution:run', '/p', `--feature=${SLUG}`, '--resume', '--until-complete', '--expect-run=r1', '--wave=2', '--json'], 'the child never re-detaches');
+});
+
 test('adding integration_dev during active lane work enables the final supervisor without recompiling', async (t) => {
   const roles = JSON.parse(JSON.stringify(ROLES));
   const ctx = await setup(t, { roles });

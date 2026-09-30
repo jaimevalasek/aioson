@@ -732,6 +732,10 @@ function composeQaPrompt({ profileText, feature, unit, lane, dev, maxFixFiles, m
     `- Done when: ${unit.done || '(see plan)'}`,
     ...(unit.verification.length ? ['- Verification:', ...unit.verification.map((item) => `  - ${item.command}${item.cap ? ` (${item.cap})` : ''}`)] : []),
     ...(unit.integration_verification ? ['- Review only the local Done when / Verification. Capability-wide checks belong to integration: do not fail this unit for a sibling artifact that is not yet due; report the deferred check to integration. A local PASS does not approve the whole capability.'] : []),
+    ...(unit.manual_verification?.length ? [
+      '- Manual/production checks handed to the owner (not executable unattended; never fail or block this review for them — confirm the implementer listed each as `manual_verification_deferred`):',
+      ...unit.manual_verification.map((item) => `  - ${item.check}${item.cap ? ` (${item.cap})` : ''}`)
+    ] : []),
     `- Correction budget: at most ${maxFixFiles} file(s) among the unit files; list each in corrections[] as {path, summary}.`,
     '',
     '## Implementer report',
@@ -747,6 +751,73 @@ function composeQaPrompt({ profileText, feature, unit, lane, dev, maxFixFiles, m
   ].join('\n');
 }
 
+// A Capability Delivery Plan `Verification` cell mixes commands with checks a
+// person performs: "`npm test` + smoke: link a model in `npm run tauri dev`".
+// Each `+` / `;` / `&&` part that is only backticked commands (plus filler such
+// as "e", "and", "passes") is executable; a part that reads as a human check
+// (smoke, walkthrough, inspection, a real AI session...) is manual; anything
+// else keeps its old meaning — a check the supervisor runs.
+const VERIFICATION_FILLER = /^(?:[\s,.:;+&]|\b(?:e|and|then|depois|passes?|passam?|pass|green|verdes?|succeeds?|ok|both|ambos)\b)*$/i;
+const MANUAL_CHECK_CUE = /\b(?:smoke|manual|walkthrough|inspe\w*|visual|desktop|gui|browser|navegador|screenshot|click|clique|real[\s-]+ai|ia\s+real|person|pessoa|owner|dono|human|humano|interactive|interativ\w*)\b/i;
+function splitVerificationText(text) {
+  const commands = [];
+  const manual = [];
+  for (const raw of String(text || '').split(/\s\+\s|;|\s&&\s|<br\s*\/?\s*>|\n/i)) {
+    const part = raw.trim();
+    if (!part) continue;
+    const quoted = [...part.matchAll(/`([^`]+)`/g)].map(match => match[1].trim()).filter(Boolean);
+    if (quoted.length > 0 && VERIFICATION_FILLER.test(part.replace(/`[^`]+`/g, ' '))) commands.push(...quoted);
+    else if (MANUAL_CHECK_CUE.test(part)) manual.push(part);
+    else commands.push(part);
+  }
+  return { commands, manual };
+}
+
+function splitIntegrationVerification(items) {
+  const verification = new Map();
+  const manual = new Map();
+  for (const item of items || []) {
+    if (!item || typeof item.command !== 'string' || !item.command.trim()) continue;
+    const split = splitVerificationText(item.command);
+    for (const command of split.commands) verification.set(`${item.cap || ''}:${command}`, { cap: item.cap || null, command });
+    for (const check of split.manual) manual.set(`${item.cap || ''}:${check}`, { cap: item.cap || null, check });
+  }
+  return { verification: [...verification.values()], manual: [...manual.values()] };
+}
+
+// A check a person performs cannot pass inside an unattended process. When the
+// final supervisor (or its review) blocks ONLY on such checks while every
+// command it ran exited 0, no retry can change the result — it used to spin
+// through rework into recovery_no_progress and leave the run unfinished. The
+// run hands those checks to the owner and continues; any real failure keeps
+// the normal rework/decision path.
+function deferManualVerification(outcome, unit, priorEvidence = []) {
+  if (unit?.owner !== 'supervisor' || !outcome || !['passed', 'failed', 'blocked'].includes(outcome.kind)) return null;
+  const findings = Array.isArray(outcome.findings) ? outcome.findings : [];
+  const severe = (finding) => ['critical', 'high'].includes(String(finding?.severity || '').trim().toLowerCase());
+  const kindOf = (finding) => String(finding?.kind || finding?.check || '').trim();
+  // `verification_not_executable` is accepted only when the plan itself lists
+  // manual checks; otherwise it may mean a missing tool, which is a real block.
+  const manual = (finding) => kindOf(finding) === 'manual_verification_deferred'
+    || (kindOf(finding) === 'verification_not_executable' && (unit.manual_verification || []).length > 0);
+  const blocking = findings.filter(severe);
+  if (blocking.length === 0 || !blocking.every(manual)) return null;
+  const ran = (list) => (Array.isArray(list) ? list : []).filter((item) => item && typeof item === 'object' && Number.isInteger(item.exit_code));
+  const executed = ran(outcome.evidence).length > 0 ? ran(outcome.evidence) : ran(priorEvidence);
+  if (executed.length === 0 || executed.some((item) => item.exit_code !== 0)) return null;
+  const checks = blocking.map((finding) => String(finding.text || finding.summary || finding.message || finding.description || '').slice(0, 800)).filter(Boolean);
+  return {
+    outcome: {
+      ...outcome,
+      kind: 'passed',
+      verdict: 'PASS',
+      verdict_reported: outcome.verdict || null,
+      findings: findings.map((finding) => (severe(finding) && manual(finding) ? { ...finding, severity: 'medium', to: 'owner', deferred: true } : finding))
+    },
+    checks
+  };
+}
+
 /**
  * Optional final integration pipeline. It is enabled by declaring
  * `integration_dev` in the active execution profile. The unit is synthesized
@@ -757,9 +828,7 @@ function buildIntegrationSupervisor(plan, integrationRole = plan?.integration?.r
   if (!plan || !integrationRole) return null;
   const sourceUnits = plan.units || [];
   const files = [...new Set(sourceUnits.flatMap(unit => unit.files || []))];
-  const verification = [...new Map((plan.integration.verification || [])
-    .filter(item => item && typeof item.command === 'string' && item.command.trim())
-    .map(item => [`${item.cap || ''}:${item.command}`, item])).values()];
+  const { verification, manual: manualVerification } = splitIntegrationVerification(plan.integration.verification || []);
   const laneQa = Object.values(plan.lanes || {}).map(lane => lane.qa).find(Boolean) || null;
   const wave = Math.max(0, ...(plan.waves || []).map(item => Number(item.wave) || 0)) + 1;
   const unit = {
@@ -772,12 +841,13 @@ function buildIntegrationSupervisor(plan, integrationRole = plan?.integration?.r
     files,
     read_ranges: [],
     scope: 'Integrate every approved unit, implement planned integration-owned work, run the complete verification set, and repair cross-unit regressions in their owning files.',
-    done: verification.length > 0
+    done: `${verification.length > 0
       ? 'Every integration verification command passes and no critical/high cross-unit finding remains.'
-      : 'The complete project verification passes and no critical/high cross-unit finding remains.',
+      : 'The complete project verification passes and no critical/high cross-unit finding remains.'} Checks that need a person or a live desktop/AI session are handed to the owner as deferred manual verification; they never block this stage.`,
     caps: [...new Set(sourceUnits.flatMap(item => item.caps || []))],
-    acs: [...new Set(sourceUnits.flatMap(item => item.acs || []))],
+    acs: [...new Set(sourceUnits.flatMap(item => [...(item.acs || []), ...(item.capability_acs || [])]))],
     verification,
+    manual_verification: manualVerification,
     depends_on: [],
     report: `.aioson/context/reports/${plan.feature}/{run_id}/integration-supervisor.json`,
     qa_report: `.aioson/context/reports/${plan.feature}/{run_id}/integration-supervisor-qa.json`
@@ -847,10 +917,17 @@ function composeIntegrationSupervisorPrompt({ plan, state, unit }) {
     '## Complete verification',
     ...(unit.verification.length ? unit.verification.map(item => `- ${item.command}${item.cap ? ` (${item.cap})` : ''}`) : ['- Run the project\'s complete deterministic typecheck/test/build verification appropriate to this delivery.']),
     '',
+    ...(unit.manual_verification?.length ? [
+      '## Manual and production checks (a person performs these after the run)',
+      ...unit.manual_verification.map(item => `- ${item.check}${item.cap ? ` (${item.cap})` : ''}`),
+      '',
+      'You cannot perform these in an unattended process. Do not start the desktop app, drive a GUI or open a real AI session to try. Do not report BLOCKED for them: prepare what they need (the code paths they exercise must be integrated and covered by the executable checks), then list each one as a finding with `"kind": "manual_verification_deferred"`, `"severity": "medium"` and `"to": "owner"`.',
+      ''
+    ] : []),
     '## Exact correction scope',
     ...unit.files.map(file => `- ${file}`),
     '',
-    'Report PASS only after the complete verification succeeds and all critical/high integration findings are resolved. Preserve concrete failing commands and paths in findings when blocked.'
+    'Report PASS only after every executable verification command succeeds and all critical/high integration findings are resolved; deferred manual checks never turn PASS into BLOCKED. Report BLOCKED only for a reproduced failure you could not repair or an executable command this environment cannot run, and preserve the concrete failing commands, exit codes and paths in findings and evidence.'
   ].join('\n');
 }
 
@@ -1830,6 +1907,19 @@ async function runExecution({
       };
     };
 
+    // The owner's list: planned manual checks plus what the supervisor or its
+    // review deferred. It stays on the run ledger (status/dashboard) and in
+    // the findings; it never reopens a unit.
+    const recordManualVerification = (unitState, unit, stage, checks) => {
+      const list = [...new Set([...(unit.manual_verification || []).map((item) => item.check), ...checks])];
+      state.integration ||= { owner: 'dev', units: [], status: 'running' };
+      state.integration.manual_verification = [...new Set([...(state.integration.manual_verification || []), ...list])];
+      if (!state.findings.some((finding) => finding.check === 'manual_verification_deferred' && finding.unit === unitState.id && finding.stage === stage)) {
+        state.findings.push({ check: 'manual_verification_deferred', severity: 'medium', unit: unitState.id, lane: unitState.lane, wave: unitState.wave, stage, to: 'owner', checks: list, message: `${unitState.id} (${stage}) passed every executable check; ${list.length} check(s) that need a person or a live desktop/AI session were handed to the owner instead of blocking the run` });
+      }
+      emit({ type: 'integration', status: 'manual_verification_deferred', unit: unitState.id, stage, checks: list.length });
+    };
+
     const routeUnitToSupervisor = async (unitState, stage, outcome, trigger) => {
       const currentRoles = await refreshRuntimePolicy();
       if (!queueSupervisorTakeover(unitState, stage, outcome, integrationDevRoutes(currentRoles))) return false;
@@ -2080,6 +2170,11 @@ async function runExecution({
         } catch (error) {
           outcome = { kind: 'crashed', reason: 'engine_error', error: error.message, host: config.host, model: config.model };
         }
+        const deferredDev = deferManualVerification(outcome, unit);
+        if (deferredDev) {
+          outcome = deferredDev.outcome;
+          recordManualVerification(unitState, unit, 'dev', deferredDev.checks);
+        }
         unitState.dev = { ...unitState.dev, ...outcome, status: outcome.kind, findings: outcome.findings || [], evidence: (outcome.evidence || []).slice(0, MAX_EXCERPT_ITEMS), messages: outcome.messages || [], messages_dropped: outcome.messages_dropped || 0 };
         delete unitState.dev.kind;
         delete unitState.dev.live;
@@ -2144,6 +2239,11 @@ async function runExecution({
           outcome = await executeRole({ ...commonArgs, role: 'qa', config, promptText, reportRel: roundReport(unit.qa_report, state.run_id, unitState.rework?.rounds || 0, unitState.continuations?.qa, unitState.qa_report_repair?.rounds || 0, unitState.technical_retries?.qa), onHeartbeat: liveFor(unitState, 'qa'), independentFrom: requireIndependentQa ? unitState.dev : null });
         } catch (error) {
           outcome = { kind: 'crashed', reason: 'engine_error', error: error.message, host: config.host, model: config.model };
+        }
+        const deferredQa = deferManualVerification(outcome, unit, unitState.dev?.evidence);
+        if (deferredQa) {
+          outcome = deferredQa.outcome;
+          recordManualVerification(unitState, unit, 'qa', deferredQa.checks);
         }
         const after = await gitBaseline(projectDir).catch(() => null);
         const changed = diffBaselines(before, after);
@@ -2501,6 +2601,8 @@ async function runExecution({
       state.integration.status = approved ? 'passed' : 'skipped';
       state.integration.dev = supervisorState.dev;
       state.integration.qa = supervisorState.qa;
+      const plannedManual = (supervisor.unit.manual_verification || []).map((item) => item.check);
+      if (plannedManual.length > 0) state.integration.manual_verification = [...new Set([...(state.integration.manual_verification || []), ...plannedManual])];
       for (const integrationId of state.integration.units || []) {
         const integrated = state.units[integrationId];
         if (!integrated || integrated.owner !== 'integration') continue;
@@ -2934,6 +3036,8 @@ module.exports = {
   buildIntegrationSupervisor,
   composeIntegrationSupervisorPrompt,
   composeQaPrompt,
+  splitVerificationText,
+  deferManualVerification,
   decideExecution,
   diffBaselines,
   executeRole,

@@ -187,7 +187,9 @@ function rowDepths(rows) {
         for (const dep of row.depends) {
           const key = String(dep.phase).trim().toLowerCase();
           const exact = rows.filter((candidate) => label(candidate) === key);
-          const number = phaseNumber(dep.phase);
+          // Same rule as execution:compile: only a bare number (`2`, `Phase 2`) means the whole phase.
+          const bare = key.match(/^(?:phase|fase|etapa)?\s*[-#]?\s*(\d+)$/i);
+          const number = bare ? parseInt(bare[1], 10) : null;
           const targets = exact.length > 0 ? exact : rows.filter((candidate) => number !== null && phaseNumber(candidate.phase) === number);
           deps.push(...targets.filter((candidate) => depth.has(candidate)));
         }

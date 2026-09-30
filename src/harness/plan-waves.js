@@ -45,16 +45,39 @@ function splitPathCell(value) {
  * sufixo `(dev)` = portão after_dev (basta o implementador passar), sem
  * sufixo ou `(qa)` = after_qa (a revisão da lane terminou). Vazio, `-`,
  * `—`, `none` → nenhuma aresta (a onda continua sendo a barreira).
+ *
+ * Um parêntese que não é portão é nota do planejador ("1-backend (mod.rs e
+ * lib.rs)"): vira `note`, nunca parte do nome, e as vírgulas dentro dele não
+ * separam dependências — senão a nota vira fase desconhecida ou, pior, o
+ * número do nome passa a apontar para a fase inteira.
  */
+const GATE_WORDS = /^(dev|qa|implemented|reviewed)$/i;
+
+function splitTopLevel(value) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  const text = String(value || '').replace(/<br\s*\/?\s*>/gi, ';');
+  for (const char of text) {
+    if (char === '(') depth += 1;
+    if (char === ')' && depth > 0) depth -= 1;
+    if (depth === 0 && (char === ',' || char === ';')) { parts.push(current); current = ''; continue; }
+    current += char;
+  }
+  parts.push(current);
+  return parts;
+}
+
 function parseDependsCell(value) {
-  return String(value || '')
-    .split(/,|;|<br\s*\/?\s*>/i)
+  return splitTopLevel(value)
     .map((token) => token.replace(/`/g, '').trim())
     .filter((token) => token && !/^(?:-+|—|none|nenhuma?|n\/a)$/i.test(token))
     .map((token) => {
-      const match = token.match(/^(.+?)\s*\((dev|qa|implemented|reviewed)\)$/i);
+      const match = token.match(/^(.+?)\s*\(([^()]*)\)$/);
       if (!match) return { phase: token, gate: 'after_qa' };
-      const kind = match[2].toLowerCase();
+      const inner = match[2].trim();
+      if (!GATE_WORDS.test(inner)) return { phase: match[1].trim(), gate: 'after_qa', note: inner };
+      const kind = inner.toLowerCase();
       return { phase: match[1].trim(), gate: kind === 'dev' || kind === 'implemented' ? 'after_dev' : 'after_qa' };
     });
 }
