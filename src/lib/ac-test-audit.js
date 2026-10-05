@@ -422,6 +422,40 @@ async function collectDeclaredEvidence(targetDir, slug) {
   return byAc;
 }
 
+// AC id → its CAP when every CAP the AC belongs to is not_applicable or
+// deferred in the PRD Feature Capability Map. Closure only demands proof for
+// required CAPs, so the audit must not demand tests for promises the product
+// owner moved out of this delivery.
+async function collectOutOfScopeAcs(targetDir, slug) {
+  const byAc = new Map();
+  const { content: prd, path: prdPath } = await readTextFirst([
+    path.join(targetDir, '.aioson', 'context', `prd-${slug}.md`),
+    path.join(targetDir, '.aioson', 'context', 'done', slug, `prd-${slug}.md`)
+  ]);
+  if (!prd) return byAc;
+  const { validateProductCapabilityMap, validatePrdAcceptanceCriteria } = require('./feature-completeness');
+  const productMap = validateProductCapabilityMap(prd, prdPath);
+  if (productMap.rows.length === 0) return byAc;
+  const decisionByCap = new Map(productMap.rows.map((row) => [row.cap.toLowerCase(), row.decision]));
+  const nameByCap = new Map(productMap.rows.map((row) => [row.cap.toLowerCase(), row.cap]));
+  const { capToAcs } = validatePrdAcceptanceCriteria(prd, prdPath, productMap);
+  const capsByAc = new Map();
+  for (const [cap, acs] of Object.entries(capToAcs)) {
+    for (const ac of acs) {
+      const key = ac.toUpperCase();
+      if (!capsByAc.has(key)) capsByAc.set(key, []);
+      capsByAc.get(key).push(cap);
+    }
+  }
+  for (const [ac, caps] of capsByAc) {
+    const decisions = caps.map((cap) => decisionByCap.get(cap));
+    if (decisions.every((decision) => decision === 'not_applicable' || decision === 'deferred')) {
+      byAc.set(ac, { cap: nameByCap.get(caps[0]) || caps[0], decision: decisions[0] });
+    }
+  }
+  return byAc;
+}
+
 async function collectQaEvidence(targetDir, slug) {
   const candidates = [
     path.join(targetDir, '.aioson', 'context', `qa-report-${slug}.md`),
@@ -565,11 +599,17 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
     if (disposition.eligible) deferredAcs = disposition.deferred_acs;
   }
   for (const item of items) if (deferredAcs.includes(item.ac.toUpperCase())) item.status = 'deferred';
-  const missingItems = items.filter((item) => !['covered', 'deferred'].includes(item.status));
+  const outOfScope = await collectOutOfScopeAcs(targetDir, slug);
+  for (const item of items) {
+    const scope = outOfScope.get(item.ac.toUpperCase());
+    if (scope && item.status !== 'covered') Object.assign(item, { status: 'out_of_scope', scope });
+  }
+  const missingItems = items.filter((item) => !['covered', 'deferred', 'out_of_scope'].includes(item.status));
   const noCriteria = requireCriteria && items.length === 0;
   const summary = {
     acs_total: items.length,
     deferred: items.filter(item => item.status === 'deferred').length,
+    out_of_scope: items.filter(item => item.status === 'out_of_scope').length,
     covered: items.filter((item) => item.status === 'covered').length,
     missing: items.filter((item) => item.status === 'missing').length,
     weak: items.filter((item) => item.status === 'weak').length,

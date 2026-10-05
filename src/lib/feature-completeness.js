@@ -1078,6 +1078,7 @@ module.exports = {
   extractSection,
   parseFirstMarkdownTable,
   validateRequirementsBaseline,
+  validateProductCapabilityMap,
   validatePrdAcceptanceCriteria,
   analyzeFeatureCompleteness,
   findingsThroughStage,

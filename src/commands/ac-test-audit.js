@@ -81,10 +81,10 @@ async function runAcTestAudit({ args, options = {}, logger }) {
     logger.log('No acceptance criteria IDs found in requirements, PRD, or conformance artifacts.');
   } else {
     for (const item of report.items) {
-      const mark = item.status === 'covered' ? '✓' : '✗';
+      const mark = item.status === 'covered' ? '✓' : (item.status === 'out_of_scope' ? '–' : '✗');
       const evidence = item.evidence.length
         ? ` — ${item.evidence.map((e) => e.file).join(', ')}`
-        : '';
+        : (item.scope ? ` — ${item.scope.cap} is ${item.scope.decision} in the PRD` : '');
       logger.log(`  ${mark} ${item.ac}: ${item.status}${evidence}`);
     }
   }

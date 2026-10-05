@@ -218,6 +218,40 @@ test('ac:test-audit takes a PRD\'s criteria from its Acceptance Criteria table, 
   assert.equal(result.ok, true, JSON.stringify(result.items));
 });
 
+test('ac:test-audit does not demand tests for criteria of a deferred or not_applicable CAP', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/prd-sync.md', [
+    '# PRD',
+    '',
+    '## Feature Capability Map',
+    '| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |',
+    '|---|---|---|---|---|',
+    '| CAP-sync-link | Link persists | User saves | required | Core promise |',
+    '| CAP-sync-chat | Chat about the link | User asks | not_applicable | Owner removed the chat |',
+    '| CAP-sync-live | Real provider proof | QA with account | deferred | Next feature owns it |',
+    '',
+    '## Acceptance Criteria',
+    '| AC | CAP | Observable behavior | Evidence |',
+    '|---|---|---|---|',
+    '| AC-sync-01 | CAP-sync-link | Link persists | unit test |',
+    '| AC-sync-02 | CAP-sync-chat | Chat answers | unit test |',
+    '| AC-sync-03 | CAP-sync-live | Provider login works | e2e |',
+    '| AC-sync-04 | CAP-sync-link | Link survives restart | unit test |',
+    ''
+  ].join('\n'));
+  await writeFile(dir, 'tests/sync.test.js', "test('AC-sync-01', () => { expect(1).toBe(1); });\n");
+  const result = await auditAcceptanceCriteriaTests(dir, 'sync', { requireCriteria: true, requireAssertions: true });
+  const status = Object.fromEntries(result.items.map((item) => [item.ac, item.status]));
+  assert.deepEqual(status, {
+    'AC-sync-01': 'covered',
+    'AC-sync-02': 'out_of_scope',
+    'AC-sync-03': 'out_of_scope',
+    'AC-sync-04': 'missing'
+  });
+  assert.deepEqual(result.missing, ['AC-sync-04']);
+  assert.equal(result.summary.out_of_scope, 2);
+});
+
 test('ac:test-audit reads Rust assertions that follow a lifetime', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, '.aioson/context/prd-renderer.md', '# PRD\n\nAC-renderer-01\n');
