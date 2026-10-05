@@ -19,7 +19,15 @@ but active coordination inside it is not disposable while work is in progress.
 - Pruning preserves active tasks/runs, paused executions inside the retention window, pending/running runner items, actionable Neural Chain work items,
   unresolved handoffs, artifacts, learnings, plans, and catalog/configuration rows.
 - Preserve legacy `content_items` rows without `source_path` until their database-only payload has been exported to files.
-- `--force` is forbidden unless the operator explicitly confirms that reported active runtime records are stale.
+- `--force` is forbidden unless the operator explicitly confirms that reported live runtime records are not running.
+
+## Automatic lifecycle
+
+`feature:close` already maintains the database at every closure: it removes the closed feature's raw lane output, applies
+the retention windows and compacts when free pages are at least 8 MB and 25% of the file. Only work that moved in the last
+120 minutes counts as live and holds compaction back; rows a dead session left `running` show as `stale` in
+`runtime:storage` and do not block it (`aioson agent:recover .` marks them abandoned). `aioson doctor .` reports
+`runtime:db_health`; `aioson doctor . --fix` runs the same prune-and-compact. A manual request is only needed between closures.
 
 ## Procedure
 

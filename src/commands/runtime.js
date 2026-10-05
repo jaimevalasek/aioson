@@ -30,7 +30,8 @@ const {
   DEFAULT_OUTPUT_DAYS,
   getRuntimeStorageReport,
   pruneRuntimeData,
-  compactRuntimeDb
+  compactRuntimeDb,
+  liveRuntimeCounts
 } = require('../runtime-maintenance');
 
 const ALLOWED_LAYOUTS = new Set(['document', 'tabs', 'accordion', 'stack', 'mixed']);
@@ -2372,18 +2373,11 @@ function formatStorageBytes(value) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Only work that moved inside the live window blocks compaction; rows a dead
+// session left in an active status are reported as stale (agent:recover).
 function countBusyRuntime(db) {
-  const scalar = (sql) => Number(db.prepare(sql).get().count || 0);
-  const busy = {
-    tasks: scalar("SELECT COUNT(*) AS count FROM tasks WHERE status = 'running'"),
-    agent_runs: scalar("SELECT COUNT(*) AS count FROM agent_runs WHERE status = 'running'"),
-    agent_execution_runs: scalar("SELECT COUNT(*) AS count FROM agent_execution_runs WHERE state IN ('spawning', 'running', 'pausing', 'resuming')")
-  };
-  if (db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'runner_queue'").get()) {
-    busy.runner_queue = scalar("SELECT COUNT(*) AS count FROM runner_queue WHERE status = 'running'");
-  }
-  busy.total = Object.values(busy).reduce((total, count) => total + count, 0);
-  return busy;
+  const { live, stale } = liveRuntimeCounts(db);
+  return { ...live, stale };
 }
 
 /** aioson runtime:storage [targetDir] */
@@ -2397,6 +2391,8 @@ async function runRuntimeStorage({ args, options = {}, logger, t }) {
     if (!options.json) {
       logger.log(`Runtime storage: ${formatStorageBytes(report.database.sizeBytes)} (${dbPath})`);
       logger.log(`  WAL: ${formatStorageBytes(report.database.walBytes)} | free pages: ${formatStorageBytes(report.database.reclaimableFreeBytes)}`);
+      logger.log(`  health: ${report.health.status}${report.health.reasons.length ? ` (${report.health.reasons.join(', ')})` : ''} | live data: ${formatStorageBytes(report.health.liveBytes)}`);
+      if (report.stale.total > 0) logger.log(`  stale active rows: ${report.stale.total} (no activity in the live window; aioson agent:recover . marks them abandoned)`);
       logger.log(`  cleanup preview: ${report.preview.directRows} direct row(s)`);
       for (const category of report.categories.filter((item) => item.bytes > 0)) {
         logger.log(`  ${category.category}: ${formatStorageBytes(category.bytes)} | ${category.rows} row(s)`);

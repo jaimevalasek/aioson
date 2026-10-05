@@ -5,6 +5,17 @@ const fs = require('node:fs');
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_HISTORY_DAYS = 30;
 const DEFAULT_OUTPUT_DAYS = 14;
+// A row only counts as live work when it moved inside this window. Crashed
+// sessions and dead engines leave rows in running/correcting forever; treating
+// those as active blocked compaction for good (measured: 92 "running" rows, the
+// oldest four months old, none touched in the last day).
+const DEFAULT_LIVE_WINDOW_MINUTES = 120;
+// Health thresholds. Deletes never shrink the file (auto_vacuum is off), so
+// free pages are the dead weight only VACUUM gives back.
+const COMPACT_MIN_FREE_BYTES = 8 * 1024 * 1024;
+const COMPACT_MIN_FREE_RATIO = 0.25;
+const OVERSIZED_LIVE_BYTES = 64 * 1024 * 1024;
+const EXECUTION_LIVE_STATES = "'queued', 'spawning', 'running', 'pausing', 'resuming'";
 
 const CATEGORY_BY_TABLE = new Map([
   ['agent_execution_events', 'verbose_telemetry'],
@@ -120,22 +131,35 @@ function countWhere(db, table, where, params) {
   return Number(db.prepare(`SELECT COUNT(*) AS count FROM ${quoteIdentifier(table)} WHERE ${where}`).get(...params).count || 0);
 }
 
+// Binds two cutoffs: inactivity of a waiting state, last event of a process state.
+function expiredExecutionRunSql(alias) {
+  return `((${alias}.state NOT IN (${EXECUTION_LIVE_STATES})
+      AND (${alias}.state IN ('passed', 'failed', 'cancelled') OR ${alias}.updated_at < ?))
+    OR (${alias}.state IN (${EXECUTION_LIVE_STATES}) AND NOT EXISTS (
+      SELECT 1 FROM agent_execution_events recent
+      WHERE recent.telemetry_run_id = ${alias}.telemetry_run_id AND recent.created_at >= ?
+    )))`;
+}
+
 function retentionRules(db, policy) {
   const rules = [
     {
+      // Waiting states (correcting, waiting_report, paused) expire by
+      // inactivity; a process state with no event inside the window is a dead
+      // engine. The run row of a process state is never removed (AC-10).
       key: 'terminal_execution_output',
       table: 'agent_execution_events',
       where: `event_type = 'output' AND created_at < ? AND EXISTS (
         SELECT 1 FROM agent_execution_runs r
         WHERE r.telemetry_run_id = agent_execution_events.telemetry_run_id
-          AND r.state IN ('passed', 'failed', 'cancelled')
+          AND ${expiredExecutionRunSql('r')}
       )`,
-      params: [policy.outputCutoff]
+      params: [policy.outputCutoff, policy.outputCutoff, policy.outputCutoff]
     },
     {
       key: 'terminal_execution_runs',
       table: 'agent_execution_runs',
-      where: "updated_at < ? AND state IN ('passed', 'failed', 'cancelled', 'paused')",
+      where: `updated_at < ? AND state NOT IN (${EXECUTION_LIVE_STATES})`,
       params: [policy.historyCutoff]
     },
     {
@@ -178,7 +202,7 @@ function retentionRules(db, policy) {
     {
       key: 'terminal_agent_runs',
       table: 'agent_runs',
-      where: `status IN ('completed', 'failed') AND finished_at < ?
+      where: `status IN ('completed', 'failed', 'abandoned') AND finished_at < ?
         AND NOT EXISTS (
           SELECT 1 FROM agent_runs child
           WHERE child.parent_run_key = agent_runs.run_key
@@ -193,7 +217,7 @@ function retentionRules(db, policy) {
     {
       key: 'terminal_tasks',
       table: 'tasks',
-      where: `status IN ('completed', 'failed') AND finished_at < ?
+      where: `status IN ('completed', 'failed', 'abandoned') AND finished_at < ?
         AND NOT EXISTS (
           SELECT 1 FROM tasks child
           WHERE child.parent_task_key = tasks.task_key
@@ -294,6 +318,151 @@ function activeRuntimeCounts(db) {
   return Object.fromEntries(checks.map(([table, where]) => [table, countWhere(db, table, where, [])]));
 }
 
+function liveCutoffIso(options = {}) {
+  const minutes = positiveDays(options.liveWindowMinutes, DEFAULT_LIVE_WINDOW_MINUTES);
+  const now = options.now === undefined ? Date.now() : options.now;
+  return new Date(now - minutes * 60 * 1000).toISOString();
+}
+
+function liveExecutionRunSql(alias) {
+  return `(${alias}.state IN (${EXECUTION_LIVE_STATES}) AND (${alias}.updated_at >= ? OR EXISTS (
+    SELECT 1 FROM agent_execution_events recent
+    WHERE recent.telemetry_run_id = ${alias}.telemetry_run_id AND recent.created_at >= ?
+  )))`;
+}
+
+// Work that is probably writing right now: an active status that also moved
+// inside the live window. Rows stuck in an active status past the window are
+// counted as stale instead, so they no longer block compaction.
+function liveRuntimeCounts(db, options = {}) {
+  const cutoff = liveCutoffIso(options);
+  const live = {};
+  const stale = {};
+  const checks = [
+    ['tasks', "status = 'running'", 'updated_at >= ?', [cutoff]],
+    ['agent_runs', "status = 'running'", 'updated_at >= ?', [cutoff]],
+    ['agent_execution_runs', `state IN (${EXECUTION_LIVE_STATES})`, liveExecutionRunSql('agent_execution_runs'), [cutoff, cutoff]],
+    ['runner_queue', "status = 'running'", 'COALESCE(started_at, created_at) >= ?', [cutoff]]
+  ];
+  for (const [table, active, recent, params] of checks) {
+    if (!tableExists(db, table)) continue;
+    const total = countWhere(db, table, active, []);
+    live[table] = table === 'agent_execution_runs'
+      ? countWhere(db, table, recent, params)
+      : countWhere(db, table, `${active} AND ${recent}`, params);
+    stale[table] = Math.max(0, total - live[table]);
+  }
+  const sum = (counts) => Object.values(counts).reduce((total, count) => total + count, 0);
+  return { live: { ...live, total: sum(live) }, stale: { ...stale, total: sum(stale) }, cutoff };
+}
+
+function assessRuntimeDbHealth(database = {}) {
+  const sizeBytes = Number(database.sizeBytes) || 0;
+  const freeBytes = Number(database.reclaimableFreeBytes) || 0;
+  const liveBytes = Math.max(0, sizeBytes - freeBytes);
+  const freeRatio = sizeBytes > 0 ? freeBytes / sizeBytes : 0;
+  const reasons = [];
+  if (freeBytes >= COMPACT_MIN_FREE_BYTES && freeRatio >= COMPACT_MIN_FREE_RATIO) reasons.push('reclaimable_free_pages');
+  if (liveBytes >= OVERSIZED_LIVE_BYTES) reasons.push('live_data_oversized');
+  return {
+    status: reasons.length > 0 ? 'warn' : 'healthy',
+    sizeBytes,
+    liveBytes,
+    freeBytes,
+    freeRatio: Number(freeRatio.toFixed(3)),
+    reasons,
+    thresholds: {
+      compactMinFreeBytes: COMPACT_MIN_FREE_BYTES,
+      compactMinFreeRatio: COMPACT_MIN_FREE_RATIO,
+      oversizedLiveBytes: OVERSIZED_LIVE_BYTES
+    }
+  };
+}
+
+function readDatabaseStats(db, dbPath) {
+  const pageSize = Number(db.pragma('page_size', { simple: true }) || 0);
+  const pageCount = Number(db.pragma('page_count', { simple: true }) || 0);
+  const freePages = Number(db.pragma('freelist_count', { simple: true }) || 0);
+  return {
+    sizeBytes: fileSize(dbPath),
+    walBytes: fileSize(`${dbPath}-wal`),
+    pageSize,
+    pageCount,
+    freePages,
+    reclaimableFreeBytes: freePages * pageSize
+  };
+}
+
+// Raw lane output is only a debugging tail while the feature is in flight;
+// the run rows, lifecycle events and report files stay as the history.
+function purgeFeatureExecutionOutput(db, feature, options = {}) {
+  if (!feature || !tableExists(db, 'agent_execution_runs') || !tableExists(db, 'agent_execution_events')) return 0;
+  const cutoff = liveCutoffIso(options);
+  return Number(db.prepare(`
+    DELETE FROM agent_execution_events
+    WHERE event_type = 'output' AND telemetry_run_id IN (
+      SELECT run.telemetry_run_id FROM agent_execution_runs run
+      WHERE run.feature = ? AND NOT ${liveExecutionRunSql('run')}
+    )
+  `).run(feature, cutoff, cutoff).changes || 0);
+}
+
+/**
+ * Lifecycle maintenance for a quiet point (feature:close): drop the closed
+ * feature's raw lane output, apply the retention policy, and give the space
+ * back with VACUUM when free pages are a real share of the file and nothing is
+ * writing. Never throws on a busy database; the caller only reports.
+ */
+function maintainRuntimeDb(db, dbPath, options = {}) {
+  const featureOutputDeleted = db.transaction(() => purgeFeatureExecutionOutput(db, options.feature, options))();
+  const prune = pruneRuntimeData(db, options);
+  db.pragma('wal_checkpoint(TRUNCATE)');
+  const before = readDatabaseStats(db, dbPath);
+  const healthBefore = assessRuntimeDbHealth(before);
+  const activity = liveRuntimeCounts(db, options);
+  let compaction = { ok: false, skipped: 'not_needed' };
+  if (healthBefore.reasons.includes('reclaimable_free_pages')) {
+    if (activity.live.total > 0) {
+      compaction = { ok: false, skipped: 'live_runtime', live: activity.live };
+    } else if (db.pragma('quick_check', { simple: true }) !== 'ok') {
+      compaction = { ok: false, skipped: 'integrity_check_failed' };
+    } else {
+      try {
+        compaction = { ok: true, ...compactRuntimeDb(db, dbPath) };
+      } catch (error) {
+        compaction = { ok: false, skipped: 'busy', error: error.code || error.message };
+      }
+    }
+  }
+  const after = readDatabaseStats(db, dbPath);
+  return {
+    featureOutputDeleted,
+    pruned: prune.deleted.total,
+    compaction,
+    before: { sizeBytes: before.sizeBytes, freeBytes: before.reclaimableFreeBytes },
+    health: assessRuntimeDbHealth(after),
+    stale: activity.stale
+  };
+}
+
+function formatMegabytes(bytes) {
+  return `${((Number(bytes) || 0) / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function describeRuntimeMaintenance(result) {
+  const parts = [`runtime db: ${result.featureOutputDeleted} lane output event(s) of the closed feature removed`, `${result.pruned} expired row(s) pruned`];
+  const { compaction } = result;
+  if (compaction.ok) {
+    parts.push(`compacted ${formatMegabytes(compaction.beforeBytes)} -> ${formatMegabytes(compaction.afterBytes)}`);
+  } else if (compaction.skipped === 'not_needed') {
+    parts.push(`${formatMegabytes(result.health.sizeBytes)}, no compaction needed`);
+  } else {
+    parts.push(`compaction skipped (${compaction.skipped}); run aioson runtime:compact . later`);
+  }
+  if (result.health.reasons.includes('live_data_oversized')) parts.push('live data still above the healthy size; see aioson runtime:storage .');
+  return parts.join('; ');
+}
+
 function getRuntimeStorageReport(db, dbPath, options = {}) {
   const tables = listTableStorage(db).sort((a, b) => b.bytes - a.bytes || b.rows - a.rows || a.table.localeCompare(b.table));
   const categories = new Map();
@@ -305,30 +474,26 @@ function getRuntimeStorageReport(db, dbPath, options = {}) {
     categories.set(table.category, current);
   }
 
-  const pageSize = Number(db.pragma('page_size', { simple: true }) || 0);
-  const pageCount = Number(db.pragma('page_count', { simple: true }) || 0);
-  const freePages = Number(db.pragma('freelist_count', { simple: true }) || 0);
+  const database = readDatabaseStats(db, dbPath);
+  const { sizeBytes, freePages } = database;
   const preview = previewRuntimePrune(db, options);
-  const sizeBytes = fileSize(dbPath);
-  const walBytes = fileSize(`${dbPath}-wal`);
+  const health = assessRuntimeDbHealth(database);
+  const activity = liveRuntimeCounts(db, options);
   const recommendations = [];
   if (preview.directRows > 0) recommendations.push('prune');
   if (freePages > 0 || (preview.directRows > 0 && sizeBytes >= 10 * 1024 * 1024)) recommendations.push('compact_after_prune');
   if ((categories.get('verbose_telemetry')?.bytes || 0) > sizeBytes * 0.5) recommendations.push('verbose_telemetry_dominates');
+  if (activity.stale.total > 0) recommendations.push('recover_stale_runs');
 
   return {
     ok: true,
     dbPath,
-    database: {
-      sizeBytes,
-      walBytes,
-      pageSize,
-      pageCount,
-      freePages,
-      reclaimableFreeBytes: freePages * pageSize
-    },
+    database,
+    health,
     policy: preview.policy,
     active: activeRuntimeCounts(db),
+    live: activity.live,
+    stale: activity.stale,
     preview,
     categories: [...categories.values()].sort((a, b) => b.bytes - a.bytes),
     tables,
@@ -352,11 +517,18 @@ function compactRuntimeDb(db, dbPath) {
 module.exports = {
   DEFAULT_HISTORY_DAYS,
   DEFAULT_OUTPUT_DAYS,
+  DEFAULT_LIVE_WINDOW_MINUTES,
   resolveRetentionPolicy,
   listTableStorage,
   previewRuntimePrune,
   pruneRuntimeData,
   getRuntimeStorageReport,
   compactRuntimeDb,
-  activeRuntimeCounts
+  activeRuntimeCounts,
+  liveRuntimeCounts,
+  assessRuntimeDbHealth,
+  readDatabaseStats,
+  purgeFeatureExecutionOutput,
+  maintainRuntimeDb,
+  describeRuntimeMaintenance
 };

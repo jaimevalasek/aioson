@@ -28,6 +28,7 @@ const { emitSubTaskEvent } = require('../sub-task-telemetry');
 const { loadConfig } = require('../sub-task-engine');
 const { runDistillation, readFeatureClassification } = require('../learning-loop-engine');
 const { openRuntimeDb } = require('../runtime-store');
+const { maintainRuntimeDb, describeRuntimeMaintenance } = require('../runtime-maintenance');
 const { runNotify } = require('./notify');
 const { splitCurrentState, buildArchiveContent, parseActiveSlugs } = require('../current-state-trim');
 const {
@@ -991,6 +992,26 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
   }
 
+  // 6. Runtime DB lifecycle. The closed feature's raw lane output was only a
+  // debugging tail (run rows, lifecycle events and report files stay); the
+  // retention policy runs at this quiet point, and VACUUM gives the space back
+  // because deletes alone never shrink aios.sqlite. Best-effort, never blocks.
+  let runtimeMaintenance = null;
+  let maintenanceHandle = null;
+  try {
+    maintenanceHandle = await openRuntimeDb(targetDir, { mustExist: true });
+    if (maintenanceHandle) {
+      runtimeMaintenance = maintainRuntimeDb(maintenanceHandle.db, maintenanceHandle.dbPath, { feature: slug });
+      updates.push(describeRuntimeMaintenance(runtimeMaintenance));
+    }
+  } catch (err) {
+    updates.push(`runtime db: maintenance skipped (${(err && err.message) || err})`);
+  } finally {
+    if (maintenanceHandle && maintenanceHandle.db) {
+      try { maintenanceHandle.db.close(); } catch { /* swallow */ }
+    }
+  }
+
   const result = {
     ok: closeErrors.length === 0,
     ...(closeErrors.length > 0 ? { reason: 'completed_with_errors' } : {}),
@@ -1006,7 +1027,8 @@ async function runFeatureClose({ args, options = {}, logger }) {
     followup_plans: followupPlans,
     archive,
     scoutArchive,
-    distillation
+    distillation,
+    runtimeMaintenance
   };
 
   if (options.json) return result;

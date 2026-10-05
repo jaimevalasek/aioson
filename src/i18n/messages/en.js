@@ -726,6 +726,9 @@ module.exports = {
     fix_action_scouts_directory_pruning: 'Delete unattached scouts older than prune_unattached_after_days from .aioson/runtime/scouts/',
     learning_loop: {
       distillation_complete: 'distillation: {promoted} promoted, {review} for review, {merge} merge candidates ({duration}ms)',
+    runtime_db_health: 'Runtime database size ({size} on disk, {live} live data, {free} reclaimable)',
+    runtime_db_health_hint: 'aios.sqlite never shrinks on its own ({reasons}). Run `aioson doctor . --fix` (or `aioson runtime:prune . --compact`) to prune expired telemetry and give the space back; feature:close does it automatically.',
+    fix_action_runtime_db_health: 'Prune expired runtime telemetry and compact .aioson/runtime/aios.sqlite when no work is live',
       distillation_failed_silent: 'distillation failed silently for feature "{slug}" — phase: {phase}',
       skipped_micro: 'distillation skipped: feature classification MICRO',
       skipped_no_distill: 'distillation skipped: --no-distill flag set',

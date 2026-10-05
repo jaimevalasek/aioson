@@ -243,7 +243,8 @@ async function openRuntimeDb(targetDir, options = {}) {
       UNIQUE(telemetry_run_id, sequence_no),
       FOREIGN KEY (telemetry_run_id) REFERENCES agent_execution_runs(telemetry_run_id) ON DELETE CASCADE
     );
-    CREATE INDEX IF NOT EXISTS idx_agent_execution_events_cursor ON agent_execution_events(telemetry_run_id, sequence_no);
+    -- UNIQUE(telemetry_run_id, sequence_no) already indexes the event cursor; the copy only doubled its bytes.
+    DROP INDEX IF EXISTS idx_agent_execution_events_cursor;
     CREATE INDEX IF NOT EXISTS idx_agent_execution_runs_feature_updated ON agent_execution_runs(feature, updated_at DESC);
 
     CREATE TABLE IF NOT EXISTS artifacts (
@@ -2832,7 +2833,7 @@ function reconcileExecutionRun(db, correlation, probe=()=>false) {
 
 function pruneExecutionTelemetry(db, options={}) {
   const days=Math.max(Number(options.retentionDays)||30,1),cutoff=new Date(Date.now()-days*86400000).toISOString(),batch=Math.min(Math.max(Number(options.batch)||100,1),1000);
-  return db.prepare(`DELETE FROM agent_execution_runs WHERE telemetry_run_id IN (SELECT telemetry_run_id FROM agent_execution_runs WHERE updated_at < ? AND state IN ('passed','failed','cancelled','paused') ORDER BY updated_at LIMIT ?)` ).run(cutoff,batch).changes;
+  return db.prepare(`DELETE FROM agent_execution_runs WHERE telemetry_run_id IN (SELECT telemetry_run_id FROM agent_execution_runs WHERE updated_at < ? AND state NOT IN ('queued','spawning','running','pausing','resuming') ORDER BY updated_at LIMIT ?)` ).run(cutoff,batch).changes;
 }
 
 function pruneExecutionOutput(db, options={}) {
@@ -2841,9 +2842,10 @@ function pruneExecutionOutput(db, options={}) {
     SELECT event.id FROM agent_execution_events event
     JOIN agent_execution_runs run ON run.telemetry_run_id=event.telemetry_run_id
     WHERE event.event_type='output' AND event.created_at < ?
-      AND run.state IN ('passed','failed','cancelled')
+      AND ((run.state NOT IN ('queued','spawning','running','pausing','resuming') AND (run.state IN ('passed','failed','cancelled') OR run.updated_at < ?))
+        OR (run.state IN ('queued','spawning','running','pausing','resuming') AND NOT EXISTS (SELECT 1 FROM agent_execution_events recent WHERE recent.telemetry_run_id=run.telemetry_run_id AND recent.created_at >= ?)))
     ORDER BY event.created_at LIMIT ?
-  )`).run(cutoff,batch).changes;
+  )`).run(cutoff,cutoff,cutoff,batch).changes;
 }
 
 module.exports = {

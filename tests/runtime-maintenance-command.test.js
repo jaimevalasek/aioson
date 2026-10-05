@@ -54,10 +54,11 @@ test('runtime maintenance commands preview before deleting and compact only when
 test('runtime compact refuses active execution unless force is explicit', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-runtime-active-'));
   const opened = await openRuntimeDb(dir);
+  const now = new Date().toISOString();
   opened.db.prepare(`
     INSERT INTO tasks(task_key,title,status,created_at,updated_at)
-    VALUES ('active-task','Active task','running','2026-08-03T00:00:00Z','2026-08-03T00:00:00Z')
-  `).run();
+    VALUES ('active-task','Active task','running',?,?)
+  `).run(now, now);
   opened.db.close();
 
   const { t } = createTranslator('en');
@@ -65,4 +66,20 @@ test('runtime compact refuses active execution unless force is explicit', async 
   assert.equal(result.ok, false);
   assert.equal(result.error, 'active_runtime');
   assert.equal(result.busy.tasks, 1);
+});
+
+test('runtime compact is not blocked by rows a dead session left running', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-runtime-stale-'));
+  const opened = await openRuntimeDb(dir);
+  opened.db.prepare(`
+    INSERT INTO tasks(task_key,title,status,created_at,updated_at)
+    VALUES ('stale-task','Stale task','running','2026-05-18T00:00:00Z','2026-05-18T00:00:00Z')
+  `).run();
+  opened.db.close();
+
+  const { t } = createTranslator('en');
+  const result = await runRuntimeCompact({ args: [dir], options: { json: true }, logger: logger(), t });
+  assert.equal(result.ok, true);
+  assert.equal(result.busy.tasks, 0);
+  assert.equal(result.busy.stale.tasks, 1);
 });

@@ -9,7 +9,7 @@ project history remains in versioned feature, learning, brain, rule, documentati
 | Command family | Main state | Current value | Retention |
 |---|---|---|---|
 | `runtime:*`, `live:*`, `agent:done`, `agent:recover` | `tasks`, `agent_runs`, events, artifacts | sessions, parent/child tasks, handoffs, observability | active work is protected; terminal history expires |
-| `agent:execution:*` and dispatcher | `agent_execution_runs/events` | process/model/state and bounded safe output | terminal output: 14 days; stale terminal/paused execution: 30 days |
+| `agent:execution:*` and dispatcher | `agent_execution_runs/events` | process/model/state and bounded safe output | raw output: dropped when its feature closes, otherwise 14 days; runs: 30 days without activity, whatever their last state |
 | `runner:queue*`, `runner:daemon` | `runner_queue` | local queue and model fallback | pending/running is protected; terminal rows expire |
 | `chain:*` | `chain_edges`, `chain_work_items` | relationships and the claimed causal queue | actionable work items are never pruned |
 | `squad:*` | handoffs, events, plans, workers, catalogs, metrics | squad coordination | in-flight state and configuration are protected |
@@ -18,6 +18,32 @@ project history remains in versioned feature, learning, brain, rule, documentati
 
 Runner `cascade` currently means fallback/escalation between models. Plan import records phase ordering in text and
 priority, but does not yet maintain an executable task-dependency graph.
+
+## What is kept and what is feature-scoped
+
+| Kind | Tables | Lifetime |
+|---|---|---|
+| Durable knowledge | `artifacts`, `project_learnings`, `squad_learnings`, `evolution_log`, `chain_edges`, `implementation_plans`, `plan_phases`, squad catalogs and configuration | kept; never pruned |
+| Open coordination | open `chain_work_items`, pending `runner_queue`, unresolved `squad_handoffs` | kept while open |
+| Raw lane output | `agent_execution_events` with `event_type = 'output'` | only useful while the feature is in flight: removed at `feature:close` (any verdict) |
+| Run history | `agent_execution_runs` and their lifecycle events | 30 days |
+| Session telemetry | `execution_events`, `agent_events`, terminal `agent_runs` and `tasks` | 30 days |
+
+Raw output is the biggest family by far, so most of the size belongs to the feature being built and goes away when it closes.
+
+## Lifecycle maintenance (automatic)
+
+`feature:close` runs the lifecycle at the end of every closure (PASS, FAIL or ACCEPTED_WITH_FOLLOWUPS) and reports it as
+a `runtime db:` line. It removes the closed feature's raw lane output, applies the retention table above and runs `VACUUM`
+when free pages are at least 8 MB and 25% of the file. Deleted rows never shrink `aios.sqlite` on their own; only `VACUUM`
+returns the space to the disk. A run whose engine died stays in `running` or `correcting` forever, so retention looks at
+how long a run has gone without activity, whatever its last state says.
+
+Only work that moved in the last 120 minutes counts as live and holds compaction back. Rows a dead session left in an
+active status are reported as `stale` by `runtime:storage`; `aioson agent:recover .` marks them abandoned so they expire.
+
+`aioson doctor .` reports `runtime:db_health` (advisory). It warns when free pages pass that threshold or when the live
+data passes 64 MB. `aioson doctor . --fix` prunes and compacts.
 
 ## Diagnostics and maintenance
 
@@ -30,7 +56,7 @@ aioson runtime:compact . --json
 
 Storage diagnostics and dry-run are read-only. Pruning removes expired telemetry and terminal local history while
 protecting active coordination and durable knowledge. Compaction runs `quick_check`, a checkpoint, and `VACUUM`;
-it refuses active work unless the operator explicitly uses `--force` after verifying those records are stale.
+it refuses live work (activity in the last 120 minutes) unless the operator explicitly uses `--force`.
 File-backed content index rows are rebuildable with `aioson runtime:ingest . --squad={slug}`; pruning never deletes
 the output files.
 
@@ -45,7 +71,7 @@ filenames. `.aioson/config/*.json` is additively merged and `.aioson/config.md` 
 
 New telemetry output is coalesced into bounded same-stream chunks (up to 16 KB), preserving order, secret redaction,
 and the 1 MB per-execution cap while sharply reducing SQLite row and index growth. New execution bridges also prune
-terminal raw output older than 14 days and stale terminal/paused executions older than 30 days in bounded batches.
+raw output older than 14 days and executions without activity for 30 days in bounded batches.
 
 ## Browser evidence on disk
 

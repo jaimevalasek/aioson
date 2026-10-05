@@ -10,7 +10,7 @@ versionados de features, learnings, brains, rules, docs, dossiers e planos.
 | Família de comandos | Estado principal | Valor atual | Retenção |
 |---|---|---|---|
 | `runtime:*`, `live:*`, `agent:done`, `agent:recover` | `tasks`, `agent_runs`, `execution_events`, `agent_events`, `artifacts` | sessões, tarefas pai/filho, handoffs e observabilidade | trabalho ativo é protegido; histórico terminal expira |
-| `agent:execution:*` e dispatcher | `agent_execution_runs`, `agent_execution_events` | processo/modelo/estado e saída segura limitada | saída terminal: 14 dias; execução terminal/pausada obsoleta: 30 dias |
+| `agent:execution:*` e dispatcher | `agent_execution_runs`, `agent_execution_events` | processo/modelo/estado e saída segura limitada | saída bruta: removida quando a feature fecha, senão 14 dias; execuções: 30 dias sem atividade, qualquer que seja o último estado |
 | `runner:queue*`, `runner:daemon` | `runner_queue` | fila local e fallback entre modelos | pending/running é protegido; terminal expira |
 | `chain:*` | `chain_edges`, `chain_work_items` | relações e fila causal com claim/lease | work items acionáveis nunca são podados pela manutenção |
 | `squad:*` | handoffs, eventos, planos, workers, catálogos e métricas | coordenação de squads | estado em curso e configuração são protegidos |
@@ -21,6 +21,33 @@ versionados de features, learnings, brains, rules, docs, dossiers e planos.
 ordem das fases na descrição/prioridade, mas ainda não mantém um grafo executável de dependências entre tarefas.
 O banco já é útil para filas, tarefas pai/filho, claims e Neural Chain; uma futura cascata de tarefas deve reutilizar
 essas superfícies sem depender de logs brutos.
+
+## O que fica guardado e o que é da feature
+
+| Tipo | Tabelas | Vida útil |
+|---|---|---|
+| Conhecimento durável | `artifacts`, `project_learnings`, `squad_learnings`, `evolution_log`, `chain_edges`, `implementation_plans`, `plan_phases`, catálogos e configuração de squads | fica; nunca é podado |
+| Coordenação aberta | `chain_work_items` abertos, `runner_queue` pendente, `squad_handoffs` não resolvidos | fica enquanto estiver aberto |
+| Saída bruta das lanes | `agent_execution_events` com `event_type = 'output'` | só serve enquanto a feature está em andamento: removida no `feature:close` (qualquer veredito) |
+| Histórico de execuções | `agent_execution_runs` e seus eventos de ciclo de vida | 30 dias |
+| Telemetria de sessão | `execution_events`, `agent_events`, `agent_runs` e `tasks` terminais | 30 dias |
+
+A saída bruta é de longe a maior família. Por isso, a maior parte do tamanho pertence à feature em construção e sai quando ela fecha.
+
+## Manutenção do ciclo de vida (automática)
+
+O `feature:close` roda o ciclo de vida ao final de todo fechamento (PASS, FAIL ou ACCEPTED_WITH_FOLLOWUPS) e reporta numa
+linha `runtime db:`. Ele remove a saída bruta das lanes da feature fechada, aplica a tabela de retenção acima e executa
+`VACUUM` quando as páginas livres somam pelo menos 8 MB e 25% do arquivo. Linhas apagadas nunca diminuem o `aios.sqlite`
+sozinhas; só o `VACUUM` devolve o espaço ao disco. Uma execução cujo motor morreu fica em `running` ou `correcting` para
+sempre, então a retenção olha há quanto tempo a execução está sem atividade, qualquer que seja o último estado registrado.
+
+Só conta como trabalho vivo o que se moveu nos últimos 120 minutos, e só isso segura a compactação. Linhas que uma sessão
+morta deixou num status ativo aparecem como `stale` no `runtime:storage`; `aioson agent:recover .` as marca como
+abandonadas para que expirem.
+
+O `aioson doctor .` reporta `runtime:db_health` (advisory). Ele avisa quando as páginas livres passam desse limite ou quando os
+dados vivos passam de 64 MB. O `aioson doctor . --fix` poda e compacta.
 
 ## Diagnóstico e manutenção
 
@@ -35,8 +62,8 @@ aioson runtime:compact . --json
 - `runtime:prune --dry-run` não apaga dados.
 - `runtime:prune` remove telemetria antiga e histórico terminal, preservando coordenação ativa e memória durável.
 - Índices de conteúdo file-backed são regeneráveis com `aioson runtime:ingest . --squad={slug}`; o prune não remove os arquivos.
-- `runtime:compact` executa `quick_check`, checkpoint e `VACUUM` para devolver espaço físico. Ele recusa trabalho ativo;
-  `--force` deve ser usado somente depois de confirmar que os registros reportados são obsoletos.
+- `runtime:compact` executa `quick_check`, checkpoint e `VACUUM` para devolver espaço físico. Ele recusa trabalho vivo
+  (atividade nos últimos 120 minutos), a menos que o operador use `--force` explicitamente.
 
 O `aioson update` abre e migra o mesmo `aios.sqlite` de forma aditiva. Não cria um segundo banco e não executa
 limpeza destrutiva automaticamente. Depois da atualização, o NEO pode diagnosticar, mostrar uma prévia e, mediante
@@ -52,9 +79,9 @@ enquanto `.aioson/config.md` é configuração gerenciada e local. `.aioson/cons
 
 A ponte de telemetria agrupa linhas adjacentes do mesmo stream em blocos limitados (até 16 KB), mantendo ordem,
 redação de segredos e o teto de 1 MB por execução. Isso reduz drasticamente o número de linhas e índices quando
-um agente produz muita saída. Ao iniciar novas execuções, ela também remove em lotes a saída terminal acima de 14
-dias e execuções terminais/pausadas acima de 30 dias. A manutenção física continua explícita porque `wal_checkpoint`
-sozinho não reduz o arquivo principal; quem recupera esse espaço é o `VACUUM`.
+um agente produz muita saída. Ao iniciar novas execuções, ela também remove em lotes a saída acima de 14 dias e
+execuções sem atividade há mais de 30 dias. O `wal_checkpoint` sozinho não reduz o arquivo principal; quem recupera
+esse espaço é o `VACUUM`, que o `feature:close` executa quando vale a pena.
 
 ## Evidência de browser em disco
 

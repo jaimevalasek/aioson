@@ -19,7 +19,9 @@ const {
   assessDistillationLag
 } = require('./learning-loop-doctor');
 const { assessJargonLeak } = require('./jargon-leak-doctor');
-const { openRuntimeDb } = require('./runtime-store');
+const Database = require('better-sqlite3');
+const { openRuntimeDb, resolveRuntimePaths } = require('./runtime-store');
+const { assessRuntimeDbHealth, readDatabaseStats, maintainRuntimeDb } = require('./runtime-maintenance');
 const { isGitCheckout } = require('./lib/project-root');
 const { inspectDesignDocSeed } = require('./lib/design-doc-seed');
 const { inspectRetiredDesignPresets } = require('./lib/design-presets');
@@ -457,6 +459,22 @@ async function runDoctor(targetDir) {
     hintKey: scoutAssessment.staleCount === 0 ? undefined : 'doctor.scouts_directory_pruning_hint'
   });
 
+  // 6b. runtime_db_health — aios.sqlite never shrinks on its own (advisory)
+  const runtimeDbAssessment = assessRuntimeDb(targetDir);
+  checks.push({
+    id: 'runtime:db_health',
+    severity: 'warning',
+    key: 'doctor.runtime_db_health',
+    params: {
+      size: formatMegabytes(runtimeDbAssessment.health.sizeBytes),
+      free: formatMegabytes(runtimeDbAssessment.health.freeBytes),
+      live: formatMegabytes(runtimeDbAssessment.health.liveBytes)
+    },
+    ok: runtimeDbAssessment.health.status === 'healthy',
+    hintKey: runtimeDbAssessment.health.status === 'healthy' ? undefined : 'doctor.runtime_db_health_hint',
+    hintParams: runtimeDbAssessment.health.status === 'healthy' ? undefined : { reasons: runtimeDbAssessment.health.reasons.join(', ') }
+  });
+
   // 7. Active Learning Loop curation checks (Phase 4)
   //    Per BR-ALL-11: MICRO projects skip these checks entirely (with hint).
   //    On DB failure (no runtime/aios.sqlite yet), checks emit ok=true so a
@@ -655,6 +673,7 @@ async function runDoctor(targetDir) {
       retiredDesignDocSeed: designDocSeed,
       retiredDesignPresets: retiredPresets,
       scoutPruning: scoutAssessment,
+      runtimeDb: runtimeDbAssessment,
       curation: {
         classification,
         closedFeatureCount: closedFeatures.length,
@@ -663,6 +682,27 @@ async function runDoctor(targetDir) {
       }
     }
   };
+}
+
+function formatMegabytes(bytes) {
+  return `${((Number(bytes) || 0) / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// assessRuntimeDb — read-only health of .aioson/runtime/aios.sqlite. Opens the
+// file without migrating it; a project without a runtime DB is healthy.
+function assessRuntimeDb(targetDir) {
+  const dbPath = resolveRuntimePaths(targetDir).dbPath;
+  let db = null;
+  try {
+    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    return { present: true, dbPath, health: assessRuntimeDbHealth(readDatabaseStats(db, dbPath)) };
+  } catch {
+    return { present: false, dbPath, health: assessRuntimeDbHealth({}) };
+  } finally {
+    if (db) {
+      try { db.close(); } catch { /* swallow */ }
+    }
+  }
 }
 
 // assessScoutPruning — list `.aioson/runtime/scouts/*.json` files older than
@@ -924,6 +964,36 @@ async function applyDoctorFixes(targetDir, report, options = {}) {
     });
   } else {
     actions.push({ id: 'scouts_directory_pruning', applied: false, skipped: true, count: 0, missingCount: 0 });
+  }
+
+  // runtime_db_health: prune expired telemetry and compact when idle
+  const runtimeDb = (report.livingMemory && report.livingMemory.runtimeDb) || null;
+  if (runtimeDb && runtimeDb.present && runtimeDb.health.status !== 'healthy') {
+    let reclaimed = 0;
+    let applied = false;
+    if (!dryRun) {
+      const handle = await openRuntimeDb(targetDir, { mustExist: true });
+      if (handle) {
+        try {
+          const maintenance = maintainRuntimeDb(handle.db, handle.dbPath);
+          applied = Boolean(maintenance.compaction.ok) || maintenance.pruned > 0;
+          reclaimed = maintenance.compaction.ok ? maintenance.compaction.reclaimedBytes : 0;
+        } finally {
+          handle.db.close();
+        }
+      }
+    }
+    if (applied) changedCount += 1;
+    actions.push({
+      id: 'runtime_db_health',
+      applied,
+      count: applied ? 1 : 0,
+      missingCount: 1,
+      reclaimedBytes: reclaimed,
+      dryRun
+    });
+  } else {
+    actions.push({ id: 'runtime_db_health', applied: false, skipped: true, count: 0, missingCount: 0 });
   }
 
   // bootstrap_coverage and version_drift: advisory only (no auto-fix)
