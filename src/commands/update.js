@@ -14,6 +14,31 @@ const { inspectDesignDocSeed } = require('../lib/design-doc-seed');
 const { inspectFeatureRegistry, featureRegistryParams } = require('../lib/feature-registry');
 const { inspectRetiredDesignPresets } = require('../lib/design-presets');
 
+// Project-local files update never rewrites, so the update is where the
+// consumer hears about them: the retired design-doc seed (a framework
+// leftover) and a features.md that grew narrative (how to migrate it).
+// Returns the design-doc seed inspection, which the update result reports.
+async function logProjectLocalAdvisories(targetDir, logger, t) {
+  const designDocSeed = await inspectDesignDocSeed(targetDir);
+  if (designDocSeed.kind) {
+    logger.log('');
+    logger.log(t('doctor.retired_design_doc_seed', { kind: designDocSeed.kind }));
+    logger.log(t(
+      designDocSeed.kind === 'verbatim'
+        ? 'doctor.retired_design_doc_seed_hint_verbatim'
+        : 'doctor.retired_design_doc_seed_hint_derived',
+      { path: designDocSeed.path }
+    ));
+  }
+  const registry = await inspectFeatureRegistry(targetDir);
+  if (registry.needsTidy) {
+    logger.log('');
+    logger.log(t('doctor.feature_registry_noise', featureRegistryParams(registry.measures)));
+    logger.log(t('doctor.feature_registry_noise_hint'));
+  }
+  return designDocSeed;
+}
+
 async function runUpdate({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const dryRun = Boolean(options['dry-run']);
@@ -81,27 +106,7 @@ async function runUpdate({ args, options, logger, t }) {
     trackedIgnored.slice(0, 10).forEach((relPath) => logger.log(`    - ${relPath}`));
     logger.log(t('update.tracked_ignored_remedy', { paths: formatTrackedIgnoredRemedyOperands(trackedIgnored).join(' ') }));
   }
-  // The retired design-doc seed is project-local — update never rewrites it,
-  // so the update is where the consumer hears it is a framework leftover.
-  const designDocSeed = await inspectDesignDocSeed(targetDir);
-  if (designDocSeed.kind) {
-    logger.log('');
-    logger.log(t('doctor.retired_design_doc_seed', { kind: designDocSeed.kind }));
-    logger.log(t(
-      designDocSeed.kind === 'verbatim'
-        ? 'doctor.retired_design_doc_seed_hint_verbatim'
-        : 'doctor.retired_design_doc_seed_hint_derived',
-      { path: designDocSeed.path }
-    ));
-  }
-  // The feature index is project-local too: update never rewrites it, so this
-  // is where a project whose features.md grew narrative hears how to migrate.
-  const featureRegistry = await inspectFeatureRegistry(targetDir);
-  if (featureRegistry.needsTidy) {
-    logger.log('');
-    logger.log(t('doctor.feature_registry_noise', featureRegistryParams(featureRegistry.measures)));
-    logger.log(t('doctor.feature_registry_noise_hint'));
-  }
+  const designDocSeed = await logProjectLocalAdvisories(targetDir, logger, t);
   // Retired fixed design presets: the template ships only the engine now, and
   // update rewrites neither design_skill nor the saved install profile — so
   // this is where the consumer hears a preset is no longer backed.

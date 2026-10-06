@@ -194,6 +194,31 @@ async function restoreTemplateFiles(targetDir, relPaths, options = {}) {
   return restored;
 }
 
+/** The feature-index advisory as a 0- or 1-element check list. */
+async function featureRegistryChecks(targetDir) {
+  const registry = await inspectFeatureRegistry(targetDir);
+  if (!registry.needsTidy) return [];
+  return [{
+    id: 'context:feature_registry_noise',
+    severity: 'warning',
+    key: 'doctor.feature_registry_noise',
+    params: featureRegistryParams(registry.measures),
+    ok: false,
+    hintKey: 'doctor.feature_registry_noise_hint'
+  }];
+}
+
+/** `--fix` for the feature-index advisory; returns the fix action. */
+async function fixFeatureRegistry(targetDir, report, dryRun) {
+  const flagged = report.checks.some((check) => check.id === 'context:feature_registry_noise' && !check.ok);
+  if (!flagged) {
+    return { id: 'feature_registry', applied: false, skipped: true, count: 0, missingCount: 0 };
+  }
+  const tidy = await tidyFeatureRegistry(targetDir, { dryRun });
+  const changed = Boolean(tidy.ok && tidy.changed);
+  return { id: 'feature_registry', applied: changed && !dryRun, count: changed ? 1 : 0, missingCount: 1 };
+}
+
 async function runDoctor(targetDir) {
   const checks = [];
 
@@ -240,17 +265,7 @@ async function runDoctor(targetDir) {
   // Feature index carrying narrative (advisory). features.md is project-local,
   // so update never rewrites it; notes written into it never leave on
   // feature:close. `--fix` relocates them losslessly (feature:tidy).
-  const featureRegistry = await inspectFeatureRegistry(targetDir);
-  if (featureRegistry.needsTidy) {
-    checks.push({
-      id: 'context:feature_registry_noise',
-      severity: 'warning',
-      key: 'doctor.feature_registry_noise',
-      params: featureRegistryParams(featureRegistry.measures),
-      ok: false,
-      hintKey: 'doctor.feature_registry_noise_hint'
-    });
-  }
+  checks.push(...(await featureRegistryChecks(targetDir)));
 
   // Retired fixed design presets (advisory). The template ships one design
   // skill — the engine — since 2026-08-28. A `design_skill` that still names a
@@ -868,26 +883,9 @@ async function applyDoctorFixes(targetDir, report, options = {}) {
 
   // Feature index: rows stay, every note moves verbatim to its feature folder,
   // and the previous file is backed up — nothing the project wrote is lost.
-  const registryCheck = report.checks.find((check) => check.id === 'context:feature_registry_noise' && !check.ok);
-  if (registryCheck) {
-    const tidy = await tidyFeatureRegistry(targetDir, { dryRun });
-    const applied = tidy.ok && tidy.changed;
-    if (applied) changedCount += 1;
-    actions.push({
-      id: 'feature_registry',
-      applied: applied && !dryRun,
-      count: applied ? 1 : 0,
-      missingCount: 1
-    });
-  } else {
-    actions.push({
-      id: 'feature_registry',
-      applied: false,
-      skipped: true,
-      count: 0,
-      missingCount: 0
-    });
-  }
+  const registryFix = await fixFeatureRegistry(targetDir, report, dryRun);
+  changedCount += registryFix.count;
+  actions.push(registryFix);
 
   if (
     report.contextValidation &&

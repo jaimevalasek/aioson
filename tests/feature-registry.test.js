@@ -97,7 +97,38 @@ describe('feature registry — canonical serialization', () => {
     assert.deepEqual(statuses(out), statuses(NOISY));
     assert.equal(lastInProgress(out), lastInProgress(NOISY).replace(/\s+/g, ' ').trim());
     assert.ok(!out.includes('<!--'), 'rows only');
-    assert.match(out, /## Active[\s\S]*checkout[\s\S]*## Closed[\s\S]*billing/);
+    assert.match(out, /## In progress[\s\S]*checkout[\s\S]*## Planning[\s\S]*reports[\s\S]*## Paused[\s\S]*legacy-import[\s\S]*## Done[\s\S]*billing/);
+    assert.match(out, /^2 in progress · 1 planning · 1 paused · 1 done$/m);
+    assert.ok(!out.includes('## Abandoned'), 'empty sections are omitted');
+  });
+
+  it('groups by situation: QA states stay in progress, closed sections read newest first', () => {
+    const out = serializeFeatureRegistry(parseFeatureRegistry([
+      '| slug | status | started | completed |',
+      '|---|---|---|---|',
+      '| old | done | 2026-01-01 | 2026-01-05 |',
+      '| wip-a | in_progress | 2026-03-01 | — |',
+      '| fresh | done | 2026-02-01 | 2026-04-02 |',
+      '| blocked | qa_blocked | 2026-03-02 | — |',
+      '| dropped | abandoned | 2026-02-03 | 2026-02-04 |',
+      '| wip-b | in_progress | 2026-01-15 | — |',
+      '| odd | draft | — | — |'
+    ].join('\n')));
+    const order = (heading) => {
+      const section = out.split(`## ${heading}\n`)[1].split('\n## ')[0];
+      return section.split('\n').filter((line) => /^\| [a-z]/.test(line) && !/^\| slug/.test(line)).map((line) => line.split('|')[1].trim());
+    };
+    assert.deepEqual(order('In progress'), ['wip-a', 'blocked', 'wip-b'], 'file order kept');
+    assert.deepEqual(order('Done'), ['fresh', 'old'], 'newest completed first');
+    assert.deepEqual(order('Abandoned'), ['dropped']);
+    assert.deepEqual(order('Other'), ['odd'], 'an unknown status is never hidden');
+    assert.equal(lastInProgress(out).split('|')[1].trim(), 'wip-b');
+  });
+
+  it('an empty registry still renders a table', () => {
+    const out = serializeFeatureRegistry(parseFeatureRegistry(''));
+    assert.match(out, /## In progress\n\n\| slug \| status \| started \| completed \|/);
+    assert.equal(parseFeatureRegistry(out).recognized, true);
   });
 
   it('is idempotent and has no headerless rows', () => {
@@ -186,12 +217,12 @@ describe('feature:register', () => {
     assert.match(content, new RegExp(`\\| checkout \\| paused \\| ${created.started} \\|`), 'started date is kept');
   });
 
-  it('abandoned sets the completed date and lands in Closed', async () => {
+  it('abandoned sets the completed date and lands in Abandoned', async () => {
     project = await makeProject(null);
     await runFeatureRegister({ args: [project.root], options: { feature: 'search', json: true } });
     await runFeatureRegister({ args: [project.root], options: { feature: 'search', status: 'abandoned', json: true } });
     const content = await fs.readFile(path.join(project.ctx, 'features.md'), 'utf8');
-    assert.match(content, /## Closed[\s\S]*\| search \| abandoned \| \d{4}-\d{2}-\d{2} \| \d{4}-\d{2}-\d{2} \|/);
+    assert.match(content, /## Abandoned\n\n\| slug[^\n]*\n[^\n]*\n\| search \| abandoned \| \d{4}-\d{2}-\d{2} \| \d{4}-\d{2}-\d{2} \|/);
   });
 
   it('refuses done, unknown statuses and unsafe slugs', async () => {

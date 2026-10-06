@@ -32,30 +32,51 @@ function fail(jsonOut, logger, reason, message, exitCode = 1) {
   return { ok: false, reason, message, exitCode };
 }
 
+/** @returns {null | {reason: string, message: string}} */
+function validateRegistration(slug, status) {
+  if (!slug || !SAFE_SLUG.test(slug)) {
+    return { reason: 'invalid_slug', message: 'feature:register requires --feature=<kebab-case-slug>.' };
+  }
+  if (!KNOWN_STATUSES.has(status)) {
+    return { reason: 'invalid_status', message: `Unknown status "${status}". Use one of: ${[...KNOWN_STATUSES].join(', ')}.` };
+  }
+  if (status === 'done') {
+    return {
+      reason: 'use_feature_close',
+      message: 'A feature becomes done only through `aioson feature:close . --feature=<slug> --verdict=PASS` (QA sign-off, archive, gates).'
+    };
+  }
+  return null;
+}
+
+/** An explicit --started wins; otherwise an existing row keeps its date. */
+function resolveStarted(optionStarted, existing, date) {
+  if (optionStarted) return String(optionStarted);
+  return existing && /^\d{4}-\d{2}-\d{2}$/.test(existing.started) ? existing.started : date;
+}
+
+function logRegistration(logger, output, existing) {
+  logger.log(existing
+    ? `features.md: ${output.slug} ${existing.status} → ${output.status}`
+    : `features.md: registered ${output.slug} (${output.status}, started ${output.started})`);
+  if (output.remainingNotes > 0) {
+    logger.log(`features.md still carries ${output.remainingNotes} legacy note(s) — run \`aioson feature:tidy .\` to move them to their feature folders.`);
+  }
+}
+
 async function runFeatureRegister({ args = [], options = {}, logger } = {}) {
   const targetDir = resolveTargetDir(args);
   const jsonOut = Boolean(options.json);
   const slug = String(options.feature || options.slug || '').trim();
   const status = String(options.status || DEFAULT_STATUS).trim().toLowerCase();
 
-  if (!slug || !SAFE_SLUG.test(slug)) {
-    return fail(jsonOut, logger, 'invalid_slug', 'feature:register requires --feature=<kebab-case-slug>.');
-  }
-  if (!KNOWN_STATUSES.has(status)) {
-    return fail(jsonOut, logger, 'invalid_status',
-      `Unknown status "${status}". Use one of: ${[...KNOWN_STATUSES].join(', ')}.`);
-  }
-  if (status === 'done') {
-    return fail(jsonOut, logger, 'use_feature_close',
-      'A feature becomes done only through `aioson feature:close . --feature=<slug> --verdict=PASS` (QA sign-off, archive, gates).');
-  }
+  const invalid = validateRegistration(slug, status);
+  if (invalid) return fail(jsonOut, logger, invalid.reason, invalid.message);
 
   const date = today();
   const content = await readFileSafe(path.join(targetDir, '.aioson', 'context', 'features.md'));
   const existing = parseFeatureRegistry(content || '').rows.find((row) => row.slug === slug);
-  const started = options.started
-    ? String(options.started)
-    : existing && /^\d{4}-\d{2}-\d{2}$/.test(existing.started) ? existing.started : date;
+  const started = resolveStarted(options.started, existing, date);
   const completed = status === 'abandoned' ? date : '—';
 
   const result = await writeFeatureRow(targetDir, { slug, status, started, completed });
@@ -73,14 +94,7 @@ async function runFeatureRegister({ args = [], options = {}, logger } = {}) {
     previousStatus: existing ? existing.status : null,
     remainingNotes: result.remainingNotes
   };
-  if (!jsonOut && logger) {
-    logger.log(existing
-      ? `features.md: ${slug} ${existing.status} → ${status}`
-      : `features.md: registered ${slug} (${status}, started ${started})`);
-    if (result.remainingNotes > 0) {
-      logger.log(`features.md still carries ${result.remainingNotes} legacy note(s) — run \`aioson feature:tidy .\` to move them to their feature folders.`);
-    }
-  }
+  if (!jsonOut && logger) logRegistration(logger, output, existing);
   return output;
 }
 

@@ -508,7 +508,7 @@ aioson feature:close . --feature=checkout --verdict=PASS --no-archive
 
 ## feature:register / feature:tidy
 
-`features.md` is a rows-only index (slug, status, started, completed) in two tables, **Active** and **Closed**. Agents never hand-edit it: decisions, scope history and pause reasons belong in the feature folder (`.aioson/context/features/{slug}/`), which leaves with the feature when it is archived.
+`features.md` is a rows-only index (slug, status, started, completed): a count summary, then one table per situation — **In progress** (including `qa_failed`/`qa_blocked`, in file order, because the workflow binding reads the last `in_progress` row), **Planning**, **Paused**, **Done** and **Abandoned** (newest first); empty sections are omitted. Agents never hand-edit it: decisions, scope history and pause reasons belong in the feature folder (`.aioson/context/features/{slug}/`), which leaves with the feature when it is archived.
 
 ```bash
 aioson feature:register . --feature=checkout                    # new row, in_progress, started today
@@ -518,7 +518,7 @@ aioson feature:tidy .                                            # apply it
 ```
 
 - `feature:register` upserts one row; `--status` accepts `planning`, `in_progress`, `paused`, `qa_failed`, `qa_blocked`, `abandoned` (sets the completed date). `done` is refused — only `feature:close` closes a feature.
-- `feature:tidy` migrates an index that grew narrative: rows are rewritten as one Active/Closed index (rows that sat outside a table header are rejoined; for a duplicated slug the last row wins and the earlier one is kept as a note), and every `<!-- slug: … -->` note moves verbatim to `registry-notes.md` in that feature's folder — live (`features/{slug}/`) or archived (`done/{slug}/dossier/`). Notes naming no registered feature go to `done/registry-notes.md`. The previous file is kept in `.aioson/backups/features-registry/`.
+- `feature:tidy` migrates an index that grew narrative: rows are regrouped into one table per situation (rows that sat outside a table header are rejoined; for a duplicated slug the last row wins and the earlier one is kept as a note), and every `<!-- slug: … -->` note moves verbatim to `registry-notes.md` in that feature's folder — live (`features/{slug}/`) or archived (`done/{slug}/dossier/`). Notes naming no registered feature go to `done/registry-notes.md`. The previous file is kept in `.aioson/backups/features-registry/`.
 - `aioson doctor` warns when the index carries notes or headerless rows, `aioson doctor --fix` runs the same migration, and `aioson update` prints the advisory — it never rewrites `features.md` itself.
 
 ---

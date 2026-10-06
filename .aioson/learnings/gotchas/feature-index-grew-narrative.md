@@ -29,7 +29,7 @@ status: corrigido no framework
 
 ## O que agora impede
 
-- `src/lib/feature-registry.js` é o único dono do arquivo: parse → muda linhas → serializa canonicamente (tabelas Active/Closed; a ordem das ativas é preservada porque a ligação do workflow lê "a última linha in_progress"). Nenhuma nota é descartada: um escritor mantém as notas sem alteração no fim do arquivo ou as move para a pasta da feature.
+- `src/lib/feature-registry.js` é o único dono do arquivo: parse → muda linhas → serializa canonicamente (resumo com contagens e uma tabela por situação — em andamento, planejamento, pausadas, concluídas e abandonadas; a ordem das em andamento é preservada porque a ligação do workflow lê "a última linha in_progress"). Nenhuma nota é descartada: um escritor mantém as notas sem alteração no fim do arquivo ou as move para a pasta da feature.
 - `feature:close` move as notas da própria feature para `features/{slug}/registry-notes.md` antes do arquivamento, e elas vão junto para `done/{slug}/dossier/`.
 - `feature:register` é o caminho do agente (recusa `done`, valida o slug); o kernel do @product e o nó do brain apontam para ele; um teste fixa a frase.
 - `feature:tidy` (`--dry-run`) migra projetos existentes com backup; `doctor` avisa (`context:feature_registry_noise`), `doctor --fix` migra, `update` imprime o aviso e nunca reescreve o arquivo sozinho.

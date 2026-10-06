@@ -214,6 +214,16 @@ async function updateFeaturesFile(featuresPath, slug, verdict, date, targetDir) 
   return true;
 }
 
+/** Report lines for the notes the registry write moved or left behind. */
+function describeRegistryWrite(registryWrite, slug) {
+  if (!registryWrite || !Array.isArray(registryWrite.relocated)) return [];
+  const lines = registryWrite.relocated.map((moved) => `features.md: ${moved.notes} note(s) of ${slug} moved to ${moved.path}`);
+  if (registryWrite.remainingNotes > 0) {
+    lines.push(`features.md: ${registryWrite.remainingNotes} legacy note(s) of other features remain — run \`aioson feature:tidy .\``);
+  }
+  return lines;
+}
+
 async function ensureDossier({ targetDir, ctxDir, slug }) {
   const dossierPath = path.join(ctxDir, 'features', slug, 'dossier.md');
   try {
@@ -799,14 +809,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
   if (featuresContent) {
     const registryWrite = await updateFeaturesFile(featuresPath, slug, verdict, today, targetDir);
     updates.push(`features.md: ${slug} → ${isAcceptedVerdict(verdict) ? 'done' : 'qa_failed'} (${today})`);
-    if (registryWrite && Array.isArray(registryWrite.relocated)) {
-      for (const moved of registryWrite.relocated) {
-        updates.push(`features.md: ${moved.notes} note(s) of ${slug} moved to ${moved.path}`);
-      }
-      if (registryWrite.remainingNotes > 0) {
-        updates.push(`features.md: ${registryWrite.remainingNotes} legacy note(s) of other features remain — run \`aioson feature:tidy .\``);
-      }
-    }
+    updates.push(...describeRegistryWrite(registryWrite, slug));
   } else {
     updates.push('features.md: not found (skipped)');
   }

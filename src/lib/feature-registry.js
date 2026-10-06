@@ -26,7 +26,6 @@ const NOTES_FILE = 'registry-notes.md';
 const UNATTRIBUTED_NOTES_REL = path.join('done', NOTES_FILE);
 const DEFAULT_COLUMNS = ['slug', 'status', 'started', 'completed'];
 const EMPTY_CELL = '—';
-const CLOSED_STATUSES = new Set(['done', 'abandoned']);
 const KNOWN_STATUSES = new Set([
   'planning', 'in_progress', 'paused', 'qa_failed', 'qa_blocked', 'done', 'abandoned'
 ]);
@@ -94,92 +93,103 @@ function noteSlug(text, knownSlugs) {
  * `recognized` is false only when the file has content but no pipe-table rows
  * (an unknown hand-made format) — writers then refuse to restructure it.
  */
+// Lines this module writes itself; they are regenerated, never kept as notes.
+const GENERATED_LINES = [
+  /^#\s+/, // the title
+  /^Rows only\b/, // the intro line
+  /^Run `aioson feature:tidy/ // the legacy-notes hint
+];
+
+function isGeneratedLine(trimmed) {
+  return SECTION_HEADING.test(trimmed) || SUMMARY_LINE.test(trimmed) || GENERATED_LINES.some((re) => re.test(trimmed));
+}
+
+function rowFromCells(cells) {
+  return {
+    slug: cells[0],
+    status: cells[1] || 'unknown',
+    started: cells[2] || EMPTY_CELL,
+    completed: cells[3] || EMPTY_CELL,
+    extra: cells.slice(4)
+  };
+}
+
+/** One `|` line: header, separator or data row. Mutates the parse state. */
+function readTableLine(state, trimmed) {
+  if (!state.inRun) state.headerSeenInRun = false;
+  state.inRun = true;
+  const cells = splitCells(trimmed);
+  if (isHeaderRow(cells)) {
+    state.headerSeenInRun = true;
+    if (!state.columns) state.columns = cells.map((cell) => cell || '');
+    return;
+  }
+  if (isSeparatorRow(cells) || !cells[0]) return;
+  if (!state.headerSeenInRun) state.headerlessRows += 1;
+  const row = rowFromCells(cells);
+  const existing = state.bySlug.get(row.slug);
+  if (existing) {
+    // Last row wins — the same rule parseFeaturesMap (workflow routing)
+    // applies. The earlier row is kept verbatim as a note, never dropped.
+    state.superseded.push({ slug: row.slug, text: `${row.slug}: superseded duplicate row ${trimmed}` });
+    Object.assign(existing, row);
+    return;
+  }
+  state.bySlug.set(row.slug, row);
+  state.rows.push(row);
+}
+
+function collectNotes(comments, state) {
+  const knownSlugs = new Set(state.rows.map((row) => row.slug));
+  const notes = comments.filter(Boolean).map((text) => ({ slug: noteSlug(text, knownSlugs), text, kind: 'comment' }));
+  if (state.prose.length > 0) notes.push({ slug: null, text: state.prose.join('\n'), kind: 'prose' });
+  for (const entry of state.superseded) {
+    notes.push({ slug: SAFE_SLUG.test(entry.slug) ? entry.slug : null, text: entry.text, kind: 'superseded_row' });
+  }
+  return notes;
+}
+
+function measure(raw, state, notes, unclosed) {
+  const visible = notes.filter((note) => note.kind !== 'superseded_row');
+  return {
+    bytes: Buffer.byteLength(raw, 'utf8'),
+    rows: state.rows.length,
+    notes: visible.length,
+    noteBytes: visible.reduce((sum, note) => sum + Buffer.byteLength(note.text, 'utf8'), 0),
+    headerlessRows: state.headerlessRows,
+    unclosedComment: unclosed,
+    duplicates: state.superseded.length
+  };
+}
+
 function parseFeatureRegistry(content) {
   const raw = String(content || '');
   const { comments, plain, unclosed } = extractComments(raw);
-
-  let columns = null;
-  const rows = [];
-  const bySlug = new Map();
-  const superseded = [];
-  const prose = [];
-  let headerlessRows = 0;
-  let headerSeenInRun = false;
-  let inRun = false;
+  const state = {
+    columns: null, rows: [], bySlug: new Map(), superseded: [], prose: [],
+    headerlessRows: 0, headerSeenInRun: false, inRun: false
+  };
 
   for (const line of plain.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (trimmed.startsWith('|')) {
-      if (!inRun) headerSeenInRun = false;
-      inRun = true;
-      const cells = splitCells(trimmed);
-      if (isHeaderRow(cells)) {
-        headerSeenInRun = true;
-        if (!columns) columns = cells.map((cell) => cell || '');
-        continue;
-      }
-      if (isSeparatorRow(cells)) continue;
-      const slug = cells[0];
-      if (!slug) continue;
-      if (!headerSeenInRun) headerlessRows += 1;
-      const row = {
-        slug,
-        status: cells[1] || 'unknown',
-        started: cells[2] || EMPTY_CELL,
-        completed: cells[3] || EMPTY_CELL,
-        extra: cells.slice(4)
-      };
-      if (bySlug.has(slug)) {
-        // Last row wins — the same rule parseFeaturesMap (workflow routing)
-        // applies. The earlier row is kept verbatim as a note, never dropped.
-        superseded.push({ slug, text: `${slug}: superseded duplicate row ${trimmed}` });
-        Object.assign(bySlug.get(slug), row);
-        continue;
-      }
-      bySlug.set(slug, row);
-      rows.push(row);
+      readTableLine(state, trimmed);
       continue;
     }
-    inRun = false;
-    if (!trimmed) continue;
-    if (/^#\s+/.test(trimmed)) continue; // the title is regenerated
-    if (/^##\s+(active|closed|legacy notes)\s*$/i.test(trimmed)) continue;
-    if (/^Rows only\b/.test(trimmed)) continue; // the canonical intro line
-    if (/^Run `aioson feature:tidy/.test(trimmed)) continue; // the legacy-notes hint
-    prose.push(trimmed);
+    state.inRun = false;
+    if (trimmed && !isGeneratedLine(trimmed)) state.prose.push(trimmed);
   }
 
-  const knownSlugs = new Set(rows.map((row) => row.slug));
-  const notes = [];
-  for (const text of comments) {
-    if (!text) continue;
-    notes.push({ slug: noteSlug(text, knownSlugs), text, kind: 'comment' });
-  }
-  if (prose.length > 0) {
-    notes.push({ slug: null, text: prose.join('\n'), kind: 'prose' });
-  }
-  for (const entry of superseded) {
-    notes.push({ slug: SAFE_SLUG.test(entry.slug) ? entry.slug : null, text: entry.text, kind: 'superseded_row' });
-  }
-
+  const notes = collectNotes(comments, state);
+  const columns = state.columns && state.columns.length >= DEFAULT_COLUMNS.length ? state.columns : DEFAULT_COLUMNS.slice();
   return {
     // Comments alone are fine (a fresh file); free prose with no rows is a
     // hand-made format this module will not restructure.
-    recognized: rows.length > 0 || prose.length === 0,
-    columns: columns && columns.length >= DEFAULT_COLUMNS.length ? columns : DEFAULT_COLUMNS.slice(),
-    rows,
+    recognized: state.rows.length > 0 || state.prose.length === 0,
+    columns,
+    rows: state.rows,
     notes,
-    measures: {
-      bytes: Buffer.byteLength(raw, 'utf8'),
-      rows: rows.length,
-      notes: notes.filter((note) => note.kind !== 'superseded_row').length,
-      noteBytes: notes
-        .filter((note) => note.kind !== 'superseded_row')
-        .reduce((sum, note) => sum + Buffer.byteLength(note.text, 'utf8'), 0),
-      headerlessRows,
-      unclosedComment: unclosed,
-      duplicates: superseded.length
-    }
+    measures: measure(raw, state, notes, unclosed)
   };
 }
 
@@ -215,29 +225,74 @@ function renderTable(columns, rows) {
   return lines.join('\n');
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
+
+/** Newest first by completed, then started; undated rows keep file order at the end. */
+function newestFirst(rows) {
+  const key = (row) => (ISO_DATE.test(row.completed) ? row.completed : '') + (ISO_DATE.test(row.started) ? row.started : '');
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const left = key(a.row);
+      const right = key(b.row);
+      if (left !== right) {
+        if (!left) return 1;
+        if (!right) return -1;
+        return left < right ? 1 : -1;
+      }
+      return a.index - b.index;
+    })
+    .map((entry) => entry.row);
+}
+
+// One section per situation. "In progress" keeps FILE ORDER: the workflow
+// binding reads "the last in_progress row", so those rows never move relative
+// to each other. Closed sections read newest first.
+const SECTIONS = [
+  { heading: 'In progress', label: 'in progress', statuses: ['in_progress', 'qa_failed', 'qa_blocked'], order: 'file' },
+  { heading: 'Planning', label: 'planning', statuses: ['planning'], order: 'file' },
+  { heading: 'Paused', label: 'paused', statuses: ['paused'], order: 'file' },
+  { heading: 'Done', label: 'done', statuses: ['done'], order: 'newest' },
+  { heading: 'Abandoned', label: 'abandoned', statuses: ['abandoned'], order: 'newest' }
+];
+const OTHER_SECTION = { heading: 'Other', label: 'other', order: 'file' };
+const SECTION_HEADING = /^##\s+(in progress|planning|paused|done|abandoned|other|active|closed|legacy notes)\s*$/i;
+const SUMMARY_LINE = /^\d+ (in progress|planning|paused|done|abandoned|other)( · \d+ [a-z ]+)*$/;
+
+function groupRows(rows) {
+  const known = new Set(SECTIONS.flatMap((section) => section.statuses));
+  const groups = SECTIONS.map((section) => ({
+    ...section,
+    rows: rows.filter((row) => section.statuses.includes(row.status))
+  }));
+  groups.push({ ...OTHER_SECTION, rows: rows.filter((row) => !known.has(row.status)) });
+  for (const group of groups) {
+    if (group.order === 'newest') group.rows = newestFirst(group.rows);
+  }
+  return groups.filter((group) => group.rows.length > 0);
+}
+
 /**
- * Canonical features.md: title, one intro line, an Active table (file order
- * preserved — workflow binding reads "the last in_progress row"), a Closed
- * table, and — only while legacy notes were not relocated yet — those notes
- * verbatim at the bottom.
+ * Canonical features.md: title, one intro line, a count summary, one table per
+ * situation (empty ones omitted), and — only while legacy notes were not
+ * relocated yet — those notes verbatim at the bottom.
  */
 function serializeFeatureRegistry(registry, { keepNotes = [] } = {}) {
-  const active = registry.rows.filter((row) => !CLOSED_STATUSES.has(row.status));
-  const closed = registry.rows.filter((row) => CLOSED_STATUSES.has(row.status));
+  const groups = groupRows(registry.rows);
   const parts = [
     '# Features',
     '',
     'Rows only — written by `aioson feature:register` and `aioson feature:close`. Notes and decisions belong in the feature folder (`.aioson/context/features/{slug}/`), never here.',
-    '',
-    '## Active',
-    '',
-    renderTable(registry.columns, active),
-    '',
-    '## Closed',
-    '',
-    renderTable(registry.columns, closed),
     ''
   ];
+  if (groups.length === 0) {
+    parts.push('## In progress', '', renderTable(registry.columns, []), '');
+  } else {
+    parts.push(groups.map((group) => `${group.rows.length} ${group.label}`).join(' · '), '');
+    for (const group of groups) {
+      parts.push(`## ${group.heading}`, '', renderTable(registry.columns, group.rows), '');
+    }
+  }
   if (keepNotes.length > 0) {
     parts.push(LEGACY_NOTES_HEADING, '');
     parts.push('Run `aioson feature:tidy .` to move these notes to their feature folders.', '');
@@ -290,6 +345,24 @@ async function notesDestination(ctxDir, slug) {
  * Append notes to their destination files. Idempotent: a note whose exact
  * text is already in the destination is not written twice.
  */
+async function readOptional(file) {
+  try {
+    return await fs.readFile(file, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+async function appendNotesFile(dest, slug, current, fresh, now) {
+  const header = current
+    ? ''
+    : `# Registry notes${slug ? ` — ${slug}` : ''}\n\nMoved verbatim out of \`.aioson/context/features.md\`, which holds rows only.\n`;
+  const separator = current && !current.endsWith('\n') ? '\n' : '';
+  const block = fresh.map((note) => note.text).join('\n\n');
+  await fs.mkdir(path.dirname(dest), { recursive: true });
+  await fs.writeFile(dest, `${current}${separator}${header}\n## Moved on ${today(now)}\n\n${block}\n`, 'utf8');
+}
+
 async function relocateNotes(ctxDir, notes, { dryRun = false, now } = {}) {
   const groups = new Map();
   for (const note of notes) {
@@ -300,32 +373,18 @@ async function relocateNotes(ctxDir, notes, { dryRun = false, now } = {}) {
   }
   const moved = [];
   for (const [dest, group] of groups) {
-    let current = '';
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      current = await fs.readFile(dest, 'utf8');
-    } catch {
-      current = '';
-    }
+    // eslint-disable-next-line no-await-in-loop
+    const current = await readOptional(dest);
     const fresh = group.notes.filter((note) => !current.includes(note.text));
-    const bytes = fresh.reduce((sum, note) => sum + Buffer.byteLength(note.text, 'utf8'), 0);
     moved.push({
       slug: group.slug,
       path: path.relative(path.dirname(path.dirname(ctxDir)), dest).replace(/\\/g, '/'),
       notes: group.notes.length,
       written: fresh.length,
-      bytes
+      bytes: fresh.reduce((sum, note) => sum + Buffer.byteLength(note.text, 'utf8'), 0)
     });
-    if (dryRun || fresh.length === 0) continue;
-    const header = current
-      ? ''
-      : `# Registry notes${group.slug ? ` — ${group.slug}` : ''}\n\nMoved verbatim out of \`.aioson/context/features.md\`, which holds rows only.\n`;
-    const block = fresh.map((note) => note.text).join('\n\n');
-    const stamp = `\n## Moved on ${today(now)}\n\n${block}\n`;
     // eslint-disable-next-line no-await-in-loop
-    await fs.mkdir(path.dirname(dest), { recursive: true });
-    // eslint-disable-next-line no-await-in-loop
-    await fs.writeFile(dest, `${current}${current && !current.endsWith('\n') ? '\n' : ''}${header}${stamp}`, 'utf8');
+    if (!dryRun && fresh.length > 0) await appendNotesFile(dest, group.slug, current, fresh, now);
   }
   return moved;
 }
@@ -409,19 +468,14 @@ async function writeFeatureRow(targetDir, row, { relocateSlug = null, now } = {}
 }
 
 module.exports = {
-  CLOSED_STATUSES,
   EMPTY_CELL,
   KNOWN_STATUSES,
-  NOTES_FILE,
   SAFE_SLUG,
   featureRegistryParams,
   inspectFeatureRegistry,
-  needsTidy,
   parseFeatureRegistry,
-  relocateNotes,
   serializeFeatureRegistry,
   tidyFeatureRegistry,
   today,
-  upsertRow,
   writeFeatureRow
 };
