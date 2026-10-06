@@ -29,6 +29,12 @@ const responseSchema = {
 };
 
 function sha(value) { return createHash('sha256').update(value).digest('hex'); }
+// A shallow checkout (CI's actions/checkout, a release worktree from an
+// archive) has no history, so the frozen baseline revision may be absent.
+function hasRevision(revision) {
+  const result = spawnSync('git', ['cat-file', '-e', `${revision}^{commit}`], { cwd: root, encoding: 'utf8' });
+  return result.status === 0;
+}
 function sourceText(revision, relativePath) {
   const fullPath = `template/.aioson/${relativePath}`;
   if (revision === 'current') return fs.readFileSync(path.join(root, fullPath), 'utf8');
@@ -183,4 +189,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
-module.exports = { buildPrompt, parseTrace, responseSchema, variants };
+module.exports = { baselineCommit, buildPrompt, hasRevision, parseTrace, responseSchema, variants };
