@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.70.0] - 2026-10-06
+
+### Added
+
+- **`features.md` is a rows-only index with one writer.** A long-lived project's index was 86% HTML-comment narrative (27 KB of 32 KB) and 30 rows sat after those comments without a table header, so they no longer rendered as a table. `src/lib/feature-registry.js` now owns parsing and serialization (Active and Closed tables, Active in file order so the workflow binding still reads the same last `in_progress` row); notes are never dropped. `feature:register` is the agent path (it refuses `done`), `feature:close` moves the closing feature's notes into its folder so they are archived with it, and `feature:tidy [--dry-run]` migrates existing projects with a backup in `.aioson/backups/features-registry/`. `doctor` warns (`context:feature_registry_noise`), `doctor --fix` migrates, and `update` prints the advisory without rewriting the file. The product kernel and the `dev/patterns` brain no longer treat the index as append-only.
+
+### Fixed
+
+- **`aios.sqlite` stays healthy across the feature lifecycle.** `feature:close` drops the closed feature's raw lane output, applies retention and compacts when free pages reach 8 MB and 25% of the file with nothing live; waiting states and dead-engine process states expire by inactivity, live work means activity in the last 120 minutes, and `doctor` reports `runtime:db_health` (`--fix` prunes and compacts). Measured on copies of consumer databases: 118.9 → 20.0 MB, 66.9 → 15.6 MB, 50.0 → 10.9 MB.
+- **`ac:test-audit` asks only for proof the delivery owes.** Criteria whose capabilities are all `deferred` or `not_applicable` are reported as `out_of_scope`; inline Rust tests under nested crates (`src-tauri/src/**`) are scanned with the `ac_orders_07` identifier form; a PRD's criteria come from its own Acceptance Criteria table, not from another feature's AC cited in prose.
+- **Orchestrated runs finish instead of stalling.** The integration supervisor separates backticked commands from checks a person performs and defers the latter as `manual_verification_deferred`; a block made only of manual checks with every command at exit 0 passes and is recorded for the owner. `Depends on` parsing no longer splits inside notes or wires an unknown label to a whole phase, a row that lists its ACs owns exactly those, and `execution:run --detach` starts the engine as its own process after the read-only preflight.
+
 ## [1.69.0] - 2026-09-28
 
 - Pinned the optional Cursor SDK's transitive HTTP client to patched `undici` 6.28.0 so production dependency audits pass without shipping the vulnerable 5.x copy.
