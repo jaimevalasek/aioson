@@ -39,7 +39,7 @@
       "tags": ["context", "bootstrap", "cache", "idempotency"],
       "q": 4,
       "v": "BEST_PRACTICE",
-      "s": "Files that act as system state caches (bootstrap/current-state.md, project-pulse.md, features.md) are append-only. Never replace existing entries — add a new line/row. Other agents trust historical entries to remain stable.",
+      "s": "Files that act as system state caches (bootstrap/current-state.md, project-pulse.md) are append-only. Never replace existing entries — add a new line/row. Other agents trust historical entries to remain stable. features.md is NOT one of them: it is a rows-only index written by `aioson feature:register` / `feature:close` — never append notes or superseding entries to it; narrative goes in the feature dossier.",
       "p": "// good — Edit appending one bullet under existing section\n// bad — Write replacing the whole file",
       "src": "AIOSON audit Lote B (commits ff14ccf, 5aa1c0c)",
       "date": "2026-05-07",

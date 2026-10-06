@@ -11,6 +11,7 @@ const { applyAgentLocale } = require('../locales');
 const { getCliVersionLabelSync } = require('../version');
 const { resolveTargetDir } = require('../lib/project-root');
 const { inspectDesignDocSeed } = require('../lib/design-doc-seed');
+const { inspectFeatureRegistry, featureRegistryParams } = require('../lib/feature-registry');
 const { inspectRetiredDesignPresets } = require('../lib/design-presets');
 
 async function runUpdate({ args, options, logger, t }) {
@@ -92,6 +93,14 @@ async function runUpdate({ args, options, logger, t }) {
         : 'doctor.retired_design_doc_seed_hint_derived',
       { path: designDocSeed.path }
     ));
+  }
+  // The feature index is project-local too: update never rewrites it, so this
+  // is where a project whose features.md grew narrative hears how to migrate.
+  const featureRegistry = await inspectFeatureRegistry(targetDir);
+  if (featureRegistry.needsTidy) {
+    logger.log('');
+    logger.log(t('doctor.feature_registry_noise', featureRegistryParams(featureRegistry.measures)));
+    logger.log(t('doctor.feature_registry_noise_hint'));
   }
   // Retired fixed design presets: the template ships only the engine now, and
   // update rewrites neither design_skill nor the saved install profile — so

@@ -179,6 +179,10 @@ test('Dev context treats Planner plan as PRIMARY and old manifests as optional c
 test('Product prompt registers feature state and hands to mandatory Sheldon', async () => {
   const content = await fs.readFile(path.join(process.cwd(), '.aioson/agents/product.md'), 'utf8');
   assert.match(content, /Always register.*features\.md/i);
+  // The index is written by the CLI, never by hand: hand edits are how notes
+  // and headerless rows accumulated in long-lived projects.
+  assert.match(content, /aioson feature:register \. --feature=\{slug\}/);
+  assert.match(content, /never hand-edit `features\.md`/);
   assert.match(content, /Next agent: @sheldon/);
   assert.match(content, /Sheldon review: pending/);
 });

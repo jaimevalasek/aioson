@@ -239,6 +239,10 @@ module.exports = {
       'aioson workflow:mode [ruta] [--feature=<slug>] [--auto] [--step] [--json] [--locale=es]',
     help_feature_list:
       'aioson feature:list [ruta] [--status=<status[,status2]>] [--limit=N] [--json] [--locale=es]',
+    help_feature_register:
+      'aioson feature:register [ruta] --feature=<slug> [--status=planning|in_progress|paused|qa_blocked|abandoned] [--started=YYYY-MM-DD] [--json] [--locale=es]',
+    help_feature_tidy:
+      'aioson feature:tidy [ruta] [--dry-run] [--json] [--locale=es]',
     help_feature_current:
       'aioson feature:current [ruta] [--with-summary] [--json] [--locale=es]',
     help_feature_trace:
@@ -517,9 +521,12 @@ module.exports = {
     no_nested_project_root: 'Sin raiz AIOSON anidada dentro de .aioson/ ({count} encontradas)',
     no_nested_project_root_hint: 'Almacenamiento AIOSON huerfano, creado por un comando ejecutado desde dentro de .aioson/: {paths}. Nada lo lee y su estado de runtime nunca se reconcilia con el real — elimine esos directorios. El CLI ahora redirige esas ejecuciones a la raiz del proyecto propietario.',
     retired_design_doc_seed: 'Semilla retirada de design-doc en .aioson/context/design-doc.md ({kind})',
+    feature_registry_noise: 'features.md contiene {notes} bloque(s) de notas ({noteKb} KB de {totalKb} KB) y {headerless} fila(s) fuera de un encabezado de tabla — el índice debe contener solo filas',
+    feature_registry_noise_hint: 'Ejecuta `aioson feature:tidy . --dry-run` para previsualizar y luego `aioson feature:tidy .` (o `aioson doctor . --fix`): las filas se reescriben como un índice Active/Closed y cada nota se mueve tal cual a la carpeta de su feature, con copia en .aioson/backups/features-registry/.',
     retired_design_doc_seed_hint_verbatim: '{path} es la semilla de organizacion de codigo que instaladores antiguos copiaban tal cual — el layout del propio CLI Node.js del framework, no el de este proyecto. Nada la produce ni la exige; la gobernanza estructural vive en .aioson/design-docs/. Eliminela (`aioson doctor . --fix` borra una copia identica).',
     retired_design_doc_seed_hint_derived: '{path} todavia lleva el encabezado de la semilla retirada ("debe cargarse antes de cualquier implementacion", "generado por @discovery-design-doc") y su layout de CLI Node.js. Conserve solo lo que este proyecto decidio, como registro nombrado de decision tecnica, o elimine el archivo; la gobernanza estructural vive en .aioson/design-docs/.',
     fix_action_retired_design_doc_seed: 'Eliminar .aioson/context/design-doc.md cuando sea la semilla retirada copiada tal cual (las copias editadas se conservan para revision)',
+    fix_action_feature_registry: 'Reescribir features.md como índice solo de filas y mover sus notas a la carpeta de cada feature (con copia)',
     retired_skill_trees: 'Arboles de skills retirados del framework todavia instalados ({count})',
     retired_skill_trees_hint: 'Una version anterior copio {paths} — un segundo motor de diseno y las specs de componentes del dashboard del propio framework. Nada los enruta y update nunca elimina archivos locales del proyecto; eliminalos (el motor interface-design es la unica skill de diseno incluida) o conserva solo lo que este proyecto realmente usa.',
     retired_design_preset: 'design_skill apunta a un preset visual fijo retirado ({id})',

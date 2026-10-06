@@ -241,6 +241,7 @@ const { runProfilerCoverage } = require('./commands/profiler-coverage');
 const { runFeatureExport } = require('./commands/feature-export');
 const { runFeatureCurrent } = require('./commands/feature-current');
 const { runFeatureList } = require('./commands/feature-list');
+const { runFeatureRegister, runFeatureTidy } = require('./commands/feature-registry');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
 const { runDossierAddResearch } = require('./commands/dossier-add-research');
 const { runDossierAudit } = require('./commands/dossier-audit');
@@ -940,6 +941,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'feature-current',
   'feature:list',
   'feature-list',
+  'feature:register',
+  'feature-register',
+  'feature:tidy',
+  'feature-tidy',
   'dossier:init',
   'dossier-init',
   'dossier:show',
@@ -1187,6 +1192,8 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_pentester_report');
   logHelpLine(t, logger, 'cli.help_pentester_coverage');
   logHelpLine(t, logger, 'cli.help_feature_list');
+  logHelpLine(t, logger, 'cli.help_feature_register');
+  logHelpLine(t, logger, 'cli.help_feature_tidy');
   logHelpLine(t, logger, 'cli.help_feature_current');
   logHelpLine(t, logger, 'cli.help_feature_trace');
   logHelpLine(t, logger, 'cli.help_feature_diff');
@@ -2200,6 +2207,10 @@ async function main() {
       result = await runProfilerCoverage({ args, options, logger: commandLogger });
     } else if (command === 'feature:list' || command === 'feature-list') {
       result = await runFeatureList({ args, options, logger: commandLogger, t });
+    } else if (command === 'feature:register' || command === 'feature-register') {
+      result = await runFeatureRegister({ args, options, logger: commandLogger });
+    } else if (command === 'feature:tidy' || command === 'feature-tidy') {
+      result = await runFeatureTidy({ args, options, logger: commandLogger });
     } else if (command === 'dossier:init' || command === 'dossier-init') {
       result = await runDossierInit({ args, options, logger: commandLogger });
     } else if (command === 'dossier:show' || command === 'dossier-show') {

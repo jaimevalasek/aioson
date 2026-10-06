@@ -38,6 +38,7 @@ const {
 const { analyzeFeatureCompleteness, findingsThroughStage } = require('../lib/feature-completeness');
 const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
 const { resolveTargetDir } = require('../lib/project-root');
+const { parseFeatureRegistry, writeFeatureRow, EMPTY_CELL } = require('../lib/feature-registry');
 const { visualEvidenceBlock, formatVisualEvidence } = require('../lib/visual-evidence');
 
 // P0 agent-loading-contract: a feature closing is the natural cadence to roll
@@ -171,11 +172,26 @@ function escapeSlugForRegex(slug) {
   return slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function updateFeaturesFile(featuresPath, slug, verdict, date) {
+async function updateFeaturesFile(featuresPath, slug, verdict, date, targetDir) {
   const content = await readFileSafe(featuresPath);
   if (!content) return false;
 
   const status = isAcceptedVerdict(verdict) ? 'done' : 'qa_failed';
+  // The registry module rewrites the index canonically and moves this
+  // feature's notes into its folder, so they leave with the feature when the
+  // archive step runs. Only a hand-made format it cannot read falls through
+  // to the legacy in-place row edit below.
+  if (targetDir) {
+    const existing = parseFeatureRegistry(content).rows.find((row) => row.slug === slug);
+    const started = existing && existing.started && existing.started !== EMPTY_CELL ? existing.started : date;
+    const result = await writeFeatureRow(
+      targetDir,
+      { slug, status, started, completed: date },
+      { relocateSlug: slug, now: () => new Date(`${date}T12:00:00Z`) }
+    );
+    if (result.written) return result;
+  }
+
   const rowRe = new RegExp(
     `^(\\|\\s*${escapeSlugForRegex(slug)}\\s*\\|)\\s*[^|]*\\s*\\|\\s*([^|]*)\\s*\\|\\s*([^|]*)\\s*\\|(.*)$`,
     'm'
@@ -781,8 +797,16 @@ async function runFeatureClose({ args, options = {}, logger }) {
   const featuresPath = path.join(dir, 'features.md');
   const featuresContent = await readFileSafe(featuresPath);
   if (featuresContent) {
-    await updateFeaturesFile(featuresPath, slug, verdict, today);
+    const registryWrite = await updateFeaturesFile(featuresPath, slug, verdict, today, targetDir);
     updates.push(`features.md: ${slug} → ${isAcceptedVerdict(verdict) ? 'done' : 'qa_failed'} (${today})`);
+    if (registryWrite && Array.isArray(registryWrite.relocated)) {
+      for (const moved of registryWrite.relocated) {
+        updates.push(`features.md: ${moved.notes} note(s) of ${slug} moved to ${moved.path}`);
+      }
+      if (registryWrite.remainingNotes > 0) {
+        updates.push(`features.md: ${registryWrite.remainingNotes} legacy note(s) of other features remain — run \`aioson feature:tidy .\``);
+      }
+    }
   } else {
     updates.push('features.md: not found (skipped)');
   }

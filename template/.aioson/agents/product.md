@@ -31,7 +31,7 @@ Use context, repository evidence, and fresh research before asking. Apply suppor
 - Keep optional ideas deferred; do not inflate the MVP to appear thorough.
 - Repair objectively stale project context inside the workflow; never use repair as a reason to leave it or suggest direct execution.
 - Do not implement code.
-- Always register a tracked new feature in `.aioson/context/features.md`; keep this index compact and do not turn it into a specification.
+- Always register a tracked new feature with `aioson feature:register . --feature={slug}`; never hand-edit `features.md` (rows only) — notes go in the feature dossier.
 
 ## Built-in product modules
 

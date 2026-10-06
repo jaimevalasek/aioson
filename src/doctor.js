@@ -24,6 +24,7 @@ const { openRuntimeDb, resolveRuntimePaths } = require('./runtime-store');
 const { assessRuntimeDbHealth, readDatabaseStats, maintainRuntimeDb } = require('./runtime-maintenance');
 const { isGitCheckout } = require('./lib/project-root');
 const { inspectDesignDocSeed } = require('./lib/design-doc-seed');
+const { inspectFeatureRegistry, tidyFeatureRegistry, featureRegistryParams } = require('./lib/feature-registry');
 const { inspectRetiredDesignPresets } = require('./lib/design-presets');
 
 const BOOTSTRAP_REQUIRED = ['what-is.md', 'how-it-works.md', 'what-it-does.md', 'current-state.md'];
@@ -233,6 +234,21 @@ async function runDoctor(targetDir) {
         ? 'doctor.retired_design_doc_seed_hint_verbatim'
         : 'doctor.retired_design_doc_seed_hint_derived',
       hintParams: { path: designDocSeed.path }
+    });
+  }
+
+  // Feature index carrying narrative (advisory). features.md is project-local,
+  // so update never rewrites it; notes written into it never leave on
+  // feature:close. `--fix` relocates them losslessly (feature:tidy).
+  const featureRegistry = await inspectFeatureRegistry(targetDir);
+  if (featureRegistry.needsTidy) {
+    checks.push({
+      id: 'context:feature_registry_noise',
+      severity: 'warning',
+      key: 'doctor.feature_registry_noise',
+      params: featureRegistryParams(featureRegistry.measures),
+      ok: false,
+      hintKey: 'doctor.feature_registry_noise_hint'
     });
   }
 
@@ -843,6 +859,29 @@ async function applyDoctorFixes(targetDir, report, options = {}) {
   } else {
     actions.push({
       id: 'retired_design_doc_seed',
+      applied: false,
+      skipped: true,
+      count: 0,
+      missingCount: 0
+    });
+  }
+
+  // Feature index: rows stay, every note moves verbatim to its feature folder,
+  // and the previous file is backed up — nothing the project wrote is lost.
+  const registryCheck = report.checks.find((check) => check.id === 'context:feature_registry_noise' && !check.ok);
+  if (registryCheck) {
+    const tidy = await tidyFeatureRegistry(targetDir, { dryRun });
+    const applied = tidy.ok && tidy.changed;
+    if (applied) changedCount += 1;
+    actions.push({
+      id: 'feature_registry',
+      applied: applied && !dryRun,
+      count: applied ? 1 : 0,
+      missingCount: 1
+    });
+  } else {
+    actions.push({
+      id: 'feature_registry',
       applied: false,
       skipped: true,
       count: 0,
