@@ -86,7 +86,7 @@ const RICH_CSS = `
   .stage { position: absolute; }
 `;
 const RICH_BODY = `
-  <div class="grain"></div><div class="orb"></div>
+  <div class="grain"></div><div class="orb"></div><div class="rail"><div class="bleed stage"><div class="row">Layered scene</div></div></div>
   <section class="plates"><div class="plate"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD" alt="Prancha um"></div>
   <div class="plate"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD" alt="Prancha dois"></div>
   <div class="plate"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD" alt="Prancha três"></div></section>
@@ -100,7 +100,7 @@ test('craft weight grades each lever 0–2: the thin page warns, the rich one sc
   assert.equal(weight.scored, true);
   assert.equal(weight.bar, 60);
   assert.ok(weight.score < 60, `thin page weight ${weight.score}: ${JSON.stringify(weight.grades)}`);
-  assert.match(thin.warnings.join('\n'), /craft weight \d+\/100 below the brand bar \(60\): the levers are lit but thin/);
+  assert.match(thin.warnings.join('\n'), /craft weight \d+\/100 below the brand bar \(60\): review/);
   assert.doesNotMatch(thin.warnings.join('\n'), /craft floor/);
 
   const rich = analyzeVisualSources({ html: thinBrandSurface(RICH_CSS, RICH_BODY) });
@@ -183,7 +183,7 @@ test('fold density: an empty entry fold, a gap fold or a stretched sequence on d
 
   const empty = summarizeRuntime([{ viewport: desktop, raw: { ...base, occupancy: occupancy(18, 4, 6), pixel_density: pixels } }]);
   assert.match(empty.warnings.join('\n'), /desktop: the first fold is 82% empty \(a visual subject — loaded media, display type, a contrasting panel or a photographic ground — covers 18% of it\)/);
-  assert.deepEqual(empty.metrics.assurance.density, { folds: 3, first_fold_occupancy_pct: 18, folds_occupancy_pct: [18, 4, 6], folds_avg_occupancy_pct: 9, folds_pixels_pct: [21, 36, 53], ground: '#f8e8f8', scope: 'desktop', floor: 35 });
+  assert.deepEqual(empty.metrics.assurance.density, { folds: 3, first_fold_occupancy_pct: 18, folds_occupancy_pct: [18, 4, 6], folds_avg_occupancy_pct: 9, folds_pixels_pct: [21, 36, 53], ground: '#f8e8f8', scope: 'desktop', floor: 35, enforced: true, register: null });
   assert.deepEqual(empty.metrics.viewports[0].density.folds_occupancy_pct, [18, 4, 6]);
 
   // The measured incident shape: a filled opening, then a viewport of page
@@ -476,6 +476,10 @@ surface_mode: brand
   const underFloor = await approveWithDensity({ first_fold_occupancy_pct: 20, scope: 'desktop', floor: 30 });
   assert.equal(underFloor.result.error, 'prototype_visual_craft_below_bar');
   assert.match(underFloor.output, /first fold 80% empty at desktop \(a visual subject covers 20%\)/);
+
+  const intentionalSpace = await approveWithDensity({ first_fold_occupancy_pct: 20, scope: 'desktop', floor: 30, enforced: false, register: 'editorial' });
+  assert.equal(intentionalSpace.result.error, 'prototype_visual_craft_below_bar', 'the measured craft bar still applies');
+  assert.doesNotMatch(intentionalSpace.output, /first fold/, 'recorded negative space is not a fill quota');
 
   // Evidence recorded by a probe that predates the embedded floor: 35 covers it.
   const legacy = await approveWithDensity({ first_fold_occupancy_pct: 34, scope: 'desktop' });

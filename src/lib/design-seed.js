@@ -88,6 +88,7 @@ const {
   TYPEFACE_BANK,
   COMPOSITION_BANK,
   REGISTER_MATERIALS,
+  REGISTER_MOTIONS,
   MATERIALS,
   RHYTHMS,
   TECHNICAL_RHYTHMS,
@@ -362,6 +363,7 @@ function generateSeedCandidates({ project = null, slug, register = null, count =
   const usedDisplays = new Map();
   const usedHeroes = new Map();
   const usedMaterials = new Map();
+  const usedMotions = new Map();
   const total = Math.max(1, Math.min(6, count));
 
   for (let i = 0; i < total; i += 1) {
@@ -379,9 +381,14 @@ function generateSeedCandidates({ project = null, slug, register = null, count =
     const chosenPairing = pickLeastUsed(rng, pairingPool, (p) => p.display, usedDisplays, avoid.map((entry) => entry && entry.display_face));
     const pairing = chosenPairing.value;
     const compositionPool = COMPOSITION_BANK.filter((c) => c.registers.includes(candidateRegister));
-    const chosenComposition = pickLeastUsed(rng, compositionPool, (c) => c.hero, usedHeroes);
+    const chosenComposition = pickLeastUsed(rng, compositionPool, (c) => c.hero, usedHeroes,
+      avoid.map((entry) => entry && entry.composition_family));
     const composition = chosenComposition.value;
-    const material = pickLeastUsed(rng, REGISTER_MATERIALS[candidateRegister], (value) => value, usedMaterials).value;
+    const chosenMaterial = pickLeastUsed(rng, REGISTER_MATERIALS[candidateRegister], (value) => value, usedMaterials,
+      avoid.map((entry) => entry && entry.material_family));
+    const material = chosenMaterial.value;
+    const chosenMotion = pickLeastUsed(rng, REGISTER_MOTIONS[candidateRegister], (value) => value, usedMotions,
+      avoid.map((entry) => entry && entry.motion_family));
 
     candidates.push({
       label: `${scheme}-${Math.round(hue) % 360}`,
@@ -399,6 +406,7 @@ function generateSeedCandidates({ project = null, slug, register = null, count =
         note: composition.note,
         rhythm: pickFrom(rng, candidateRegister === 'technical' ? TECHNICAL_RHYTHMS : RHYTHMS),
         material,
+        motion: chosenMotion.value,
         finishing: finishingFloor(candidateRegister, pole)
       },
       diversity: {
@@ -408,7 +416,10 @@ function generateSeedCandidates({ project = null, slug, register = null, count =
         palette_trials: drawn.trials,
         display_uses: chosenPairing.priorUses,
         recent_display_uses: chosenPairing.recentUses,
-        hero_uses: chosenComposition.priorUses
+        hero_uses: chosenComposition.priorUses,
+        recent_hero_uses: chosenComposition.recentUses,
+        recent_material_uses: chosenMaterial.recentUses,
+        recent_motion_uses: chosenMotion.recentUses
       }
     });
   }
@@ -489,7 +500,7 @@ function readRegistry() {
 }
 
 function recordFingerprint(entry, { projectDir = null } = {}) {
-  if (!entry || !entry.project || !Number.isFinite(entry.accent_hue)) return false;
+  if (!entry || !entry.project || (!Number.isFinite(entry.accent_hue) && !entry.composition_signature)) return false;
   if (projectDir && !process.env.AIOSON_DESIGN_REGISTRY && isEphemeralProjectDir(projectDir)) return false;
   try {
     const registry = readRegistry();
@@ -612,6 +623,7 @@ function writeSeedRecord(targetDir, slug, payload) {
       ui: c.pairing && c.pairing.ui,
       hero: c.composition && c.composition.hero,
       material: c.composition && c.composition.material,
+      motion: c.composition && c.composition.motion,
       ...(c.diversity ? { diversity: c.diversity } : {})
     })),
     warnings: payload.warnings || [],
@@ -704,31 +716,34 @@ function classifyPaletteOrigin({ accentHue, groundPole = null, identity = false,
  * project came out looking like the first".
  */
 function findRepetition(current, entries) {
-  if (!current || !Number.isFinite(current.accent_hue)) return null;
+  if (!current) return null;
   let hit = null;
   for (const entry of entries || []) {
-    if (!entry || !Number.isFinite(entry.accent_hue)) continue;
+    if (!entry) continue;
     const sameProject = current.project_id && entry.project_id
       ? current.project_id === entry.project_id
       : entry.project === current.project;
     if (sameProject) continue;
-    const delta = hueDeltaDeg(entry.accent_hue, current.accent_hue);
-    const hueReason = fingerprintMatchReason(delta, entry.ground_pole === current.ground_pole);
+    const delta = Number.isFinite(entry.accent_hue) && Number.isFinite(current.accent_hue)
+      ? hueDeltaDeg(entry.accent_hue, current.accent_hue) : null;
+    const hueReason = delta === null ? null : fingerprintMatchReason(delta, entry.ground_pole === current.ground_pole);
     const sameFace = Boolean(current.display_face && entry.display_face && current.display_face === entry.display_face);
     const sameMode = Boolean(current.surface_mode && entry.surface_mode && current.surface_mode === entry.surface_mode);
     const sameMaterial = Boolean(current.material_signature && entry.material_signature && current.material_signature === entry.material_signature);
     const sameMotion = Boolean(current.motion_signature && entry.motion_signature && current.motion_signature === entry.motion_signature);
-    const structuralReason = sameFace && sameMode && (sameMaterial || sameMotion)
-      ? 'same type, surface mode, and finish/motion signature'
-      : null;
+    const sameComposition = Boolean(current.composition_signature && entry.composition_signature && current.composition_signature === entry.composition_signature);
+    const structuralReason = sameMode && sameComposition && (sameMaterial || sameMotion)
+      ? 'same composition, surface mode, and finish/motion signature'
+      : (sameFace && sameMode && (sameMaterial || sameMotion) ? 'same type, surface mode, and finish/motion signature' : null);
     const reason = hueReason || structuralReason;
     if (!reason) continue;
-    if (!hit || delta < hit.delta) {
+    if (!hit || (delta ?? Infinity) < (hit.delta ?? Infinity)) {
       hit = {
         entry,
-        delta: Math.round(delta),
+        delta: delta === null ? null : Math.round(delta),
         reason,
         same_face: sameFace,
+        same_composition: sameComposition,
         same_material: sameMaterial,
         same_motion: sameMotion
       };

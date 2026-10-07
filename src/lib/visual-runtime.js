@@ -432,11 +432,12 @@ function pageProbe(probeVersion) {
  * @param {Array<{viewport: object, raw: object}>} runs
  * @returns {{metrics: object, issues: string[], warnings: string[]}}
  */
-function summarizeRuntime(runs, { surfaceMode = null, projectDir = null } = {}) {
+function summarizeRuntime(runs, { surfaceMode = null, projectDir = null, register = null } = {}) {
   const issues = [];
   const warnings = [];
   const relativeShot = (file) => (projectDir ? path.relative(projectDir, file).split(path.sep).join('/') : file);
   const familiarityMode = ['operate', 'read'].includes(String(surfaceMode || '').toLowerCase());
+  const restrainedRegister = ['quiet', 'editorial', 'technical'].includes(String(register || '').toLowerCase());
   const metrics = {
     viewports: [],
     assurance: {
@@ -499,11 +500,11 @@ function summarizeRuntime(runs, { surfaceMode = null, projectDir = null } = {}) 
       const entryDesktop = viewport.width >= DENSITY_DESKTOP_WIDTH && !(run.route && run.route.state);
       if (entryDesktop) {
         const current = metrics.assurance.density;
-        if (!current || density.first_fold_occupancy_pct < current.first_fold_occupancy_pct) metrics.assurance.density = { ...density, scope, floor: DENSITY_FIRST_FOLD_FLOOR };
-        if (!familiarityMode) {
+        if (!current || density.first_fold_occupancy_pct < current.first_fold_occupancy_pct) metrics.assurance.density = { ...density, scope, floor: DENSITY_FIRST_FOLD_FLOOR, enforced: !familiarityMode && !restrainedRegister, register: register || null };
+        if (!familiarityMode && !restrainedRegister) {
           const emptyFold = folds.findIndex((pct, index) => index > 0 && pct < DENSITY_FOLD_FLOOR);
           if (density.first_fold_occupancy_pct < DENSITY_FIRST_FOLD_FLOOR) {
-            warnings.push(`${scope}: the first fold is ${100 - density.first_fold_occupancy_pct}% empty (a visual subject — loaded media, display type, a contrasting panel or a photographic ground — covers ${density.first_fold_occupancy_pct}% of it) — the opening of a premium surface is filled: type at display scale over a photograph or a painted atmosphere, not a heading floating in the page color${captureNote}`);
+            warnings.push(`${scope}: the first fold is ${100 - density.first_fold_occupancy_pct}% empty (a visual subject — loaded media, display type, a contrasting panel or a photographic ground — covers ${density.first_fold_occupancy_pct}% of it) — inspect the capture against the recorded composition: distinguish intentional negative space from missing evidence or stretched layout; do not add a background effect just to increase occupancy${captureNote}`);
           } else if (emptyFold !== -1) {
             warnings.push(`${scope}: fold ${emptyFold + 1} is ${100 - folds[emptyFold]}% empty (per fold: ${folds.map((pct) => `${pct}%`).join(', ')}) — a whole viewport of page color between sections is not rhythm, it is a gap; tighten the sequence or fill the field (image-led rows, painted panels, oversized type)${captureNote}`);
           } else if (average < DENSITY_FOLDS_FLOOR) {

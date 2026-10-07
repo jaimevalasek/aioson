@@ -45,7 +45,7 @@ function prototypeHtml() {
   --shadow-1: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); --wash: linear-gradient(180deg, rgba(139,92,246,.12), transparent 60%); }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-html, body { background: var(--bg); color: var(--fg); font-family: 'Inter', system-ui, sans-serif; }
+html, body { background: var(--bg); color: var(--fg); font-family: 'Inter', system-ui, sans-serif; font-size: 16px; }
 h1 { font-family: 'Fraunces', Georgia, serif; font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1.02; }
   .hero { padding: var(--s8); background: var(--wash), radial-gradient(circle at 85% 10%, rgba(139,92,246,.18), transparent 32%); border-radius: var(--r2); box-shadow: var(--shadow-1); }
 .card { padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r1); background: color-mix(in oklch, var(--bg), white 4%); }
@@ -132,7 +132,7 @@ test('the implementers measure the shipped front-end at agent:done and hold it t
   assert.equal(done.interface_files, 2);
   assert.ok(Array.isArray(done.regressed) && done.regressed.length >= 3, `expected regressions, got ${JSON.stringify(done.regressed)}`);
   assert.ok(done.regressed.some((r) => /^craft /.test(r)) && done.regressed.some((r) => /^materials /.test(r)) && done.regressed.some((r) => /typeface delivered/.test(r)), done.regressed.join(' | '));
-  assert.match(done.reason, /src\/ui: craft \d\/5 \| materials \d\/7 \| tells \d+ \| REGRESSED vs prototype/);
+  assert.match(done.reason, /src\/ui: craft \d\/4 \| materials \d\/7 \| tells \d+ \| REGRESSED vs prototype/);
 
   const implementation = readVisualImplementation(dir, SLUG);
   assert.ok(implementation, 'visual-implementation.json must be persisted next to the prototype evidence');
@@ -141,7 +141,7 @@ test('the implementers measure the shipped front-end at agent:done and hold it t
   const block = visualEvidenceBlock(dir, SLUG);
   assert.equal(block.measured, true);
   assert.ok(block.implementation.regressed.length >= 3);
-  assert.match(formatVisualEvidence(block), /\| implementation: craft \d\/5 .* — REGRESSED vs prototype: craft/);
+  assert.match(formatVisualEvidence(block), /\| implementation: craft \d\/4 .* — REGRESSED vs prototype: craft/);
 
   // QA's session end measures the same surface the same way.
   const qa = await verifyAgentArtifact({ targetDir: dir, agent: 'qa', options: {} });
@@ -155,7 +155,7 @@ test('an implementation that holds the floor reports it, and a feature without p
   const noEvidence = await verifyAgentArtifact({ targetDir: dir, agent: 'deyvin', options: {} });
   assert.equal(noEvidence.skipped, false);
   assert.equal(noEvidence.regressed, undefined);
-  assert.match(noEvidence.reason, /craft \d\/5/);
+  assert.match(noEvidence.reason, /craft \d\/4/);
   const report = readVisualImplementation(dir, SLUG);
   assert.match(report.metrics.conformance.reason, /no recorded prototype evidence/);
 

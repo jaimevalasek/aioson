@@ -16,7 +16,7 @@ const POLES = ['light', 'dark', 'chromatic'];
 
 const TYPEFACE_BANK = [
   { display: 'Young Serif', ui: 'Figtree', host: 'google', registers: ['editorial', 'material'], vibe: 'warm chunky oldstyle' },
-  { display: 'Gambetta', ui: 'Switzer', host: 'fontshare', registers: ['editorial', 'quiet'], vibe: 'calligraphic contemporary serif' },
+  { display: 'Gambetta', ui: 'Switzer', host: 'fontshare', registers: ['editorial', 'quiet', 'material'], vibe: 'calligraphic contemporary serif' },
   { display: 'Petrona', ui: 'Archivo', host: 'google', registers: ['editorial'], vibe: 'upright latin serif with bite' },
   { display: 'Italiana', ui: 'Karla', host: 'google', registers: ['quiet', 'editorial'], vibe: 'hairline display roman' },
   { display: 'Abril Fatface', ui: 'Mulish', host: 'google', registers: ['material', 'editorial'], vibe: 'poster didone' },
@@ -30,7 +30,7 @@ const TYPEFACE_BANK = [
   { display: 'Panchang', ui: 'General Sans', host: 'fontshare', registers: ['constructed'], vibe: 'squared wide display' },
   { display: 'Anton', ui: 'Archivo', host: 'google', registers: ['constructed'], vibe: 'compressed poster sans' },
   { display: 'Bricolage Grotesque', ui: 'Public Sans', host: 'google', registers: ['constructed', 'editorial'], vibe: 'characterful grotesque' },
-  { display: 'Familjen Grotesk', ui: 'Karla', host: 'google', registers: ['quiet', 'technical'], vibe: 'warm grotesque' },
+  { display: 'Familjen Grotesk', ui: 'Karla', host: 'google', registers: ['quiet', 'technical', 'material'], vibe: 'warm grotesque' },
   { display: 'Fragment Mono', ui: 'Archivo', host: 'google', registers: ['technical'], vibe: 'monospace display' },
   { display: 'Clash Display', ui: 'Satoshi', host: 'fontshare', registers: ['constructed', 'cinematic'], vibe: 'angular display grotesque' },
   { display: 'Cabinet Grotesk', ui: 'General Sans', host: 'fontshare', registers: ['editorial', 'constructed'], vibe: 'retro grotesque' },
@@ -42,15 +42,17 @@ const TYPEFACE_BANK = [
 
 const COMPOSITION_BANK = [
   { hero: 'split-editorial', note: 'text column against a full-bleed media column, baselines locked across the seam', registers: ['editorial', 'quiet', 'material'] },
-  { hero: 'type-as-image', note: 'display type IS the hero — the wordmark or promise set at 96px+, media behind or absent', registers: ['editorial', 'constructed', 'cinematic'] },
+  { hero: 'type-as-image', note: 'display type leads the composition — scale and line breaks follow the actual proposition and viewport, with supporting media or none', registers: ['editorial', 'constructed', 'cinematic'] },
   { hero: 'full-bleed-stage', note: 'media or product fills the viewport under a legibility scrim, one action, UI out of the frame', registers: ['cinematic', 'material'] },
   { hero: 'offset-grid', note: 'asymmetric 12-col grid with one element overlapping the seam and one bleeding off-canvas', registers: ['editorial', 'constructed'] },
-  { hero: 'centered-object', note: 'one subject floating at full presence in a generous field, soft grounded shadow, nothing competing', registers: ['quiet', 'material'] },
+  { hero: 'centered-object', note: 'one subject in a generous field, grounded through crop, proportion or tonal separation, with nothing competing', registers: ['quiet', 'material'] },
   { hero: 'working-surface', note: 'the real working surface leads, with a compact context rail and the primary action beside the relevant data', registers: ['technical'] },
   { hero: 'signal-and-detail', note: 'one meaningful signal anchors the view, aligned with its trend, units, and a directly inspectable detail region', registers: ['technical'] },
   { hero: 'process-sequence', note: 'a precise process or product sequence leads into its active step and supporting evidence, with rules joining the regions', registers: ['technical'] },
   { hero: 'stacked-manifesto', note: 'oversized stacked display lines with one word swapped for media or color, marquee optional', registers: ['constructed', 'editorial'] },
   { hero: 'framed-plate', note: 'media in a drawn frame with hairline rules and small caps captions — a plate, not a card', registers: ['editorial', 'quiet'] },
+  { hero: 'index-and-feature', note: 'a scannable list of real items beside one featured object or story; selection leads the opening instead of a generic hero', registers: ['quiet', 'editorial', 'technical'] },
+  { hero: 'typographic-introduction', note: 'a compact proposition, deliberate line breaks and useful content immediately below; hierarchy comes from measure, weight and spacing', registers: ['quiet', 'editorial'] },
   { hero: 'collage-layers', note: 'overlapping color panels and cutout media at slight rotations — composed chaos with a strict palette', registers: ['constructed', 'material'] },
   { hero: 'horizontal-rail', note: 'edge-to-edge horizontal scroll rail with snap and a visible overflow cue as the first move', registers: ['cinematic', 'constructed'] },
   { hero: 'diagonal-axis', note: 'content set on one tilted axis or clipped section seams — the angle is the signature, used once', registers: ['constructed', 'cinematic'] }
@@ -59,13 +61,22 @@ const COMPOSITION_BANK = [
 // Names echo the visual-effects.md vocabulary — the doc owns the execution.
 const REGISTER_MATERIALS = {
   technical: ['rule hierarchy', 'tonal steps', 'restrained status wash'],
-  quiet: ['radial wash', 'grain and noise'],
-  editorial: ['rule hierarchy', 'grain and noise'],
-  material: ['grain and noise', 'dither and halftone'],
+  quiet: ['tonal steps', 'image-led ground', 'radial wash', 'grain and noise'],
+  editorial: ['rule hierarchy', 'tonal steps', 'image-led ground', 'grain and noise'],
+  material: ['grain and noise', 'dither and halftone', 'image-led ground', 'tonal steps'],
   constructed: ['dither and halftone', 'conic ring', 'tonal steps'],
-  cinematic: ['radial wash', 'grain and noise', 'ambient drift']
+  cinematic: ['radial wash', 'grain and noise', 'ambient drift', 'image-led ground']
 };
 const MATERIALS = [...new Set(Object.values(REGISTER_MATERIALS).flat())];
+// Proposals, not obligations: the brief and existing interaction system win.
+const REGISTER_MOTIONS = {
+  technical: ['state feedback', 'static'],
+  quiet: ['static', 'entrance reveal', 'state feedback'],
+  editorial: ['static', 'state feedback', 'entrance reveal'],
+  material: ['state feedback', 'entrance reveal', 'static'],
+  constructed: ['static', 'entrance reveal', 'scroll-driven'],
+  cinematic: ['entrance reveal', 'scroll-driven', 'animated backdrop']
+};
 
 const RHYTHMS = ['96/128px desktop, 48/64px mobile', '112/160px desktop, 56/72px mobile', '80/120px desktop, 48/64px mobile'];
 const TECHNICAL_RHYTHMS = ['24/32px desktop, 16/24px mobile', '32/48px desktop, 16/24px mobile'];
@@ -94,4 +105,4 @@ const SCHEME_WEIGHTS = {
   default: [['mono', 0.2], ['analogous', 0.2], ['complementary', 0.2], ['split-complementary', 0.1], ['triadic', 0.1], ['duo-accent', 0.1], ['color-block', 0.1]]
 };
 
-module.exports = { REGISTERS, POLES, SCHEMES, TYPEFACE_BANK, COMPOSITION_BANK, REGISTER_MATERIALS, MATERIALS, RHYTHMS, TECHNICAL_RHYTHMS, POLE_WEIGHTS, SCHEME_WEIGHTS };
+module.exports = { REGISTERS, POLES, SCHEMES, TYPEFACE_BANK, COMPOSITION_BANK, REGISTER_MATERIALS, REGISTER_MOTIONS, MATERIALS, RHYTHMS, TECHNICAL_RHYTHMS, POLE_WEIGHTS, SCHEME_WEIGHTS };

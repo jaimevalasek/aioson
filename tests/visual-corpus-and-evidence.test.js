@@ -100,7 +100,7 @@ import { Lift } from './Styled';
 
 export function App() {
   return (
-    <main className="hero">
+    <main className="hero reveal">
       <h1 className="display">Relatório — decisão</h1>
       <p>Primeiro — segundo — terceiro — quarto — quinto.</p>
       <img className="evidence" src="/shot.png" alt="" />
@@ -309,7 +309,7 @@ test('a feature-owned measurement lands in the feature evidence slot, where an a
   const block = visualEvidenceBlock(dir, SLUG);
   assert.equal(block.measured, true);
   assert.equal(block.stale, false);
-  assert.match(block.summary, /craft \d\/5 \| materials \d\/7 \| tells \d+ \| accent ~\d+° on dark/);
+  assert.match(block.summary, /craft \d\/4 \| materials \d\/7 \| tells \d+ \| accent ~\d+° on dark/);
   assert.match(formatVisualEvidence(block), /^visual evidence: craft/);
 });
 
@@ -406,7 +406,7 @@ const AMBIENT_PROTOTYPE = HOVER_ONLY_PROTOTYPE.replace('</style>', `
 @keyframes drift { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
 .aurora { background: linear-gradient(120deg, #12203a, #3a1240, #12203a); background-size: 300% 300%; animation: drift 20s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .aurora { animation: none; } }
-</style>`);
+</style>`).replace('<main>', '<main class="aurora">');
 
 async function ambitionFixture(prototype, briefing) {
   const dir = await makeTmpDir('aioson-motion-ambition-');

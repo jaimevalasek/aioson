@@ -28,9 +28,9 @@ const {
   POLES
 } = require('../lib/design-seed');
 
-// 1.3.1: candidates keep their base hues apart and search disjoint rungs of
-// the ladder — same inputs draw differently than 1.3.0, so the record says so.
-const VERSION = '1.3.1';
+// Generator revision, independent of the package release: composition,
+// material and motion now consult recent, explicitly recorded choices.
+const VERSION = '1.4.0';
 const GENERATOR = `aioson design:seed@${VERSION}`;
 
 /**
@@ -184,7 +184,7 @@ async function runDesignSeed({ args, options = {}, logger }) {
     logger.log(`  contrast: ink ${c.contrast.ink_on_ground} · muted ${c.contrast.muted_on_ground} · accent ${c.contrast.accent_on_ground} · accent-ink ${c.contrast.accent_ink_on_accent}`);
     logger.log(`  type: ${c.pairing.display} / ${c.pairing.ui} (${c.pairing.host}) — ${c.pairing.vibe}`);
     logger.log(`  composition: ${c.composition.hero} — ${c.composition.note}`);
-    logger.log(`  rhythm ${c.composition.rhythm} · material: ${c.composition.material}`);
+    logger.log(`  rhythm ${c.composition.rhythm} · material: ${c.composition.material} · motion proposal: ${c.composition.motion}`);
     logger.log(`  finishing floor: ${c.composition.finishing}`);
     logger.log('');
   }

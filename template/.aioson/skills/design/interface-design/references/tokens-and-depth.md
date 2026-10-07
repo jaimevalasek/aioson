@@ -118,11 +118,11 @@ For landings, cinematic surfaces, and premium reveals — on top of the posture 
 
 ## Operational density — admin / config / settings pages
 
-Settings pages, admin panels, config screens, and entity managers use a **compact scale** that overrides the default generous consumer spacing. Apply this whenever the user is operating a tool, not reading content.
+Settings pages, admin panels, config screens, and entity managers need a density chosen for the task, input method and reading load. Preserve the established product scale; a touch-operated admin screen still needs comfortable targets.
 
 ### Decision checkpoint for operational density
 
-> Depth: borders-first • Surfaces: 3-level (page / card / elevated) • Spacing base: 4px • Controls: 32px • Card padding: 16px outer / 12px nested • Type: 11px floor to 16px, card headings capped at 16px • Radius: the system's three-step ladder, each nested level one step tighter
+> Decide the scan unit, comparison task, longest realistic label, keyboard/touch use and number of visible items. Then set control size, spacing and type from the product's tokens. Check a populated screen and an error state before choosing the compact variant.
 
 The radius ladder, the faces, and the hues are the product's own (drawn or extracted); a fixed set of values printed here would make every admin panel the same admin panel.
 
@@ -134,14 +134,14 @@ The radius ladder, the faces, and the hues are the product's own (drawn or extra
 | L2 | card nested inside L1 | `12px` | `--radius-md` |
 | L3 | inset block, disclosure body | `10px` | `--radius-sm` |
 
-Section gap: `12px` — not 16px or 24px.
+These padding values illustrate one compact scale, not a required look. Choose section gaps from content grouping and the existing rhythm; do not force every product to 12px.
 
 ### Card headings
 
 - Section title: 15–16px, `font-weight: 600` — **never a display size inside a card**
 - No kicker or eyebrow label above the title — the title carries its own weight; `kicker above heading` is a measured generation tell with no earning-back, delete the label
 - Sub-info (path, ID, count): one truncated mono line at the 11px floor **below** the title — no card for it; text under 11px is another measured tell
-- **No verbose description paragraphs** in admin cards — remove them or collapse to `<details>`
+- Keep instructions needed to make a decision visible; disclose secondary explanations when they interrupt scanning.
 
 ### Form controls
 
@@ -152,34 +152,31 @@ Select : same
 Button : 12px/8px padding · 13px text · radius --radius-sm
 ```
 
-The default 40px `min-height` rule in `## Forms` applies to consumer/public-facing forms. Admin/operational forms use 32px controls. Reduce only in authenticated tool contexts — never on public-facing login or onboarding.
+These are compact desktop examples, not a consequence of authentication. Increase target size for touch, motor needs and long labels; preserve readable text and visible focus. Use the form guidance in `components-and-states.md`.
 
 ### List rows
 
 ```
 Row     : 8px vertical padding · divider between rows
 Gap     : 10px
-Name    : 13px text · weight 500 — not 14px
+Name    : readable body token · weight distinguishes primary from metadata
 Meta    : mono 11px text · truncated
-Badges  : 8px/2px padding · 11px text — not 12px/4px
+Badges  : padding and text follow status importance and the product scale
 Edit btn: 10px/4px padding · 11px text
 ```
 
 ### Entity grids (same-type objects: projects, agents, providers)
 
-Never stack same-type entities full-width. Use:
+Use a table or full-width rows for comparing attributes and scanning many objects; cards for visual identification or independently actionable summaries. A responsive card grid is one option:
 ```css
 grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 gap: 12px;
 /* Entity card: radius --radius-md, padding 12px */
 ```
 
-### Add/Edit → Modal, not accordion
+### Choose the editing surface
 
-Inline form expansion (accordion, RevealPanel) inside entity cards creates visual clutter and unpredictable layout shifts. Use a modal:
-- `max-width: 448px`, centered, backdrop = ink at 50% with a light blur
-- Single "+ Add" button outside the grid → opens modal
-- "Edit" button on each card → same modal pre-filled
+Use inline editing for a few fields when surrounding context helps; a modal for a short bounded task; a drawer for contextual inspection; a dedicated page for long, linked or multi-step work. Size it from field lengths and viewport constraints, using the product's overlay tokens. Preserve focus, cancel behavior and unsaved input. Avoid layout jumps, but do not impose a 448px modal on every entity.
 
 ### Disclosure for secondary tools
 

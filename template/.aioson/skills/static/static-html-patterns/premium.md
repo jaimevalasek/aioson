@@ -1,15 +1,11 @@
-# Premium Template Patterns (Aigocy-style)
+# Optional Production Techniques
 
-> Load when the user wants an "award-worthy" result or explicitly asks for premium,
-> cinematic, or production-agency quality patterns. These are sourced from a
-> real ThemeForest production template (#61450410).
+> Load only for a technique already justified by the visual direction. These examples originated in one agency template; they are not a definition of premium quality or a prescribed aesthetic.
+> The approved prototype, identity and `interface-design` decisions govern the result. Resolve color variables from that identity or the selected `design:seed` candidate.
 
----
+## 14. Optional production patterns
 
-## 14. Premium Template Patterns
-
-Real patterns extracted from a production AI agency template (ThemeForest #61450410).
-Use these to elevate landing pages from "nice" to "award-worthy".
+Choose each technique independently for its communication or interaction value. Static composition, image treatment and typography remain complete design options.
 
 ---
 
@@ -161,16 +157,16 @@ Pure SMIL animation — no JS or GSAP needed. Great for "how it works" or "integ
   <!-- SVG paths with animated dots -->
   <svg class="hub-svg" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
     <!-- Path from center to tool-1 -->
-    <path id="path-1" d="M300 300 C 240 240, 160 200, 100 160" stroke="hsla(265,80%,65%,0.3)" stroke-width="1" fill="none"/>
-    <circle r="4" fill="hsl(265,80%,65%)">
+    <path id="path-1" d="M300 300 C 240 240, 160 200, 100 160" stroke="color-mix(in srgb, var(--accent-primary) 30%, transparent)" stroke-width="1" fill="none"/>
+    <circle r="4" fill="var(--accent-primary)">
       <animateMotion dur="3s" repeatCount="indefinite" begin="0s">
         <mpath href="#path-1"/>
       </animateMotion>
     </circle>
 
     <!-- Path from center to tool-2 -->
-    <path id="path-2" d="M300 300 C 360 240, 440 200, 500 160" stroke="hsla(265,80%,65%,0.3)" stroke-width="1" fill="none"/>
-    <circle r="4" fill="hsl(310,75%,60%)">
+    <path id="path-2" d="M300 300 C 360 240, 440 200, 500 160" stroke="color-mix(in srgb, var(--accent-primary) 30%, transparent)" stroke-width="1" fill="none"/>
+    <circle r="4" fill="var(--accent-secondary)">
       <animateMotion dur="4s" repeatCount="indefinite" begin="1s">
         <mpath href="#path-2"/>
       </animateMotion>
@@ -480,7 +476,7 @@ with decorative gradient glow images for depth. This creates the "cinematic laye
   transform: translateX(-50%);
   width: 800px; height: 400px;
   background: radial-gradient(ellipse at center,
-    hsla(265,60%,40%,0.15) 0%,
+    color-mix(in srgb, var(--accent-primary) 15%, transparent) 0%,
     transparent 70%
   );
   pointer-events: none; z-index: 0;
@@ -491,7 +487,7 @@ with decorative gradient glow images for depth. This creates the "cinematic laye
   transform: translateX(-50%);
   width: 800px; height: 400px;
   background: radial-gradient(ellipse at center,
-    hsla(265,60%,40%,0.1) 0%,
+    color-mix(in srgb, var(--accent-primary) 10%, transparent) 0%,
     transparent 70%
   );
   pointer-events: none; z-index: 0;
@@ -687,7 +683,7 @@ Only activate for Bold & Cinematic direction, and skip on touch devices.
 
   const dots = [];
   const MAX_DOTS = 20;
-  const COLOR = 'hsla(265, 80%, 65%,';
+  const COLOR = getComputedStyle(canvas).getPropertyValue('--accent-primary').trim();
 
   window.addEventListener('mousemove', (e) => {
     dots.push({ x: e.clientX, y: e.clientY, alpha: 1 });
@@ -701,9 +697,11 @@ Only activate for Bold & Cinematic direction, and skip on touch devices.
       dot.alpha = (i / dots.length) * 0.6;
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
-      ctx.fillStyle = `${COLOR}${dot.alpha})`;
+      ctx.fillStyle = COLOR;
+      ctx.globalAlpha = dot.alpha;
       ctx.fill();
     });
+    ctx.globalAlpha = 1;
     requestAnimationFrame(draw);
   }
   draw();

@@ -5,7 +5,7 @@ description: Advanced landing page production skill — animation libraries (GSA
 
 # Landing Page Forge
 
-Production playbook for landing pages that convert. Covers animation craft, performance, discoverability, and tracking — the full stack from visual to measurable.
+Production playbook for landing pages. The approved prototype, identity and `interface-design` direction govern the visual result. Motion patterns below are optional techniques, not a premium checklist; a static page can succeed through typography, composition and real evidence. Resolve effect colors from the identity or selected `design:seed` candidate. Apply performance, discoverability and tracking sections only within the project scope.
 
 ---
 
@@ -168,7 +168,7 @@ btn.addEventListener("mouseleave", () => {
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-primary) 12%, transparent) 0%, transparent 70%);
   pointer-events: none;
   transform: translate(-50%, -50%);
   z-index: 0;
@@ -263,7 +263,6 @@ Staggered load sequence for above-the-fold hero sections.
 const heroTL = gsap.timeline({ defaults: { ease: "power3.out" } });
 
 heroTL
-  .from(".hero-eyebrow",  { y: 20, opacity: 0, duration: 0.6 })
   .from(".hero-heading",  { y: 30, opacity: 0, duration: 0.8 }, "-=0.3")
   .from(".hero-sub",      { y: 20, opacity: 0, duration: 0.6 }, "-=0.4")
   .from(".hero-cta",      { y: 20, opacity: 0, duration: 0.5, stagger: 0.1 }, "-=0.3")
@@ -705,7 +704,7 @@ fbq('track', 'PageView');
 
 <!-- Font preconnect -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preload" as="font" type="font/woff2" href="/fonts/inter.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/selected-display.woff2" crossorigin>
 
 <!-- Animation libraries — defer so they don't block render -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

@@ -23,8 +23,20 @@ const { SATURATED_DISPLAY_FACES } = require('../src/lib/visual-telemetry');
 const ROOT = path.resolve(__dirname, '..', 'template', '.aioson');
 const ENGINE = path.join(ROOT, 'skills', 'design', 'interface-design');
 
+const AUXILIARY = [
+  'skills/static/static-html-patterns.md',
+  'skills/static/static-html-patterns/structure.md',
+  'skills/static/static-html-patterns/css-tokens.md',
+  'skills/static/static-html-patterns/premium.md',
+  'skills/static/static-html-patterns/motion.md',
+  'skills/static/static-html-patterns/checklists.md',
+  'skills/static/react-motion-patterns.md',
+  'skills/static/landing-page-forge.md'
+];
+
 // Every prose surface an agent loads while deciding or building a visual system.
 const DOCTRINE = [
+  ...AUXILIARY,
   'skills/design/interface-design/SKILL.md',
   'skills/design/interface-design/references/aesthetic-registers.md',
   'skills/design/interface-design/references/components-and-states.md',
@@ -55,7 +67,8 @@ const DOCTRINE = [
 // becomes every project's value.
 const TOKEN_MATH = [
   'skills/design/interface-design/references/design-directions.md',
-  'skills/design/interface-design/references/tokens-and-depth.md'
+  'skills/design/interface-design/references/tokens-and-depth.md',
+  'skills/static/static-html-patterns/css-tokens.md'
 ];
 
 async function readDoctrine(rel) {
@@ -135,9 +148,26 @@ test('the doctrine says where hues and faces come from — the draw or the ident
 
 test('the workspace mirrors of the tracked doctrine docs match the template', async () => {
   const workspace = path.resolve(__dirname, '..', '.aioson');
-  for (const rel of DOCTRINE.filter((r) => r.startsWith('docs/') || r.startsWith('agents/'))) {
+  for (const rel of DOCTRINE) {
     const [t, w] = await Promise.all([readDoctrine(rel), fs.readFile(path.join(workspace, rel), 'utf8').catch(() => null)]);
     if (t === null || w === null) continue;
     assert.equal(w, t, `template/workspace drift: ${rel}`);
   }
+});
+
+test('reachable production recipes defer to art direction and do not reintroduce fixed aesthetic bundles', async () => {
+  for (const rel of AUXILIARY) {
+    const text = await readDoctrine(rel);
+    assert.ok(text, `${rel} is reachable`);
+    assert.match(text, /visual direction|interface-design|approved prototype/i, rel);
+    assert.doesNotMatch(text, /Hero law|THE HERO LAW|mandatory trio|All three required|Every landing page follows/i, rel);
+    assert.doesNotMatch(text, /hsla?\(\s*(?:265|190|310)\s*,|rgba?\(99,\s*102,\s*241/, `${rel}: a literal effect palette overrides the chosen identity`);
+  }
+  const components = await readDoctrine('skills/design/interface-design/references/components-and-states.md');
+  assert.doesNotMatch(components, /text-\[0\.65rem\]|max-w-448px|Modal, not inline/);
+  const intent = await readDoctrine('skills/design/interface-design/references/intent-and-domain.md');
+  assert.match(intent, /composition family/);
+  assert.match(intent, /material family/);
+  assert.match(intent, /motion family/);
+  assert.match(intent, /at least two structural axes/);
 });

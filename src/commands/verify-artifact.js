@@ -497,6 +497,23 @@ function declaredSurfaceMode(ctx) {
   return null;
 }
 
+function declaredDesignChoices(ctx) {
+  const { sectionBody, labeledValue } = require('../lib/prototype-manifest-quality');
+  const slug = ctx.slug || ctx.conformance;
+  if (!slug) return {};
+  let manifest;
+  try {
+    manifest = fs.readFileSync(path.join(ctx.targetDir, '.aioson', 'briefings', slug, 'prototype-manifest.md'), 'utf8');
+  } catch { return {}; }
+  const body = sectionBody(manifest, 'Visual direction');
+  return {
+    register: labeledValue(body, ['register', 'registro']).toLowerCase().match(/^(technical|quiet|editorial|material|constructed|cinematic)\b/)?.[1] || null,
+    composition_family: labeledValue(body, ['composition family']),
+    material_family: labeledValue(body, ['material family']),
+    motion_family: labeledValue(body, ['motion family'])
+  };
+}
+
 /**
  * Read an optional route/state proof matrix from the owned prototype manifest:
  *
@@ -640,8 +657,17 @@ function compareToPrototype(proto, metrics, slug) {
   const regressed = [];
 
   if (craftMeasured && before.craft !== null) {
-    compared.push('craft', 'materials');
-    if (after.craft < before.craft) regressed.push(`craft ${before.craft}/5 → ${after.craft}/5`);
+    compared.push('materials');
+    const beforeCount = proto.craft.lever_count || 5;
+    const afterCount = metrics.craft.lever_count || 5;
+    const beforeLevers = Object.keys(proto.craft.levers || {}).sort().join(',');
+    const afterLevers = Object.keys(metrics.craft.levers || {}).sort().join(',');
+    if (beforeCount !== afterCount || (beforeLevers && afterLevers && beforeLevers !== afterLevers)) {
+      notCompared.push('craft');
+    } else {
+      compared.push('craft');
+      if (after.craft < before.craft) regressed.push(`craft ${before.craft}/${beforeCount} → ${after.craft}/${afterCount}`);
+    }
     if (before.materials !== null && after.materials < before.materials) regressed.push(`materials ${before.materials}/7 → ${after.materials}/7`);
   } else {
     notCompared.push('craft', 'materials');
@@ -654,7 +680,11 @@ function compareToPrototype(proto, metrics, slug) {
   // becomes unreadable (or belongs to another surface mode) is not a pass.
   for (const axis of ['weight', 'precision']) {
     if (before[axis] === null) continue;
-    if (utilityStyled || after[axis] === null) {
+    const legacyWeightAxes = ['typography', 'atmosphere', 'motion', 'composition', 'media'];
+    const beforeAxes = proto.craft?.weight?.applicable_axes || legacyWeightAxes;
+    const afterAxes = metrics.craft?.weight?.applicable_axes || legacyWeightAxes;
+    const incompatibleWeight = axis === 'weight' && [...beforeAxes].sort().join(',') !== [...afterAxes].sort().join(',');
+    if (utilityStyled || after[axis] === null || incompatibleWeight) {
       notCompared.push(axis);
     } else {
       compared.push(axis);
@@ -680,7 +710,7 @@ function compareToPrototype(proto, metrics, slug) {
   if (notCompared.length > 0) {
     reason = utilityStyled
       ? `${notCompared.join(', ')} not compared: utility-class styling keeps its decisions out of the ${metrics.declarations} authored declarations — compare the served app with --url=<http://…> --runtime`
-      : `${notCompared.join(', ')} not compared: craft evidence unavailable or surface mode no longer scores the prototype axis (${metrics.declarations} authored declarations)`;
+      : `${notCompared.join(', ')} not compared: craft evidence unavailable or surface mode/register no longer scores the same prototype axes (${metrics.declarations} authored declarations)`;
   }
   return { prototype: before, implementation: after, state, compared, not_compared: notCompared, regressed, reason };
 }
@@ -1246,12 +1276,14 @@ const ADAPTERS = {
     // what the visitor came to do (`surface_mode: operate|brand|read` in its
     // frontmatter, or a `mode:` bullet under `## Visual direction`), and
     // `--surface-mode=` says it for a directory run.
-    const result = analyzeVisualSources({ ...sources, surfaceMode: ctx.surfaceMode || declaredSurfaceMode(ctx) });
+    const designChoices = declaredDesignChoices(ctx);
+    const result = analyzeVisualSources({ ...sources, surfaceMode: ctx.surfaceMode || declaredSurfaceMode(ctx), register: ctx.register || designChoices.register });
 
     const issues = [...result.issues];
     const warnings = [...result.warnings];
     const metrics = {
       ...result.metrics,
+      design_choices: designChoices,
       files: sources.files.slice(0, VISUAL_FILES_LISTED),
       corpus: sources.corpus
     };
@@ -1404,7 +1436,7 @@ const ADAPTERS = {
         warnings.push(collected.reason);
         metrics.runtime = { available: false, reason: collected.reason };
       } else {
-        const runtime = summarizeRuntime(collected.runs, { surfaceMode: metrics.surface_mode && metrics.surface_mode.mode, projectDir: ctx.targetDir });
+        const runtime = summarizeRuntime(collected.runs, { surfaceMode: metrics.surface_mode && metrics.surface_mode.mode, register: ctx.register || designChoices.register, projectDir: ctx.targetDir });
         issues.push(...runtime.issues);
         warnings.push(...runtime.warnings);
         // The runtime findings travel inside the section too, so a later
@@ -1464,7 +1496,7 @@ const ADAPTERS = {
     // identity worth registering — fragments and snippets stay out.
     try {
       const pal = metrics.palette;
-      if (pal && pal.accent_hue != null && pal.ground && metrics.craft && metrics.craft.measured) {
+      if (pal && (pal.accent_hue != null || metrics.composition_signature) && pal.ground && metrics.craft && metrics.craft.measured) {
         const {
           readRegistry, recordFingerprint, findRepetition, projectFingerprintId,
           readSeedRecord, classifyPaletteOrigin, isEphemeralProjectDir
@@ -1502,7 +1534,7 @@ const ADAPTERS = {
         // Conformance runs transfer an approved prototype's palette; its
         // origin was judged when the prototype was measured. A dir/file run
         // on a project the registry already knows is not a cold start either.
-        if (origin.origin === 'prior' && !ctx.conformance && (ctx.slug || firstMeasuredSurface)) {
+        if (origin.origin === 'prior' && pal.accent_hue != null && !ctx.conformance && (ctx.slug || firstMeasuredSurface)) {
           if (origin.reason === 'no_draw') {
             warnings.push(`origination without a draw: no identity record and no recorded \`design:seed\` draw for this surface (${provenanceSlug ? `.aioson/context/features/${provenanceSlug}/design-seed.json absent, no seed label in the manifest` : '.aioson/context/design-seed.json absent'}) — the palette (accent ~${pal.accent_hue}° on a ${pal.ground.pole} ground) came from the model's prior, the corner every project lands on; run \`aioson design:seed . --register=<register> --slug=<feature> --json\` and build FROM one candidate, or extract the owner's identity (reference-identity-extract), or persist the established system as .aioson/context/identity.md (scope brand, source intent)`);
           } else {
@@ -1519,6 +1551,13 @@ const ADAPTERS = {
           ground_hue: pal.ground.h,
           display_face: metrics.display_face || (metrics.font_families || [])[0] || null,
           surface_mode: metrics.surface_mode && metrics.surface_mode.mode,
+          composition_signature: metrics.composition_signature || null,
+          // Decisions are labeled as declared, separately from measured
+          // signatures; proximity to a seed hue cannot prove the chosen layout.
+          composition_family: designChoices.composition_family || null,
+          material_family: designChoices.material_family || null,
+          motion_family: designChoices.motion_family || null,
+          choices_source: Object.keys(designChoices).length ? 'manifest' : null,
           material_signature: metrics.craft && Array.isArray(metrics.craft.material_techniques)
             ? metrics.craft.material_techniques.slice().sort().join('+')
             : '',
@@ -1531,8 +1570,10 @@ const ADAPTERS = {
         const repetition = findRepetition(current, registryEntries);
         if (repetition) {
           const face = repetition.same_face ? ', same display face' : '';
-          warnings.push(`cross-project palette repetition / visual fingerprint: accent hue ~${pal.accent_hue}° on a ${pal.ground.pole} ground resembles recent project "${repetition.entry.project}" (Δ${repetition.delta}°, ${repetition.reason}${face}) — palette, type, material and motion fingerprints are compared so sameness cannot hide behind one changed color; draw a diversified start with \`aioson design:seed\` (or extract an identity from the owner's references), or record why these products genuinely share the family`);
-          metrics.palette_repeat = { project: repetition.entry.project, delta_deg: repetition.delta, reason: repetition.reason, same_face: repetition.same_face, same_material: repetition.same_material, same_motion: repetition.same_motion };
+          const paletteLabel = pal.accent_hue == null ? 'achromatic surface' : `accent hue ~${pal.accent_hue}°`;
+          const deltaLabel = repetition.delta == null ? '' : `Δ${repetition.delta}°, `;
+          warnings.push(`cross-project palette repetition / visual fingerprint: ${paletteLabel} on a ${pal.ground.pole} ground resembles recent project "${repetition.entry.project}" (${deltaLabel}${repetition.reason}${face}) — palette, type, composition, material and motion fingerprints are compared; this source similarity is a review hint, not proof of identical rendered layouts. Draw a diversified start with \`aioson design:seed\` (or extract the owner's identity), or record the product reason for continuity`);
+          metrics.palette_repeat = { project: repetition.entry.project, delta_deg: repetition.delta, reason: repetition.reason, same_face: repetition.same_face, same_composition: repetition.same_composition, same_material: repetition.same_material, same_motion: repetition.same_motion };
         }
         // A diagnostic run (`--no-persist`) compares but never records: a
         // measurement must not rewrite the operator's registry as a side
@@ -1686,7 +1727,7 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
   }
   const result = await evaluateKind(kind, {
     slug, targetDir, file, dir, noBuild, buildTimeout, buildCommand,
-    runtime, route, routes, url, persist, conformance, surfaceMode, screenshotDir, screenshotMode, screenshotDirOwned, browserLauncher: options.browserLauncher || null
+    runtime, route, routes, url, persist, conformance, surfaceMode, register: options.register || null, screenshotDir, screenshotMode, screenshotDirOwned, browserLauncher: options.browserLauncher || null
   }, logger);
 
   if (result === null) {

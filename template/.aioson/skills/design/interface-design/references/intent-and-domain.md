@@ -56,24 +56,32 @@ Before touching layout or tokens, answer three questions with specificity:
 3. **What should this feel like?** — Concrete texture, not an adjective.
    Bad: "clean and modern." Good: "a Bloomberg terminal that doesn't exhaust you."
 
-**If you cannot answer all three with specifics — stop. Ask. Do not guess. Do not default.**
+Reuse answers from the brief and established product. Ask only for a missing fact that would materially change the direction; label reasonable working assumptions instead of inventing audience or brand evidence.
 
 ---
 
-## Phase 1 — Domain exploration (4 required outputs)
+## Phase 1 — Domain evidence and composition
+
+For a new page with aesthetic freedom, compare two or three brief composition directions in the existing Visual direction record before choosing tokens. Describe each through **content order, focal subject, typography role, image crop/treatment, density, material and motion**. Distinguish at least two structural axes; three palette swaps over one hero are one direction. These can be short written sketches, not three implemented prototypes or extra approval rounds. A small refinement or approved prototype needs no new alternatives.
+
+Choose by fitness: which direction exposes the visitor's decision, uses the strongest available evidence and belongs to this product? Name the winning reason and one rejected alternative. For each reference supplied, extract a principle and an exclusion; do not clone its whole style or infer animation from a screenshot. If evidence is absent, state that limitation and use the actual copy and assets as the basis.
+
+Record the selected `composition family`, `material family` and `motion family` as labeled bullets under `## Visual direction`, alongside its required register/thesis/anti-goals/signature. Use the candidate's exact family names when retained; a custom family needs a stable descriptive name. These are declared decisions for future draws, separate from the measured composition signature. Keep the record truthful after refinement; no additional design-memory file is needed.
+
+After rendering at desktop and mobile, critique hierarchy, crop, rhythm, line breaks, reading order and recognizability before effects. Compare the result to the thesis and references. Changing only colors, fonts or corner radii does not fix a repeated composition. Keep the structural choice that serves the brief even when a random proposal is more novel.
 
 Before proposing any visual direction, produce:
 
-1. **Domain concepts** — 5+ metaphors, patterns, or ideas from the product's world.
+1. **Domain concepts** — concrete forms, behaviors, artifacts or content structures from the product's world. Prefer observed evidence to decorative metaphor.
    Example (clinic scheduling): appointment slots, patient flow, triage priority, clinical notes, white coat.
 
-2. **Color world** — 5+ colors that exist naturally in that domain.
-   Example (clinic): antiseptic white, calm blue (trust, clinical), soft green (go/available), amber (warning/urgent), warm gray (neutral).
+2. **Color world** — actual identity or reference colors and the contrast/semantic roles they must serve. Domain associations are hypotheses, not palette assignments.
+   With no identity, use the seeded candidates and explain the fit; a category does not mandate a hue.
 
 3. **Signature element** — One thing that could only belong to THIS product.
    Example: a subtle "pulse" animation on available time slots, echoing a heartbeat.
 
 4. **Defaults to avoid** — 3 obvious, generic choices that must be replaced.
-   Example: blue primary button → calm teal; card shadows → border-only depth; the default sans → a delivered grotesque with clinical precision (e.g., Schibsted Grotesk) — never another face from the training-saturated set the telemetry flags.
+   Example: a generic feature-card wall becomes a task comparison when the visitor must choose; an irrelevant gradient becomes the actual product view. Change the composition for a reason, not just its colors.
 
 **The identity test:** Remove the product name. Could someone identify what this is for?

@@ -8,7 +8,7 @@ A register is not a theme and never overrides accessibility, contrast, state cov
 
 **Calibration: the guessability test.** Generated interfaces cluster into a few looks regardless of subject — warm cream with a high-contrast serif and a terracotta accent; near-black with one neon accent and glowing borders; newspaper hairlines with an italic serif and small tracked mono labels. All are legitimate when the brief asks; where the brief leaves the aesthetic free, landing in one of them means the self-check failed. If someone could guess the aesthetic from the product's category alone — or from category-plus-avoidance — redraw until neither answer is obvious. A warm, bookish, or childlike subject does not soften this: binding cloth, thread, dust jackets, and shelf ephemera cover the whole saturated spectrum, and cream paper is the smallest corner of that world. The seeded draw exists precisely to move the starting point; reverting to the familiar corner after drawing is the failure, not the fix.
 
-**A register is a posture, not a budget cut.** Every register at premium execution still carries the craft floor the telemetry measures: one real, delivered typeface with true display scale where the surface argues; one earned material or atmosphere; motion that choreographs rather than decorates; and evidence imagery when the surface argues by inspection. "Restrained" describes which levers a register pulls and how far — never whether any lever is pulled. The plainest system-stack, hairline-and-whitespace execution of any register reads as a default document, and each register below names its cheap failure so it cannot be mistaken for the register itself. Restraint governs ornament, never finish: whatever the register, the finish is a tokened system every route inherits — rule/tonal/overlap depth for no-shadow registers, a shadow strategy only where explicitly allowed, tinted washes per accent role, and texture or blend at the stated dosage. The signature material sits as the top note above that system, never as its substitute. One wash over flat panels is the measured shape of the `shallow material system` warning, and an effect no rule applies is dead weight the telemetry names.
+**A register is a posture, not a budget cut.** Premium execution requires specific hierarchy, deliberate composition, credible assets, consistent finish and complete interaction states. It does not require every technique. Technical, Quiet and Editorial may be static; their craft can live in typography, measured spacing, tonal separation, rules and image treatment. The register-aware score records those signals without demanding motion, oversized headings or stacked effects. It remains a coverage heuristic: screenshots and the brief decide whether the execution succeeds. A declared register never excuses missing content, inaccessible controls or an unfulfilled moving experience.
 
 ---
 
@@ -23,7 +23,7 @@ A register is not a theme and never overrides accessibility, contrast, state cov
 - **Texture** — data itself: tables, sparklines, counts, timestamps, units.
 - **Motion** — state feedback only, under 150ms.
 - **Failure mode** — density without hierarchy. Everything the same weight is unreadable, not technical.
-- **Premium bar** — a delivered grotesque with real optical presence, monospace numerals that align to the digit, one oversized hero metric per view, and state color that glows only where live. Cheap technical is a gray table in Arial; premium technical looks machined.
+- **Premium bar** — a delivered face with clear numeric hierarchy, aligned units, readable dense comparisons and precise feedback. Enlarge a metric only when it is the decision's focal point; a glow or hero metric is not required on every view.
 
 ## Quiet
 
@@ -34,9 +34,9 @@ A register is not a theme and never overrides accessibility, contrast, state cov
 - **Space** — negative space as the primary element. Few objects per viewport, each with room.
 - **Depth** — none or a single soft ground gradient.
 - **Texture** — atmosphere, not ornament: one photograph, one gradient field, one horizon.
-- **Motion** — slow, long, few. Reveal rather than animate.
+- **Motion** — static or a few restrained reveals, when they help attention; preserve immediate access to content.
 - **Failure mode** — emptiness with nothing to look at. Quiet needs one thing worth the silence.
-- **Premium bar** — display type at 96px+ from a face worth staring at, one breathtaking image or gradient field carrying the whole viewport, and slow reveals that make scrolling feel expensive. Cheap quiet is a centered sentence on white; premium quiet is a gallery wall.
+- **Premium bar** — an intentional type hierarchy, exact spacing and one compelling subject or argument. Judge the image crop, text measure and relation of occupied to empty space. Static composition and negative space can carry the result; neither a 96px heading, full-viewport image nor animated reveal is mandatory.
 
 ## Editorial
 
@@ -49,7 +49,7 @@ A register is not a theme and never overrides accessibility, contrast, state cov
 - **Texture** — pull quotes, marginalia, captions, figure numbers.
 - **Motion** — near zero. Scroll is the interaction.
 - **Failure mode** — a blog template. Editorial means composed, not centered.
-- **Premium bar** — a delivered display serif (high-contrast, real italics) at magazine scale, photography or figures treated as plates with credits, drop caps or hanging numerals as composition anchors, and rules that draw themselves on reveal. Cheap editorial is Georgia hairlines on beige — a word processor, not a publication.
+- **Premium bar** — a deliberate heading/reading hierarchy, well-edited measure, composed figures with useful captions and a clear reading sequence. Serif, sans, static rules, marginalia and hanging numerals are choices justified by the publication, not a mandatory editorial costume.
 
 ## Material
 

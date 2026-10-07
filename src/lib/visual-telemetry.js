@@ -25,6 +25,7 @@
  */
 
 const { parseCssColor, rgbToHex } = require('./color-math');
+const { scopeVisualCss, compositionFingerprint } = require('./visual-css-scope');
 const {
   assessFontDelivery,
   assessMediaEvidence,
@@ -1041,17 +1042,20 @@ function scanGenerationTells({ markup, styleText, decls, props, families, craftM
  * @param {{html?: string, css?: string, components?: string}} sources
  * @returns {{applicable: boolean, metrics: object, issues: string[], warnings: string[]}}
  */
-function analyzeVisualSources({ html = '', css = '', components = '', surfaceMode = null } = {}) {
+function analyzeVisualSources({ html = '', css = '', components = '', surfaceMode = null, register = null } = {}) {
   const component = componentSources(components);
   const markup = `${stripHtmlComments(html)}\n${component.markup}`;
-  const styleText = stripComments(`${extractStyleBlocks(markup)}\n${String(css || '')}\n${component.css}`);
+  const authoredStyle = stripComments(`${extractStyleBlocks(markup)}\n${String(css || '')}\n${component.css}`);
+  const authoredDeclarations = declarations(authoredStyle).length;
+  const cssScope = scopeVisualCss(authoredStyle, markup);
+  const styleText = cssScope.css;
   const decls = declarations(styleText);
 
-  if (decls.length < 10) {
+  if (authoredDeclarations < 10) {
     return {
       applicable: false,
       reason: 'not enough authored CSS to measure (fewer than 10 declarations) — utility-class markup and framework-generated styles are out of scope for static telemetry; measure the rendered result instead: --file=<built index.html> --runtime, or --url=<served app> --runtime',
-      metrics: { declarations: decls.length },
+      metrics: { declarations: authoredDeclarations, scoped_declarations: decls.length, css_scope: cssScope.evidence },
       issues: [],
       warnings: []
     };
@@ -1385,7 +1389,9 @@ function analyzeVisualSources({ html = '', css = '', components = '', surfaceMod
     ground
   };
 
-  const craftMeasured = decls.length >= CRAFT_MIN_DECLARATIONS;
+  const craftMeasured = authoredDeclarations >= CRAFT_MIN_DECLARATIONS;
+  const designRegister = ['technical', 'quiet', 'editorial', 'material', 'constructed', 'cinematic'].includes(String(register || '').toLowerCase()) ? String(register).toLowerCase() : null;
+  const restrainedRegister = ['technical', 'quiet', 'editorial'].includes(designRegister);
   const embeddedAssets = embeddedAssetProfile(html);
   const browserSurfaces = BROWSER_SURFACE_PROBES.filter((probe) => probe.re.test(styleText)).map((probe) => probe.name);
   const surface = detectSurfaceMode({ markup, maxFontPx, declared: surfaceMode });
@@ -1413,7 +1419,12 @@ function analyzeVisualSources({ html = '', css = '', components = '', surfaceMod
       motion: motionDesigned,
       chrome: browserSurfaces.length >= 2
     }
-    : {
+    : restrainedRegister ? {
+      typeface: fontDelivered,
+      display_scale: fontSizes.size >= 2 && maxFontPx >= 32,
+      material: adherence >= 60 && (depth.borders > 0 || materialTechniques.length >= 2 || /display\s*:\s*(?:grid|flex)/i.test(styleText)),
+      evidence: mediaEvidence.status === 'verified'
+    } : {
       typeface: fontDelivered,
       display_scale: maxFontPx >= DISPLAY_TYPE_FLOOR_PX,
       material: materialTechniques.length >= 2,
@@ -1459,13 +1470,29 @@ function analyzeVisualSources({ html = '', css = '', components = '', surfaceMod
     composition: overlapSignals >= 5 && (mediaCover >= 1 || blendModes >= 1 || hasClipPath) ? 2 : (overlapSignals >= 2 ? 1 : 0),
     media: mediaEvidence.verified >= 3 && mediaCover >= 2 ? 2 : (mediaEvidence.verified >= 1 ? 1 : 0)
   };
-  const weightScore = Object.values(grades).reduce((sum, g) => sum + g, 0);
+  // Registers with restraint as their premise earn their finish through type,
+  // measure, rules and image treatment. Never demand blur, overlap or ambient
+  // loops to compensate for a deliberately static composition.
+  if (restrainedRegister) {
+    const hierarchy = fontSizes.size >= 2 && maxFontPx >= 32;
+    const controlledLayout = /(?:display\s*:\s*(?:grid|flex)|grid-template|columns\s*:)/i.test(styleText);
+    const measure = /(?:max-width|inline-size|aspect-ratio)\s*:/i.test(styleText);
+    grades.typography = fontDelivered ? (hierarchy ? 2 : 1) : 0;
+    grades.composition = controlledLayout && measure ? 2 : (controlledLayout || measure ? 1 : 0);
+    grades.atmosphere = adherence >= 60 && (depth.borders > 0 || controlledLayout || materialDepth.length > 0) ? 2 : (materialDepth.length > 0 ? 1 : 0);
+    grades.media = mediaEvidence.verified > 0 ? 2 : 0;
+  }
+  const applicableAxes = Object.keys(grades).filter((axis) => !(restrainedRegister && axis === 'motion'));
+  const weightScore = applicableAxes.reduce((sum, axis) => sum + grades[axis], 0);
   const craftWeight = familiarityMode
     ? { scored: false, reason: `${surface.mode} surface: the premium axis is precision, not weight` }
     : {
       scored: craftMeasured,
-      score: Math.round((weightScore / (Object.keys(grades).length * 2)) * 100),
+      score: Math.round((weightScore / (applicableAxes.length * 2)) * 100),
       bar: CRAFT_WEIGHT_BAR,
+      register: designRegister,
+      applicable_axes: applicableAxes,
+      limitation: 'Technique coverage, not an aesthetic verdict. Inspect hierarchy, composition and domain fit in the browser.',
       grades,
       signals: { hover_transforms: hoverTransforms, atmospheric_layers: atmosphericLayers, big_blurs: bigBlurs, overlap_signals: overlapSignals, media_cover: mediaCover, tracked_caps: trackedCaps, italic_contrast: italicContrast, weight_steps: weightSteps }
     };
@@ -1499,7 +1526,10 @@ function analyzeVisualSources({ html = '', css = '', components = '', surfaceMod
     : { scored: false, reason: `${surface.mode} surface: the premium axis is weight, not precision` };
 
   const metrics = {
-    declarations: decls.length,
+    declarations: authoredDeclarations,
+    scoped_declarations: decls.length,
+    css_scope: cssScope.evidence,
+    composition_signature: compositionFingerprint(markup, styleText),
     token_adherence_pct: adherence,
     tokenized_values: tokenized,
     literal_values: literal,
@@ -1674,9 +1704,9 @@ function analyzeVisualSources({ html = '', css = '', components = '', surfaceMod
   if (craftMeasured && activeLevers <= leverFloor) {
     const missing = [];
     if (!levers.typeface) missing.push(`a delivered typeface (${fontFaceBlocks} @font-face, webfont link ${webfontLinked ? 'present' : 'absent'})`);
-    if (!familiarityMode && !levers.display_scale) missing.push(`display-scale type (largest font-size ${maxFontPx || 0}px, floor ${DISPLAY_TYPE_FLOOR_PX}px)`);
-    if (!levers.material) missing.push(`material depth (${gradientCount} gradients, ${layeredShadows} layered shadows, ${depth.blur} blur, grain ${grainNoise ? 'yes' : 'no'})`);
-    if (!levers.motion) missing.push(`motion choreography (${keyframes} keyframes, ${animated} animated declarations, ${transitionCount} transitions, no scroll reveal, no signature surface)`);
+    if (!familiarityMode && !levers.display_scale) missing.push(restrainedRegister ? 'a legible, differentiated type hierarchy' : `display-scale type (largest font-size ${maxFontPx || 0}px, floor ${DISPLAY_TYPE_FLOOR_PX}px)`);
+    if (!levers.material) missing.push(restrainedRegister ? 'consistent tokened rules, tones or image treatment' : `material depth (${gradientCount} gradients, ${layeredShadows} layered shadows, ${depth.blur} blur, grain ${grainNoise ? 'yes' : 'no'})`);
+    if (Object.hasOwn(levers, 'motion') && !levers.motion) missing.push(`motion choreography (${keyframes} keyframes, ${animated} animated declarations, ${transitionCount} transitions, no scroll reveal, no signature surface)`);
     if (!familiarityMode && !levers.evidence) missing.push(`verified evidence imagery (${mediaEvidence.verified} verified, ${mediaEvidence.unverified} awaiting runtime verification)`);
     if (familiarityMode && !levers.chrome) missing.push(`themed browser chrome (${browserSurfaces.length}/6 of ::selection, caret, scrollbar, :focus-visible, underline tuning, tabular numerals)`);
     const bar = familiarityMode
@@ -1687,17 +1717,17 @@ function analyzeVisualSources({ html = '', css = '', components = '', surfaceMod
   // The motion lever used to light on hover transitions alone, so a page with
   // one keyframe scored the same as a choreographed one. Naming the state is
   // what makes "premium animation" arguable from numbers instead of taste.
-  if (craftMeasured && motionTransitionOnly) {
+  if (craftMeasured && motionTransitionOnly && !restrainedRegister && !familiarityMode) {
     warnings.push(`motion is hover-only: ${transitionCount} transitions, ${keyframes} @keyframes, ${animated} animated declarations, no scroll reveal and no signature surface — state feedback is hygiene, not choreography. A surface reads animated when something moves without being poked: an ambient backdrop, a scroll-driven reveal, or an entrance system with reduced-motion handled (visual-effects.md owns the vocabulary)`);
   }
-  if (craftMeasured && levers.material && materialDepth.length <= 2) {
+  if (craftMeasured && levers.material && materialDepth.length <= 2 && !restrainedRegister) {
     warnings.push(`shallow material system: the material lever rests on ${materialDepth.join(' + ') || 'modern color alone'} (finish depth ${materialDepth.length}/7) — a drawn palette with no system-level finish is the measured shape of generic AI output even when every hue is right. Token the finish so every route inherits it: register-sanctioned depth (rules/tonal steps/overlap where shadows are forbidden; a shadow strategy only where allowed), tinted washes, texture or blend at the declared dosage. The signature material is the top note, never the whole system`);
   }
   // Every lever lit, every lever thin: the shape of a page that carries one of
   // each technique and still reads generic. Named after the floor, never with it.
   if (craftMeasured && ['brand', 'mixed'].includes(surface.mode) && craftWeight.scored && craftWeight.score < CRAFT_WEIGHT_BAR && activeLevers > leverFloor) {
-    const thin = Object.entries(grades).filter(([, g]) => g < 2).map(([lever, g]) => `${lever} ${g}/2`);
-    warnings.push(`craft weight ${craftWeight.score}/100 below the brand bar (${CRAFT_WEIGHT_BAR}): the levers are lit but thin — ${thin.join(', ')}. Presence is not weight: a premium surface carries its atmosphere on more than one layer (radial wash + grain + a real blur), a hover system that moves (transform on two or more hover states), image-led media (object-fit: cover), type at 96px+ with tracked caps or italic contrast, and composition that overlaps the grid (absolute or sticky layers, negative margins, clip-path) — visual-effects.md owns the vocabulary`);
+    const thin = applicableAxes.filter((axis) => grades[axis] < 2).map((axis) => `${axis} ${grades[axis]}/2`);
+    warnings.push(`craft weight ${craftWeight.score}/100 below the brand bar (${CRAFT_WEIGHT_BAR}): review ${thin.join(', ')} against the ${designRegister || 'recorded'} direction. This score measures technique coverage, not design quality: inspect hierarchy, composition, image treatment and the visitor's task; never add effects or overlap solely to raise the number`);
   }
   // The familiarity bar, held: restraint governs ornament, never finish.
   if (craftMeasured && familiarityMode && craftPrecision.scored && craftPrecision.score < CRAFT_PRECISION_BAR) {

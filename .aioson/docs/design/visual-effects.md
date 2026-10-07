@@ -54,12 +54,18 @@ Make choreography implementable:
 
 Each family below is CSS-first on purpose: no runtime, no library, no build step, and it degrades honestly.
 
+### Static finish and image-led ground
+
+Rule hierarchy and tonal steps separate information without ornamental depth. An **image-led ground** uses a real photograph, illustration or product view as the main visual field: choose its crop, focal point, captions and text-safe area, then recompose on mobile. Record the asset and static fallback. Typography and spacing can carry a surface without a background effect. These families are available to `design:seed`; they are not incomplete versions of glass or mesh.
+
+*Cost:* rules/tones add little; images need an appropriate format and size. *Failure mode:* a stock image with no product relevance, unreadable text over detail, or whitespace left where promised evidence is missing.
+
 ### Display typography (the first material)
 
 Type at true display scale is the cheapest premium material there is, and the one every generated surface skips. Three moves, in order:
 
 1. **Deliver a real face.** The build contract sanctions font-host links (`fonts.googleapis.com`, `fonts.bunny.net`, `api.fontshare.com`) and embedded WOFF2 `@font-face` — a family named without delivery renders as the OS fallback and the telemetry flags it. Pick one face with actual personality for display (a high-contrast serif, a compressed or geometric grotesque, an expressive variable font) and one quiet face for UI; declare fallback stacks that keep the hierarchy when the face is absent.
-2. **Compose at display scale.** Where the surface argues — hero, section openers, the signature move — type runs 56px to 120px+ (`clamp()` for fluid scale), with tightened tracking, `text-wrap: balance`, and real typographic contrast against a small, quiet UI size. A 32px H1 over 16px body is a document, not a composition.
+2. **Compose the hierarchy.** Use scale, weight, measure, line breaks and image relationships to make the argument visible. Expressive openings may use 56px to 120px+ fluid type; restrained and reading surfaces choose their scale from content and context. A particular heading size cannot certify or disqualify a composition.
 3. **Let type be the layout.** Oversized numerals, hanging figures, type over media with a legibility scrim, a word bleeding off the grid — composition by scale contrast is what reads as designed before any effect loads.
 
 *Cost:* one network request (progressive, `font-display: swap`) or the embedded WOFF2 bytes. *Failure mode:* five faces and no system — two families, one of them loud, is the whole budget.

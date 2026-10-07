@@ -4,7 +4,7 @@
 
 ## Component quality (mandatory for every component)
 
-Define all six states before handing off to @dev:
+Define the reachable states before handing off to @dev; static content owes no artificial loading or disabled state:
 
 | State | What to specify |
 |---|---|
@@ -30,21 +30,9 @@ Container components also need:
 - Disable the submit button and show progress during async operations.
 - Input height minimum: 40px (desktop), 44px (mobile/touch) — **consumer/public-facing forms only.**
 
-**Admin / operational form scale (settings, config, entity managers):**
+**Operational forms:** use the existing density tokens. Compact desktop controls can be appropriate for repetitive work; authentication does not establish input method or accessibility needs. Keep labels readable (never below the 11px telemetry floor), test long values and errors, and increase targets for touch. See `tokens-and-depth.md` for the density decision.
 
-```
-Label  : text-[0.65rem]  mb: 2px          ← not text-sm mb-2
-Input  : px-3 py-2  text-xs  radius 10–12px  (height ~32px)
-Select : px-3 py-2  text-xs  radius 10–12px
-Button : px-3 py-2  text-xs  radius 10–12px
-```
-
-The 40px minimum only applies to authenticated public flows (login, onboarding, checkout). In dense admin contexts, 32px controls reduce visual weight without usability loss — the audience is power users, not first-time visitors.
-
-**Entity add/edit forms → Modal, not inline expansion:**
-- Inline accordions (RevealPanel, details-based expansion) inside entity cards cause layout shift and make the page feel unstable
-- Correct pattern: `+ Add` button + `Edit` button each open a centered modal (`max-w-448px`, `backdrop-blur overlay`)
-- Modal form: single-column, `gap: 10px`, compact controls, full-width submit button
+**Entity editing:** choose inline, modal, drawer or dedicated page by field count, need for surrounding context and task duration. A modal is useful for a short bounded task; it is not the default for every entity. Keep focus return, cancel and unsaved-input behavior explicit.
 
 ---
 

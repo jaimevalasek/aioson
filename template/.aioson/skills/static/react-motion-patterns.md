@@ -1,7 +1,7 @@
 # React Motion Patterns
 
-> React equivalents of the wow effects from static-html-patterns.md.
-> Use Framer Motion as the primary animation library. Plain CSS animations as fallback when Framer Motion is not installed.
+> Optional React implementations for effects selected through `interface-design`.
+> The approved prototype and identity govern composition, palette and motion. Use CSS for simple feedback; reuse an existing animation library when choreography earns it. No effect bundle or dependency follows from a request for premium quality.
 
 ---
 
@@ -20,7 +20,7 @@ Do NOT apply heavy motion to pure admin/CRUD interfaces — motion must serve th
 ## Dependencies
 
 ```bash
-# Primary — install when any motion pattern is needed
+# Optional — only when the selected choreography needs it and the project has no equivalent
 npm install framer-motion
 
 # For scroll-driven animations without Framer Motion
@@ -38,7 +38,7 @@ npm install vanilla-tilt
 
 ## 1. Animated mesh background (hero section)
 
-CSS-only. Works in React, Next.js, Vue — no JS library needed.
+CSS-only. Use only when an animated field serves the recorded direction. All color variables below must come from the identity or selected `design:seed` candidate; define secondary accents only if that palette includes them. A static or image-led opening needs no mesh.
 
 ```tsx
 // components/ui/MeshBackground.tsx
@@ -55,10 +55,10 @@ export function MeshBackground() {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 120% 80% at -15% -10%, hsla(265, 70%, 55%, 0.28), transparent 60%),
-    radial-gradient(ellipse 80%  60% at 110%  20%, hsla(190, 80%, 55%, 0.22), transparent 55%),
-    radial-gradient(ellipse 60%  50% at  50% 110%, hsla(310, 75%, 65%, 0.18), transparent 60%),
-    hsl(240, 15%, 6%);
+    radial-gradient(ellipse 120% 80% at -15% -10%, color-mix(in srgb, var(--accent-primary) 28%, transparent), transparent 60%),
+    radial-gradient(ellipse 80%  60% at 110%  20%, color-mix(in srgb, var(--accent-alt) 22%, transparent), transparent 55%),
+    radial-gradient(ellipse 60%  50% at  50% 110%, color-mix(in srgb, var(--accent-secondary) 18%, transparent), transparent 60%),
+    var(--bg-base);
   background-size: 200% 200%;
   animation: meshDrift 20s ease infinite alternate;
   z-index: 0;
@@ -100,10 +100,10 @@ export function GradientText({ children, className }: GradientTextProps) {
 .gradient-text {
   background: linear-gradient(
     135deg,
-    hsl(265, 80%, 65%),
-    hsl(190, 80%, 55%),
-    hsl(310, 75%, 65%),
-    hsl(265, 80%, 65%)
+    var(--accent-primary),
+    var(--accent-alt),
+    var(--accent-secondary),
+    var(--accent-primary)
   );
   background-size: 300% 300%;
   -webkit-background-clip: text;
@@ -127,7 +127,7 @@ export function GradientText({ children, className }: GradientTextProps) {
 
 Usage:
 ```tsx
-<h1>The future of <GradientText>everything</GradientText></h1>
+<h1>{/* Use the actual proposition; isolate emphasis only when it aids reading. */}</h1>
 ```
 
 ---
@@ -167,7 +167,6 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
 
 Usage — staggered reveal:
 ```tsx
-<Reveal><SectionLabel>Features</SectionLabel></Reveal>
 <Reveal delay={0.1}><h2>Everything you need</h2></Reveal>
 <Reveal delay={0.2}><p>Supporting text here.</p></Reveal>
 ```
@@ -309,25 +308,20 @@ const container = {
 export function Hero() {
   return (
     <section className="hero">
-      <MeshBackground />
       <motion.div
         className="hero__content"
         variants={container}
         initial="hidden"
         animate="show"
       >
-        <motion.span variants={item} className="hero__label">
-          Category / Tagline
-        </motion.span>
         <motion.h1 variants={item} className="hero__title">
-          Bold headline that <GradientText>changes everything</GradientText>
+          {/* Actual product proposition from the approved content */}
         </motion.h1>
         <motion.p variants={item} className="hero__subtitle">
           Supporting text with real context — who benefits, how, what outcome.
         </motion.p>
         <motion.div variants={item} className="hero__actions">
           <a href="#signup" className="btn btn--primary">Get started</a>
-          <a href="#demo"   className="btn btn--ghost">Watch demo</a>
         </motion.div>
       </motion.div>
     </section>
@@ -421,7 +415,7 @@ export function ScrollProgress() {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(to right, hsl(265, 80%, 65%), hsl(190, 80%, 55%));
+  background: linear-gradient(to right, var(--accent-primary), var(--accent-alt));
   z-index: 1000;
 }
 ```
@@ -443,93 +437,33 @@ export function GlassCard({ children, className }: { children: React.ReactNode; 
 
 ```css
 .glass-card {
-  background: hsla(240, 20%, 100%, 0.04);
-  border: 1px solid hsla(240, 20%, 100%, 0.08);
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 16px;
   padding: 1.5rem;
   /* Subtle inner glow */
   box-shadow:
-    0 0 0 1px hsla(265, 70%, 65%, 0.08),
-    inset 0 1px 0 hsla(240, 100%, 100%, 0.05);
+    0 0 0 1px color-mix(in srgb, var(--accent-primary) 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--text-primary) 5%, transparent);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-card:hover {
-  border-color: hsla(265, 70%, 65%, 0.25);
+  border-color: color-mix(in srgb, var(--accent-primary) 25%, transparent);
   box-shadow:
-    0 0 0 1px hsla(265, 70%, 65%, 0.15),
-    0 8px 32px hsla(265, 70%, 55%, 0.12),
-    inset 0 1px 0 hsla(240, 100%, 100%, 0.08);
+    0 0 0 1px color-mix(in srgb, var(--accent-primary) 15%, transparent),
+    0 8px 32px color-mix(in srgb, var(--accent-primary) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
 ```
 
 ---
 
-## 9. Floating orbs (decorative)
+## 9. Background restraint
 
-```tsx
-// components/ui/FloatingOrbs.tsx
-export function FloatingOrbs() {
-  return (
-    <div className="orbs" aria-hidden="true">
-      <div className="orb orb--1" />
-      <div className="orb orb--2" />
-      <div className="orb orb--3" />
-    </div>
-  )
-}
-```
-
-```css
-.orbs {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.35;
-  animation: orbFloat 12s ease-in-out infinite;
-}
-
-.orb--1 {
-  width: 500px; height: 500px;
-  top: -200px; left: -100px;
-  background: radial-gradient(circle, hsl(265, 80%, 60%), transparent 70%);
-  animation-delay: 0s;
-}
-
-.orb--2 {
-  width: 400px; height: 400px;
-  top: 30%; right: -150px;
-  background: radial-gradient(circle, hsl(190, 80%, 55%), transparent 70%);
-  animation-delay: -4s;
-}
-
-.orb--3 {
-  width: 350px; height: 350px;
-  bottom: -100px; left: 40%;
-  background: radial-gradient(circle, hsl(310, 75%, 60%), transparent 70%);
-  animation-delay: -8s;
-}
-
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0,  0)   scale(1);    }
-  33%       { transform: translate(30px, -40px) scale(1.05); }
-  66%       { transform: translate(-20px, 20px) scale(0.95); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .orb { animation: none; }
-}
-```
+Do not add isolated blurred circles as a substitute for a subject or evidence. Choose an image crop, a static tonal field or the selected atmosphere from `.aioson/docs/design/visual-effects.md`. The composition must still work without animation.
 
 ---
 

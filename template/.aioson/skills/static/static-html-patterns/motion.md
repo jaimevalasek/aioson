@@ -3,6 +3,8 @@
 > Load when implementing scroll animations, entrance effects, hero timelines,
 > counter animations, or any carousel/slider component.
 
+Use only techniques earned by the `interface-design` direction. The approved prototype and identity govern the result; these timing examples do not prescribe a hero structure, content sequence or aesthetic. Static content must remain useful when scripts fail or reduced motion is requested.
+
 ---
 
 ## 9. GSAP Animations — Production Patterns (AI Agency / SaaS style)
@@ -47,8 +49,7 @@ function revealOnScroll(selector, options = {}) {
 // 2. Hero intro sequence (run on load, not scroll)
 function heroIntroTimeline() {
   return gsap.timeline({ delay: 0.2 })
-    .from('.hero__label',    { opacity: 0, y: 20, duration: 0.5, ease: 'power2.out' })
-    .from('.hero__title',    { opacity: 0, y: 30, duration: 0.7, ease: 'power3.out' }, '-=0.2')
+    .from('.hero__title',    { opacity: 0, y: 30, duration: 0.7, ease: 'power3.out' })
     .from('.hero__subtitle', { opacity: 0, y: 20, duration: 0.6, ease: 'power2.out' }, '-=0.4')
     .from('.hero__actions',  { opacity: 0, y: 20, duration: 0.5, ease: 'power2.out' }, '-=0.3')
     .from('.hero__social-proof', { opacity: 0, duration: 0.4 }, '-=0.2');

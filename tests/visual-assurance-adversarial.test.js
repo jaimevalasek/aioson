@@ -99,7 +99,7 @@ test('motion is application-bound: static canvas, unused keyframes and cross-wir
         @keyframes drift { from { background-position: 0 0; } to { background-position: 100% 0; } }
         @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
         .badge { animation: pulse 2s linear infinite; }
-      `
+      `, body: '<main><span class="badge">Live</span></main>'
     })
   });
   assert.equal(crossWired.metrics.motion.ambient_loops, 1);

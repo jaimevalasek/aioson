@@ -45,7 +45,7 @@ const SLOP = `<!doctype html><html><head><style>
 .t1 { font-family: Georgia, serif; } .t2 { font-family: "Space Mono", monospace; } .t3 { font-family: Manrope; }
 .fade { animation: fadeIn .3s ease; } @keyframes fadeIn { to { opacity: 1; } }
 </style></head><body>
-<div class="blob"></div>
+<div class="blob"></div><div class="glass g2 g3"><p class="t1">One</p><p class="t2">Two</p><p class="t3 fade">Three</p></div>
 <section class="hero"><h1>Transform your workflow</h1><button>Get started</button></section>
 <div class="card"><div class="inner card"><div class="deep card">nested</div></div></div>
 </body></html>`;
@@ -63,7 +63,7 @@ const CLEAN = `<!doctype html><html><head><style>
 .fade { animation: rise .2s ease; } @keyframes rise { to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .fade { animation: none; } }
 </style></head><body>
-<main class="shell"><div class="row"><button class="btn">Aprovar pedido</button></div>
+<main class="shell panel fade"><p class="is-loading" hidden>Loading</p><p class="empty-state" hidden>No rows</p><p class="error-state" hidden>Error</p><div class="row"><button class="btn">Aprovar pedido</button></div>
 <table><tr><td>PED-4471</td></tr></table></main>
 </body></html>`;
 
@@ -149,7 +149,7 @@ test('state markers are recognized in the authoring language, not only in Englis
   button:disabled { opacity: .4; }
   button:focus { outline: 2px solid #333; }
   .a { gap: 8px; } .b { font-size: 14px; } .c { background: #fff; }
-  </style><form><button class="carregando">Salvar</button></form>`;
+  </style><form><button class="carregando">Salvar</button><p class="vazio" hidden>Sem dados</p><p class="erro" hidden>Falhou</p></form>`;
   const result = analyzeVisualSources({ html: ptBr });
   assert.equal(result.applicable, true);
   assert.equal(result.metrics.interactive_surface, true);
@@ -389,10 +389,10 @@ test('emoji-as-icon, uniform card walls, and prototype affordance markers are me
 
   // Eight identical sibling cards are a wall; seven stay a metric.
   const cards = (n) => `<main>${Array.from({ length: n }, () => '<div class="card">x</div>').join('')}</main>`;
-  const wall = analyzeVisualSources({ html: CLEAN.replace('<main class="shell">', `${cards(8)}<main class="shell">`) });
+  const wall = analyzeVisualSources({ html: CLEAN.replace('<main class="shell panel fade">', `${cards(8)}<main class="shell panel fade">`) });
   assert.equal(wall.metrics.max_card_sibling_run, 8);
   assert.match(wall.warnings.join('\n'), /uniform card wall/);
-  const short = analyzeVisualSources({ html: CLEAN.replace('<main class="shell">', `${cards(7)}<main class="shell">`) });
+  const short = analyzeVisualSources({ html: CLEAN.replace('<main class="shell panel fade">', `${cards(7)}<main class="shell panel fade">`) });
   assert.equal(short.metrics.max_card_sibling_run, 7);
   assert.doesNotMatch(short.warnings.join('\n'), /uniform card wall/);
 
@@ -401,14 +401,14 @@ test('emoji-as-icon, uniform card walls, and prototype affordance markers are me
   assert.equal(bare.metrics.prototype_anchors, false);
   assert.doesNotMatch(bare.warnings.join('\n'), /data-aioson-primary|data-aioson-tour/);
 
-  const prototype = analyzeVisualSources({ html: CLEAN.replace('<main class="shell">', '<main class="shell" data-aioson-id="shell">') });
+  const prototype = analyzeVisualSources({ html: CLEAN.replace('<main class="shell panel fade">', '<main class="shell" data-aioson-id="shell">') });
   assert.equal(prototype.metrics.prototype_anchors, true);
   assert.match(prototype.warnings.join('\n'), /no `data-aioson-primary` marker/);
   assert.match(prototype.warnings.join('\n'), /no first-open explainer \(`data-aioson-tour`\)/);
 
   const complete = analyzeVisualSources({
     html: CLEAN.replace(
-      '<main class="shell">',
+      '<main class="shell panel fade">',
       '<main class="shell" data-aioson-id="shell" data-aioson-primary><div data-aioson-tour="1">Passo 1</div>'
     )
   });
@@ -578,7 +578,7 @@ function flatHygienicSurface({ fontTokens = '', headStyles = '', extraHead = '',
   ${headStyles}
   ${filler}
   </style></head><body>
-  <main><h1>Consultório</h1><button class="btn">Agendar conversa</button>${body}</main>
+  <main class="hero"><h1>Consultório</h1><button class="btn">Agendar conversa</button>${body}</main>
   </body></html>`;
 }
 
@@ -667,7 +667,7 @@ test('the page ground is what body paints in the base theme — not the most-fre
   .logo { background: #297d1a; }
   ${chips}
   body { background: var(--bg); color: var(--fg); }
-  </style></head><body><main><h1>Painel</h1></main></body></html>`;
+  </style></head><body><main><h1>Painel</h1><span class="logo">Logo</span>${Array.from({ length: 12 }, (_, i) => `<span class="chip-${i}">State</span>`).join('')}</main></body></html>`;
   const m = analyzeVisualSources({ html }).metrics;
   assert.equal(m.palette.ground.pole, 'dark');
   assert.equal(m.palette.ground.h, 315);
@@ -679,7 +679,7 @@ test('a full surface whose material rests on gradients and blur alone draws the 
     headStyles: `
       .hero { background: linear-gradient(180deg, #0b0d12, #141821), radial-gradient(circle at 20% 0%, #1a1e2a, transparent); }
       .top { backdrop-filter: blur(12px); }
-    `
+    `, body: '<div class="top">Navigation</div>'
   }) });
   assert.equal(shallow.metrics.craft.levers.material, true);
   assert.equal(shallow.metrics.craft.material_depth, 2);
@@ -691,7 +691,7 @@ test('a full surface whose material rests on gradients and blur alone draws the 
       .card { box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 8px 24px -14px rgba(0,0,0,.3); }
       .pop { box-shadow: 0 4px 10px -2px rgba(0,0,0,.12), 0 22px 48px -24px rgba(0,0,0,.45); }
       .veil::after { content: ''; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence baseFrequency='0.8'/></filter></svg>"); }
-    `
+    `, body: '<div class="card">Card</div><div class="pop">Panel</div><div class="veil">Material</div>'
   }) });
   assert.ok(deep.metrics.craft.material_depth >= 4, `deep fixture depth (got ${deep.metrics.craft.material_depth})`);
   assert.doesNotMatch(deep.warnings.join('\n'), /shallow material system/);
@@ -737,14 +737,14 @@ test('the palette fingerprint reads the shipped hue family through var()', () =>
         .cta:hover { background: #e85f41; }
         .link { color: #ff6b4a; }
         .badge { border-color: #ff6b4a; color: #ff6b4a; }
-      `
+      `, body: '<a class="cta link" href="#contact">Contact</a><span class="badge">Open</span>'
     })
   });
   const palette = dark.metrics.palette;
   assert.equal(palette.ground.pole, 'dark', `ground ${JSON.stringify(palette.ground)}`);
   assert.equal(palette.ground.hex, '#0e2a2e');
   assert.ok(palette.accent_hue >= 20 && palette.accent_hue <= 50, `coral accent family, got ${palette.accent_hue}°`);
-  assert.ok(palette.color_literals > 80, 'var()-resolved uses are counted, not just literal sites');
+  assert.ok(palette.color_literals > 8, 'live var()-resolved uses are counted, not just literal sites');
   assert.ok(palette.hue_clusters >= 1);
 
   // The default fixture ships a white ground — pole flips with the surface.
@@ -830,7 +830,7 @@ test('the generation tells fire on the saturated defaults, each with its counter
   .springy { transition: transform .4s cubic-bezier(.5, 1.8, .4, .9); }
   .legal { font-size: 10px; color: #777777; }
   </style></head><body>
-  <p class="eyebrow">Nossa plataforma</p><h1>Streamline seu fluxo</h1>
+  <p class="eyebrow">Nossa plataforma</p><h1>Streamline seu fluxo</h1><div class="card halo brutal springy"><p class="legal">Terms</p></div>
   <p>Enterprise-grade por design. It's not just a tool. It's a platform.</p>
   <p>Não é só um painel. É seu copiloto.</p>
   <div class="icon"><svg></svg></div><h3>Rápido</h3>
@@ -902,7 +902,7 @@ test('an untouched browser chrome is named on full surfaces; one themed surface 
 
   const themed = analyzeVisualSources({ html: bare.replace('</style>', `
   ::selection { background: #1a1a1a; color: #ffffff; }
-  td { font-variant-numeric: tabular-nums; }
+  h1 { font-variant-numeric: tabular-nums; }
   </style>`) });
   assert.equal(themed.metrics.craft.browser_surfaces.count, 2);
   assert.deepEqual(themed.metrics.craft.browser_surfaces.present, ['::selection', 'tabular numerals']);
@@ -1003,7 +1003,7 @@ test('a workhorse UI face on `.card-title` is sanctioned; the same face on the d
   assert.deepEqual(sanctioned.metrics.tells.saturated_display_faces, []);
   assert.equal(sanctioned.metrics.display_face, 'young serif');
 
-  const display = analyzeVisualSources({ html: base('.hero-title { font-family: var(--font-ui); }') });
+  const display = analyzeVisualSources({ html: base('.hero-title { font-family: var(--font-ui); }').replace('<h1>Painel', '<h1 class="hero-title">Painel') });
   assert.deepEqual(display.metrics.tells.saturated_display_faces, ['inter']);
 });
 
@@ -1047,7 +1047,7 @@ test('the negation-pivot cadence counts accented pt-BR words', () => {
 // its brief asked for. Motion is now a measured block, and a "signature"
 // surface is one that moves paint on its own.
 
-function hoverOnlySurface(extra = '') {
+function hoverOnlySurface(extra = '', body = '') {
   const filler = Array.from({ length: 40 }, (_, i) =>
     `.h${i} { padding: var(--s2); color: var(--fg); background: var(--bg); transition: color .2s ease; }`
   ).join('\n');
@@ -1056,7 +1056,7 @@ function hoverOnlySurface(extra = '') {
   body { font-family: Georgia, serif; color: var(--fg); background: var(--bg); }
   ${extra}
   ${filler}
-  </style></head><body><main><h1>Painel</h1></main></body></html>`;
+  </style></head><body><main><h1>Painel</h1>${Array.from({ length: 40 }, (_, i) => `<p class="h${i}">Row ${i}</p>`).join('')}${body}</main></body></html>`;
 }
 
 test('motion: a wall of hover transitions is state feedback, never choreography', () => {
@@ -1078,7 +1078,7 @@ test('motion: an entrance system with reduced-motion is designed motion, and one
       @keyframes slide { from { transform: translateX(-8px); } to { transform: none; } }
       .a { animation: rise .5s ease both; } .b { animation: fade .4s ease both; } .c { animation: slide .4s ease both; }
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
-    `)
+    `, '<div class="a">A</div><div class="b">B</div><div class="c">C</div>')
   }).metrics;
   assert.equal(entrance.motion.designed, true);
   assert.equal(entrance.motion.transition_only, false);
@@ -1090,7 +1090,7 @@ test('motion: an entrance system with reduced-motion is designed motion, and one
     html: hoverOnlySurface(`
       @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
       .badge { animation: pulse 2s ease-in-out infinite; }
-    `)
+    `, '<span class="badge">Live</span>')
   }).metrics;
   assert.equal(pulse.motion.ambient_loops, 1);
   assert.equal(pulse.motion.signature, false, 'a transform-only loop is a badge, not a backdrop');
@@ -1102,7 +1102,7 @@ test('motion: an ambient backdrop, a painted surface and a scroll-driven timelin
     html: hoverOnlySurface(`
       @keyframes drift { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
       .aurora { background: linear-gradient(120deg, #12203a, #3a1240, #12203a); background-size: 300% 300%; animation: drift 18s ease-in-out infinite; }
-    `)
+    `, '<div class="aurora">Scene</div>')
   }).metrics;
   assert.equal(backdrop.motion.signature, true);
   assert.deepEqual(backdrop.motion.signature_kinds, ['animated backdrop']);
@@ -1123,7 +1123,7 @@ test('motion: an ambient backdrop, a painted surface and a scroll-driven timelin
   assert.deepEqual(painted.motion.signature_kinds, ['animated canvas/WebGL']);
 
   const scrolled = analyzeVisualSources({
-    html: hoverOnlySurface('.reveal { animation: fade linear both; animation-timeline: view(); } @keyframes fade { from { opacity: 0; } to { opacity: 1; } }')
+    html: hoverOnlySurface('.reveal { animation: fade linear both; animation-timeline: view(); } @keyframes fade { from { opacity: 0; } to { opacity: 1; } }', '<section class="reveal">Next</section>')
   }).metrics;
   assert.equal(scrolled.motion.signature, true);
   assert.ok(scrolled.motion.signature_kinds.includes('scroll-driven'));
@@ -1141,7 +1141,7 @@ function statesFixture(body, script = '') {
   return `<!doctype html><html><head><style>
   :root { --s: 8px; --fg: #111; --bg: #fff; }
   body { background: var(--bg); color: var(--fg); font-family: Georgia, serif; }
-  button:focus-visible { outline: 2px solid var(--fg); }
+  :focus-visible { outline: 2px solid var(--fg); }
   ${Array.from({ length: 40 }, (_, i) => `.f${i} { padding: var(--s); color: var(--fg); background: var(--bg); }`).join('\n')}
   </style></head><body>${body}<script>${script}<\/script></body></html>`;
 }

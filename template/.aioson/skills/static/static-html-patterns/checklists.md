@@ -6,25 +6,25 @@
 
 ## 12. Full Section Checklist (AI / SaaS Landing Page)
 
-For complete AI agency or SaaS landing pages, include these sections in order:
+Use this as a content inventory, not a required order or section quota. Choose the sequence from the visitor's questions and real evidence, following `structure.md` and the approved visual direction. A small page may need only an opening, evidence and contact; omit unsupported sections and claims.
 
 | # | Section | Purpose |
 |---|---|---|
-| 1 | Header (sticky) | Logo + nav + CTA button |
-| 2 | Hero | Headline + sub + 2 CTAs + social proof |
+| 1 | Header | Identity and useful navigation; sticky only when it helps |
+| 2 | Opening | Proposition, focal evidence and the actions the task requires |
 | 3 | Logos bar | "Trusted by" brand names |
-| 4 | Features grid | 3–6 cards with icon + title + description |
-| 5 | How it works | 3 numbered steps with image alternation |
+| 4 | Capabilities | Demonstration, comparison, list or cards according to the evidence |
+| 5 | How it works | The real sequence; illustrate only meaningful steps |
 | 6 | Services | Cards with deeper service descriptions |
-| 7 | Stats / Numbers | Animated counters (clients, projects, uptime) |
+| 7 | Stats / Numbers | Verifiable figures with context; animation optional |
 | 8 | Case studies | Portfolio cards with hover image reveal |
-| 9 | Testimonials | Swiper slider with quotes + avatars |
-| 10 | Pricing | 3-tier cards with "Most popular" badge |
+| 9 | Testimonials | Real attributed quotes; slider only if browsing benefits |
+| 10 | Pricing | Actual plans and comparison criteria; no fabricated popularity |
 | 11 | FAQ | Accordion with open/close animation |
-| 12 | Final CTA | Single button, urgency, no distractions |
+| 12 | Closing action | A useful next step, with urgency only when factual |
 | 13 | Footer | Dense: links + social + newsletter + copyright |
 
-**For MICRO landing pages (single page, simple product):** sections 1, 2, 4, 9, 12, 13.
+Do not add testimonials, pricing or a closing CTA solely to complete this table. Techniques such as sliders and animated counters are optional implementations, not quality criteria.
 
 ---
 
