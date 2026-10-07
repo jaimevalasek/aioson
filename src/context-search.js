@@ -4,7 +4,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const Database = require('better-sqlite3');
-const { parseFrontmatter, parseAgentList, parseFlowList } = require('./preflight-engine');
+const { parseFrontmatter, parseAgentList } = require('./preflight-engine');
+const { parseFrontmatterList } = require('./lib/frontmatter');
 const { canonicalAgentId } = require('./agents');
 const { pathMatchesPattern: selectorPathMatchesPattern } = require('./context-selector');
 
@@ -671,7 +672,7 @@ function inferLoadTier(sourceType, relPath) {
 }
 
 function parseListValue(value) {
-  return parseFlowList(value);
+  return parseFrontmatterList(value);
 }
 
 function buildSearchInput(query, opts = {}) {

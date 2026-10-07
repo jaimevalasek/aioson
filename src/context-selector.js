@@ -4,9 +4,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const Database = require('better-sqlite3');
 const { canonicalAgentId } = require('./agents');
+const { parseFrontmatterList } = require('./lib/frontmatter');
 const {
   parseFrontmatter,
-  parseFlowList,
   parseAgentList,
   appliesToAgent,
   readFileSafe,
@@ -186,7 +186,7 @@ function isActivationOnlyTask(agent, mode, task) {
 }
 
 function parseListValue(value) {
-  return parseFlowList(value);
+  return parseFrontmatterList(value);
 }
 
 function semanticSearchEnabled(options) {

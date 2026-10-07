@@ -316,26 +316,32 @@ async function withViolations(targetDir, blocks, violations, gate, stack) {
   return merged.sort((a, b) => Number(b.findings.length > 0) - Number(a.findings.length > 0));
 }
 
+function findingLines(block) {
+  if (!block.findings || block.findings.length === 0) return [];
+  const lines = [block.named_by_document
+    ? 'Detected in the code this document names — rename before it is built:'
+    : 'Detected in this change — fix it in this edit:'];
+  for (const finding of block.findings) {
+    // The block header already names the rule; the finding keeps its reason.
+    const message = String(finding.message).replace(/\s*—\s*see \S+\.md/, '');
+    lines.push(`- ${finding.severity} ${message}${finding.file ? ` [${finding.file}]` : ''}`);
+  }
+  if (block.more > 0) lines.push(`- … ${block.more} more (aioson rules:check . --changed)`);
+  return lines;
+}
+
+function blockLines(block) {
+  return [
+    `${block.authority === 'advisory' ? 'Guidance' : 'Rule'} ${block.path}:`,
+    ...block.constraints.map((constraint) => `- ${constraint}`),
+    ...block.forbidden.map((pattern) => `- (forbidden) ${pattern}`),
+    ...findingLines(block)
+  ];
+}
+
 function formatInjectionText(filePath, ruleBlocks) {
   const target = filePath ? path.basename(String(filePath)) : 'this change';
-  const lines = [`[AIOSON context:guard] Project rules apply to ${target}:`];
-  for (const block of ruleBlocks) {
-    lines.push(`${block.authority === 'advisory' ? 'Guidance' : 'Rule'} ${block.path}:`);
-    for (const constraint of block.constraints) lines.push(`- ${constraint}`);
-    for (const pattern of block.forbidden) lines.push(`- (forbidden) ${pattern}`);
-    if (block.findings && block.findings.length > 0) {
-      lines.push(block.named_by_document
-        ? 'Detected in the code this document names — rename before it is built:'
-        : 'Detected in this change — fix it in this edit:');
-      for (const finding of block.findings) {
-        // The block header already names the rule; the finding keeps its reason.
-        const message = String(finding.message).replace(/\s*—\s*see \S+\.md/, '');
-        lines.push(`- ${finding.severity} ${message}${finding.file ? ` [${finding.file}]` : ''}`);
-      }
-      if (block.more > 0) lines.push(`- … ${block.more} more (aioson rules:check . --changed)`);
-    }
-  }
-  return lines.join('\n');
+  return [`[AIOSON context:guard] Project rules apply to ${target}:`, ...ruleBlocks.flatMap(blockLines)].join('\n');
 }
 
 // Two installed copies of the hook (user-level and project-level settings)
@@ -408,30 +414,42 @@ function writeVerdict(claimDir, key, keep) {
 async function judgeVocabularyBlocks(targetDir, event, blocks, violations, input) {
   if (!input.jevFilter || blocks.length === 0) return { blocks, report: null };
   const claimDir = input.claimDir || CLAIM_DIR;
-  const proven = new Set(violations.map((violation) => violation.path));
-  const remembered = new Map();
-  const toJudge = [];
-  for (const block of blocks) {
-    if (proven.has(block.path)) continue;
-    const verdict = readVerdict(claimDir, verdictKey(event, block.path, input.relPath));
-    if (verdict === null) toJudge.push(block);
-    else remembered.set(block.path, verdict);
-  }
+  const keyOf = (rulePath) => verdictKey(event, rulePath, input.relPath);
+  const { toJudge, remembered } = partitionByVerdict(blocks, violations, (rulePath) => readVerdict(claimDir, keyOf(rulePath)));
   let report = null;
   if (toJudge.length > 0) {
-    const rules = [];
-    for (const block of toJudge) {
-      const content = await readFileSafe(path.join(targetDir, block.path));
-      rules.push({ path: block.path, about: String(parseFrontmatter(content || '').description || ''), constraints: block.constraints });
-    }
-    const judged = await judgeGuardRules({ ...input.jevFilter, projectDir: targetDir, file: input.relPath, excerpt: input.content, rules });
+    const judged = await judgeGuardRules({
+      ...input.jevFilter, projectDir: targetDir, file: input.relPath, excerpt: input.content, rules: await rulesForJudge(targetDir, toJudge)
+    });
     report = judged.report;
     for (const [rulePath, keep] of judged.keep) {
       remembered.set(rulePath, keep);
-      if (report.status === 'used') writeVerdict(claimDir, verdictKey(event, rulePath, input.relPath), keep);
+      if (report.status === 'used') writeVerdict(claimDir, keyOf(rulePath), keep);
     }
   }
   return { blocks: blocks.filter((block) => remembered.get(block.path) !== false), report };
+}
+
+// Violation-backed rules need no judge; a remembered verdict needs no request.
+function partitionByVerdict(blocks, violations, lookup) {
+  const proven = new Set(violations.map((violation) => violation.path));
+  const remembered = new Map();
+  const toJudge = [];
+  for (const block of blocks.filter((entry) => !proven.has(entry.path))) {
+    const verdict = lookup(block.path);
+    if (verdict === null) toJudge.push(block);
+    else remembered.set(block.path, verdict);
+  }
+  return { toJudge, remembered };
+}
+
+async function rulesForJudge(targetDir, blocks) {
+  const rules = [];
+  for (const block of blocks) {
+    const content = await readFileSafe(path.join(targetDir, block.path));
+    rules.push({ path: block.path, about: String(parseFrontmatter(content || '').description || ''), constraints: block.constraints });
+  }
+  return rules;
 }
 
 function claimGuardEvent(event, claimDir = CLAIM_DIR) {
@@ -466,76 +484,84 @@ function formatForTool(tool, additionalContext) {
 
 async function buildGuardResponse(event, targetDir, options = {}) {
   const gate = { ...GUARD_GATE, ...(options.gate || {}) };
-  const toolName = event && event.tool_name;
-  const toolInput = (event && event.tool_input) || {};
-  if (!MUTATING_TOOLS.has(toolName)) return emptyResponse();
-
-  const filePath = toolInput.file_path || toolInput.notebook_path || '';
-  const content = extractEditedContent(toolInput);
-  if (!filePath && !content) return emptyResponse();
-  // A session edits more than the project (operator memory, scratch files):
-  // the project's rules apply to the project's files only.
-  if (outsideProject(targetDir, filePath)) return emptyResponse();
-  if (!claimGuardEvent(event, options.claimDir)) return emptyResponse();
-
-  const query = deriveQuery(filePath, content, gate.maxContentChars);
-  if (!query) return emptyResponse();
+  const target = guardTarget(event, targetDir, options, gate);
+  if (!target) return emptyResponse();
 
   const agent = options.agent || 'dev';
-  const brief = await buildContextBrief(targetDir, {
-    agent,
-    mode: 'executing',
-    task: query,
-    paths: filePath
+  const brief = await buildContextBrief(targetDir, { agent, mode: 'executing', task: target.query, paths: target.filePath });
+  const vocabulary = await vocabularyBlocksFor(targetDir, brief, target, gate);
+  const found = await violationsFor(targetDir, target, agent);
+  const judged = await judgeVocabularyBlocks(targetDir, event, vocabulary, found.violations, {
+    jevFilter: options.jevFilter, claimDir: options.claimDir, relPath: target.relPath, content: target.content
   });
-  const stack = brief.intent && brief.intent.stack;
+  const ruleBlocks = await withViolations(targetDir, judged.blocks, found.violations, gate, brief.intent && brief.intent.stack);
+  if (ruleBlocks.length === 0) return emptyResponse();
 
+  const response = formatForTool(options.tool || 'claude', formatInjectionText(target.filePath, ruleBlocks));
+  response._guard = guardRecord({ ruleBlocks, brief, agent, target, found, judged });
+  return response;
+}
+
+// The pending write the guard judges, or null for a call it lets pass.
+function guardTarget(event, targetDir, options, gate) {
+  const toolName = event && event.tool_name;
+  const toolInput = (event && event.tool_input) || {};
+  if (!MUTATING_TOOLS.has(toolName)) return null;
+  const filePath = toolInput.file_path || toolInput.notebook_path || '';
+  const content = extractEditedContent(toolInput);
+  // A session edits more than the project (operator memory, scratch files):
+  // the project's rules apply to the project's files only.
+  if ((!filePath && !content) || outsideProject(targetDir, filePath)) return null;
+  if (!claimGuardEvent(event, options.claimDir)) return null;
+  const query = deriveQuery(filePath, content, gate.maxContentChars);
+  if (!query) return null;
   const pathCandidates = guardPathCandidates(targetDir, filePath);
   // Classify by the project-relative path: the folders above the project root
   // (a checkout under `.../research/` or `.../tests/`) say nothing about the file.
   const relPath = String(pathCandidates[pathCandidates.length - 1] || filePath).replace(/\\/g, '/');
-  const surfaceKinds = detectSurfaceKinds(relPath, content);
-  const governanceArtifact = isGovernanceArtifact(filePath);
+  return { toolName, toolInput, filePath, content, query, pathCandidates, relPath };
+}
 
-  // Vocabulary salience: the brief routed a rule through a hard signal.
+// Vocabulary salience: the brief routed a rule through a hard signal.
+async function vocabularyBlocksFor(targetDir, brief, target, gate) {
   const ruled = matchedRules(brief);
-  const vocabularyBlocks = ruled.length > 0 && confidenceAllows(brief.confidence, gate)
-    ? await buildRuleBlocks(targetDir, ruled, gate, surfaceKinds, pathCandidates, stack, governanceArtifact)
-    : [];
-  // Violation salience: a rule's own checker finds a NEW violation in what is
-  // being written — the naming rule speaks when `servicoCliente.js` is written,
-  // whether or not the text says "naming". Governance files author the law and
-  // quote its counter-examples, so they are never judged by it.
-  const violationKind = governanceArtifact ? null : editedFileKind(relPath);
-  const violations = violationKind
-    ? await detectEditViolations(targetDir, { agent, rel: relPath, kind: violationKind, toolName, toolInput })
-    : [];
-  const judged = await judgeVocabularyBlocks(targetDir, event, vocabularyBlocks, violations, {
-    jevFilter: options.jevFilter, claimDir: options.claimDir, relPath, content
-  });
-  const ruleBlocks = await withViolations(targetDir, judged.blocks, violations, gate, stack);
-  if (ruleBlocks.length === 0) return emptyResponse();
+  if (ruled.length === 0 || !confidenceAllows(brief.confidence, gate)) return [];
+  const surfaceKinds = detectSurfaceKinds(target.relPath, target.content);
+  const stack = brief.intent && brief.intent.stack;
+  return buildRuleBlocks(targetDir, ruled, gate, surfaceKinds, target.pathCandidates, stack, isGovernanceArtifact(target.filePath));
+}
 
-  const additionalContext = formatInjectionText(filePath, ruleBlocks);
-  const response = formatForTool(options.tool || 'claude', additionalContext);
-  response._guard = {
+// Violation salience: a rule's own checker finds a NEW violation in what is
+// being written — the naming rule speaks when `servicoCliente.js` is written,
+// whether or not the text says "naming". Governance files author the law and
+// quote its counter-examples, so they are never judged by it.
+async function violationsFor(targetDir, target, agent) {
+  const kind = isGovernanceArtifact(target.filePath) ? null : editedFileKind(target.relPath);
+  if (!kind) return { kind, violations: [] };
+  const violations = await detectEditViolations(targetDir, {
+    agent, rel: target.relPath, kind, toolName: target.toolName, toolInput: target.toolInput
+  });
+  return { kind, violations };
+}
+
+// What the outcome reader (lib/guard-outcomes.js) re-checks later: was the
+// measured violation fixed, or did it land and stay?
+function guardRecord({ ruleBlocks, brief, agent, target, found, judged }) {
+  return {
     injected: true,
     rules: ruleBlocks.map((block) => block.path),
     confidence: brief.confidence,
-    violations: violations.reduce((sum, block) => sum + block.findings.length + block.more, 0),
-    // What the outcome reader (lib/guard-outcomes.js) re-checks later: was the
-    // measured violation fixed, or did it land and stay?
+    violations: found.violations.reduce((sum, block) => sum + block.findings.length + block.more, 0),
     agent,
-    file: relPath,
-    violation_keys: violations.map((block) => ({
+    file: target.relPath,
+    violation_keys: found.violations.map((block) => ({
       rule: block.path,
       checker: block.checker,
-      kind: violationKind,
+      kind: found.kind,
       keys: block.findings.map((finding) => finding.key)
     })),
     ...(judged.report ? { jev: judged.report } : {})
   };
-  return response;
 }
 
 module.exports = {
@@ -543,7 +569,6 @@ module.exports = {
   claimGuardEvent,
   deriveQuery,
   detectSurfaceKinds,
-  editedFileKind,
   isGovernanceArtifact,
   outsideProject,
   extractEditedContent,

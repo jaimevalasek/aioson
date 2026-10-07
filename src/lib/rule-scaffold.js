@@ -217,14 +217,9 @@ function scaffoldRule(projectDir, options = {}) {
   return scaffoldKnowledge(projectDir, options, 'rule');
 }
 
-function scaffoldDoc(projectDir, options = {}) {
-  return scaffoldKnowledge(projectDir, options, 'doc');
-}
-
 module.exports = {
   DEFAULT_PRIORITY,
   DEFAULT_LOAD_TIER,
   scaffoldKnowledge,
-  scaffoldRule,
-  scaffoldDoc
+  scaffoldRule
 };

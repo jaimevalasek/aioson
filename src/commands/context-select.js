@@ -22,9 +22,14 @@ async function recordSelectEvent(targetDir, result) {
   }
 }
 
+async function withSelectTrace(targetDir, result) {
+  await recordSelectEvent(targetDir, result);
+  return result;
+}
+
 async function runContextSelect({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
-  const result = await selectContext(targetDir, {
+  const result = await withSelectTrace(targetDir, await selectContext(targetDir, {
     agent: options.agent || options.a || 'dev',
     mode: options.mode || 'planning',
     task: options.task || options.goal || '',
@@ -36,8 +41,7 @@ async function runContextSelect({ args, options = {}, logger }) {
     // (agent/mode filter, score vs threshold) — the debugging channel
     // context:evals uses for its failure diagnosis.
     explain: typeof options.explain === 'string' ? options.explain : ''
-  });
-  await recordSelectEvent(targetDir, result);
+  }));
 
   if (options.json) return result;
 

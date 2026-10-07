@@ -47,6 +47,23 @@ function replaceOnce(text, oldString, newString, replaceAll) {
   return replaceAll ? text.split(anchor).join(replacement) : text.replace(anchor, () => replacement);
 }
 
+// Edits applied in order; one missing anchor makes the whole call unknowable.
+function applyEdits(text, edits) {
+  let current = text;
+  for (const edit of edits) {
+    current = edit ? replaceOnce(current, edit.old_string, String(edit.new_string ?? ''), edit.replace_all) : null;
+    if (current === null) return null;
+  }
+  return current;
+}
+
+// The edits a tool call makes, or null when the tool rewrites the whole file.
+function editsOf(toolName, toolInput) {
+  if (toolName === 'Edit') return [toolInput];
+  if (toolName === 'MultiEdit' && Array.isArray(toolInput.edits)) return toolInput.edits;
+  return null;
+}
+
 /**
  * The whole file as it will read after the tool call (LF line endings), or
  * null when it cannot be known (an Edit whose anchor is missing fails in the
@@ -54,20 +71,9 @@ function replaceOnce(text, oldString, newString, replaceAll) {
  */
 function textAfterEdit(before, toolName, toolInput = {}) {
   if (toolName === 'Write') return typeof toolInput.content === 'string' ? lf(toolInput.content) : null;
-  if (before === null) return null;
-  const current = lf(before);
-  if (toolName === 'Edit') {
-    return replaceOnce(current, toolInput.old_string, String(toolInput.new_string ?? ''), toolInput.replace_all);
-  }
-  if (toolName === 'MultiEdit' && Array.isArray(toolInput.edits)) {
-    let text = current;
-    for (const edit of toolInput.edits) {
-      text = edit ? replaceOnce(text, edit.old_string, String(edit.new_string ?? ''), edit.replace_all) : null;
-      if (text === null) return null;
-    }
-    return text;
-  }
-  return null;
+  const edits = editsOf(toolName, toolInput);
+  if (before === null || edits === null) return null;
+  return applyEdits(lf(before), edits);
 }
 
 function readCurrent(targetDir, rel) {
@@ -116,40 +122,43 @@ function codeShapedIdentifier(raw) {
  * which is exactly where a naming decision is made before any code exists.
  */
 function extractNamedCode(markdown) {
-  const paths = new Set();
-  const identifiers = new Set();
-  const snippets = new Map();
+  const named = { paths: new Set(), identifiers: new Set(), snippets: new Map() };
   let fence = null;
-  for (const line of String(markdown || '').split(/\r?\n/)) {
-    const marker = FENCE.exec(line);
-    if (fence) {
-      if (marker && marker[1][0] === fence.char && marker[1].length >= fence.size && !marker[2]) {
-        fence = null;
-        continue;
-      }
-      if (!snippets.has(fence.ext)) snippets.set(fence.ext, []);
-      snippets.get(fence.ext).push(line);
-      continue;
-    }
-    if (marker) {
-      fence = { char: marker[1][0], size: marker[1].length, ext: FENCE_EXT[marker[2].toLowerCase()] || '.js' };
-      continue;
-    }
-    for (const match of line.matchAll(INLINE_CODE)) {
-      const cited = normalizeCitedPath(match[1]);
-      if (cited) {
-        paths.add(cited);
-        continue;
-      }
-      const name = codeShapedIdentifier(match[1]);
-      if (name) identifiers.add(name);
-    }
-    for (const match of line.replace(INLINE_CODE, ' ').matchAll(BARE_PATH)) {
-      const cited = normalizeCitedPath(match[1]);
-      if (cited) paths.add(cited);
-    }
+  for (const line of String(markdown || '').split(/\r?\n/)) fence = readDocumentLine(line, fence, named);
+  return { paths: [...named.paths], identifiers: [...named.identifiers], snippets: named.snippets };
+}
+
+// Inline `code` spans and bare paths on one prose line.
+function collectReferences(line, named) {
+  for (const match of line.matchAll(INLINE_CODE)) {
+    const cited = normalizeCitedPath(match[1]);
+    const name = cited ? null : codeShapedIdentifier(match[1]);
+    if (cited) named.paths.add(cited);
+    if (name) named.identifiers.add(name);
   }
-  return { paths: [...paths], identifiers: [...identifiers], snippets };
+  for (const match of line.replace(INLINE_CODE, ' ').matchAll(BARE_PATH)) {
+    const cited = normalizeCitedPath(match[1]);
+    if (cited) named.paths.add(cited);
+  }
+}
+
+function closesFence(marker, fence) {
+  return Boolean(marker) && marker[1][0] === fence.char && marker[1].length >= fence.size && !marker[2];
+}
+
+// One line of a document: inside a fence it is snippet code, a fence marker
+// opens or closes one, anything else is prose. Returns the fence state after it.
+function readDocumentLine(line, fence, named) {
+  const marker = FENCE.exec(line);
+  if (fence) {
+    if (closesFence(marker, fence)) return null;
+    if (!named.snippets.has(fence.ext)) named.snippets.set(fence.ext, []);
+    named.snippets.get(fence.ext).push(line);
+    return fence;
+  }
+  if (marker) return { char: marker[1][0], size: marker[1].length, ext: FENCE_EXT[marker[2].toLowerCase()] || '.js' };
+  collectReferences(line, named);
+  return null;
 }
 
 // `index.*` is a path the naming checker skips, so the synthetic carrier of a
@@ -229,68 +238,75 @@ async function editTimeCheckers(targetDir) {
  * @returns {Promise<Array<{ checker, path, authority, findings, named_by_document }>>}
  */
 async function detectEditViolations(targetDir, input) {
-  const { agent, rel, kind, toolName, toolInput } = input;
-  if (!rel || (kind !== 'code' && kind !== 'markdown')) return [];
-  // `before` may be supplied (a replay over history); otherwise it is the disk.
-  const before = Object.prototype.hasOwnProperty.call(input, 'before')
-    ? (input.before === null ? null : lf(input.before))
-    : readCurrent(targetDir, rel);
-  const after = textAfterEdit(before, toolName, toolInput);
-  if (after === null) return [];
+  if (!input.rel || (input.kind !== 'code' && input.kind !== 'markdown')) return [];
+  const files = pendingFiles(targetDir, input);
+  if (!files || files.postFiles.length === 0) return [];
+  const checkers = await editTimeCheckers(targetDir);
+  if (checkers.size === 0) return [];
+  const ctx = { ...input, ...files, targetDir, baseline: await readBaseline(targetDir) };
+  return [...checkers].map(([id, declaring]) => checkerViolations(id, declaring, ctx)).filter(Boolean);
+}
 
+function beforeText(targetDir, input) {
+  // `before` may be supplied (a replay over history); otherwise it is the disk.
+  if (!Object.prototype.hasOwnProperty.call(input, 'before')) return readCurrent(targetDir, input.rel);
+  return input.before === null ? null : lf(input.before);
+}
+
+// What the checkers read before and after the pending edit, or null when the
+// edit cannot be replayed.
+function pendingFiles(targetDir, input) {
+  const before = beforeText(targetDir, input);
+  const after = textAfterEdit(before, input.toolName, input.toolInput);
+  if (after === null) return null;
   // A re-check (guard outcomes) asks whether the document STILL names the
   // path, even once the file was created under that name.
   const exists = input.keepExistingCitations ? () => false : (cited) => fs.existsSync(path.resolve(targetDir, cited));
   const filesOf = (text) => {
     if (text === null) return [];
-    if (kind === 'markdown') return filesNamedBy(text, exists);
-    return [{ rel, lines: text.split('\n') }];
+    return input.kind === 'markdown' ? filesNamedBy(text, exists) : [{ rel: input.rel, lines: text.split('\n') }];
   };
-  const preFiles = filesOf(before);
-  const postFiles = filesOf(after);
-  if (postFiles.length === 0) return [];
+  return { preFiles: filesOf(before), postFiles: filesOf(after) };
+}
 
-  const checkers = await editTimeCheckers(targetDir);
-  if (checkers.size === 0) return [];
-  const baseline = await readBaseline(targetDir);
+// HIGH findings the edit introduces: absent before it, not accepted as debt.
+// rules:check attributes a checker's findings to the first declaring document
+// and keys its baseline the same way, so accepted debt matches here.
+function freshFindings(enforcer, ctx, declaring, scoped) {
+  const known = new Set(runChecker(enforcer, ctx.targetDir, ctx.preFiles, declaring).map(diffKey));
+  const accepted = (finding) => Boolean(ctx.baseline && ctx.baseline.has(findingKey({ ...finding, rule: declaring[0].name })));
+  return uniqueFindings(runChecker(enforcer, ctx.targetDir, scoped, declaring))
+    .filter((finding) => finding.severity === 'HIGH' && !known.has(diffKey(finding)) && !accepted(finding));
+}
 
-  const blocks = [];
-  for (const [id, declaring] of checkers) {
-    const applicable = declaring.filter((doc) => appliesToAgent(doc.frontmatter || {}, agent));
-    if (applicable.length === 0) continue;
-    const scoped = postFiles.filter((file) => applicable.some((doc) => inPathScope(doc.frontmatter || {}, file.rel)));
-    if (scoped.length === 0) continue;
+function violationBlock(id, ctx, applicable, scoped, fresh) {
+  const binding = applicable.find((doc) => doc.authority === 'binding');
+  const synthetic = new Set(scoped.filter((file) => file.synthetic).map((file) => file.rel));
+  // The injection shows a few; a re-check (guard outcomes) needs them all.
+  const cap = ctx.uncapped ? fresh.length : MAX_FINDINGS_PER_BLOCK;
+  return {
+    checker: id,
+    path: (binding || applicable[0]).path,
+    authority: binding ? 'binding' : 'advisory',
+    named_by_document: ctx.kind === 'markdown',
+    findings: fresh.slice(0, cap).map((finding) => ({
+      severity: finding.severity,
+      message: finding.message,
+      file: synthetic.has(finding.file) ? null : finding.file,
+      key: diffKey(finding)
+    })),
+    more: Math.max(0, fresh.length - cap)
+  };
+}
 
-    const enforcer = ENFORCERS[id];
-    const known = new Set(runChecker(enforcer, targetDir, preFiles, declaring).map(diffKey));
-    const fresh = uniqueFindings(runChecker(enforcer, targetDir, scoped, declaring))
-      .filter((finding) => finding.severity === 'HIGH')
-      .filter((finding) => !known.has(diffKey(finding)))
-      // rules:check attributes a checker's findings to the first declaring
-      // document; the baseline is keyed the same way, so accepted debt matches.
-      .filter((finding) => !(baseline && baseline.has(findingKey({ ...finding, rule: declaring[0].name }))));
-    if (fresh.length === 0) continue;
-
-    const binding = applicable.find((doc) => doc.authority === 'binding');
-    const owner = binding || applicable[0];
-    const synthetic = new Set(scoped.filter((file) => file.synthetic).map((file) => file.rel));
-    // The injection shows a few; a re-check (guard outcomes) needs them all.
-    const cap = input.uncapped ? fresh.length : MAX_FINDINGS_PER_BLOCK;
-    blocks.push({
-      checker: id,
-      path: owner.path,
-      authority: binding ? 'binding' : 'advisory',
-      named_by_document: kind === 'markdown',
-      findings: fresh.slice(0, cap).map((finding) => ({
-        severity: finding.severity,
-        message: finding.message,
-        file: synthetic.has(finding.file) ? null : finding.file,
-        key: diffKey(finding)
-      })),
-      more: Math.max(0, fresh.length - cap)
-    });
-  }
-  return blocks;
+// One checker: the documents that address this agent, the files they scope,
+// and the violations the edit adds there.
+function checkerViolations(id, declaring, ctx) {
+  const applicable = declaring.filter((doc) => appliesToAgent(doc.frontmatter || {}, ctx.agent));
+  const scoped = ctx.postFiles.filter((file) => applicable.some((doc) => inPathScope(doc.frontmatter || {}, file.rel)));
+  if (scoped.length === 0) return null;
+  const fresh = freshFindings(ENFORCERS[id], ctx, declaring, scoped);
+  return fresh.length === 0 ? null : violationBlock(id, ctx, applicable, scoped, fresh);
 }
 
 /** A file the source checkers read line by line (rules:check's own extension set). */

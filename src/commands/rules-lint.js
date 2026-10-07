@@ -2,7 +2,8 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { parseFrontmatter, parseFlowList } = require('../preflight-engine');
+const { parseFrontmatter } = require('../preflight-engine');
+const { parseFrontmatterList: parseFlowList } = require('../lib/frontmatter');
 const { listAgentDefinitions, canonicalAgentId } = require('../agents');
 const { resolveTargetDir } = require('../lib/project-root');
 

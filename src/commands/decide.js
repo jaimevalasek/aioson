@@ -61,40 +61,50 @@ function logConsultation(logger, input, found, recommendation) {
 
 async function runDecide({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
-  const question = String(options.question || '').trim();
-  if (!question) {
+  const input = decideInput(options);
+  if (!input.question) {
     if (!options.json) logger.error('decide needs --question="<the decision to make>".');
     return { ok: false, status: 'question_required', exitCode: 1 };
   }
-  const input = {
-    question,
+  if (options.record) return record(targetDir, input, logger, Boolean(options.json));
+  return consult(targetDir, input, logger, Boolean(options.json));
+}
+
+const textOf = (value) => (value ? String(value).trim() : '');
+
+function decideInput(options) {
+  return {
+    question: textOf(options.question),
     options: listOf(options.options, '|'),
     evidence: options.evidence ? String(options.evidence) : '',
     agents: listOf(options.agents),
     paths: listOf(options.paths),
     triggers: listOf(options.triggers),
     aliases: listOf(options.aliases),
-    choice: options.choice ? String(options.choice).trim() : '',
+    choice: textOf(options.choice),
     why: options.why ? String(options.why) : '',
-    by: options.by ? String(options.by).trim() : ''
+    by: textOf(options.by)
   };
-  if (options.record) return record(targetDir, input, logger, Boolean(options.json));
+}
 
-  const found = await findPrecedent(targetDir, { question, agent: input.agents[0] || 'dev', paths: input.paths });
+function consultationStatus(recommendation) {
+  if (recommendation.status !== 'used') return 'undecided';
+  return recommendation.recommended ? 'recommended' : 'needs_a_human';
+}
+
+// Precedent first, with no model; only an undecided question reaches JEV.
+async function consult(targetDir, input, logger, json) {
+  const found = await findPrecedent(targetDir, { question: input.question, agent: input.agents[0] || 'dev', paths: input.paths });
   if (found.decisions.length > 0) {
     const result = { ok: true, status: 'precedent', precedent: found.decisions, governing: found.governing };
-    if (options.json) return result;
+    if (json) return result;
     logger.log('Already decided — follow it (a human changes it by editing or superseding the file):');
     for (const item of found.decisions) logger.log(`- ${item.decided} [${item.path}]`);
     return result;
   }
-
-  const recommendation = await recommendChoice({ projectDir: targetDir, question, options: input.options, evidence: input.evidence, governing: found.governing });
-  let status = 'undecided';
-  if (recommendation.status === 'used') status = recommendation.recommended ? 'recommended' : 'needs_a_human';
-  const result = { ok: true, status, governing: found.governing, jev: recommendation };
-  if (options.json) return result;
-  logConsultation(logger, input, found, recommendation);
+  const recommendation = await recommendChoice({ projectDir: targetDir, question: input.question, options: input.options, evidence: input.evidence, governing: found.governing });
+  const result = { ok: true, status: consultationStatus(recommendation), governing: found.governing, jev: recommendation };
+  if (!json) logConsultation(logger, input, found, recommendation);
   return result;
 }
 

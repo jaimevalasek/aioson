@@ -11,9 +11,11 @@ const { isRetiredDesignDocSeed } = require('./lib/design-doc-seed');
 
 // ─── Frontmatter parser ───────────────────────────────────────────────────────
 
-// Lives in lib/frontmatter.js; re-exported here for the many callers that
-// have always imported it from the engine.
-const { parseFrontmatter, parseFlowList, stripYamlComment } = require('./lib/frontmatter');
+// Lives in lib/frontmatter.js; the engine keeps `parseFrontmatter` as its API
+// for the many callers that have always imported it from here.
+const { parseFrontmatterText, parseFrontmatterList } = require('./lib/frontmatter');
+
+const parseFrontmatter = parseFrontmatterText;
 
 async function readFileSafe(filePath) {
   try {
@@ -449,7 +451,7 @@ async function detectClassification(targetDir, slug) {
 
 function parseAgentList(value) {
   if (value === undefined || value === null) return null;
-  return parseFlowList(value);
+  return parseFrontmatterList(value);
 }
 
 function appliesToAgent(frontmatter, agent) {
@@ -746,8 +748,6 @@ function extractLastCheckpoint(artifact) {
 
 module.exports = {
   parseFrontmatter,
-  parseFlowList,
-  stripYamlComment,
   readFileSafe,
   readFeatureArtifactSafe,
   featureDoneDir,

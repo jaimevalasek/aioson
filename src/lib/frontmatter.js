@@ -5,36 +5,58 @@
 // whatever shape the docs teach (inline or block lists, trailing comments,
 // quoted items) must read the same, because a list that parses differently
 // silently changes which agents receive a rule.
+//
+// Public names are this module's own (`parseFrontmatterText`,
+// `parseFrontmatterList`); preflight-engine keeps `parseFrontmatter` as the
+// engine API the commands have always imported.
 
-// A YAML comment opens at `#` that starts the value or follows whitespace —
-// never inside a quoted scalar or a quoted flow item. Without this, the
-// comments in the documented rule example stayed inside the values:
-// `agents: [planner, dev]  # only these` read as `["[planner", "dev] # only
-// these"]` and silently excluded the rule from BOTH agents.
-function stripYamlComment(value) {
+function isQuote(ch) {
+  return ch === '"' || ch === "'";
+}
+
+// One step inside a quoted run starting at `i`: where the scan resumes and
+// whether the quote is still open. `''` escapes a single quote, `\"` a double.
+function stepInQuote(text, i, quote) {
+  if (text[i] !== quote) return { i, quote };
+  if (quote === "'" && text[i + 1] === "'") return { i: i + 1, quote };
+  if (quote === '"' && text[i - 1] === '\\') return { i, quote };
+  return { i, quote: null };
+}
+
+// Index of the `#` that opens a YAML comment — at the start of the value or
+// after whitespace, never inside a quoted scalar or quoted flow item — or -1.
+function commentStart(value) {
   let quote = null;
   let atItemStart = true;
   for (let i = 0; i < value.length; i += 1) {
-    const ch = value[i];
     if (quote) {
-      if (ch !== quote) continue;
-      if (quote === "'" && value[i + 1] === "'") { i += 1; continue; }
-      if (quote === '"' && value[i - 1] === '\\') continue;
-      quote = null;
+      ({ i, quote } = stepInQuote(value, i, quote));
       continue;
     }
-    if ((ch === '"' || ch === "'") && atItemStart) { quote = ch; atItemStart = false; continue; }
-    if (ch === '#' && (i === 0 || /\s/.test(value[i - 1]))) return value.slice(0, i).trimEnd();
-    if (ch === '[' || ch === ',') { atItemStart = true; continue; }
-    if (!/\s/.test(ch)) atItemStart = false;
+    const ch = value[i];
+    if (isQuote(ch) && atItemStart) {
+      quote = ch;
+      atItemStart = false;
+      continue;
+    }
+    if (ch === '#' && (i === 0 || /\s/.test(value[i - 1]))) return i;
+    atItemStart = ch === '[' || ch === ',' || (atItemStart && /\s/.test(ch));
   }
-  return value;
+  return -1;
+}
+
+// Without this, the comments in the documented rule example stayed inside the
+// values: `agents: [planner, dev]  # only these` read as `["[planner", "dev] #
+// only these"]` and silently excluded the rule from BOTH agents.
+function stripYamlComment(value) {
+  const at = commentStart(value);
+  return at < 0 ? value : value.slice(0, at).trimEnd();
 }
 
 function unquoteScalar(text) {
   const value = String(text).trim();
   const first = value[0];
-  if (value.length >= 2 && (first === '"' || first === "'") && value[value.length - 1] === first) {
+  if (value.length >= 2 && isQuote(first) && value[value.length - 1] === first) {
     const inner = value.slice(1, -1);
     return first === "'" ? inner.replace(/''/g, "'") : inner.replace(/\\"/g, '"');
   }
@@ -46,28 +68,25 @@ function unquoteScalar(text) {
 // phrase such as "criar pastas, subpastas" stays one phrase.
 function splitFlowItems(body) {
   const items = [];
-  let current = '';
+  let start = 0;
   let quote = null;
   for (let i = 0; i < body.length; i += 1) {
-    const ch = body[i];
     if (quote) {
-      current += ch;
-      if (ch !== quote) continue;
-      if (quote === "'" && body[i + 1] === "'") { current += "'"; i += 1; continue; }
-      if (quote === '"' && body[i - 1] === '\\') continue;
-      quote = null;
+      ({ i, quote } = stepInQuote(body, i, quote));
       continue;
     }
-    if ((ch === '"' || ch === "'") && current.trim() === '') { quote = ch; current += ch; continue; }
-    if (ch === ',') { items.push(current); current = ''; continue; }
-    current += ch;
+    if (isQuote(body[i]) && body.slice(start, i).trim() === '') quote = body[i];
+    else if (body[i] === ',') {
+      items.push(body.slice(start, i));
+      start = i + 1;
+    }
   }
-  items.push(current);
+  items.push(body.slice(start));
   return items.map((item) => unquoteScalar(item)).filter(Boolean);
 }
 
 /** List-valued frontmatter (`[a, b]`, `a, b`, or a block list) as an array of strings. */
-function parseFlowList(value) {
+function parseFrontmatterList(value) {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
   if (value === undefined || value === null) return [];
   const raw = String(value).trim();
@@ -106,60 +125,58 @@ function readBlockSequence(lines, start) {
     last = j;
   }
   if (items.length === 0) return null;
-  const flow = items.map((item) => {
-    if (/^["']/.test(item) || !/[,[\]]/.test(item)) return item;
-    return `"${item.replace(/"/g, '\\"')}"`;
-  });
+  const flow = items.map((item) => (/^["']/.test(item) || !/[,[\]]/.test(item) ? item : `"${item.replace(/"/g, '\\"')}"`));
   return { value: `[${flow.join(', ')}]`, last };
 }
 
-function parseFrontmatter(content) {
+// YAML block scalars (`description: >-` / `|`): the value is the indented
+// block that follows — folded (`>`) joins the lines with a space, literal
+// (`|`) keeps the line breaks. Without this the indicator itself (`>-`) was
+// the value and every continuation line holding a colon became a bogus key —
+// the shipped design engine's description was unreadable to the selector and
+// printed as `>-` by skill:list.
+function readBlockScalar(lines, start, style) {
+  const parts = [];
+  let last = start;
+  while (last + 1 < lines.length && (/^\s/.test(lines[last + 1]) || lines[last + 1].trim() === '')) {
+    last += 1;
+    parts.push(lines[last].trim());
+  }
+  while (parts.length > 0 && parts[parts.length - 1] === '') parts.pop();
+  const value = style === '>' ? parts.join(' ').replace(/\s+/g, ' ').trim() : parts.join('\n').trim();
+  return { value, last };
+}
+
+// One `key: value` entry starting at line `i`, or null for a line that is not
+// one (a comment, a stray line). `last` is the final line the entry consumed.
+function readEntry(lines, i) {
+  const line = lines[i];
+  const colonIdx = line.indexOf(':');
+  if (line.trim().startsWith('#') || colonIdx === -1) return null;
+  const key = line.slice(0, colonIdx).trim();
+  const value = stripYamlComment(line.slice(colonIdx + 1).trim());
+  const sequence = value === '' ? readBlockSequence(lines, i + 1) : null;
+  if (sequence) return { key, ...sequence };
+  const block = /^([>|])[+-]?$/.exec(value);
+  if (block) return { key, ...readBlockScalar(lines, i, block[1]) };
+  return { key, value: value.startsWith('[') ? value : unquoteScalar(value), last: i };
+}
+
+function parseFrontmatterText(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return {};
   const result = {};
   const lines = match[1].split(/\r?\n/);
   for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (line.trim().startsWith('#')) continue;
-    const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
-    const key = line.slice(0, colonIdx).trim();
-    let value = stripYamlComment(line.slice(colonIdx + 1).trim());
-    if (value === '') {
-      const sequence = readBlockSequence(lines, i + 1);
-      if (sequence) {
-        if (key) result[key] = sequence.value;
-        i = sequence.last;
-        continue;
-      }
-    }
-    // YAML block scalars (`description: >-` / `|`): the value is the indented
-    // block that follows — folded (`>`) joins the lines with a space, literal
-    // (`|`) keeps the line breaks. Without this the indicator itself (`>-`)
-    // was the value and every continuation line holding a colon became a
-    // bogus key — the shipped design engine's description was unreadable to
-    // the selector and printed as `>-` by skill:list.
-    const block = /^([>|])[+-]?$/.exec(value);
-    if (block) {
-      const parts = [];
-      while (i + 1 < lines.length && (/^\s/.test(lines[i + 1]) || lines[i + 1].trim() === '')) {
-        i += 1;
-        parts.push(lines[i].trim());
-      }
-      while (parts.length > 0 && parts[parts.length - 1] === '') parts.pop();
-      value = block[1] === '>'
-        ? parts.join(' ').replace(/\s+/g, ' ').trim()
-        : parts.join('\n').trim();
-    } else if (!value.startsWith('[')) {
-      value = unquoteScalar(value);
-    }
-    if (key) result[key] = value;
+    const entry = readEntry(lines, i);
+    if (!entry) continue;
+    if (entry.key) result[entry.key] = entry.value;
+    i = entry.last;
   }
   return result;
 }
 
 module.exports = {
-  parseFrontmatter,
-  parseFlowList,
-  stripYamlComment
+  parseFrontmatterText,
+  parseFrontmatterList
 };

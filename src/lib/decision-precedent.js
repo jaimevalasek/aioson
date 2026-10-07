@@ -58,18 +58,10 @@ async function findPrecedent(projectDir, { question, agent = 'dev', paths = [] }
 async function recommendChoice(input) {
   const options = input.options || [];
   if (options.length < 2) return { status: 'no_options' };
-  const config = input.config || loadJevConfig(input.projectDir, input.env || process.env);
-  if (!config || config.status !== 'ready' || !config.enabled) return { status: config ? config.status : 'unconfigured' };
-  const criteria = {};
-  options.forEach((option, index) => { criteria[`option_${index}`] = option; });
-  criteria[NEEDS_A_HUMAN] = 'None of the options fits, or the evidence does not settle it — a human must decide.';
-  const questions = {
-    decide: {
-      type: 'choice',
-      instructions: 'Which option should the project adopt for `question`, given `evidence` and the `governing` project knowledge? Choose needs_a_human when the evidence does not settle it.',
-      criteria
-    }
-  };
+  const ready = readyJevConfig(input);
+  if (!ready.config) return { status: ready.status };
+  const { config } = ready;
+  const { criteria, questions } = choiceQuestions(options);
   const response = await requestJev({
     config,
     state: { question: input.question, options, evidence: String(input.evidence || '').slice(0, 1500), governing: input.governing || [] },
@@ -80,18 +72,45 @@ async function recommendChoice(input) {
   });
   if (!response.ok) return { status: 'unavailable', reason: response.reason };
   if (validateAnswers(questions, response.answers).length > 0) return { status: 'unavailable', reason: 'invalid_response' };
-  const answer = response.answers.decide;
+  return readRecommendation(response.answers.decide, criteria, response.model || config.model);
+}
+
+// `{ config }` when JEV is ready, otherwise `{ status }` naming why it is not.
+function readyJevConfig(input) {
+  const config = input.config || loadJevConfig(input.projectDir, input.env || process.env);
+  if (!config) return { status: 'unconfigured' };
+  return config.status === 'ready' && config.enabled ? { config } : { status: config.status };
+}
+
+function choiceQuestions(options) {
+  const criteria = {};
+  options.forEach((option, index) => { criteria[`option_${index}`] = option; });
+  criteria[NEEDS_A_HUMAN] = 'None of the options fits, or the evidence does not settle it — a human must decide.';
+  return {
+    criteria,
+    questions: {
+      decide: {
+        type: 'choice',
+        instructions: 'Which option should the project adopt for `question`, given `evidence` and the `governing` project knowledge? Choose needs_a_human when the evidence does not settle it.',
+        criteria
+      }
+    }
+  };
+}
+
+function readRecommendation(answer, criteria, model) {
   const probability = answer.probabilities[answer.choice];
-  const proposed = answer.choice === NEEDS_A_HUMAN ? null : criteria[answer.choice];
+  const needsAHuman = answer.choice === NEEDS_A_HUMAN;
+  const proposed = needsAHuman ? null : criteria[answer.choice];
   const confident = Boolean(proposed) && answer.confidence >= MIN_CONFIDENCE && probability >= MIN_PROBABILITY;
   return {
     status: 'used',
     recommended: confident ? proposed : null,
     proposed,
-    needs_a_human: answer.choice === NEEDS_A_HUMAN,
+    needs_a_human: needsAHuman,
     confidence: answer.confidence,
     probability,
-    model: response.model || config.model
+    model
   };
 }
 
@@ -140,7 +159,6 @@ async function recordDecision(projectDir, input) {
 }
 
 module.exports = {
-  DECISIONS_PREFIX,
   findPrecedent,
   recommendChoice,
   recordDecision,

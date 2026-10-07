@@ -42,48 +42,10 @@ async function currentKeys(targetDir, { agent, file, kind }) {
 async function collectGuardOutcomes(targetDir, options = {}) {
   if (!(await runtimeStoreExists(targetDir))) return { available: false };
   const sinceDays = Number(options.sinceDays) > 0 ? Number(options.sinceDays) : DEFAULT_SINCE_DAYS;
-  const since = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
-  const handle = await openRuntimeDb(targetDir, { mustExist: true });
-  let rows;
-  try {
-    rows = handle.db.prepare(
-      "SELECT agent_name, payload_json FROM execution_events WHERE source = 'context_guard' AND event_type = 'guard_injected' AND created_at >= ? ORDER BY created_at ASC, id ASC"
-    ).all(since);
-  } finally {
-    handle.db.close();
-  }
-
-  const rules = new Map();
-  const ruleOf = (rulePath) => {
-    if (!rules.has(rulePath)) rules.set(rulePath, { path: rulePath, injections: 0, with_violations: 0, fixed: 0, still_present: 0, file_gone: 0 });
-    return rules.get(rulePath);
-  };
-  const recorded = new Map(); // file|agent|kind → Set of rule|key
-  for (const row of rows) {
-    const payload = parsePayload(row.payload_json);
-    if (!payload) continue;
-    for (const rulePath of payload.rules || []) ruleOf(rulePath).injections += 1;
-    for (const violation of payload.violations || []) {
-      if (!violation.keys || violation.keys.length === 0) continue;
-      ruleOf(violation.rule).with_violations += 1;
-      const group = `${payload.file}\u0000${row.agent_name || 'dev'}\u0000${violation.kind || 'code'}`;
-      if (!recorded.has(group)) recorded.set(group, new Set());
-      for (const key of violation.keys) recorded.get(group).add(`${violation.rule}|${key}`);
-    }
-  }
-
-  for (const [group, keys] of recorded) {
-    const [file, agent, kind] = group.split('\u0000');
-    const now = await currentKeys(targetDir, { agent, file, kind });
-    for (const entry of keys) {
-      const rule = ruleOf(entry.slice(0, entry.indexOf('|')));
-      if (now === null) rule.file_gone += 1;
-      else if (now.has(entry)) rule.still_present += 1;
-      else rule.fixed += 1;
-    }
-  }
-
-  const ruleRows = [...rules.values()].sort((a, b) => (b.injections - a.injections) || a.path.localeCompare(b.path));
+  const rows = await readGuardRows(targetDir, new Date(Date.now() - sinceDays * 86_400_000).toISOString());
+  const table = ruleTable();
+  await recheck(targetDir, foldInjections(rows, table), table);
+  const ruleRows = [...table.rules.values()].sort((a, b) => (b.injections - a.injections) || a.path.localeCompare(b.path));
   const sum = (field) => ruleRows.reduce((total, rule) => total + rule[field], 0);
   return {
     available: true,
@@ -96,6 +58,60 @@ async function collectGuardOutcomes(targetDir, options = {}) {
     },
     rules: ruleRows
   };
+}
+
+async function readGuardRows(targetDir, since) {
+  const handle = await openRuntimeDb(targetDir, { mustExist: true });
+  try {
+    return handle.db.prepare(
+      "SELECT agent_name, payload_json FROM execution_events WHERE source = 'context_guard' AND event_type = 'guard_injected' AND created_at >= ? ORDER BY created_at ASC, id ASC"
+    ).all(since);
+  } finally {
+    handle.db.close();
+  }
+}
+
+function ruleTable() {
+  const rules = new Map();
+  const of = (rulePath) => {
+    if (!rules.has(rulePath)) rules.set(rulePath, { path: rulePath, injections: 0, with_violations: 0, fixed: 0, still_present: 0, file_gone: 0 });
+    return rules.get(rulePath);
+  };
+  return { rules, of };
+}
+
+// Counts injections per rule and groups the recorded violation keys by the
+// file, agent and reading that produced them: file|agent|kind → rule|key set.
+function foldInjections(rows, table) {
+  const recorded = new Map();
+  for (const row of rows) {
+    const payload = parsePayload(row.payload_json);
+    if (payload) foldPayload(payload, row.agent_name || 'dev', table, recorded);
+  }
+  return recorded;
+}
+
+function foldPayload(payload, agent, table, recorded) {
+  for (const rulePath of payload.rules || []) table.of(rulePath).injections += 1;
+  for (const violation of (payload.violations || []).filter((entry) => entry.keys && entry.keys.length > 0)) {
+    table.of(violation.rule).with_violations += 1;
+    const group = `${payload.file}\u0000${agent}\u0000${violation.kind || 'code'}`;
+    if (!recorded.has(group)) recorded.set(group, new Set());
+    violation.keys.forEach((key) => recorded.get(group).add(`${violation.rule}|${key}`));
+  }
+}
+
+function outcomeOf(now, entry) {
+  if (now === null) return 'file_gone';
+  return now.has(entry) ? 'still_present' : 'fixed';
+}
+
+async function recheck(targetDir, recorded, table) {
+  for (const [group, keys] of recorded) {
+    const [file, agent, kind] = group.split('\u0000');
+    const now = await currentKeys(targetDir, { agent, file, kind });
+    for (const entry of keys) table.of(entry.slice(0, entry.indexOf('|')))[outcomeOf(now, entry)] += 1;
+  }
 }
 
 module.exports = { collectGuardOutcomes };

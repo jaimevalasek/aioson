@@ -13,31 +13,37 @@ async function recordBriefEvent(targetDir, result, featureSlug) {
     const { openRuntimeDb, appendContextBriefEvent } = require('../runtime-store');
     handle = await openRuntimeDb(targetDir, { mustExist: true });
     if (!handle || !handle.db) return;
-    const payload = {
-      mode: result.mode,
-      task_chars: String(result.task || '').length,
-      must_load: (result.must_load || []).map((item) => item.path).slice(0, 40),
-      should_load: (result.should_load || []).map((item) => item.path).slice(0, 40),
-      skills: (result.skills || []).map((item) => item.path),
-      // Recall is offered too: a doc loaded from `related` is not a routing gap.
-      related: (result.related || []).map((item) => item.path).slice(0, 6),
-      confidence: result.confidence,
-      // A workflow-only task routes no domain rule; context:usage and
-      // agent:done count these separately from a real consultation.
-      generic_task: Boolean(result.task_vocabulary && result.task_vocabulary.generic)
-    };
-    if (result.jev_filter) {
-      payload.jev = { status: result.jev_filter.status, offered: result.jev_filter.offered, pruned: (result.pruned || []).map((item) => item.path) };
-    }
-    if (featureSlug) payload.feature_slug = String(featureSlug).trim();
     appendContextBriefEvent(handle.db, {
       agentName: result.agent,
       message: `brief_built:${result.mode}`,
-      payload
+      payload: briefPayload(result, featureSlug)
     });
   } catch { /* telemetry is advisory */ } finally {
     if (handle && handle.db) { try { handle.db.close(); } catch { /* closed */ } }
   }
+}
+
+const pathsOf = (items, limit) => (items || []).map((item) => item.path).slice(0, limit);
+
+function briefPayload(result, featureSlug) {
+  const payload = {
+    mode: result.mode,
+    task_chars: String(result.task || '').length,
+    must_load: pathsOf(result.must_load, 40),
+    should_load: pathsOf(result.should_load, 40),
+    skills: pathsOf(result.skills),
+    // Recall is offered too: a doc loaded from `related` is not a routing gap.
+    related: pathsOf(result.related, 6),
+    confidence: result.confidence,
+    // A workflow-only task routes no domain rule; context:usage and
+    // agent:done count these separately from a real consultation.
+    generic_task: Boolean(result.task_vocabulary && result.task_vocabulary.generic)
+  };
+  if (result.jev_filter) {
+    payload.jev = { status: result.jev_filter.status, offered: result.jev_filter.offered, pruned: pathsOf(result.pruned) };
+  }
+  if (featureSlug) payload.feature_slug = String(featureSlug).trim();
+  return payload;
 }
 
 // A large optional file names the lines worth reading, never the whole file.
