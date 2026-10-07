@@ -23,7 +23,9 @@ async function runContextGuard({ args, options = {}, logger }) {
   try {
     response = await buildGuardResponse(event || {}, targetDir, {
       tool: options.tool || 'claude',
-      agent: await resolveGuardAgentAt(targetDir, options, event)
+      agent: await resolveGuardAgentAt(targetDir, options, event),
+      // A configured JEV judges vocabulary-only injections; --no-jev skips it.
+      jevFilter: options['no-jev'] ? null : { env: process.env }
     });
   } catch {
     // The guard is advisory and runs on the PreToolUse hot path. Any internal

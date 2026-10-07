@@ -105,6 +105,15 @@ Uma regra com verificador determinístico (`enforcement:`) também é injetada q
 - Respeita `agents:` e `paths:` da regra. Markdown fora de `.aioson/` (docs, notas em `plans/` e `research/`, README/CHANGELOG) e os próprios arquivos de governança (`.aioson/rules`, `docs`, `skills`) nunca são julgados: eles falam SOBRE o produto e citam contraexemplos de propósito.
 - A injeção traz o achado (`HIGH non-English filename "servicoCliente"`) junto com as duas primeiras restrições da regra. Só achados `HIGH` disparam.
 
+### O Jev como juiz das injeções por vocabulário
+
+Com o Jev ativo no `aioson-models.json`, uma regra que o guard escolheu **só por vocabulário** (nenhum verificador mediu violação) passa por mais uma pergunta: "esta regra governa a mudança que está sendo escrita neste arquivo? Compartilhar uma palavra não basta". Abaixo de `min_noul`, a regra sai da injeção. É o caso de "cadastro" puxando a regra de formulário para uma referência de CLI.
+
+- Uma violação medida nunca vai ao juiz.
+- O veredito de cada par (regra, arquivo) vale para a sessão por 10 minutos, então a mesma regra não é julgada a cada edição do mesmo arquivo.
+- Prazo de 3 s, sem nova tentativa. Jev desligado, fora do ar ou com resposta incompleta mantém a injeção: o guard nunca fica mais quieto porque o juiz falhou.
+- `--no-jev` desliga o julgamento.
+
 ### `guard_surfaces:` — vincular a regra ao tipo de artefato
 
 As quatro regras de interação do framework (`form-fields-masks-and-validation`, `status-change-confirmation`, `status-flow-drag-and-drop`, `management-home-widgets`) declaram `guard_surfaces: [ui]`. Hoje `ui` é o único tipo, e o guard o detecta assim:

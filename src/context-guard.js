@@ -8,6 +8,7 @@ const { buildContextBrief, extractDocConstraints, rankForStack } = require('./co
 const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 const { parseListValue, pathMatchesPattern } = require('./context-selector');
 const { detectEditViolations, isSourceFile } = require('./lib/edit-time-enforcement');
+const { judgeGuardRules } = require('./lib/jev-context-filter');
 
 // Harness-agnostic core for `context:guard`.
 //
@@ -367,6 +368,69 @@ function pruneClaims(dir, now = Date.now()) {
   }
 }
 
+// A JEV verdict on (rule, file) holds for the session: the same rule is not
+// re-judged on every edit of the same file. Same directory and TTL as the
+// event claims, so one prune serves both.
+function verdictKey(event, rulePath, relPath) {
+  const session = event && event.session_id;
+  if (!session) return '';
+  return `v-${crypto.createHash('sha256').update(JSON.stringify([session, rulePath, relPath])).digest('hex').slice(0, 32)}`;
+}
+
+function readVerdict(claimDir, key, now = Date.now()) {
+  if (!key) return null;
+  try {
+    const file = path.join(claimDir, key);
+    if (now - fs.statSync(file).mtimeMs > CLAIM_TTL_MS) return null;
+    return fs.readFileSync(file, 'utf8') === 'keep';
+  } catch {
+    return null;
+  }
+}
+
+function writeVerdict(claimDir, key, keep) {
+  if (!key) return;
+  try {
+    fs.mkdirSync(claimDir, { recursive: true });
+    fs.writeFileSync(path.join(claimDir, key), keep ? 'keep' : 'drop');
+  } catch { /* an unwritable temp dir only costs a re-judgment */ }
+}
+
+/**
+ * With JEV ready, a rule injected only by vocabulary (no checker backed it)
+ * must also be judged to govern this write; a measured violation needs no
+ * judge. Every failure keeps the injection — the guard never goes quieter
+ * because the judge is down.
+ */
+async function judgeVocabularyBlocks(targetDir, event, blocks, violations, input) {
+  if (!input.jevFilter || blocks.length === 0) return { blocks, report: null };
+  const claimDir = input.claimDir || CLAIM_DIR;
+  const proven = new Set(violations.map((violation) => violation.path));
+  const remembered = new Map();
+  const toJudge = [];
+  for (const block of blocks) {
+    if (proven.has(block.path)) continue;
+    const verdict = readVerdict(claimDir, verdictKey(event, block.path, input.relPath));
+    if (verdict === null) toJudge.push(block);
+    else remembered.set(block.path, verdict);
+  }
+  let report = null;
+  if (toJudge.length > 0) {
+    const rules = [];
+    for (const block of toJudge) {
+      const content = await readFileSafe(path.join(targetDir, block.path));
+      rules.push({ path: block.path, about: String(parseFrontmatter(content || '').description || ''), constraints: block.constraints });
+    }
+    const judged = await judgeGuardRules({ ...input.jevFilter, projectDir: targetDir, file: input.relPath, excerpt: input.content, rules });
+    report = judged.report;
+    for (const [rulePath, keep] of judged.keep) {
+      remembered.set(rulePath, keep);
+      if (report.status === 'used') writeVerdict(claimDir, verdictKey(event, rulePath, input.relPath), keep);
+    }
+  }
+  return { blocks: blocks.filter((block) => remembered.get(block.path) !== false), report };
+}
+
 function claimGuardEvent(event, claimDir = CLAIM_DIR) {
   const identity = eventIdentity(event);
   if (!identity) return true;
@@ -443,7 +507,10 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   const violations = violationKind
     ? await detectEditViolations(targetDir, { agent, rel: relPath, kind: violationKind, toolName, toolInput })
     : [];
-  const ruleBlocks = await withViolations(targetDir, vocabularyBlocks, violations, gate, stack);
+  const judged = await judgeVocabularyBlocks(targetDir, event, vocabularyBlocks, violations, {
+    jevFilter: options.jevFilter, claimDir: options.claimDir, relPath, content
+  });
+  const ruleBlocks = await withViolations(targetDir, judged.blocks, violations, gate, stack);
   if (ruleBlocks.length === 0) return emptyResponse();
 
   const additionalContext = formatInjectionText(filePath, ruleBlocks);
@@ -452,7 +519,8 @@ async function buildGuardResponse(event, targetDir, options = {}) {
     injected: true,
     rules: ruleBlocks.map((block) => block.path),
     confidence: brief.confidence,
-    violations: violations.reduce((sum, block) => sum + block.findings.length + block.more, 0)
+    violations: violations.reduce((sum, block) => sum + block.findings.length + block.more, 0),
+    ...(judged.report ? { jev: judged.report } : {})
   };
   return response;
 }

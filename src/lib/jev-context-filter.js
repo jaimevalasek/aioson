@@ -108,7 +108,91 @@ async function pruneOptionalContext(input) {
   };
 }
 
+/**
+ * The brief's adapter: should_load and skills are judged as one ranked list
+ * (should_load first) and handed back in their own slots. Without a filter the
+ * brief is returned as selected.
+ */
+async function judgeBriefOptional(projectDir, jevFilter, input) {
+  const { shouldLoad, skills } = input;
+  if (!jevFilter) return { shouldLoad, skills, report: null, pruned: [] };
+  const tagged = [...shouldLoad.map((item) => ({ ...item, slot: 'should_load' })), ...skills.map((item) => ({ ...item, slot: 'skills' }))];
+  const result = await pruneOptionalContext({
+    projectDir,
+    env: jevFilter.env,
+    config: jevFilter.config,
+    fetchImpl: jevFilter.fetchImpl,
+    task: input.task,
+    agent: input.agent,
+    mode: input.mode,
+    paths: input.paths,
+    items: tagged,
+    describe: input.describe
+  });
+  const untag = (slot) => result.items.filter((item) => item.slot === slot).map(({ slot: _slot, ...item }) => item);
+  return { shouldLoad: untag('should_load'), skills: untag('skills'), report: result.report, pruned: result.pruned };
+}
+
+const GUARD_TIMEOUT_MS = 3000;
+
+/**
+ * Does each vocabulary-selected rule govern the write being made? Used by
+ * context:guard for injections no checker backed: a rule that shares a word
+ * with a file is the noise class ("cadastro" pulling the form rule into a CLI
+ * reference). Returns, per rule path, whether to keep it — every rule is kept
+ * when JEV is not ready or does not answer cleanly.
+ *
+ * @param {{ config?: object, projectDir?: string, env?: object, fetchImpl?: Function,
+ *   file: string, excerpt: string, rules: Array<{ path: string, about: string, constraints: string[] }> }} input
+ * @returns {Promise<{ keep: Map<string, boolean>, report: object }>}
+ */
+async function judgeGuardRules(input) {
+  const keepAll = (report) => ({ keep: new Map(input.rules.map((rule) => [rule.path, true])), report });
+  if (input.rules.length === 0) return keepAll({ status: 'nothing_to_judge' });
+  const config = input.config || loadJevConfig(input.projectDir, input.env || process.env);
+  if (!config || config.status !== 'ready' || !config.enabled) return keepAll({ status: config ? config.status : 'unconfigured' });
+
+  const questions = {};
+  input.rules.forEach((_, index) => {
+    questions[`applies_${index}`] = {
+      type: 'noul',
+      instructions: `Does \`rules[${index}]\` govern the change being written to \`file\`? Sharing a word with the file is not enough.`,
+      criteria: {
+        true: 'The change builds or edits what the rule governs.',
+        false: 'The file is about something else, or only mentions the rule\'s subject.'
+      }
+    };
+  });
+  const response = await requestJev({
+    config,
+    state: {
+      file: input.file,
+      excerpt: String(input.excerpt || '').slice(0, 1500),
+      rules: input.rules.map((rule) => ({ path: rule.path, about: String(rule.about || '').slice(0, 300), says: rule.constraints.slice(0, 3) }))
+    },
+    questions,
+    fetchImpl: input.fetchImpl || globalThis.fetch,
+    timeoutMs: GUARD_TIMEOUT_MS,
+    retries: 0
+  });
+  if (!response.ok) return keepAll({ status: 'unavailable', reason: response.reason });
+  const scores = input.rules.map((_, index) => {
+    const value = response.answers && response.answers[`applies_${index}`] && response.answers[`applies_${index}`].noul;
+    return typeof value === 'number' && !Number.isNaN(value) ? value : null;
+  });
+  if (scores.some((score) => score === null) || validateAnswers(questions, response.answers).length > 0) {
+    return keepAll({ status: 'unavailable', reason: 'invalid_response' });
+  }
+  const keep = new Map(input.rules.map((rule, index) => [rule.path, scores[index] >= config.minNoul]));
+  return {
+    keep,
+    report: { status: 'used', judged: input.rules.length, dropped: [...keep.values()].filter((value) => !value).length, min_noul: config.minNoul }
+  };
+}
+
 module.exports = {
   OPTIONAL_BUDGET,
+  judgeBriefOptional,
+  judgeGuardRules,
   pruneOptionalContext
 };
