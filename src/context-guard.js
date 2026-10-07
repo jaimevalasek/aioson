@@ -7,6 +7,7 @@ const path = require('node:path');
 const { buildContextBrief, extractDocConstraints, rankForStack } = require('./context-brief');
 const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 const { parseListValue, pathMatchesPattern } = require('./context-selector');
+const { detectEditViolations, isSourceFile } = require('./lib/edit-time-enforcement');
 
 // Harness-agnostic core for `context:guard`.
 //
@@ -144,7 +145,8 @@ const GUARD_GATE = {
   minConfidence: 'medium', // 'low' briefs never inject
   maxConstraints: 10,
   maxForbidden: 6,
-  maxContentChars: 4000
+  maxContentChars: 4000,
+  maxViolationConstraints: 2 // the finding is the message; the rule only frames it
 };
 
 const CONFIDENCE_RANK = { low: 0, medium: 1, high: 2 };
@@ -261,13 +263,73 @@ async function buildRuleBlocks(targetDir, salient, gate, surfaceKinds = null, pa
   return blocks;
 }
 
+// What the violation checkers read: source files by their lines, and the
+// Markdown that DECIDES code — plans, specs, architecture and design docs,
+// execution manifests under `.aioson/` — by the code it names. Reports, PRDs,
+// dossiers, archives, docs and notes describe or quote code; measured on 60
+// commits of a real consumer, judging them flagged QA reports for quoting the
+// identifiers they were reporting on.
+const AIOSON_ARTIFACT = /^\.aioson\//;
+const ARCHIVED_ARTIFACT = /^\.aioson\/context\/(?:done|abandoned)\//;
+const DECISION_DOC = /(?:^|[-_.])(?:implementation-plan|plan|spec|architecture|design-doc|manifest|tasks?)(?:[-_.]|$)/i;
+const PLANS_TREE = /\/(?:simple-)?plans\//;
+const DESCRIPTIVE_DOC = /report|dossier|evidence|audit|retro|review/i;
+
+function isDecisionArtifact(relPath) {
+  if (!AIOSON_ARTIFACT.test(relPath) || ARCHIVED_ARTIFACT.test(relPath)) return false;
+  const stem = path.basename(relPath).replace(/\.mdx?$/i, '');
+  if (DESCRIPTIVE_DOC.test(stem)) return false;
+  return DECISION_DOC.test(stem) || PLANS_TREE.test(relPath);
+}
+
+function editedFileKind(relPath) {
+  if (isSourceFile(relPath)) return 'code';
+  const ext = path.extname(relPath).toLowerCase();
+  if (!DOC_FILE_EXTENSIONS.has(ext) || !isDecisionArtifact(relPath)) return null;
+  return 'markdown';
+}
+
+// A measured violation leads the injection: it names the exact line to change.
+// The rule it breaks contributes a few of its constraints when the vocabulary
+// pass had not already selected it.
+async function withViolations(targetDir, blocks, violations, gate, stack) {
+  const merged = blocks.map((block) => ({ ...block, findings: [], more: 0 }));
+  for (const violation of violations) {
+    let block = merged.find((item) => item.path === violation.path);
+    if (!block) {
+      const content = await readFileSafe(path.join(targetDir, violation.path));
+      if (!content) continue;
+      const constraints = dedupeStrings(rankForStack(extractDocConstraints(content).constraints, stack))
+        .slice(0, gate.maxViolationConstraints);
+      block = { path: violation.path, constraints, forbidden: [], findings: [], more: 0 };
+      merged.push(block);
+    }
+    block.authority = violation.authority;
+    block.named_by_document = violation.named_by_document;
+    block.findings.push(...violation.findings);
+    block.more += violation.more;
+  }
+  return merged.sort((a, b) => Number(b.findings.length > 0) - Number(a.findings.length > 0));
+}
+
 function formatInjectionText(filePath, ruleBlocks) {
   const target = filePath ? path.basename(String(filePath)) : 'this change';
   const lines = [`[AIOSON context:guard] Project rules apply to ${target}:`];
   for (const block of ruleBlocks) {
-    lines.push(`Rule ${block.path}:`);
+    lines.push(`${block.authority === 'advisory' ? 'Guidance' : 'Rule'} ${block.path}:`);
     for (const constraint of block.constraints) lines.push(`- ${constraint}`);
     for (const pattern of block.forbidden) lines.push(`- (forbidden) ${pattern}`);
+    if (block.findings && block.findings.length > 0) {
+      lines.push(block.named_by_document
+        ? 'Detected in the code this document names — rename before it is built:'
+        : 'Detected in this change — fix it in this edit:');
+      for (const finding of block.findings) {
+        // The block header already names the rule; the finding keeps its reason.
+        const message = String(finding.message).replace(/\s*—\s*see \S+\.md/, '');
+        lines.push(`- ${finding.severity} ${message}${finding.file ? ` [${finding.file}]` : ''}`);
+      }
+      if (block.more > 0) lines.push(`- … ${block.more} more (aioson rules:check . --changed)`);
+    }
   }
   return lines.join('\n');
 }
@@ -352,22 +414,36 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   const query = deriveQuery(filePath, content, gate.maxContentChars);
   if (!query) return emptyResponse();
 
+  const agent = options.agent || 'dev';
   const brief = await buildContextBrief(targetDir, {
-    agent: options.agent || 'dev',
+    agent,
     mode: 'executing',
     task: query,
     paths: filePath
   });
-
-  const ruled = matchedRules(brief);
-  if (ruled.length === 0) return emptyResponse();
-  if (!confidenceAllows(brief.confidence, gate)) return emptyResponse();
+  const stack = brief.intent && brief.intent.stack;
 
   const pathCandidates = guardPathCandidates(targetDir, filePath);
   // Classify by the project-relative path: the folders above the project root
   // (a checkout under `.../research/` or `.../tests/`) say nothing about the file.
-  const surfaceKinds = detectSurfaceKinds(pathCandidates[pathCandidates.length - 1] || filePath, content);
-  const ruleBlocks = await buildRuleBlocks(targetDir, ruled, gate, surfaceKinds, pathCandidates, brief.intent && brief.intent.stack, isGovernanceArtifact(filePath));
+  const relPath = String(pathCandidates[pathCandidates.length - 1] || filePath).replace(/\\/g, '/');
+  const surfaceKinds = detectSurfaceKinds(relPath, content);
+  const governanceArtifact = isGovernanceArtifact(filePath);
+
+  // Vocabulary salience: the brief routed a rule through a hard signal.
+  const ruled = matchedRules(brief);
+  const vocabularyBlocks = ruled.length > 0 && confidenceAllows(brief.confidence, gate)
+    ? await buildRuleBlocks(targetDir, ruled, gate, surfaceKinds, pathCandidates, stack, governanceArtifact)
+    : [];
+  // Violation salience: a rule's own checker finds a NEW violation in what is
+  // being written — the naming rule speaks when `servicoCliente.js` is written,
+  // whether or not the text says "naming". Governance files author the law and
+  // quote its counter-examples, so they are never judged by it.
+  const violationKind = governanceArtifact ? null : editedFileKind(relPath);
+  const violations = violationKind
+    ? await detectEditViolations(targetDir, { agent, rel: relPath, kind: violationKind, toolName, toolInput })
+    : [];
+  const ruleBlocks = await withViolations(targetDir, vocabularyBlocks, violations, gate, stack);
   if (ruleBlocks.length === 0) return emptyResponse();
 
   const additionalContext = formatInjectionText(filePath, ruleBlocks);
@@ -375,7 +451,8 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   response._guard = {
     injected: true,
     rules: ruleBlocks.map((block) => block.path),
-    confidence: brief.confidence
+    confidence: brief.confidence,
+    violations: violations.reduce((sum, block) => sum + block.findings.length + block.more, 0)
   };
   return response;
 }
@@ -385,6 +462,7 @@ module.exports = {
   claimGuardEvent,
   deriveQuery,
   detectSurfaceKinds,
+  editedFileKind,
   isGovernanceArtifact,
   outsideProject,
   extractEditedContent,

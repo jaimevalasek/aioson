@@ -374,5 +374,8 @@ test('discovery reads every governance surface and every checker is well formed'
     assert.equal(enforcer.id, id, `${id} must carry its own id`);
     assert.equal(typeof enforcer.run, 'function');
     assert.ok(enforcer.summary && enforcer.summary.length > 10, `${id} needs a human-readable summary`);
+    // `file` checkers also judge a pending edit in memory (context:guard);
+    // a new checker must decide which one it is.
+    assert.ok(['file', 'tree'].includes(enforcer.reads), `${id} must declare reads: 'file' | 'tree'`);
   }
 });

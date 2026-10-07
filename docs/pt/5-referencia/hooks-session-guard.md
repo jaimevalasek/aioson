@@ -96,6 +96,15 @@ Uma regra precisa passar por todos estes filtros:
 4. **Escopo de superfície** — se a regra declara `guard_surfaces:`, o tipo de artefato editado precisa estar na lista.
 5. **Opt-in de salience** — a regra declara `entities`/`aliases`, ou marca `guard: true` no frontmatter. Regras de baseline genéricas ficam caladas.
 
+### Quando a violação fala mais alto que o vocabulário
+
+Uma regra com verificador determinístico (`enforcement:`) também é injetada quando o verificador **encontra uma violação nova** no que está sendo escrito, mesmo que o texto não use nenhuma palavra da regra. Valem só os verificadores que leem um arquivo por vez (`source-code-language`, `no-native-dialogs`, `file-size`, `function-size`).
+
+- **Código**: o arquivo é avaliado antes e depois da edição. Só a violação que a edição introduz conta; o débito antigo de um arquivo legado não volta a cada edição, e o débito aceito no `.aioson/context/rules-baseline.json` continua aceito.
+- **Markdown de produto que os agentes escrevem em `.aioson/`** (plano, spec, PRD): é avaliado pelo código que nomeia. Entram os caminhos citados, os identificadores pedidos (`criarCliente()`, `ClienteServico`) e os blocos de código. O planner que escreve `src/modulos/clientes/servicoCliente.js` no plano recebe a regra de nomes com o achado exato antes de existir qualquer arquivo.
+- Respeita `agents:` e `paths:` da regra. Markdown fora de `.aioson/` (docs, notas em `plans/` e `research/`, README/CHANGELOG) e os próprios arquivos de governança (`.aioson/rules`, `docs`, `skills`) nunca são julgados: eles falam SOBRE o produto e citam contraexemplos de propósito.
+- A injeção traz o achado (`HIGH non-English filename "servicoCliente"`) junto com as duas primeiras restrições da regra. Só achados `HIGH` disparam.
+
 ### `guard_surfaces:` — vincular a regra ao tipo de artefato
 
 As quatro regras de interação do framework (`form-fields-masks-and-validation`, `status-change-confirmation`, `status-flow-drag-and-drop`, `management-home-widgets`) declaram `guard_surfaces: [ui]`. Hoje `ui` é o único tipo, e o guard o detecta assim:

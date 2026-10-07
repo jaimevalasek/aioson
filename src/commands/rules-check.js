@@ -103,6 +103,10 @@ const ENFORCERS = Object.freeze({
   'source-code-language': {
     id: 'source-code-language',
     surface: 'code',
+    // `file`: verdicts come from one file's path and lines, so the checker can
+    // judge a pending edit in memory (context:guard). `tree`: it needs the
+    // whole repository and only runs here.
+    reads: 'file',
     summary: 'source identifiers, filenames, and directories use technical English',
     /**
      * @param {{ files: Array<{ rel: string, lines: string[] }> }} ctx
@@ -122,6 +126,7 @@ const ENFORCERS = Object.freeze({
   'no-native-dialogs': {
     id: 'no-native-dialogs',
     surface: 'code',
+    reads: 'file',
     summary: 'confirmation and input use design-system components, not native browser dialogs',
     run({ files }) {
       const findings = [];
@@ -162,6 +167,7 @@ const ENFORCERS = Object.freeze({
   'file-size': {
     id: FILE_SIZE_ID,
     surface: 'code',
+    reads: 'file',
     summary: 'a file stays under its logic-line limit — a God object is a measured finding, not a feeling',
     run({ files, documents }) {
       const limit = sizeThreshold(documents, 'max_file_lines', 500);
@@ -186,6 +192,7 @@ const ENFORCERS = Object.freeze({
   'function-size': {
     id: 'function-size',
     surface: 'code',
+    reads: 'file',
     summary: 'a function stays under its logic-line limit — one responsibility per named body',
     run({ files, documents }) {
       const limit = sizeThreshold(documents, 'max_function_lines', 60);
@@ -217,6 +224,7 @@ const ENFORCERS = Object.freeze({
   'module-fan-out': {
     id: 'module-fan-out',
     surface: 'code',
+    reads: 'tree',
     summary: 'a module imports at most its limit of internal modules — coupling is counted, not felt',
     run({ targetDir, files, documents }) {
       const limit = sizeThreshold(documents, 'max_module_fan_out', 15);
@@ -242,6 +250,7 @@ const ENFORCERS = Object.freeze({
   'import-cycle': {
     id: 'import-cycle',
     surface: 'code',
+    reads: 'tree',
     summary: 'no import cycles — a module never depends on something that depends on it',
     run({ targetDir, files }) {
       const graph = moduleGraphOf(targetDir);
@@ -785,7 +794,10 @@ async function runRulesCheck({ args, options = {}, logger }) {
 module.exports = {
   runRulesCheck,
   discoverGovernance,
+  readBaseline,
+  findingKey,
   GOVERNANCE_SURFACES,
   ENFORCERS,
+  SOURCE_EXTS,
   listEnforcerIds
 };

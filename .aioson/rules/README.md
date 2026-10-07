@@ -147,6 +147,8 @@ An all-clear always means files were read. `--changed` narrows the check to the 
 
 Breaking a rule is a contract violation; falling short of a skill is a competence gap worth surfacing, not a reason to refuse the handoff. When a rule and a skill declare the same checker, the rule's authority applies.
 
+**At edit time.** With the session guard installed (`aioson hooks:install`), every checker that reads one file at a time (`source-code-language`, `no-native-dialogs`, `file-size`, `function-size`) also judges each pending write in memory. A NEW `HIGH` violation the edit introduces puts the document and the finding in front of the agent before the file lands, whatever the edit's wording. The product Markdown agents write under `.aioson/` (plans, specs, PRDs) is judged by the code it names — cited paths, requested identifiers, fenced code — so a plan that names a translated file hears the naming rule before anything is built. The document's `agents:` and `paths:` still apply, accepted baseline debt stays accepted, and Markdown outside `.aioson/` (docs, notes) and the governance files themselves are never judged: they talk about the product and quote counter-examples on purpose.
+
 ### A project that was already built against a different convention
 
 New violations in a compliant tree are drift, and an agent fixes them on the spot. A codebase written against a different convention from its first commit is something else: the tree is not wrong by accident, and choosing between it and the rule is a decision about the whole project. `rules:check` measures the difference and refuses to decide for you — when most of the tree already breaks the rule, it says so and lays out the three real options:
