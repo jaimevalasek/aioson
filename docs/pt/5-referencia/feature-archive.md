@@ -15,12 +15,31 @@ Quando o `@qa` registra PASS e o usuário autoriza `aioson feature:close --verdi
                 ├── atualiza spec-{slug}.md (QA sign-off)
                 ├── atualiza features.md → done
                 ├── limpa project-pulse.md
-                └── chama feature:archive automaticamente
-                        ├── move *-{slug}.{md,yaml,yml,json} → done/{slug}/
-                        └── atualiza done/MANIFEST.md
+                ├── chama feature:archive automaticamente
+                │       ├── move *-{slug}.{md,yaml,yml,json} → done/{slug}/
+                │       └── atualiza done/MANIFEST.md
+                ├── extrai os aprendizados (lê a evidência bruta)
+                ├── apaga de done/{slug}/ tudo que não é documentação
+                └── roda feature:sweep para arrumar o que outros fechamentos deixaram para trás
 ```
 
 Não existe etapa manual. O contexto fica limpo sem que o desenvolvedor precise lembrar de nada.
+
+### O arquivo morto guarda só documentação
+
+Depois que a feature fecha, os arquivos que os agentes geraram para testar e analisar o sistema já cumpriram o papel. O `feature:archive` os apaga e mantém só a documentação:
+
+| Fica | Sai |
+|---|---|
+| `*.md`, `*.yaml`, `*.yml` (PRD, spec, requisitos, planos, relatório de QA, dossiê, briefing) | capturas de tela, logs, `*.txt`, scripts de teste (`*.mjs`, `*.cjs`) |
+| `prototype*.html` (protótipo aprovado) | `review.html`, `walkthrough.json`, JSON de execução, validação e evidência visual |
+| `security-findings-{slug}.json`, `closure-review.json`, `force-bypass-findings.json` | as pastas `browser/`, `visual-screenshots/`, `evidence/`, `validator-runs/`, `reviews/`, `jev/`, `qa/`, `scouts/`, `reports/` inteiras |
+
+`--keep-evidence` guarda tudo (no `feature:archive`, `feature:sweep` e `feature:close`). Dentro do `feature:close` a limpeza só acontece depois da extração de aprendizados, que ainda lê a evidência bruta.
+
+### Features abandonadas
+
+Uma feature `abandoned` sai do contexto vivo do mesmo jeito: vai para `.aioson/context/abandoned/{slug}/`, com o próprio `abandoned/MANIFEST.md`. O `feature:register --status=abandoned` já arquiva na hora (`--no-archive` deixa os arquivos onde estão). Features `paused` continuam no contexto vivo.
 
 ---
 
@@ -96,17 +115,21 @@ aioson feature:archive . --feature=checkout --restore
 
 Após restaurar, atualize `features.md` manualmente se quiser mudar o status da feature de `done` para `in_progress`.
 
-### Arquivamento retroativo
+### Arquivamento retroativo (`feature:sweep`)
 
-Para features que já estão como `done` em `features.md` mas ainda têm arquivos no root (projetos que fizeram upgrade do AIOSON):
+Fechamentos que não passaram pelo `feature:close` deixam arquivos perdidos no contexto vivo: linha marcada `done` à mão em `features.md`, feature abandonada, ou um arquivo que um agente escreveu depois que a feature já tinha sido arquivada. O `feature:sweep` arruma tudo de uma vez:
 
 ```bash
-aioson feature:archive . --feature=briefing-agent
-aioson feature:archive . --feature=harness-driven-aioson
-# etc.
+# Ver o que seria arquivado e quanta evidência sairia dos arquivos mortos
+aioson feature:sweep . --dry-run
+
+# Arquivar e limpar
+aioson feature:sweep .
 ```
 
-O comando é idempotente — rodar duas vezes na mesma feature é no-op seguro.
+Ele arquiva toda feature `done` ou `abandoned` que ainda tem arquivo no contexto vivo (inclusive sobras de uma já arquivada) e reduz cada pasta de `done/` e `abandoned/` a só documentação. Uma sobra com o mesmo nome e o mesmo conteúdo da cópia arquivada é apagada; com conteúdo diferente, vira erro para conciliar à mão, nunca sobrescrita. O `feature:close` roda essa varredura sozinho ao fechar.
+
+O comando é idempotente — rodar duas vezes é no-op seguro.
 
 ### Opção --force
 

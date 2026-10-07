@@ -170,7 +170,7 @@ async function scanDoneFeaturesPendingArchive(targetDir) {
     items.push({
       slug,
       path: '.aioson/context/features.md',
-      reason: 'feature is done but missing from .aioson/context/done/MANIFEST.md',
+      reason: 'feature is closed (done or abandoned) but its files are still in the live context',
       suggested_command: `aioson feature:archive . --feature=${slug}`,
       ...plan
     });

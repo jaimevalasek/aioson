@@ -15,7 +15,8 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { contextDir, readFileSafe, readFeatureArtifactSafe, parseFrontmatter } = require('../preflight-engine');
-const { runFeatureArchive } = require('./feature-archive');
+const { runFeatureArchive, runFeatureSweep } = require('./feature-archive');
+const { pruneToDocumentation } = require('../lib/archive-documentation');
 const { evaluateFollowups, persistFollowupPlans } = require('../lib/delivery-followups');
 const { runGateCheck } = require('./gate-check');
 const isAcceptedVerdict = verdict => ['PASS', 'ACCEPTED_WITH_FOLLOWUPS'].includes(verdict);
@@ -882,9 +883,11 @@ async function runFeatureClose({ args, options = {}, logger }) {
   const skipArchive = options['no-archive'] === true || options.archive === false;
   if (isAcceptedVerdict(verdict) && !skipArchive) {
     try {
+      // The distillation below still mines the raw evidence; the prune to
+      // documentation runs after it (see "Documentation-only archive").
       archive = await runFeatureArchive({
         args: [targetDir],
-        options: { feature: slug, json: true },
+        options: { feature: slug, json: true, keepEvidence: true },
         logger: null
       });
       if (archive && archive.moved && archive.moved.length > 0) {
@@ -987,6 +990,34 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
   } else if (isAcceptedVerdict(verdict) && skipDistill) {
     updates.push('distill: skipped (--no-distill flag)');
+  }
+
+  // Documentation-only archive: once the distillation has read it, the test
+  // and analysis output (captures, logs, smoke scripts, validator runs,
+  // review packets) leaves done/{slug}/. Then the sweep heals closures that
+  // never came through here — hand-edited rows, abandoned features, files an
+  // agent wrote after an earlier archive — so the live context only holds
+  // work in motion. Best-effort: neither step can fail the closure.
+  if (archive && archive.ok && !skipArchive && options['keep-evidence'] !== true) {
+    try {
+      const pruned = pruneToDocumentation(path.join(dir, 'done', slug), { root: path.join(targetDir, '.aioson') });
+      if (pruned.files > 0) updates.push(`archive: removed ${pruned.files} test/analysis file(s) — done/${slug}/ keeps documentation only`);
+      for (const f of pruned.failed) updates.push(`archive: could not remove done/${slug}/${f.file} (${f.error})`);
+    } catch (err) {
+      updates.push(`archive: evidence prune failed (${(err && err.message) || err})`);
+    }
+  }
+  if (isAcceptedVerdict(verdict) && !skipArchive) {
+    try {
+      const sweep = await runFeatureSweep({ args: [targetDir], options: { json: true, keepEvidence: options['keep-evidence'] === true }, logger: null });
+      const healed = (sweep && sweep.archived) || [];
+      if (healed.length > 0) updates.push(`sweep: archived ${healed.length} other closed feature(s) left in the live context (${healed.map((h) => h.slug).join(', ')})`);
+      const prunedFiles = ((sweep && sweep.evidence) || []).reduce((n, e) => n + e.files, 0);
+      if (prunedFiles > 0) updates.push(`sweep: removed ${prunedFiles} test/analysis file(s) from older archives`);
+      for (const f of (sweep && sweep.failed) || []) updates.push(`sweep: ${f.slug} not archived (${f.reason}) — run aioson feature:sweep . --dry-run`);
+    } catch (err) {
+      updates.push(`sweep: failed (${(err && err.message) || err})`);
+    }
   }
 
   // Auto-rollup bootstrap/current-state.md (P0 agent-loading-contract). The

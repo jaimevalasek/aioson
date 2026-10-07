@@ -198,7 +198,7 @@ test('feature:archive drops the regenerable diagnostics and archives the reports
     assert.ok(await fs.stat(path.join(dir, '.aioson/briefings/orders/browser/proto/proto-step-01-failed.png')), 'dry-run drops nothing');
 
     const logger = silentLogger();
-    const result = await runFeatureArchive({ args: [dir], options: { feature: 'orders', ...(keep ? { 'keep-diagnostics': true } : {}) }, logger });
+    const result = await runFeatureArchive({ args: [dir], options: { feature: 'orders', 'keep-evidence': true, ...(keep ? { 'keep-diagnostics': true } : {}) }, logger });
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     const archive = path.join(dir, '.aioson/context/done/orders');
     assert.ok(await fs.stat(path.join(archive, 'dossier', 'visual-evidence.json')), 'the evidence report is archived');
@@ -358,7 +358,7 @@ test('feature:archive drops the diagnostics on the reconcile path too, and the d
     ['briefings', 'walkthrough_artifacts', 3]
   ], 'the preview names what the reconcile drops');
 
-  const result = await runFeatureArchive({ args: [dir], options: { feature: 'orders' }, logger: silentLogger() });
+  const result = await runFeatureArchive({ args: [dir], options: { feature: 'orders', 'keep-evidence': true }, logger: silentLogger() });
   assert.equal(result.ok, true, JSON.stringify(result.errors));
   const archive = path.join(dir, '.aioson/context/done/orders');
   assert.ok(await fs.stat(path.join(archive, 'dossier', 'visual-evidence.json')), 'the evidence report is merged');

@@ -854,3 +854,35 @@ test('feature:close: PASS leaves workflow state for a DIFFERENT feature untouche
   const ex = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow-execute.json'), 'utf8'));
   assert.equal(ex.feature, 'other-feature');
 });
+
+test('feature:close PASS keeps documentation only and sweeps closures that skipped it', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/features.md', [
+    '| slug | status | started | completed |',
+    '|------|--------|---------|-----------|',
+    '| checkout | in_progress | 2026-01-01 | — |',
+    '| hand-closed | done | 2026-01-01 | 2026-02-01 |',
+    ''
+  ].join('\n'));
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '## Vision\nA thing.\n');
+  await writeFile(tmpDir, '.aioson/context/features/checkout/dossier.md', '# dossier\n');
+  await writeFile(tmpDir, '.aioson/context/features/checkout/qa-smoke.stdout.log', 'log');
+  await writeFile(tmpDir, '.aioson/plans/checkout/validator-runs/run.json', '{}');
+  await writeFile(tmpDir, '.aioson/context/prd-hand-closed.md', '## Vision\nOld.\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS', 'no-distill': true },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  const done = path.join(tmpDir, '.aioson', 'context', 'done');
+  await fs.access(path.join(done, 'checkout', 'prd-checkout.md'));
+  await fs.access(path.join(done, 'checkout', 'dossier', 'dossier.md'));
+  await assert.rejects(fs.access(path.join(done, 'checkout', 'dossier', 'qa-smoke.stdout.log')));
+  await assert.rejects(fs.access(path.join(done, 'checkout', 'plans', 'validator-runs')));
+  await fs.access(path.join(done, 'hand-closed', 'prd-hand-closed.md'));
+  await assert.rejects(fs.access(path.join(tmpDir, '.aioson', 'context', 'prd-hand-closed.md')));
+  assert.ok(result.updates.some((u) => u.startsWith('sweep: archived 1 other closed feature')));
+});

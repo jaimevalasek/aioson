@@ -25,6 +25,8 @@ const {
 } = require('../lib/feature-registry');
 const { readFileSafe } = require('../preflight-engine');
 
+const { runFeatureArchive } = require('./feature-archive');
+
 const DEFAULT_STATUS = 'in_progress';
 
 function fail(jsonOut, logger, reason, message, exitCode = 1) {
@@ -95,6 +97,18 @@ async function runFeatureRegister({ args = [], options = {}, logger } = {}) {
     remainingNotes: result.remainingNotes
   };
   if (!jsonOut && logger) logRegistration(logger, output, existing);
+
+  // An abandoned feature leaves the live context like a delivered one does:
+  // its documents move to abandoned/{slug}/, its test and analysis output is
+  // dropped. `--no-archive` keeps everything where it is.
+  if (status === 'abandoned' && options.archive !== false && options['no-archive'] !== true) {
+    const archive = await runFeatureArchive({ args: [targetDir], options: { feature: slug, json: true }, logger: null });
+    output.archive = archive;
+    if (!jsonOut && logger) {
+      if (archive && archive.ok && !archive.noop) logger.log(`archived in ${archive.archiveDir}/ (documentation only)`);
+      else if (archive && !archive.ok) logger.log(`archive incomplete — re-run: aioson feature:archive . --feature=${slug}`);
+    }
+  }
   return output;
 }
 

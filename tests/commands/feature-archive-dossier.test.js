@@ -146,7 +146,7 @@ describe('feature:archive — dossier dir extension (AC-F1-08)', () => {
     await fs.writeFile(path.join(archivedDir, 'dossier.md'), '# preexisting\n');
 
     const result = await runFeatureArchive({
-      args: ['.'], options: { feature: 'feature-x', json: true }, logger: silentLogger()
+      args: ['.'], options: { feature: 'feature-x', json: true, 'keep-evidence': true }, logger: silentLogger()
     });
     // divergente = erro acionável, nunca sobrescrito em silêncio
     assert.equal(result.ok, false);

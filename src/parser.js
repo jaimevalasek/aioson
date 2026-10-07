@@ -75,7 +75,7 @@ const BOOLEAN_FLAGS = new Set([
   'auto', 'paths-only', 'with-summary', 'titles-only',
   // feature:close / feature:archive — pure booleans; `--preflight .`,
   // `--restore .`, `--no-archive .` etc. must not swallow the path positional.
-  'preflight', 'explain', 'restore', 'sweep', 'no-archive', 'no-distill', 'no-trim',
+  'preflight', 'explain', 'restore', 'sweep', 'no-archive', 'no-distill', 'no-trim', 'keep-evidence',
   // briefing:apply-feedback — pure booleans; `--confirm .` / `--declined .`
   // / `--allow-stale .` must not swallow the path positional.
   'confirm', 'declined', 'allow-stale',

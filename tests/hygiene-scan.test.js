@@ -455,6 +455,7 @@ test('CLI exposes hygiene:scan with JSON output', async () => {
       '| checkout | done | 2026-06-01 | 2026-06-02 |',
       ''
     ].join('\n'));
+    await write(dir, '.aioson/context/prd-checkout.md', '## Vision\nCheckout.\n');
 
     const cli = spawnSync(
       process.execPath,

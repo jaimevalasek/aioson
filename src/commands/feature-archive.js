@@ -20,6 +20,7 @@ const { contextDir, readFileSafe } = require('../preflight-engine');
 const { moveFileResilient, moveDirResilient } = require('../lib/fs-move');
 const { resolveTargetDir } = require('../lib/project-root');
 const { listDiagnosticDirs, dirStats, clearDir, formatBytes } = require('../lib/evidence-artifacts');
+const { pruneToDocumentation } = require('../lib/archive-documentation');
 
 const ARCHIVED_EXTENSIONS = ['md', 'yaml', 'yml', 'json'];
 
@@ -220,12 +221,31 @@ async function readCompletedDate(featuresPath, slug) {
   return isoMatch ? isoMatch[0] : raw;
 }
 
-function manifestHeader() {
-  return [
+// Where a feature's documents go when it leaves the live context: `done/` for
+// delivered work, `abandoned/` for work dropped before delivery — so the live
+// context only ever holds features still in motion.
+const ARCHIVE_BUCKETS = {
+  done: [
     '# Archived Features Manifest',
     '',
     '> Features whose artefacts were moved into `.aioson/context/done/{slug}/` after QA sign-off.',
-    '> Agents that need historical awareness (@briefing, @neo, @discover, @sheldon) read this file instead of globbing archived PRDs.',
+    '> Agents that need historical awareness (@briefing, @neo, @discover, @sheldon) read this file instead of globbing archived PRDs.'
+  ],
+  abandoned: [
+    '# Abandoned Features Manifest',
+    '',
+    '> Features dropped before delivery. Their documents were moved into `.aioson/context/abandoned/{slug}/` so the live context only holds current work.',
+    '> `completed` is the date the feature was abandoned.'
+  ]
+};
+
+function bucketFor(status) {
+  return status === 'abandoned' ? 'abandoned' : 'done';
+}
+
+function manifestHeader(bucket = 'done') {
+  return [
+    ...(ARCHIVE_BUCKETS[bucket] || ARCHIVE_BUCKETS.done),
     '',
     '| slug | completed | files | summary |',
     '|------|-----------|-------|---------|',
@@ -234,7 +254,7 @@ function manifestHeader() {
 }
 
 function parseManifest(content) {
-  if (!content) return { header: manifestHeader(), rows: new Map() };
+  if (!content) return { rows: new Map() };
   const rows = new Map();
   const lines = content.split(/\r?\n/);
   for (const line of lines) {
@@ -248,10 +268,10 @@ function parseManifest(content) {
     if (!slug) continue;
     rows.set(slug, { slug, completed, files, summary });
   }
-  return { header: manifestHeader(), rows };
+  return { rows };
 }
 
-function renderManifest(rows) {
+function renderManifest(rows, bucket = 'done') {
   const sorted = Array.from(rows.values()).sort((a, b) => {
     if (a.completed && b.completed) return b.completed.localeCompare(a.completed);
     if (a.completed) return -1;
@@ -261,10 +281,10 @@ function renderManifest(rows) {
   const body = sorted
     .map((r) => `| ${r.slug} | ${r.completed || '—'} | ${r.files} | ${r.summary || '—'} |`)
     .join('\n');
-  return manifestHeader() + body + (body ? '\n' : '');
+  return manifestHeader(bucket) + body + (body ? '\n' : '');
 }
 
-async function updateManifest(manifestPath, entry, mode) {
+async function updateManifest(manifestPath, entry, mode, bucket = 'done') {
   const existing = await readFileSafe(manifestPath);
   const { rows } = parseManifest(existing);
   if (mode === 'remove') {
@@ -272,7 +292,7 @@ async function updateManifest(manifestPath, entry, mode) {
   } else {
     rows.set(entry.slug, entry);
   }
-  await fs.writeFile(manifestPath, renderManifest(rows), 'utf8');
+  await fs.writeFile(manifestPath, renderManifest(rows, bucket), 'utf8');
 }
 
 /**
@@ -345,6 +365,11 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
   // dropped instead of archived: the reports beside it travel, the binaries
   // that no report reads back do not. `--keep-diagnostics` carries them along.
   const keepDiagnostics = Boolean(options['keep-diagnostics'] || options.keepDiagnostics);
+  // After the move the archive keeps documentation only (see
+  // lib/archive-documentation). `--keep-evidence` leaves everything in place —
+  // feature:close passes it so the learning distillation can still mine the
+  // raw evidence, then prunes once it is done.
+  const keepEvidence = Boolean(options['keep-evidence'] || options.keepEvidence);
   const jsonOut = Boolean(options.json);
 
   const log = (msg) => { if (logger && !jsonOut) logger.log(msg); };
@@ -362,9 +387,6 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
   }
 
   const ctxDir = contextDir(targetDir);
-  const doneDir = path.join(ctxDir, 'done');
-  const archiveDir = path.join(doneDir, slug);
-  const manifestPath = path.join(doneDir, 'MANIFEST.md');
   const featuresPath = path.join(ctxDir, 'features.md');
 
   if (!(await dirExists(ctxDir))) {
@@ -374,8 +396,18 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
   }
 
   if (restore) {
+    const restoreBucket = (await dirExists(path.join(ctxDir, 'done', slug))) || !(await dirExists(path.join(ctxDir, 'abandoned', slug)))
+      ? 'done'
+      : 'abandoned';
     return await runRestore({
-      slug, ctxDir, archiveDir, manifestPath, dryRun, jsonOut, log
+      slug,
+      ctxDir,
+      archiveDir: path.join(ctxDir, restoreBucket, slug),
+      manifestPath: path.join(ctxDir, restoreBucket, 'MANIFEST.md'),
+      bucket: restoreBucket,
+      dryRun,
+      jsonOut,
+      log
     });
   }
 
@@ -385,11 +417,16 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     log(`Feature "${slug}" is not registered in features.md. Use --force to archive anyway.`);
     return { ok: false };
   }
-  if (status.exists && status.status !== 'done' && !force) {
+  if (status.exists && status.status !== 'done' && status.status !== 'abandoned' && !force) {
     if (jsonOut) return { ok: false, reason: 'not_done', slug, status: status.status };
-    log(`Feature "${slug}" has status "${status.status}" in features.md — only "done" features can be archived. Use --force to override.`);
+    log(`Feature "${slug}" has status "${status.status}" in features.md — only "done" or "abandoned" features can be archived. Use --force to override.`);
     return { ok: false };
   }
+
+  const bucket = bucketFor(status.status);
+  const doneDir = path.join(ctxDir, bucket);
+  const archiveDir = path.join(doneDir, slug);
+  const manifestPath = path.join(doneDir, 'MANIFEST.md');
 
   const otherSlugs = await readOtherSlugs(featuresPath, slug);
   const rootFiles = await findSlugFiles(ctxDir, slug, otherSlugs);
@@ -487,9 +524,11 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
       ok: true,
       dryRun: true,
       slug,
+      bucket,
       targetDir: path.relative(targetDir, archiveDir),
       move: toMove,
       skip: toSkip,
+      prune_evidence: !keepEvidence,
       dirs,
       dossier: dirs.find((d) => d.label === 'dossier') || null,
       diagnostics: diagnosticPlans.map(({ dir, ...rest }) => rest),
@@ -550,6 +589,27 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
         message: (err && err.message) || String(err)
       });
     }
+  }
+
+  // A live root file whose name the archive already holds was skipped forever
+  // — it stayed beside the archive as clutter. An identical copy is removed;
+  // a divergent one is an actionable error, never overwritten silently.
+  for (const s of toSkip) {
+    const live = path.join(ctxDir, s.name);
+    try {
+      const [a, b] = await Promise.all([fs.readFile(live), fs.readFile(path.join(archiveDir, s.name))]);
+      if (a.equals(b)) {
+        await fs.rm(live, { force: true });
+        s.reason = 'duplicate_removed';
+      } else {
+        errors.push({
+          item: path.relative(targetDir, live),
+          kind: 'file',
+          code: 'archive_merge_conflict',
+          message: `live copy differs from archived ${path.relative(targetDir, path.join(archiveDir, s.name))} — reconcile manually (never overwritten silently)`
+        });
+      }
+    } catch { /* unreadable side: left as it is */ }
   }
 
   // Diagnostics go before the directory moves: what is dropped never
@@ -645,6 +705,10 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     });
   }
 
+  const evidencePruned = keepEvidence
+    ? null
+    : pruneToDocumentation(archiveDir, { root: path.join(targetDir, '.aioson') });
+
   const totalArchived = (await findArchivedFiles(archiveDir)).length;
   const entry = {
     slug,
@@ -652,14 +716,18 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     files: String(totalArchived),
     summary: summary || '—'
   };
-  await updateManifest(manifestPath, entry, 'upsert');
+  await updateManifest(manifestPath, entry, 'upsert', bucket);
 
   const result = {
     ok: errors.length === 0,
     ...(errors.length > 0 ? { reason: 'archive_incomplete' } : {}),
     slug,
+    bucket,
     completed,
     archiveDir: path.relative(targetDir, archiveDir),
+    evidence_pruned: evidencePruned
+      ? { files: evidencePruned.files, bytes: evidencePruned.bytes, failed: evidencePruned.failed.length > 0 ? evidencePruned.failed : undefined }
+      : undefined,
     moved,
     skipped: toSkip,
     totalArchived,
@@ -681,6 +749,10 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
   }
   log(`  moved: ${moved.length} file(s)`);
   for (const f of moved) log(`    • ${f}`);
+  if (evidencePruned && evidencePruned.files > 0) {
+    log(`  removed ${evidencePruned.files} test/analysis file(s), ${formatBytes(evidencePruned.bytes)} — the archive keeps documentation only (pass --keep-evidence to keep them)`);
+  }
+  for (const f of (evidencePruned && evidencePruned.failed) || []) log(`    ✗ could not remove ${f.file}: ${f.error}`);
   if (toSkip.length) {
     log(`  skipped: ${toSkip.length} file(s) already in archive`);
     for (const s of toSkip) log(`    • ${s.name}`);
@@ -705,14 +777,14 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     for (const e of errors) log(`    ✗ ${e.item}${e.code ? ` [${e.code}]` : ''}: ${e.message}`);
     log(`  Fix the cause (close editors/watchers holding the folder) and re-run: aioson feature:archive . --feature=${slug}`);
   }
-  log(`  manifest updated: .aioson/context/done/MANIFEST.md`);
+  log(`  manifest updated: .aioson/context/${bucket}/MANIFEST.md`);
   return result;
 }
 
-async function runRestore({ slug, ctxDir, archiveDir, manifestPath, dryRun, jsonOut, log }) {
+async function runRestore({ slug, ctxDir, archiveDir, manifestPath, bucket = 'done', dryRun, jsonOut, log }) {
   if (!(await dirExists(archiveDir))) {
     if (jsonOut) return { ok: false, reason: 'nothing_to_restore', slug };
-    log(`No archive found at .aioson/context/done/${slug}/ — nothing to restore.`);
+    log(`No archive found at .aioson/context/${bucket}/${slug}/ — nothing to restore.`);
     return { ok: false };
   }
 
@@ -776,7 +848,7 @@ async function runRestore({ slug, ctxDir, archiveDir, manifestPath, dryRun, json
 
   await removeEmptyDirBestEffort(archiveDir);
 
-  await updateManifest(manifestPath, { slug }, 'remove');
+  await updateManifest(manifestPath, { slug }, 'remove', bucket);
 
   const result = {
     ok: true,
@@ -790,37 +862,54 @@ async function runRestore({ slug, ctxDir, archiveDir, manifestPath, dryRun, json
   log(`  restored: ${restored.length} file(s)`);
   for (const f of restored) log(`    • ${f}`);
   if (dossierRestored) log(`  restored dossier dir: ${dossierRestored}/`);
-  log(`  manifest updated: .aioson/context/done/MANIFEST.md`);
+  log(`  manifest updated: .aioson/context/${bucket}/MANIFEST.md`);
   return result;
 }
 
-async function listDoneFeatures(featuresPath) {
+// Features that left the live context — delivered or dropped. Their documents
+// belong in done/ or abandoned/, never beside the work still in motion.
+async function listClosedFeatures(featuresPath) {
   const content = await readFileSafe(featuresPath);
   if (!content) return [];
   const results = [];
   const lines = content.split(/\r?\n/);
   for (const line of lines) {
-    const m = line.match(/^\|\s*([a-z][a-z0-9-]*)\s*\|\s*done\s*\|/i);
-    if (m) results.push(m[1].toLowerCase());
+    const m = line.match(/^\|\s*([a-z][a-z0-9-]*)\s*\|\s*(done|abandoned)\s*\|/i);
+    if (m) results.push({ slug: m[1].toLowerCase(), status: m[2].toLowerCase() });
   }
   return results;
 }
 
-async function listArchivedSlugs(manifestPath) {
-  const content = await readFileSafe(manifestPath);
-  if (!content) return new Set();
-  const slugs = new Set();
-  const lines = content.split(/\r?\n/);
-  for (const line of lines) {
-    const m = line.match(/^\|\s*([a-z][a-z0-9-]+)\s*\|/i);
-    if (m && m[1] !== 'slug') slugs.add(m[1].toLowerCase());
-  }
-  return slugs;
+async function hasLiveArtifacts(ctxDir, targetDir, slug) {
+  const { rootFiles, dirs } = await collectFeatureArtifacts({ ctxDir, targetDir, slug, includeDone: false });
+  return rootFiles.length > 0 || dirs.length > 0;
 }
 
+async function listArchiveFolders(ctxDir) {
+  const folders = [];
+  for (const bucket of Object.keys(ARCHIVE_BUCKETS)) {
+    for (const entry of await readDirSafe(path.join(ctxDir, bucket))) {
+      if (entry.isDirectory()) folders.push({ bucket, slug: entry.name, dir: path.join(ctxDir, bucket, entry.name) });
+    }
+  }
+  return folders;
+}
+
+/**
+ * aioson feature:sweep — heal the live context after closures that did not
+ * go through feature:close (rows hand-edited to done, pre-archive features,
+ * artifacts an agent wrote after the archive ran):
+ *   1. every done/abandoned feature that still has files in the live context
+ *      is archived (done/ or abandoned/), stragglers of already-archived
+ *      features included;
+ *   2. every archive folder is pruned to documentation only, unless
+ *      --keep-evidence.
+ * `--dry-run` lists both without touching anything.
+ */
 async function runFeatureSweep({ args = [], options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const dryRun = Boolean(options['dry-run'] || options.dryRun);
+  const keepEvidence = Boolean(options['keep-evidence'] || options.keepEvidence);
   const jsonOut = Boolean(options.json);
   const log = (msg) => { if (logger && !jsonOut) logger.log(msg); };
 
@@ -832,43 +921,60 @@ async function runFeatureSweep({ args = [], options = {}, logger }) {
   }
 
   const featuresPath = path.join(ctxDir, 'features.md');
-  const manifestPath = path.join(ctxDir, 'done', 'MANIFEST.md');
-
-  const doneSlugs = await listDoneFeatures(featuresPath);
-  const archivedSlugs = await listArchivedSlugs(manifestPath);
-  const pending = doneSlugs.filter((s) => !archivedSlugs.has(s));
-
-  if (pending.length === 0) {
-    const result = { ok: true, pending: [], archived: [] };
-    if (jsonOut) return result;
-    log('All done features are already archived.');
-    return result;
+  const closed = await listClosedFeatures(featuresPath);
+  const pending = [];
+  for (const { slug, status } of closed) {
+    // eslint-disable-next-line no-await-in-loop
+    if (await hasLiveArtifacts(ctxDir, targetDir, slug)) pending.push({ slug, status });
   }
 
+  const evidenceRoot = path.join(targetDir, '.aioson');
+
   if (dryRun) {
-    const result = { ok: true, dryRun: true, pending, archived: [] };
+    const evidence = [];
+    if (!keepEvidence) {
+      for (const f of await listArchiveFolders(ctxDir)) {
+        const p = pruneToDocumentation(f.dir, { root: evidenceRoot, dryRun: true });
+        if (p.files > 0) evidence.push({ bucket: f.bucket, slug: f.slug, files: p.files, bytes: p.bytes });
+      }
+    }
+    const result = { ok: true, dryRun: true, pending: pending.map((p) => p.slug), pending_detail: pending, evidence, archived: [] };
     if (jsonOut) return result;
-    log(`[dry-run] ${pending.length} done feature(s) not yet archived:`);
-    for (const s of pending) log(`  • ${s}`);
+    if (pending.length === 0 && evidence.length === 0) {
+      log('Nothing to sweep: closed features are archived and their archives hold documentation only.');
+      return result;
+    }
+    if (pending.length > 0) {
+      log(`[dry-run] ${pending.length} closed feature(s) still have files in the live context:`);
+      for (const p of pending) log(`  • ${p.slug} (${p.status} → ${bucketFor(p.status)}/)`);
+    }
+    if (evidence.length > 0) {
+      const files = evidence.reduce((n, e) => n + e.files, 0);
+      const bytes = evidence.reduce((n, e) => n + e.bytes, 0);
+      log(`[dry-run] ${files} test/analysis file(s), ${formatBytes(bytes)}, would be removed from ${evidence.length} archive folder(s):`);
+      for (const e of evidence) log(`  • ${e.bucket}/${e.slug}: ${e.files} file(s), ${formatBytes(e.bytes)}`);
+    }
     return result;
   }
 
   const archived = [];
   const failed = [];
-  for (const slug of pending) {
+  for (const { slug } of pending) {
     try {
+      // eslint-disable-next-line no-await-in-loop
       const archiveResult = await runFeatureArchive({
         args: [targetDir],
-        options: { feature: slug, json: true },
+        options: { feature: slug, json: true, keepEvidence },
         logger: null
       });
       if (archiveResult && archiveResult.ok) {
         const movedCount = archiveResult.moved ? archiveResult.moved.length : 0;
-        archived.push({ slug, moved: movedCount });
-        log(`  ✓ ${slug} — ${movedCount} file(s) archived`);
+        archived.push({ slug, bucket: archiveResult.bucket, moved: movedCount });
+        log(`  ✓ ${slug} — ${movedCount} file(s) archived in ${archiveResult.bucket || 'done'}/`);
       } else {
-        failed.push({ slug, reason: archiveResult.reason || 'unknown' });
+        failed.push({ slug, reason: archiveResult.reason || 'unknown', errors: archiveResult.errors });
         log(`  ✗ ${slug} — ${archiveResult.reason || 'unknown'}`);
+        for (const e of archiveResult.errors || []) log(`      ${e.item}${e.code ? ` [${e.code}]` : ''}: ${e.message}`);
       }
     } catch (err) {
       failed.push({ slug, reason: err.message || String(err) });
@@ -876,8 +982,28 @@ async function runFeatureSweep({ args = [], options = {}, logger }) {
     }
   }
 
-  const result = { ok: true, pending, archived, failed: failed.length > 0 ? failed : undefined };
+  const evidence = [];
+  if (!keepEvidence) {
+    for (const f of await listArchiveFolders(ctxDir)) {
+      const p = pruneToDocumentation(f.dir, { root: evidenceRoot });
+      if (p.files > 0 || p.failed.length > 0) {
+        evidence.push({ bucket: f.bucket, slug: f.slug, files: p.files, bytes: p.bytes, failed: p.failed.length > 0 ? p.failed : undefined });
+      }
+    }
+  }
+
+  const result = {
+    ok: true,
+    pending: pending.map((p) => p.slug),
+    archived,
+    evidence,
+    failed: failed.length > 0 ? failed : undefined
+  };
   if (jsonOut) return result;
+  const prunedFiles = evidence.reduce((n, e) => n + e.files, 0);
+  const prunedBytes = evidence.reduce((n, e) => n + e.bytes, 0);
+  if (prunedFiles > 0) log(`  removed ${prunedFiles} test/analysis file(s), ${formatBytes(prunedBytes)}, from ${evidence.length} archive folder(s)`);
+  for (const e of evidence) for (const f of e.failed || []) log(`  ✗ could not remove ${e.bucket}/${e.slug}/${f.file}: ${f.error}`);
   log(`\nSweep complete: ${archived.length} archived, ${failed.length} failed.`);
   return result;
 }
