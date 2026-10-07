@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { buildGuardResponse } = require('../context-guard');
 const { normalizeAgentName } = require('../agents');
+const { isAutoAgent, resolveActiveAgent } = require('../lib/active-agent');
 const { resolveProjectRootOrSelf, resolveTargetDir } = require('../lib/project-root');
 
 // `aioson context:guard [path] --tool=claude [--json]`
@@ -22,7 +23,7 @@ async function runContextGuard({ args, options = {}, logger }) {
   try {
     response = await buildGuardResponse(event || {}, targetDir, {
       tool: options.tool || 'claude',
-      agent: resolveGuardAgent(options, event)
+      agent: await resolveGuardAgentAt(targetDir, options, event)
     });
   } catch {
     // The guard is advisory and runs on the PreToolUse hot path. Any internal
@@ -49,14 +50,24 @@ async function runContextGuard({ args, options = {}, logger }) {
 }
 
 function resolveGuardAgent(options = {}, event = {}) {
-  const candidate = options.agent
-    || options.a
+  const explicit = [options.agent, options.a].find((value) => value && !isAutoAgent(value));
+  const candidate = explicit
     || event?.agent
     || event?.agent_name
     || event?.context?.agent
     || process.env.AIOSON_AGENT
     || 'dev';
   return normalizeAgentName(candidate) || 'dev';
+}
+
+// An explicit agent wins; `auto` (what a default install bakes) or no flag
+// resolves the agent acting now — event, AIOSON_AGENT, the project's latest
+// brief — so the planner's plan is judged with the planner's rules.
+async function resolveGuardAgentAt(targetDir, options = {}, event = {}) {
+  const explicit = [options.agent, options.a].find((value) => value && !isAutoAgent(value));
+  if (explicit) return normalizeAgentName(explicit) || 'dev';
+  const active = await resolveActiveAgent(targetDir, { event });
+  return active.agent || 'dev';
 }
 
 async function resolveEvent(args, options) {
@@ -100,4 +111,4 @@ function readStdinEvent() {
   });
 }
 
-module.exports = { runContextGuard, resolveGuardAgent };
+module.exports = { runContextGuard, resolveGuardAgent, resolveGuardAgentAt };

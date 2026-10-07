@@ -972,6 +972,38 @@ function appendContextBriefEvent(db, options) {
   });
 }
 
+// One row per `context:select` CLI call. The agents that consult selection
+// instead of the brief (briefing, refiner, squad) leave the same activation
+// trace, so "which agent is acting now?" has an answer for all of them.
+function appendContextSelectEvent(db, options) {
+  insertExecutionEvent(db, {
+    task_key: null,
+    run_key: null,
+    agent_name: options.agentName ? String(options.agentName).trim() : null,
+    agent_kind: null,
+    squad_slug: null,
+    session_key: null,
+    source: 'context_select',
+    workflow_id: null,
+    workflow_stage: null,
+    parent_run_key: null,
+    event_type: 'selection_built',
+    phase: 'context_select',
+    status: null,
+    tool_name: null,
+    message: String(options.message || 'selection_built'),
+    payload_json: options.payload ? JSON.stringify(options.payload) : null,
+    sequence_no: 1,
+    parent_event_id: null,
+    created_at: options.createdAt || nowIso(),
+    plan_step_id: null,
+    worker_status: null,
+    verdict: null,
+    token_count: null,
+    progress_pct: null
+  });
+}
+
 function appendRunEvent(db, options) {
   const run = getRunContext(db, options.runKey);
   if (!run) {
@@ -2866,6 +2898,7 @@ module.exports = {
   appendRunEvent,
   appendContextLoadEvent,
   appendContextBriefEvent,
+  appendContextSelectEvent,
   logAgentEvent,
   readAgentSession,
   writeAgentSession,

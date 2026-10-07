@@ -149,11 +149,21 @@ aioson hooks:install . --agent=dev --tool=claude --no-guard
 
 Se você rodou `init`, `install` ou `update` sem `--no-hooks`, isso já aconteceu. Use `hooks:install` quando quiser trocar o agente-dono, reinstalar depois de um `--no-hooks`, ou configurar só uma ferramenta.
 
-```bash
-# Instalar hooks para o agente dev (padrão)
-aioson hooks:install . --agent=dev --tool=claude
+### Qual agente o guard representa
 
-# Para outro agente (ex: qa)
+O guard julga cada escrita com as regras do agente que está agindo **naquele momento**. Sem `--agent` (o caso de `init`, `install` e `update`), o comando do guard é gravado com `--agent=auto`, e o agente é resolvido em tempo de execução, nesta ordem:
+
+1. o próprio evento do harness (`agent`, `agent_name`, `context.agent`);
+2. a variável `AIOSON_AGENT`, que é exata e deve ser usada por quem lança uma sessão para um agente específico;
+3. o `context:brief` mais recente do projeto nas últimas duas horas, porque todo agente consulta o brief antes de agir.
+
+Sem nenhum sinal, vale `dev`. Com duas sessões paralelas no mesmo projeto, o item 3 é aproximado; use `AIOSON_AGENT` quando precisar de exatidão. Um `--agent=<id>` explícito continua fixo. A telemetria (`hooks:emit`) e o fim de sessão (`agent:done`) mantêm o agente da instalação.
+
+```bash
+# Instalação padrão: o guard resolve o agente ativo (--agent=auto)
+aioson hooks:install . --tool=claude
+
+# Fixar um agente (o guard deixa de resolver em tempo de execução)
 aioson hooks:install . --agent=qa --tool=claude
 
 # Sem o context:guard (só telemetria)
@@ -192,7 +202,7 @@ Reinstalar é seguro: o instalador remove as entradas antigas do AIOSON antes de
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
         "hooks": [{
           "type": "command",
-          "command": "aioson context:guard \"$PWD\" --tool=claude --agent=dev --json 2>/dev/null || true"
+          "command": "aioson context:guard \"$PWD\" --tool=claude --agent='auto' --json 2>/dev/null || true"
         }]
       }
     ],

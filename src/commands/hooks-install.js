@@ -106,8 +106,16 @@ async function readJsonForMerge(filePath) {
   }
 }
 
-function buildClaudeHooks(agentName, includeGuard = true) {
+// The guard judges a write with the rules of the agent acting at that moment.
+// A default install (no `--agent`) bakes `auto`, and the guard resolves the
+// active agent at runtime; telemetry hooks keep the install-time agent.
+function guardAgentFor(options, agentName) {
+  return options && options.agent ? agentName : 'auto';
+}
+
+function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName) {
   const safeAgentName = normalizeHookAgentName(agentName);
+  const safeGuardAgent = normalizeHookAgentName(guardAgent);
   const emitCmd = makeEmitCommand(safeAgentName, 'claude');
   const doneCmd = makeDoneCommand(safeAgentName);
 
@@ -137,7 +145,7 @@ function buildClaudeHooks(agentName, includeGuard = true) {
     hooks.PreToolUse = [
       {
         matcher: 'Write|Edit|MultiEdit|NotebookEdit',
-        hooks: [{ type: 'command', command: makeGuardCommand(safeAgentName) }]
+        hooks: [{ type: 'command', command: makeGuardCommand(safeGuardAgent) }]
       }
     ];
   }
@@ -145,7 +153,7 @@ function buildClaudeHooks(agentName, includeGuard = true) {
   return hooks;
 }
 
-async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true) {
+async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true, guardAgent = agentName) {
   const configPath = CONFIG_PATHS.claude;
   await fs.mkdir(path.dirname(configPath), { recursive: true });
 
@@ -155,7 +163,7 @@ async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true
     return { tool: 'claude', configPath, skipped: 'invalid-config' };
   }
 
-  const newHooks = buildClaudeHooks(agentName, includeGuard);
+  const newHooks = buildClaudeHooks(agentName, includeGuard, guardAgent);
 
   // Merge: add AIOSON hooks without removing existing ones
   const merged = { ...existing };
@@ -408,7 +416,7 @@ async function runHooksInstall({ args, options = {}, logger }) {
   for (const t of tools) {
     try {
       if (t === 'claude') {
-        results.push(await installClaudeHooks(agentName, dryRun, logger, includeGuard));
+        results.push(await installClaudeHooks(agentName, dryRun, logger, includeGuard, guardAgentFor(options, agentName)));
       } else if (t === 'antigravity') {
         results.push(await installAntigravityHooks(agentName, projectDir, dryRun, logger));
       } else if (t === 'codex') {
@@ -553,6 +561,7 @@ module.exports = {
   runHooksUninstall,
   installDefaultHooks,
   buildClaudeHooks,
+  guardAgentFor,
   buildAntigravityHooks,
   scrubAntigravityHookFile,
   normalizeHookAgentName,

@@ -4,6 +4,24 @@ const path = require('node:path');
 const { selectContext } = require('../context-selector');
 const { resolveTargetDir } = require('../lib/project-root');
 
+// Best-effort, silent, only when the runtime store already exists: the agent's
+// selection call is its activation trace (see lib/active-agent.js).
+async function recordSelectEvent(targetDir, result) {
+  let handle = null;
+  try {
+    const { openRuntimeDb, appendContextSelectEvent } = require('../runtime-store');
+    handle = await openRuntimeDb(targetDir, { mustExist: true });
+    if (!handle || !handle.db) return;
+    appendContextSelectEvent(handle.db, {
+      agentName: result.agent,
+      message: `selection_built:${result.mode}`,
+      payload: { mode: result.mode, selected: (result.selected || []).length }
+    });
+  } catch { /* telemetry is advisory */ } finally {
+    if (handle && handle.db) { try { handle.db.close(); } catch { /* closed */ } }
+  }
+}
+
 async function runContextSelect({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const result = await selectContext(targetDir, {
@@ -19,6 +37,7 @@ async function runContextSelect({ args, options = {}, logger }) {
     // context:evals uses for its failure diagnosis.
     explain: typeof options.explain === 'string' ? options.explain : ''
   });
+  await recordSelectEvent(targetDir, result);
 
   if (options.json) return result;
 
