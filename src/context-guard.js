@@ -66,16 +66,19 @@ const UI_FILE_EXTENSIONS = new Set([
 ]);
 const DOC_FILE_EXTENSIONS = new Set(['.md', '.mdx']);
 const SCRIPT_FILE_EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.ts', '.mts', '.cts']);
-// A tag is markup when it closes, carries an attribute, self-closes, or names
-// an HTML element. A bare `<id>` / `<slug>` / `<host>` is placeholder notation
-// in a comment or a contract string, not the DOM.
+// A tag is markup when it closes, self-closes, names an HTML element, or is a
+// custom element (the spec requires a hyphen in its name) assigning an
+// attribute. A bare `<id>`, a `<kebab-name>` or multi-word `<the option
+// chosen>` help placeholder, or a TypeScript generic `<T extends object>` is
+// notation, not the DOM — an unknown tag followed by any word used to count,
+// and turned CLI sources and plain .ts modules into UI surfaces.
 const HTML_ELEMENT = 'div|span|form|input|button|label|select|option|textarea|table|thead|tbody|tr|td|th|ul|ol|li|p|h[1-6]|section|header|nav|main|footer|aside|article|a|img|svg|dialog|template|slot|canvas|video|audio|iframe|body|html|head';
 const DOM_MARKERS = new RegExp([
   'document\\s*\\.\\s*(?:getElementById|querySelector|querySelectorAll|createElement|addEventListener|body)',
   'classList\\s*\\.',
   'innerHTML',
   '<\\/[a-z][a-z0-9-]*>',
-  '<[a-z][a-z0-9-]*\\s+[a-z:@-][a-z0-9:@.-]*(?:=|\\s|>|\\/>)',
+  '<[a-z][a-z0-9]*-[a-z0-9-]*\\s+[a-z:@-][a-z0-9:@.-]*\\s*=',
   '<[a-z][a-z0-9-]*\\s*\\/>',
   `<(?:${HTML_ELEMENT})\\b[^>]*>`,
   'className\\s*=',

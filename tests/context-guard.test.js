@@ -615,6 +615,13 @@ test('a file outside the project owns none of its rules: operator memory and scr
   }
 });
 
+test('detectSurfaceKinds: help placeholders and TypeScript generics are notation; custom elements are markup', () => {
+  assert.equal(detectSurfaceKinds('src/commands/decide.js', "logger.error('decide --record needs --choice=\"<the option chosen>\".');").size, 0);
+  assert.equal(detectSurfaceKinds('src/lib/collections.ts', 'export function first<T extends object>(items: T[]): T { return items[0]; }').size, 0);
+  assert.ok(detectSurfaceKinds('src/ui/widget.js', 'return html`<my-card heading="Orders"></my-card>`;').has('ui'));
+  assert.ok(detectSurfaceKinds('src/ui/badge.js', "const node = '<span class=\"badge\">';").has('ui'));
+});
+
 test('detectSurfaceKinds: research captures and planning notes are about the product; AIOSON plans stay a surface', () => {
   assert.equal(detectSurfaceKinds('plans/contextual-intelligence.md', '').size, 0);
   assert.equal(detectSurfaceKinds('researchs/checkout-patterns/summary.md', '').size, 0);
