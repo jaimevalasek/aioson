@@ -523,6 +523,16 @@ async function buildGuardResponse(event, targetDir, options = {}) {
     rules: ruleBlocks.map((block) => block.path),
     confidence: brief.confidence,
     violations: violations.reduce((sum, block) => sum + block.findings.length + block.more, 0),
+    // What the outcome reader (lib/guard-outcomes.js) re-checks later: was the
+    // measured violation fixed, or did it land and stay?
+    agent,
+    file: relPath,
+    violation_keys: violations.map((block) => ({
+      rule: block.path,
+      checker: block.checker,
+      kind: violationKind,
+      keys: block.findings.map((finding) => finding.key)
+    })),
     ...(judged.report ? { jev: judged.report } : {})
   };
   return response;

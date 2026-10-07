@@ -2,6 +2,19 @@
 
 const { resolveTargetDir } = require('../lib/project-root');
 const { collectContextUsage } = require('../lib/context-usage');
+const { collectGuardOutcomes } = require('../lib/guard-outcomes');
+
+// Offered → honored: what the guard injected at write time, and whether the
+// measured violations it carried were fixed or are still in the files.
+function logGuardOutcomes(logger, guard) {
+  if (!guard || !guard.available || guard.totals.injections === 0) return;
+  const { totals } = guard;
+  logger.log(`Guard at write time: ${totals.injections} injection${totals.injections === 1 ? '' : 's'} — measured violations fixed ${totals.violations_fixed}, still present ${totals.violations_still_present}${totals.violations_file_gone ? `, file gone ${totals.violations_file_gone}` : ''}.`);
+  for (const rule of guard.rules.slice(0, 10)) {
+    const outcome = rule.with_violations > 0 ? ` · violations fixed ${rule.fixed} / still present ${rule.still_present}` : '';
+    logger.log(`- ${rule.path}: injected ${rule.injections}${outcome}`);
+  }
+}
 
 // `aioson context:usage [dir] [--since=<days>] [--feature=<slug>] [--json]`
 //
@@ -12,6 +25,7 @@ const { collectContextUsage } = require('../lib/context-usage');
 async function runContextUsageCommand({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const report = await collectContextUsage(targetDir, { since: options.since, feature: options.feature });
+  if (report.available) report.guard = await collectGuardOutcomes(targetDir, { sinceDays: report.since_days });
   report.exitCode = 0;
   if (options.json) return report;
 
@@ -61,6 +75,7 @@ async function runContextUsageCommand({ args, options = {}, logger }) {
   if (flags.skills_never_selected.length > 0) {
     logger.log(`Active skills no brief selected in the window (trigger review or retirement candidates — cross-check with \`aioson skill:audit . --usage\`): ${flags.skills_never_selected.map((skill) => skill.id).join(', ')}`);
   }
+  logGuardOutcomes(logger, report.guard);
   for (const caveat of report.caveats) logger.log(`note: ${caveat}`);
   return report;
 }

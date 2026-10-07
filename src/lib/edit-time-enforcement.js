@@ -238,7 +238,9 @@ async function detectEditViolations(targetDir, input) {
   const after = textAfterEdit(before, toolName, toolInput);
   if (after === null) return [];
 
-  const exists = (cited) => fs.existsSync(path.resolve(targetDir, cited));
+  // A re-check (guard outcomes) asks whether the document STILL names the
+  // path, even once the file was created under that name.
+  const exists = input.keepExistingCitations ? () => false : (cited) => fs.existsSync(path.resolve(targetDir, cited));
   const filesOf = (text) => {
     if (text === null) return [];
     if (kind === 'markdown') return filesNamedBy(text, exists);
@@ -272,17 +274,20 @@ async function detectEditViolations(targetDir, input) {
     const binding = applicable.find((doc) => doc.authority === 'binding');
     const owner = binding || applicable[0];
     const synthetic = new Set(scoped.filter((file) => file.synthetic).map((file) => file.rel));
+    // The injection shows a few; a re-check (guard outcomes) needs them all.
+    const cap = input.uncapped ? fresh.length : MAX_FINDINGS_PER_BLOCK;
     blocks.push({
       checker: id,
       path: owner.path,
       authority: binding ? 'binding' : 'advisory',
       named_by_document: kind === 'markdown',
-      findings: fresh.slice(0, MAX_FINDINGS_PER_BLOCK).map((finding) => ({
+      findings: fresh.slice(0, cap).map((finding) => ({
         severity: finding.severity,
         message: finding.message,
-        file: synthetic.has(finding.file) ? null : finding.file
+        file: synthetic.has(finding.file) ? null : finding.file,
+        key: diffKey(finding)
       })),
-      more: Math.max(0, fresh.length - MAX_FINDINGS_PER_BLOCK)
+      more: Math.max(0, fresh.length - cap)
     });
   }
   return blocks;

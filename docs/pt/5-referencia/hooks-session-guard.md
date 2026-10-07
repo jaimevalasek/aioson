@@ -105,6 +105,17 @@ Uma regra com verificador determinístico (`enforcement:`) também é injetada q
 - Respeita `agents:` e `paths:` da regra. Markdown fora de `.aioson/` (docs, notas em `plans/` e `research/`, README/CHANGELOG) e os próprios arquivos de governança (`.aioson/rules`, `docs`, `skills`) nunca são julgados: eles falam SOBRE o produto e citam contraexemplos de propósito.
 - A injeção traz o achado (`HIGH non-English filename "servicoCliente"`) junto com as duas primeiras restrições da regra. Só achados `HIGH` disparam.
 
+### Oferecido → cumprido: medir se a regra funcionou
+
+Cada injeção fica registrada no runtime do projeto (`guard_injected`, só quando `.aioson/runtime/aios.sqlite` já existe), com as violações medidas que carregava. O `aioson context:usage .` refaz as verificações nos arquivos **como estão agora** e separa, por regra, a violação corrigida da que entrou e ficou:
+
+```
+Guard at write time: 12 injections — measured violations fixed 9, still present 2, file gone 1.
+- .aioson/rules/source-code-language-convention.md: injected 7 · violations fixed 5 / still present 2
+```
+
+"Still present" em uma regra é o sinal de que a prosa dela está perdendo para o modelo e de que ela pede uma verificação mais dura no fim da etapa (`rules:check`). Em plano, a reverificação pergunta se o documento AINDA cita o nome errado, mesmo depois de o arquivo ter sido criado com ele.
+
 ### O Jev como juiz das injeções por vocabulário
 
 Com o Jev ativo no `aioson-models.json`, uma regra que o guard escolheu **só por vocabulário** (nenhum verificador mediu violação) passa por mais uma pergunta: "esta regra governa a mudança que está sendo escrita neste arquivo? Compartilhar uma palavra não basta". Abaixo de `min_noul`, a regra sai da injeção. É o caso de "cadastro" puxando a regra de formulário para uma referência de CLI.

@@ -1004,6 +1004,38 @@ function appendContextSelectEvent(db, options) {
   });
 }
 
+// One row per context:guard injection: which rules reached the write and
+// which measured violations they carried, so a later reader can tell a fixed
+// violation from one that landed and stayed.
+function appendGuardEvent(db, options) {
+  insertExecutionEvent(db, {
+    task_key: null,
+    run_key: null,
+    agent_name: options.agentName ? String(options.agentName).trim() : null,
+    agent_kind: null,
+    squad_slug: null,
+    session_key: null,
+    source: 'context_guard',
+    workflow_id: null,
+    workflow_stage: null,
+    parent_run_key: null,
+    event_type: 'guard_injected',
+    phase: 'context_guard',
+    status: null,
+    tool_name: options.toolName || null,
+    message: String(options.message || 'guard_injected'),
+    payload_json: options.payload ? JSON.stringify(options.payload) : null,
+    sequence_no: 1,
+    parent_event_id: null,
+    created_at: options.createdAt || nowIso(),
+    plan_step_id: null,
+    worker_status: null,
+    verdict: null,
+    token_count: null,
+    progress_pct: null
+  });
+}
+
 function appendRunEvent(db, options) {
   const run = getRunContext(db, options.runKey);
   if (!run) {
@@ -2899,6 +2931,7 @@ module.exports = {
   appendContextLoadEvent,
   appendContextBriefEvent,
   appendContextSelectEvent,
+  appendGuardEvent,
   logAgentEvent,
   readAgentSession,
   writeAgentSession,

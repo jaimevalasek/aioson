@@ -35,6 +35,7 @@ async function runContextGuard({ args, options = {}, logger }) {
   }
 
   const guard = response && response._guard;
+  if (guard && guard.injected) await recordGuardEvent(targetDir, event, guard);
 
   if (options.json) {
     // Keep the wire payload pristine — strip the internal observability field.
@@ -49,6 +50,29 @@ async function runContextGuard({ args, options = {}, logger }) {
   }
 
   return response;
+}
+
+// Best-effort, silent, only when the runtime store exists — the same contract
+// as the brief telemetry. Read back by lib/guard-outcomes.js (context:usage).
+async function recordGuardEvent(targetDir, event, guard) {
+  let handle = null;
+  try {
+    const { openRuntimeDb, appendGuardEvent } = require('../runtime-store');
+    handle = await openRuntimeDb(targetDir, { mustExist: true });
+    if (!handle || !handle.db) return;
+    appendGuardEvent(handle.db, {
+      agentName: guard.agent,
+      toolName: event && event.tool_name,
+      payload: {
+        file: guard.file,
+        rules: guard.rules,
+        violations: guard.violation_keys || [],
+        jev: guard.jev ? guard.jev.status : null
+      }
+    });
+  } catch { /* telemetry never breaks the hook */ } finally {
+    if (handle && handle.db) { try { handle.db.close(); } catch { /* closed */ } }
+  }
 }
 
 function resolveGuardAgent(options = {}, event = {}) {
