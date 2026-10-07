@@ -219,7 +219,7 @@ identity: none
 ## Quality evidence
 - verdict: pass
 - evidence: .aioson/context/features/idea-two/visual-evidence.json
-- craft: 0/5
+- craft: 0/4
 - runtime: waived — owner explicitly accepted static-only evidence for this fixture
 - routes: 0
 `,

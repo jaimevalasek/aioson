@@ -39,6 +39,10 @@ async function write(dir, rel, body) {
   await fs.writeFile(file, body, 'utf8');
 }
 
+// Telemetry only credits CSS the markup reaches (visual-css-scope.js); the
+// `.rN` filler stands for a real page's applied rules, so an element carries them.
+const FILLER_HOST = `<div class="${Array.from({ length: 60 }, (_, i) => `r${i}`).join(' ')}"></div>`;
+
 // The incident shape: a named-but-undelivered mono face, literal values off
 // the grid, an uppercase mono label above every heading, a colored side
 // border, 10px text, stock browser chrome, the 2018 dialect.
@@ -58,6 +62,7 @@ function sloppyOperateSurface({ withForm = true } = {}) {
   <section class="card"><span class="overline">Indicador</span><h2>Cobertura</h2></section>
   <section class="card"><span class="overline">Assuntos</span><h2>Temas</h2></section>
   ${withForm ? '<table class="table"><thead><tr><th>Assunto</th></tr></thead><tbody><tr><td>Linha</td></tr></tbody></table><form><input type="text" name="q"><button class="btn">Buscar</button></form>' : ''}
+  ${FILLER_HOST}
   </main></body></html>`;
 }
 
@@ -83,6 +88,7 @@ function preciseOperateSurface() {
   <aside class="sidebar"><nav><a href="#/">Painel</a></nav></aside>
   <main id="main"><div class="toolbar"><button class="btn">Novo</button></div>
   <section class="card"><h2>Cobertura</h2></section>
+  ${FILLER_HOST}
   </main></body></html>`;
 }
 

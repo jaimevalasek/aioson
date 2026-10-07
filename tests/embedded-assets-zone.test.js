@@ -88,6 +88,11 @@ const PNG = `data:image/png;base64,${'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFc
 
 function brandSurface({ zone }) {
   const filler = Array.from({ length: 70 }, (_, i) => `.f${i} { padding: var(--s2); margin: var(--s3); color: var(--fg); background: var(--bg); }`).join('\n');
+  // Telemetry only credits CSS the markup reaches (visual-css-scope.js): the
+  // filler stands for a real page's applied rules, and the overlap/sticky
+  // layers are part of the composition — elements carry them.
+  const fillerHost = `<div class="${Array.from({ length: 70 }, (_, i) => `f${i}`).join(' ')}"></div>
+  <div class="card"><div class="sticky"></div><div class="overlap"></div><div class="shot-wide"></div></div>`;
   const img = (name, alt) => (zone ? `<img class="shot" data-asset="${name}" alt="${alt}">` : `<img class="shot" src="${PNG}" alt="${alt}">`);
   const assets = zone
     ? `<script type="application/json" data-aioson-assets>{"kitchen":"${PNG}","plate":"${PNG}","room":"${PNG}"}</script>
@@ -122,6 +127,7 @@ function brandSurface({ zone }) {
   </style></head><body>
   <section class="hero"><div class="wash"></div><p class="kicker">Casa</p><h1>Estúdio</h1><a class="btn" href="#c">Conversar</a></section>
   <section class="reveal">${img('kitchen', 'Chef plating a dish in the open kitchen')}${img('plate', 'Seasonal tasting menu plate')}${img('room', 'Dining room at dusk')}</section>
+  ${fillerHost}
   ${assets}
   </body></html>`;
 }
