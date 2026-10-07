@@ -8,7 +8,7 @@ const path = require('node:path');
 const os = require('node:os');
 
 const { runFeatureArchive, runFeatureSweep } = require('../../src/commands/feature-archive');
-const { runFeatureRegister } = require('../../src/commands/feature-registry');
+const { runFeatureRegister, runFeatureTidy } = require('../../src/commands/feature-registry');
 const { isDocumentation, pruneToDocumentation } = require('../../src/lib/archive-documentation');
 
 let root;
@@ -225,5 +225,71 @@ describe('feature:sweep heals closures that skipped feature:close', () => {
     assert.equal(result.failed[0].errors[0].code, 'archive_merge_conflict');
     assert.equal(await fs.readFile(path.join(ctx, 'done', 'archived-before', 'prd-archived-before.md'), 'utf8'), 'archived text');
     assert.equal(exists('.aioson/context/prd-archived-before.md'), true);
+  });
+});
+
+describe('feature:sweep archives finished simple plans', () => {
+  const plan = (status, extra = '', updated = '2026-08-01') =>
+    `---\nstatus: ${status}\nupdated_at: ${updated}\n${extra}---\n\n# Simple Plan\n`;
+
+  it('moves a finished plan, its companions and its evidence folder; leaves the rest', async () => {
+    await seedFeatures([['registered-plan', 'in_progress'], ['shipped-plan', 'done']]);
+    await write('.aioson/context/simple-plans/bulleted.md', '# Simple Plan\n- **slug:** `bulleted`\n- **status:** done (smoke pendente)\n- **created:** 2026-08-20\n\n## Objetivo\n');
+    await write('.aioson/context/simple-plans/shipped-plan.md', plan('done'));
+    await write('.aioson/context/simple-plans/finished.md', plan('done — entregue na v0.1.52'));
+    await write('.aioson/context/simple-plans/finished.qa-report.md', '# QA\nPASS\n');
+    await write('.aioson/context/features/finished/visual-implementation.json', '{}');
+    await write('.aioson/context/features/finished/notes.md', '# notas\n');
+    await write('.aioson/context/simple-plans/headerless.md', '# Simple Plan — headerless\n\nstatus: done\ncreated: 2026-08-13\n\n## Objetivo\n');
+    await write('.aioson/context/simple-plans/open.md', plan('in_progress'));
+    await write('.aioson/context/simple-plans/followup.md', plan('done', 'source_feature: checkout\nsource_finding: F-1\n'));
+    await write('.aioson/context/simple-plans/registered-plan.md', plan('done'));
+    const today = new Date().toISOString().slice(0, 10);
+    await write('.aioson/context/simple-plans/just-finished.md', plan('done', '', today));
+
+    const preview = await runFeatureSweep({ args: [root], options: { json: true, 'dry-run': true } });
+    assert.deepEqual(preview.simple_plans, ['bulleted', 'finished', 'headerless', 'shipped-plan']);
+    assert.equal(exists('.aioson/context/simple-plans/finished.md'), true);
+
+    const result = await runFeatureSweep({ args: [root], options: { json: true } });
+
+    assert.deepEqual(result.simple_plans.map((p) => p.slug), ['bulleted', 'finished', 'headerless', 'shipped-plan']);
+    assert.equal(exists('.aioson/context/done/simple-plans/finished.md'), true);
+    assert.equal(exists('.aioson/context/done/simple-plans/finished.qa-report.md'), true);
+    assert.equal(exists('.aioson/context/done/simple-plans/finished/notes.md'), true);
+    assert.equal(exists('.aioson/context/done/simple-plans/finished/visual-implementation.json'), false);
+    assert.equal(exists('.aioson/context/features/finished'), false);
+    assert.equal(exists('.aioson/context/simple-plans/finished.md'), false);
+    for (const kept of ['open', 'followup', 'registered-plan', 'just-finished']) {
+      assert.equal(exists(`.aioson/context/simple-plans/${kept}.md`), true, kept);
+    }
+  });
+
+  it('removes a live copy identical to the archived plan and refuses a divergent one', async () => {
+    await write('.aioson/context/simple-plans/same.md', plan('done'));
+    await write('.aioson/context/done/simple-plans/same.md', plan('done'));
+    await write('.aioson/context/simple-plans/diverged.md', plan('done'));
+    await write('.aioson/context/done/simple-plans/diverged.md', 'older text');
+
+    const result = await runFeatureSweep({ args: [root], options: { json: true } });
+
+    assert.equal(exists('.aioson/context/simple-plans/same.md'), false);
+    assert.equal(exists('.aioson/context/simple-plans/diverged.md'), true);
+    assert.equal(await fs.readFile(path.join(ctx, 'done', 'simple-plans', 'diverged.md'), 'utf8'), 'older text');
+    assert.match(result.failed.find((f) => f.slug === 'simple-plans/diverged').reason, /archive_merge_conflict/);
+  });
+});
+
+describe('feature:tidy respects the abandoned archive', () => {
+  it('puts a note of an abandoned feature in abandoned/, not in a new live folder', async () => {
+    await seedFeatures([['dropped', 'abandoned']]);
+    await fs.appendFile(path.join(ctx, 'features.md'), '<!-- dropped: pausada por decisão do dono -->\n');
+    await write('.aioson/context/abandoned/dropped/prd-dropped.md', '# PRD\n');
+
+    const result = await runFeatureTidy({ args: [root], options: { json: true } });
+
+    assert.equal(result.ok, true);
+    assert.match(await fs.readFile(path.join(ctx, 'abandoned', 'dropped', 'registry-notes.md'), 'utf8'), /pausada por decisão do dono/);
+    assert.equal(exists('.aioson/context/features/dropped'), false);
   });
 });

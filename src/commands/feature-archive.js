@@ -21,6 +21,7 @@ const { moveFileResilient, moveDirResilient } = require('../lib/fs-move');
 const { resolveTargetDir } = require('../lib/project-root');
 const { listDiagnosticDirs, dirStats, clearDir, formatBytes } = require('../lib/evidence-artifacts');
 const { pruneToDocumentation } = require('../lib/archive-documentation');
+const { listFinishedSimplePlans, archiveFinishedSimplePlans } = require('../lib/simple-plan-archive');
 
 const ARCHIVED_EXTENSIONS = ['md', 'yaml', 'yml', 'json'];
 
@@ -902,9 +903,11 @@ async function listArchiveFolders(ctxDir) {
  *   1. every done/abandoned feature that still has files in the live context
  *      is archived (done/ or abandoned/), stragglers of already-archived
  *      features included;
- *   2. every archive folder is pruned to documentation only, unless
+ *   2. every finished Simple Plan moves to done/simple-plans/ with its
+ *      features/{slug}/ folder (see lib/simple-plan-archive.js);
+ *   3. every archive folder is pruned to documentation only, unless
  *      --keep-evidence.
- * `--dry-run` lists both without touching anything.
+ * `--dry-run` lists all three without touching anything.
  */
 async function runFeatureSweep({ args = [], options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
@@ -938,15 +941,23 @@ async function runFeatureSweep({ args = [], options = {}, logger }) {
         if (p.files > 0) evidence.push({ bucket: f.bucket, slug: f.slug, files: p.files, bytes: p.bytes });
       }
     }
-    const result = { ok: true, dryRun: true, pending: pending.map((p) => p.slug), pending_detail: pending, evidence, archived: [] };
+    const simplePlans = await listFinishedSimplePlans(ctxDir);
+    const result = {
+      ok: true, dryRun: true, pending: pending.map((p) => p.slug), pending_detail: pending,
+      simple_plans: simplePlans.map((p) => p.slug), evidence, archived: []
+    };
     if (jsonOut) return result;
-    if (pending.length === 0 && evidence.length === 0) {
+    if (pending.length === 0 && simplePlans.length === 0 && evidence.length === 0) {
       log('Nothing to sweep: closed features are archived and their archives hold documentation only.');
       return result;
     }
     if (pending.length > 0) {
       log(`[dry-run] ${pending.length} closed feature(s) still have files in the live context:`);
       for (const p of pending) log(`  • ${p.slug} (${p.status} → ${bucketFor(p.status)}/)`);
+    }
+    if (simplePlans.length > 0) {
+      log(`[dry-run] ${simplePlans.length} finished simple plan(s) would move to done/simple-plans/:`);
+      for (const p of simplePlans) log(`  • ${p.slug} (${p.status})${p.folder ? ` + features/${p.slug}/` : ''}`);
     }
     if (evidence.length > 0) {
       const files = evidence.reduce((n, e) => n + e.files, 0);
@@ -982,6 +993,13 @@ async function runFeatureSweep({ args = [], options = {}, logger }) {
     }
   }
 
+  const plans = await archiveFinishedSimplePlans(ctxDir);
+  if (plans.archived.length > 0) log(`  ✓ ${plans.archived.length} finished simple plan(s) moved to done/simple-plans/`);
+  for (const p of plans.failed) {
+    failed.push({ slug: `simple-plans/${p.slug}`, reason: p.reason });
+    log(`  ✗ simple-plans/${p.slug} — ${p.reason}`);
+  }
+
   const evidence = [];
   if (!keepEvidence) {
     for (const f of await listArchiveFolders(ctxDir)) {
@@ -996,6 +1014,7 @@ async function runFeatureSweep({ args = [], options = {}, logger }) {
     ok: true,
     pending: pending.map((p) => p.slug),
     archived,
+    simple_plans: plans.archived,
     evidence,
     failed: failed.length > 0 ? failed : undefined
   };

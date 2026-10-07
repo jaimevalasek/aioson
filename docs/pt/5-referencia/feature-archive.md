@@ -127,7 +127,14 @@ aioson feature:sweep . --dry-run
 aioson feature:sweep .
 ```
 
-Ele arquiva toda feature `done` ou `abandoned` que ainda tem arquivo no contexto vivo (inclusive sobras de uma já arquivada) e reduz cada pasta de `done/` e `abandoned/` a só documentação. Uma sobra com o mesmo nome e o mesmo conteúdo da cópia arquivada é apagada; com conteúdo diferente, vira erro para conciliar à mão, nunca sobrescrita. O `feature:close` roda essa varredura sozinho ao fechar.
+Ele arquiva toda feature `done` ou `abandoned` que ainda tem arquivo no contexto vivo (inclusive sobras de uma já arquivada) e reduz cada pasta de `done/` e `abandoned/` a só documentação.
+
+Os planos simples (`simple-plans/{slug}.md`) não têm comando de fechamento: o plano só muda para `status: done`. O sweep leva cada plano terminado (`done`, `abandoned` ou `dismissed`) para `done/simple-plans/`. Vão junto os arquivos companheiros (`{slug}.qa-report.md`, `{slug}.ui-spec.md`) e a pasta `features/{slug}/` com a evidência do plano, que é limpa como qualquer arquivo morto. Ficam onde estão:
+
+- planos ainda abertos;
+- planos de pendência (`source_feature`), que o `feature:closure` lê;
+- planos cujo slug está registrado em `features.md`;
+- planos atualizados nos últimos 2 dias, porque a sessão que acabou de terminar um pode ainda estar commitando. Uma sobra com o mesmo nome e o mesmo conteúdo da cópia arquivada é apagada; com conteúdo diferente, vira erro para conciliar à mão, nunca sobrescrita. O `feature:close` roda essa varredura sozinho ao fechar.
 
 O comando é idempotente — rodar duas vezes é no-op seguro.
 

@@ -334,10 +334,14 @@ async function exists(target) {
 /** Where a slug's relocated notes go: beside the feature, live or archived. */
 async function notesDestination(ctxDir, slug) {
   if (!slug) return path.join(ctxDir, UNATTRIBUTED_NOTES_REL);
-  const archivedDossier = path.join(ctxDir, 'done', slug, 'dossier');
-  if (await exists(archivedDossier)) return path.join(archivedDossier, NOTES_FILE);
-  const archived = path.join(ctxDir, 'done', slug);
-  if (await exists(archived)) return path.join(archived, NOTES_FILE);
+  // Abandoned features are archived too: a note must not recreate a live
+  // features/{slug}/ folder that the sweep would only move back.
+  for (const bucket of ['done', 'abandoned']) {
+    const archivedDossier = path.join(ctxDir, bucket, slug, 'dossier');
+    if (await exists(archivedDossier)) return path.join(archivedDossier, NOTES_FILE);
+    const archived = path.join(ctxDir, bucket, slug);
+    if (await exists(archived)) return path.join(archived, NOTES_FILE);
+  }
   return path.join(ctxDir, 'features', slug, NOTES_FILE);
 }
 
