@@ -28,6 +28,8 @@ paths: [src/billing/**]                   # routing: matched against the files b
 ---
 ```
 
+List fields read the same in the inline form (`agents: [dev, planner]`) and as a YAML block list (`agents:` followed by `- dev` lines); a trailing `# comment` is never part of a value, and a quoted item keeps its commas (`["criar pastas, subpastas"]`). `aioson rules:lint . --docs` names the declarations that silently change who receives a rule: an `agents:` key left without a value (it reaches every agent — write `agents: []` when that is the intent), an agent id that is a near-miss of a real one, a mode other than `planning`/`executing`, and an unknown `load_tier`.
+
 ---
 
 ## Field Reference

@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { buildGuardResponse, detectSurfaceKinds, outsideProject } = require('../src/context-guard');
+const { buildGuardResponse, claimGuardEvent, detectSurfaceKinds, outsideProject } = require('../src/context-guard');
 const { runContextGuard, resolveGuardAgent } = require('../src/commands/context-guard');
 
 test('context:guard resolves the active agent from explicit options before event metadata', () => {
@@ -610,6 +610,73 @@ test('a file outside the project owns none of its rules: operator memory and scr
     assert.equal(outsideProject(dir, outside), true);
     assert.equal(outsideProject(dir, path.join(dir, 'src', 'x.js')), false);
     assert.equal(outsideProject(dir, 'src/x.js'), false, 'relative paths are the project\'s');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('detectSurfaceKinds: research captures and planning notes are about the product; AIOSON plans stay a surface', () => {
+  assert.equal(detectSurfaceKinds('plans/contextual-intelligence.md', '').size, 0);
+  assert.equal(detectSurfaceKinds('researchs/checkout-patterns/summary.md', '').size, 0);
+  assert.equal(detectSurfaceKinds('docs/research/forms.md', '').size, 0);
+  assert.ok(detectSurfaceKinds('.aioson/plans/orders/manifest.md', '').has('ui'));
+  assert.ok(detectSurfaceKinds('docs/prd-orders.md', '').has('ui'));
+  assert.ok(detectSurfaceKinds('plans/board.tsx', '').has('ui'), 'only markdown notes are exempt — markup is still markup');
+});
+
+test('surfaces are classified by the project-relative path, never by folders above the project root', async () => {
+  const base = await makeTmpDir();
+  const dir = path.join(base, 'research', 'app');
+  try {
+    await writeProject(dir);
+    await writeFile(dir, '.aioson/rules/form-ui.md', FORM_UI_RULE);
+    const content = '# Cadastro\n\nO formulário de cadastro valida o CPF com máscara e validação inline.';
+    const spec = await buildGuardResponse({
+      tool_name: 'Write',
+      tool_input: { file_path: path.join(dir, 'docs', 'cadastro-form.md'), content }
+    }, dir, { tool: 'claude', agent: 'dev' });
+    assert.ok(spec._guard && spec._guard.rules.includes('.aioson/rules/form-ui.md'), 'a checkout under research/ still has product docs');
+
+    const note = await buildGuardResponse({
+      tool_name: 'Write',
+      tool_input: { file_path: path.join(dir, 'plans', 'cadastro-ideas.md'), content }
+    }, dir, { tool: 'claude', agent: 'dev' });
+    const noteRules = note._guard ? note._guard.rules : [];
+    assert.equal(noteRules.includes('.aioson/rules/form-ui.md'), false, 'a planning note about forms is not a form');
+  } finally {
+    await fs.rm(base, { recursive: true, force: true });
+  }
+});
+
+test('one tool event injects once even when the hook is installed twice', async () => {
+  const dir = await makeTmpDir();
+  const claimDir = path.join(dir, 'claims');
+  try {
+    await writeProject(dir);
+    await writeFile(dir, '.aioson/rules/form-ui.md', FORM_UI_RULE);
+    const event = {
+      session_id: 'session-1',
+      tool_use_id: 'toolu_1',
+      tool_name: 'Write',
+      tool_input: {
+        file_path: 'app/cadastro/form.html',
+        content: '<form id="cadastro"><label for="cpf">CPF</label><input id="cpf" name="cpf"></form>'
+      }
+    };
+    const [first, second] = await Promise.all([
+      buildGuardResponse(event, dir, { tool: 'claude', agent: 'dev', claimDir }),
+      buildGuardResponse(event, dir, { tool: 'claude', agent: 'dev', claimDir })
+    ]);
+    const injected = [first, second].filter((response) => response._guard && response._guard.injected);
+    assert.equal(injected.length, 1, 'exactly one of the two hook processes answers');
+
+    const nextEdit = { ...event, tool_use_id: 'toolu_2' };
+    const again = await buildGuardResponse(nextEdit, dir, { tool: 'claude', agent: 'dev', claimDir });
+    assert.equal(again._guard && again._guard.injected, true, 'a new tool call is a new event');
+
+    const anonymous = { tool_name: event.tool_name, tool_input: event.tool_input };
+    assert.equal(claimGuardEvent(anonymous, claimDir), true);
+    assert.equal(claimGuardEvent(anonymous, claimDir), true, 'an event without a session identity is never deduplicated');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

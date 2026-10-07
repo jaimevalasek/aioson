@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const Database = require('better-sqlite3');
-const { parseFrontmatter, parseAgentList } = require('./preflight-engine');
+const { parseFrontmatter, parseAgentList, parseFlowList } = require('./preflight-engine');
 const { canonicalAgentId } = require('./agents');
 const { pathMatchesPattern: selectorPathMatchesPattern } = require('./context-selector');
 
@@ -671,23 +671,7 @@ function inferLoadTier(sourceType, relPath) {
 }
 
 function parseListValue(value) {
-  if (Array.isArray(value)) {
-    return value.map(String).map((item) => item.trim()).filter(Boolean);
-  }
-  if (value === undefined || value === null) return [];
-  const raw = String(value).trim();
-  if (!raw || raw === '[]') return [];
-  if (raw.startsWith('[') && raw.endsWith(']')) {
-    return raw
-      .slice(1, -1)
-      .split(',')
-      .map((item) => item.trim().replace(/^["']|["']$/g, ''))
-      .filter(Boolean);
-  }
-  return raw
-    .split(',')
-    .map((item) => item.trim().replace(/^["']|["']$/g, ''))
-    .filter(Boolean);
+  return parseFlowList(value);
 }
 
 function buildSearchInput(query, opts = {}) {

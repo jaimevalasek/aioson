@@ -1,5 +1,8 @@
 'use strict';
 
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { buildContextBrief, extractDocConstraints, rankForStack } = require('./context-brief');
 const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
@@ -90,6 +93,17 @@ function isTestArtifact(filePath) {
   return TEST_PATH_SEGMENT.test(text) || TEST_BASENAME.test(path.basename(text));
 }
 
+// Research captures and planning notes are ABOUT the product too: a note that
+// weighs "status" and "confirmation" is not a status control. AIOSON's own
+// product plans live under `.aioson/plans/`, so that tree stays a surface.
+const NOTE_PATH_SEGMENT = /(?:^|[\\/])(?:plans|research|researchs)[\\/]/i;
+const AIOSON_PLANS_SEGMENT = /(?:^|[\\/])\.aioson[\\/]plans[\\/]/i;
+
+function isNoteArtifact(filePath) {
+  const text = String(filePath || '');
+  return NOTE_PATH_SEGMENT.test(text.replace(AIOSON_PLANS_SEGMENT, '/'));
+}
+
 // The project's own governance/knowledge tree is ABOUT the product, never the
 // product: a skill description that says "boards, cards, forms" is authoring
 // the law, not building a board — injecting the kanban rule there is the same
@@ -112,7 +126,7 @@ function detectSurfaceKinds(filePath, content) {
   const stem = name.slice(0, name.length - ext.length);
   if (UI_FILE_EXTENSIONS.has(ext)) kinds.add('ui');
   // Product/spec docs carry interaction contracts (briefings, manifests, PRDs).
-  else if (DOC_FILE_EXTENSIONS.has(ext) && !NON_PRODUCT_DOC.test(stem)) kinds.add('ui');
+  else if (DOC_FILE_EXTENSIONS.has(ext) && !NON_PRODUCT_DOC.test(stem) && !isNoteArtifact(filePath)) kinds.add('ui');
   else if (SCRIPT_FILE_EXTENSIONS.has(ext) && DOM_MARKERS.test(String(content || ''))) kinds.add('ui');
   return kinds;
 }
@@ -258,6 +272,54 @@ function formatInjectionText(filePath, ruleBlocks) {
   return lines.join('\n');
 }
 
+// Two installed copies of the hook (user-level and project-level settings)
+// receive the SAME tool event and used to inject the same rules twice. The
+// first process to claim the event answers; the other stays silent. An event
+// without a session identity (a manual run, a test) is never deduplicated.
+const CLAIM_DIR = path.join(os.tmpdir(), 'aioson-guard-claims');
+const CLAIM_TTL_MS = 10 * 60 * 1000;
+
+function eventIdentity(event) {
+  if (!event) return '';
+  const session = event.session_id || '';
+  const toolUse = event.tool_use_id || '';
+  if (!session && !toolUse) return '';
+  return crypto.createHash('sha256')
+    .update(JSON.stringify([session, toolUse, event.tool_name || '', event.tool_input || {}]))
+    .digest('hex')
+    .slice(0, 32);
+}
+
+function pruneClaims(dir, now = Date.now()) {
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    const file = path.join(dir, name);
+    try {
+      if (now - fs.statSync(file).mtimeMs > CLAIM_TTL_MS) fs.unlinkSync(file);
+    } catch { /* a concurrent guard already pruned it */ }
+  }
+}
+
+function claimGuardEvent(event, claimDir = CLAIM_DIR) {
+  const identity = eventIdentity(event);
+  if (!identity) return true;
+  try {
+    fs.mkdirSync(claimDir, { recursive: true });
+    fs.closeSync(fs.openSync(path.join(claimDir, identity), 'wx'));
+  } catch (error) {
+    // An unwritable temp dir must never silence the guard; only a claim
+    // another process already holds does.
+    return !(error && error.code === 'EEXIST');
+  }
+  if (identity.startsWith('0')) pruneClaims(claimDir);
+  return true;
+}
+
 function formatForTool(tool, additionalContext) {
   // Only the Claude Code adapter exists today; other harnesses default to it
   // until their own extension point is wired.
@@ -285,6 +347,7 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   // A session edits more than the project (operator memory, scratch files):
   // the project's rules apply to the project's files only.
   if (outsideProject(targetDir, filePath)) return emptyResponse();
+  if (!claimGuardEvent(event, options.claimDir)) return emptyResponse();
 
   const query = deriveQuery(filePath, content, gate.maxContentChars);
   if (!query) return emptyResponse();
@@ -300,8 +363,10 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   if (ruled.length === 0) return emptyResponse();
   if (!confidenceAllows(brief.confidence, gate)) return emptyResponse();
 
-  const surfaceKinds = detectSurfaceKinds(filePath, content);
   const pathCandidates = guardPathCandidates(targetDir, filePath);
+  // Classify by the project-relative path: the folders above the project root
+  // (a checkout under `.../research/` or `.../tests/`) say nothing about the file.
+  const surfaceKinds = detectSurfaceKinds(pathCandidates[pathCandidates.length - 1] || filePath, content);
   const ruleBlocks = await buildRuleBlocks(targetDir, ruled, gate, surfaceKinds, pathCandidates, brief.intent && brief.intent.stack, isGovernanceArtifact(filePath));
   if (ruleBlocks.length === 0) return emptyResponse();
 
@@ -317,6 +382,7 @@ async function buildGuardResponse(event, targetDir, options = {}) {
 
 module.exports = {
   buildGuardResponse,
+  claimGuardEvent,
   deriveQuery,
   detectSurfaceKinds,
   isGovernanceArtifact,

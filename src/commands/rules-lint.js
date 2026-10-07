@@ -2,8 +2,12 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { parseFrontmatter } = require('../preflight-engine');
+const { parseFrontmatter, parseFlowList } = require('../preflight-engine');
+const { listAgentDefinitions, canonicalAgentId } = require('../agents');
 const { resolveTargetDir } = require('../lib/project-root');
+
+const SELECTOR_MODES = ['planning', 'executing'];
+const LOAD_TIERS = ['always', 'trigger', 'justified', 'archive'];
 
 const ROUTING_FIELDS = [
   'task_types',
@@ -21,12 +25,66 @@ function hasValue(raw) {
   return value !== '' && value !== '[]';
 }
 
+function editDistance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const current = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = current;
+    }
+  }
+  return row[b.length];
+}
+
+let knownAgentIds = null;
+function agentIds() {
+  if (!knownAgentIds) {
+    knownAgentIds = new Set(listAgentDefinitions().flatMap((agent) => [
+      agent.id,
+      ...(agent.aliases || []),
+      ...(agent.legacyIds || []),
+      ...(agent.retiredIds || [])
+    ]));
+  }
+  return knownAgentIds;
+}
+
+// Scope declarations that silently change who receives the document. Custom
+// and squad agent ids are legitimate, so an unknown id is reported only when
+// it is a near-miss of a framework agent — a typo routes the rule to nobody.
+function scopeWarnings(frontmatter) {
+  const warnings = [];
+  if (Object.prototype.hasOwnProperty.call(frontmatter, 'agents') && String(frontmatter.agents).trim() === '') {
+    warnings.push('agents is declared without a value, so the document reaches EVERY agent; list the agents ([dev, planner]) or write agents: [] when every agent is intended.');
+  }
+  const known = agentIds();
+  for (const agent of parseFlowList(frontmatter.agents)) {
+    const id = canonicalAgentId(agent);
+    if (id === 'all' || known.has(id)) continue;
+    const near = [...known].find((candidate) => editDistance(id, candidate) <= 2 && Math.min(id.length, candidate.length) >= 3);
+    if (near) warnings.push(`agents: "${agent}" is not an agent id (did you mean "${canonicalAgentId(near)}"?) — no agent receives the document under that name.`);
+  }
+  for (const mode of parseFlowList(frontmatter.modes)) {
+    if (!SELECTOR_MODES.includes(String(mode).trim().toLowerCase())) {
+      warnings.push(`modes: "${mode}" is not a selector mode (${SELECTOR_MODES.join(', ')}) — the document is never selected in that mode.`);
+    }
+  }
+  if (hasValue(frontmatter.load_tier) && !LOAD_TIERS.includes(String(frontmatter.load_tier).trim().toLowerCase())) {
+    warnings.push(`load_tier: "${frontmatter.load_tier}" is not one of ${LOAD_TIERS.join(', ')} — it routes as trigger.`);
+  }
+  return warnings;
+}
+
 function lintRule(relPath, frontmatter) {
   const warnings = [];
   const isRule = relPath.startsWith('.aioson/rules/');
 
   if (isRule && !hasValue(frontmatter.name)) warnings.push('missing required field: name');
   if (!hasValue(frontmatter.description)) warnings.push('missing required field: description');
+  warnings.push(...scopeWarnings(frontmatter));
 
   const loadTier = String(frontmatter.load_tier || 'trigger').trim().toLowerCase();
   const routing = ROUTING_FIELDS.filter((field) => hasValue(frontmatter[field]));

@@ -35,6 +35,11 @@ function formatContextActivation(brief) {
   if (brief.should_load && brief.should_load.length > 0) {
     lines.push('', 'Load only if the named decision needs it:', ...formatItems(brief.should_load, 5));
   }
+  // The brief routes skills on their own declared signals; dropping them here
+  // made a matched skill invisible to the agent it was selected for.
+  if (brief.skills && brief.skills.length > 0) {
+    lines.push('', 'Skills matching this task (open the router when its technique fits the work):', ...formatItems(brief.skills, 6));
+  }
   if (brief.constraints && brief.constraints.length > 0) {
     lines.push('', 'Immediate constraints:', ...brief.constraints.slice(0, 6).map((item) => `- ${item}`));
   }

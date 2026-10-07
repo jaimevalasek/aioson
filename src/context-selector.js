@@ -6,6 +6,7 @@ const Database = require('better-sqlite3');
 const { canonicalAgentId } = require('./agents');
 const {
   parseFrontmatter,
+  parseFlowList,
   parseAgentList,
   appliesToAgent,
   readFileSafe,
@@ -185,20 +186,7 @@ function isActivationOnlyTask(agent, mode, task) {
 }
 
 function parseListValue(value) {
-  if (value === undefined || value === null) return [];
-  const raw = String(value).trim();
-  if (!raw || raw === '[]') return [];
-  if (raw.startsWith('[') && raw.endsWith(']')) {
-    return raw
-      .slice(1, -1)
-      .split(',')
-      .map((item) => item.trim().replace(/^["']|["']$/g, ''))
-      .filter(Boolean);
-  }
-  return raw
-    .split(',')
-    .map((item) => item.trim().replace(/^["']|["']$/g, ''))
-    .filter(Boolean);
+  return parseFlowList(value);
 }
 
 function semanticSearchEnabled(options) {
