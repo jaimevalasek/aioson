@@ -362,6 +362,27 @@ aioson doc:new . --name=customer-integration --folder=dev \
   --examples="integrate the customer registry with the ERP"
 ```
 
+## decide
+
+Make an implementation decision once. Before choosing a library, pattern or approach, an agent asks the project:
+
+```bash
+aioson decide . --question="Which queue backs the e-mail jobs?" --options="Redis|database table" --paths=src/jobs/mailer.js
+```
+
+1. **Precedent** — a recorded decision doc under `.aioson/docs/decisions/` matches the question through a hard signal: it is printed, no model involved.
+2. **Governing knowledge** — rules and docs that govern the question are listed to read first.
+3. **Recommendation** — with JEV configured and no precedent, a bounded Choice over the options plus "needs a human". JEV only recommends (confidence ≥ 0.7, probability ≥ 0.6); it never records. Unsettled → raise it with `decision:add`.
+
+Record the choice once:
+
+```bash
+aioson decide . --question="Which queue backs the e-mail jobs?" --options="Redis|database table" \
+  --record --choice=Redis --why="Redis already runs in the stack" --by=@dev --triggers="queue,jobs"
+```
+
+The decision becomes a routed doc (options as aliases, the question as its birth example), proven at birth to reach the next agent who asks — a rephrased question sharing the triggers finds it as precedent. The shipped `.aioson/docs/implementation-decisions.md` is routed to agents whose task is a choice, so they learn this protocol on demand instead of from their kernel.
+
 ---
 
 ## verify:artifact --kind=visual

@@ -212,6 +212,24 @@
       ]
     },
     {
+      "name": "dev implementation decision between libraries",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Which library should we use for the e-mail job queue? Choose between Redis and the database table.",
+      "expect": [
+        { "path": ".aioson/docs/implementation-decisions.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "planner implementation decision between approaches",
+      "agent": "planner",
+      "mode": "planning",
+      "task": "Decidir entre exportação em streaming ou em lote para o relatório financeiro — qual abordagem o plano segue?",
+      "expect": [
+        { "path": ".aioson/docs/implementation-decisions.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "dev simple plan bounded fix",
       "agent": "dev",
       "mode": "executing",

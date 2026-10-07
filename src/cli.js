@@ -427,6 +427,7 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'decision-resolve',
   'decision:list',
   'decision-list',
+  'decide',
   'feature-trace',
   'feature:diff',
   'feature-diff',
@@ -1132,6 +1133,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_agent_epilogue');
   logHelpLine(t, logger, 'cli.help_rule_new');
   logHelpLine(t, logger, 'cli.help_doc_new');
+  logHelpLine(t, logger, 'cli.help_decide');
   logHelpLine(t, logger, 'cli.help_briefing_sources');
   logHelpLine(t, logger, 'cli.help_briefing_approve');
   logHelpLine(t, logger, 'cli.help_briefing_unapprove');
@@ -2199,6 +2201,9 @@ async function main() {
     } else if (command === 'decision:list' || command === 'decision-list') {
       const { runDecisionList } = require('./commands/decision');
       result = await runDecisionList({ args, options, logger: commandLogger });
+    } else if (command === 'decide') {
+      const { runDecide } = require('./commands/decide');
+      result = await runDecide({ args, options, logger: commandLogger });
     } else if (command === 'feature:diff' || command === 'feature-diff') {
       result = await runFeatureDiff({ args, options, logger: commandLogger });
     } else if (command === 'workflow:mode' || command === 'workflow-mode') {

@@ -435,6 +435,27 @@ aioson doc:new . --name=integracao-de-clientes --folder=dev \
   --examples="integrar o cadastro de clientes com o ERP"
 ```
 
+#### `decide`
+
+Toma uma decisão de implementação uma única vez. Antes de escolher biblioteca, padrão ou abordagem, o agente pergunta ao projeto:
+
+```bash
+aioson decide . --question="Qual fila usar para os jobs de e-mail?" --options="Redis|tabela no banco" --paths=src/jobs/mailer.js
+```
+
+1. **Precedente** — um doc de decisão em `.aioson/docs/decisions/` casa com a pergunta por um sinal forte e é mostrado, sem nenhum modelo envolvido.
+2. **Conhecimento que governa** — as regras e docs que governam a pergunta são listados para leitura antes da escolha.
+3. **Recomendação** — com o Jev configurado e sem precedente, uma escolha limitada entre as opções, com "precisa de um humano" como saída. O Jev só recomenda (confiança ≥ 0,7, probabilidade ≥ 0,6) e nunca grava. Sem decisão clara, vale `decision:add`.
+
+Grave a escolha uma vez:
+
+```bash
+aioson decide . --question="Qual fila usar para os jobs de e-mail?" --options="Redis|tabela no banco" \
+  --record --choice=Redis --why="O Redis já roda no stack" --by=@dev --triggers="fila,jobs"
+```
+
+A decisão vira um doc roteado: as opções viram aliases e a pergunta vira o exemplo de nascimento. A prova de nascimento garante que ela chega ao próximo agente que fizer a pergunta, e uma pergunta reformulada que compartilha os gatilhos a encontra como precedente. O doc distribuído `.aioson/docs/implementation-decisions.md` é roteado para os agentes cuja tarefa é uma escolha, então eles aprendem esse protocolo sob demanda, sem peso no kernel.
+
 #### `verify:artifact` — o gate de artefato
 
 `verify:artifact` é a versão "sem build" do *pronto = provado, não afirmado*: ele lê os arquivos declarados e prova que a estrutura obrigatória existe e que nenhum placeholder ou truncamento passou, antes do agente se declarar concluído. É `fs` + expressão regular + `JSON.parse` — custa milissegundos e roda igual em qualquer sistema operacional.

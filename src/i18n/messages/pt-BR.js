@@ -50,6 +50,8 @@ module.exports = {
       'aioson rule:new [caminho] --name=<nome-kebab> [--description=<texto>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--priority=0-100] [--load-tier=trigger|always] [--aliases=a,b] [--examples="tarefa|tarefa"] [--no-evals] [--force] [--json] [--locale=pt-BR]',
     help_doc_new:
       'aioson doc:new [caminho] [--folder=<tema>] --name=<nome-kebab> [--description=<texto>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--load-tier=trigger|always] [--aliases=a,b] [--examples="tarefa|tarefa"] [--no-evals] [--force] [--json] [--locale=pt-BR]',
+    help_decide:
+      'aioson decide [caminho] --question="<decisão>" [--options="a|b"] [--evidence=<texto>] [--agents=a,b] [--paths=glob] [--triggers=t,t] [--record --choice="<opção>" --why=<texto> --by=<quem>] [--json] [--locale=pt-BR]',
     rule_new: {
       created: 'Regra "{name}" criada em {path}.',
       replaced: 'Regra "{name}" substituida em {path}.',

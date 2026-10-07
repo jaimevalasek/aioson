@@ -68,6 +68,8 @@ const BOOLEAN_FLAGS = new Set([
   'no-evals',
   // context:brief JEV pruning opt-out — pure boolean.
   'no-jev',
+  // decide — records the choice instead of consulting; pure boolean.
+  'record',
   // update downgrade-guard escape hatch — pure boolean; `--allow-downgrade .`
   // must not swallow the path positional.
   'allow-downgrade',

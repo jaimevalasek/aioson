@@ -49,6 +49,8 @@ module.exports = {
       'aioson rule:new [path] --name=<kebab-name> [--description=<text>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--priority=0-100] [--load-tier=trigger|always] [--aliases=a,b] [--examples="task|task"] [--no-evals] [--force] [--json] [--locale=en]',
     help_doc_new:
       'aioson doc:new [path] [--folder=<topic>] --name=<kebab-name> [--description=<text>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--load-tier=trigger|always] [--aliases=a,b] [--examples="task|task"] [--no-evals] [--force] [--json] [--locale=en]',
+    help_decide:
+      'aioson decide [path] --question="<decision>" [--options="a|b"] [--evidence=<text>] [--agents=a,b] [--paths=glob] [--triggers=t,t] [--record --choice="<option>" --why=<text> --by=<who>] [--json] [--locale=en]',
     rule_new: {
       created: 'Created rule "{name}" at {path}.',
       replaced: 'Replaced rule "{name}" at {path}.',

@@ -171,10 +171,12 @@ function renderFrontmatter(fm) {
  * @param {object} options CLI options (name, description, agents, triggers,
  *   task-types, aliases, paths, modes, priority, load-tier, folder, force)
  * @param {'rule'|'doc'} kind
+ * @param {{ body?: (name: string, frontmatter: object) => string }} [overrides]
+ *   programmatic callers (decide) supply their own body; never a CLI flag
  * @returns {Promise<{ok: boolean, reason?: string, kind?: string, path?: string,
  *   name?: string, frontmatter?: object, overwritten?: boolean, warnings?: string[]}>}
  */
-async function scaffoldKnowledge(projectDir, options = {}, kind = 'rule') {
+async function scaffoldKnowledge(projectDir, options = {}, kind = 'rule', overrides = {}) {
   const name = String(options.name || '').trim().toLowerCase();
   if (!name) return { ok: false, reason: 'name_required' };
   if (!KEBAB.test(name)) return { ok: false, reason: 'invalid_name', name };
@@ -191,7 +193,8 @@ async function scaffoldKnowledge(projectDir, options = {}, kind = 'rule') {
   if (built.error) return built.error;
   const fm = built.frontmatter;
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, `${renderFrontmatter(fm)}\n${KINDS[kind].body(name, fm)}`, 'utf8');
+  const body = typeof overrides.body === 'function' ? overrides.body(name, fm) : KINDS[kind].body(name, fm);
+  await fs.writeFile(filePath, `${renderFrontmatter(fm)}\n${body}`, 'utf8');
 
   // Without at least one routing dimension the file only loads on load_tier: always.
   const routed = [fm.agents, fm.triggers, fm.task_types, fm.aliases, fm.paths].some((list) => list.length > 0);
