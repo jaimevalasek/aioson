@@ -413,6 +413,19 @@ aioson verify:artifact . --kind=rule --file=.aioson/rules/contrato-qualidade-vis
 
 Essa verificação prova que o frontmatter roteia de verdade e que os textos de exemplo foram substituídos por requisitos concretos e verificáveis.
 
+**Nasce testada.** O `rule:new` e o `doc:new` provam o arquivo novo no ato da criação, pelo mesmo montador de brief que todo agente usa. A prova confere que o arquivo **chega a cada agente que nomeia**, no modo em que esse agente realmente consulta, e que **fica fora** do agente vizinho não nomeado e de uma tarefa sem relação. Passe as palavras que os agentes realmente usam com `--examples="tarefa um|tarefa dois"` (o `|` separa as tarefas; cada uma é provada para o primeiro agente). Uma falha mostra a causa e a correção do frontmatter, por exemplo `mode_filter — widen modes: to include planning`. Os cenários ficam em `.aioson/evals/project-knowledge.evals.json`, um arquivo do projeto que o `aioson update` nunca toca, então o `aioson context:evals .` continua provando tudo conforme o catálogo cresce. `--no-evals` cria o arquivo sem provar; `--aliases=a,b` acrescenta termos do usuário e do domínio ao roteamento.
+
+#### `doc:new`
+
+Cria um procedimento em `.aioson/docs/`: a inteligência que o agente consulta quando a tarefa pede. Usa as mesmas flags de roteamento e a mesma prova de nascimento do `rule:new`. Doc não tem `priority` (é procedimento, não lei); `--folder=<tema>` agrupa para as pessoas, enquanto o roteamento continua vindo do frontmatter.
+
+```bash
+aioson doc:new . --name=integracao-de-clientes --folder=dev \
+  --description="Reutilizar a integração de clientes existente antes de criar outra" \
+  --agents=dev --triggers="integração de clientes,cadastro de clientes" \
+  --examples="integrar o cadastro de clientes com o ERP"
+```
+
 #### `verify:artifact` — o gate de artefato
 
 `verify:artifact` é a versão "sem build" do *pronto = provado, não afirmado*: ele lê os arquivos declarados e prova que a estrutura obrigatória existe e que nenhum placeholder ou truncamento passou, antes do agente se declarar concluído. É `fs` + expressão regular + `JSON.parse` — custa milissegundos e roda igual em qualquer sistema operacional.

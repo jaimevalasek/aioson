@@ -347,6 +347,21 @@ aioson verify:artifact . --kind=rule --file=.aioson/rules/visual-quality-contrac
 
 That check proves the frontmatter routes and that the scaffold placeholders were replaced with concrete, checkable requirements.
 
+### Born tested
+
+`rule:new` and `doc:new` prove the new file at birth through the real brief builder (the call every agent makes): it **reaches each agent it names**, in the mode that agent actually consults in, and **stays out** of the nearest agent it does not name and of an unrelated task. Pass the words agents really use with `--examples="task one|task two"` (`|` separates tasks; each is proven for the first agent). A miss prints the cause and the frontmatter fix, for example `mode_filter — widen modes: to include planning`. The scenarios are saved to `.aioson/evals/project-knowledge.evals.json` (project-owned; `aioson update` never touches it), so `aioson context:evals .` keeps re-proving them as the catalog grows. `--no-evals` writes the file without proving it; `--aliases=a,b` adds user/domain terms to the routing.
+
+## doc:new
+
+Scaffold a procedure — the intelligence an agent consults when the task calls for it — under `.aioson/docs/`, with the same routing flags and the same birth proof as `rule:new`. A doc carries no `priority` (procedure, not law); `--folder=<topic>` groups it for people while routing still comes from the frontmatter.
+
+```bash
+aioson doc:new . --name=customer-integration --folder=dev \
+  --description="Reuse the existing customer integration before writing a new one" \
+  --agents=dev --triggers="customer integration,cadastro de clientes" \
+  --examples="integrate the customer registry with the ERP"
+```
+
 ---
 
 ## verify:artifact --kind=visual

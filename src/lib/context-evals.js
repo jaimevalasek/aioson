@@ -487,4 +487,4 @@ async function runContextEvals(targetDir, options = {}) {
   };
 }
 
-module.exports = { runContextEvals, loadEvalCorpus, computeCoverage };
+module.exports = { runContextEvals, loadEvalCorpus, computeCoverage, normalizeScenario, runScenario };

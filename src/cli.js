@@ -472,6 +472,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'design-seed',
   'rule:new',
   'rule-new',
+  'doc:new',
+  'doc-new',
   'briefing:sources',
   'briefing-sources',
   'briefing:review',
@@ -1129,6 +1131,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_agent_invoke');
   logHelpLine(t, logger, 'cli.help_agent_epilogue');
   logHelpLine(t, logger, 'cli.help_rule_new');
+  logHelpLine(t, logger, 'cli.help_doc_new');
   logHelpLine(t, logger, 'cli.help_briefing_sources');
   logHelpLine(t, logger, 'cli.help_briefing_approve');
   logHelpLine(t, logger, 'cli.help_briefing_unapprove');
@@ -1730,6 +1733,9 @@ async function main() {
     } else if (command === 'rule:new' || command === 'rule-new') {
       const { runRuleNew } = require('./commands/rule-new');
       result = await runRuleNew({ args, options, logger: commandLogger, t });
+    } else if (command === 'doc:new' || command === 'doc-new') {
+      const { runDocNew } = require('./commands/rule-new');
+      result = await runDocNew({ args, options, logger: commandLogger, t });
     } else if (command === 'verify:artifact' || command === 'verify-artifact') {
       const { runVerifyArtifact } = require('./commands/verify-artifact');
       result = await runVerifyArtifact({ args, options, logger: commandLogger, t });

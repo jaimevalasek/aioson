@@ -64,6 +64,8 @@ const BOOLEAN_FLAGS = new Set([
   // init/install/update hooks default and hooks:install guard opt-outs —
   // pure booleans; `--no-hooks .` / `--no-guard .` must not swallow the path.
   'no-hooks', 'no-guard',
+  // rule:new / doc:new birth-eval opt-out — `--no-evals .` must not swallow the path.
+  'no-evals',
   // update downgrade-guard escape hatch — pure boolean; `--allow-downgrade .`
   // must not swallow the path positional.
   'allow-downgrade',

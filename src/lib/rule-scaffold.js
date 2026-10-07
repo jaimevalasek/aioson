@@ -1,19 +1,21 @@
 'use strict';
 
 /**
- * Scaffolds a project-authored rule under `.aioson/rules/`.
+ * Scaffolds project-authored knowledge: a rule under `.aioson/rules/` (law the
+ * agents obey) or a doc under `.aioson/docs/` (a procedure — the intelligence
+ * an agent consults when the task calls for it).
  *
- * Rules are the sanctioned extension point: `context:select`/`context:brief` score
- * them by `agents`, `paths`, `triggers`, `task_types`, `priority`, and `load_tier`,
- * so a well-formed rule reaches every agent that touches matching work without
- * adding an agent or a hop. Hand-authored frontmatter is where that routing usually
- * breaks, so this command owns the shape and the project owns the content.
+ * Both are the sanctioned extension point: `context:select`/`context:brief`
+ * score them by `agents`, `paths`, `triggers`, `task_types`, `aliases`,
+ * `priority`, and `load_tier`, so a well-formed file reaches every agent that
+ * touches matching work without adding an agent or a hop. Hand-authored
+ * frontmatter is where that routing usually breaks, so this command owns the
+ * shape and the project owns the content.
  */
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const RULES_DIR = path.join('.aioson', 'rules');
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 // Framework rules occupy the 5–10 band. A project rule defaults above it: when a
@@ -44,7 +46,11 @@ function titleize(slug) {
   return slug.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
 }
 
-function ruleBody(name, { description, agents, triggers, paths: pathPatterns }) {
+function scopeLine(agents, pathPatterns) {
+  return `${agents.length ? agents.map((a) => `\`@${a}\``).join(', ') : 'every agent'}${pathPatterns.length ? ` on ${pathPatterns.map((p) => `\`${p}\``).join(', ')}` : ''}`;
+}
+
+function ruleBody(name, { description, agents, paths: pathPatterns }) {
   return `# ${titleize(name)}
 
 ${description}
@@ -55,7 +61,7 @@ This is a project rule. It outranks framework defaults, design-skill guidance, a
 
 ## Scope
 
-Applies to ${agents.length ? agents.map((a) => `\`@${a}\``).join(', ') : 'every agent'}${pathPatterns.length ? ` on ${pathPatterns.map((p) => `\`${p}\``).join(', ')}` : ''}.
+Applies to ${scopeLine(agents, pathPatterns)}.
 
 ## Rules
 
@@ -69,109 +75,142 @@ Applies to ${agents.length ? agents.map((a) => `\`@${a}\``).join(', ') : 'every 
 `;
 }
 
+function docBody(name, { description, agents, paths: pathPatterns }) {
+  return `# ${titleize(name)}
+
+${description}
+
+## When to consult
+
+Consulted by ${scopeLine(agents, pathPatterns)}.
+
+- Name the decision or the moment this procedure answers, in the words an agent uses for the task.
+
+## Procedure
+
+1. Replace these steps with the project's concrete procedure.
+2. Point to the existing code, contract, or integration to reuse before anything new is created.
+
+## Expected evidence
+
+- What the agent shows to prove the procedure was followed: a path, a test, a command output.
+`;
+}
+
+const KINDS = {
+  rule: { root: ['.aioson', 'rules'], priority: true, body: ruleBody },
+  doc: { root: ['.aioson', 'docs'], priority: false, body: docBody }
+};
+
+function quotedScalar(text) {
+  return text.includes(':') ? `"${text.replace(/"/g, '\\"')}"` : text;
+}
+
+async function pathExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Where the file goes. A doc may live in a topic folder (`--folder=dev`); the
+// folder groups files for people, routing still comes from the frontmatter.
+function targetOf(kind, name, options) {
+  const folder = kind === 'doc' ? String(options.folder || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') : '';
+  if (folder && !folder.split('/').every((segment) => KEBAB.test(segment))) {
+    return { error: { ok: false, reason: 'invalid_folder', name, folder } };
+  }
+  return { relPath: path.posix.join(...KINDS[kind].root, ...(folder ? folder.split('/') : []), `${name}.md`) };
+}
+
+// The frontmatter values, validated, or the refusal that names the bad one.
+function frontmatterOf(kind, name, options) {
+  const loadTier = String(options['load-tier'] || options.loadTier || DEFAULT_LOAD_TIER).trim();
+  if (!LOAD_TIERS.has(loadTier)) return { error: { ok: false, reason: 'invalid_load_tier', name, load_tier: loadTier } };
+  const priorityInput = options.priority === undefined ? DEFAULT_PRIORITY : Number(options.priority);
+  if (KINDS[kind].priority && (!Number.isFinite(priorityInput) || priorityInput < 0 || priorityInput > 100)) {
+    return { error: { ok: false, reason: 'invalid_priority', name, priority: options.priority } };
+  }
+  const label = kind === 'rule' ? 'Project rule' : 'Project procedure';
+  const modes = splitList(options.modes);
+  return {
+    frontmatter: {
+      name,
+      description: String(options.description || '').trim()
+        || `${label}: ${titleize(name)}. Replace this description with what it ${kind === 'rule' ? 'enforces' : 'guides'} and why.`,
+      ...(KINDS[kind].priority ? { priority: Math.trunc(priorityInput) } : {}),
+      agents: splitList(options.agents),
+      modes: modes.length ? modes : DEFAULT_MODES,
+      task_types: splitList(options['task-types'] || options.taskTypes),
+      load_tier: loadTier,
+      triggers: splitList(options.triggers),
+      aliases: splitList(options.aliases),
+      paths: splitList(options.paths)
+    }
+  };
+}
+
+function renderFrontmatter(fm) {
+  const lines = ['---', `name: ${fm.name}`, `description: ${quotedScalar(fm.description)}`];
+  if (fm.priority !== undefined) lines.push(`priority: ${fm.priority}`, 'version: 1.0.0');
+  if (fm.agents.length) lines.push(`agents: ${yamlList(fm.agents)}`);
+  lines.push(`modes: ${yamlList(fm.modes)}`);
+  if (fm.task_types.length) lines.push(`task_types: ${yamlList(fm.task_types)}`);
+  lines.push(`load_tier: ${fm.load_tier}`);
+  if (fm.triggers.length) lines.push(`triggers: ${yamlList(fm.triggers)}`);
+  if (fm.aliases.length) lines.push(`aliases: ${yamlList(fm.aliases)}`);
+  if (fm.paths.length) lines.push(`paths: ${yamlList(fm.paths)}`);
+  lines.push('---', '');
+  return lines.join('\n');
+}
+
 /**
- * @returns {Promise<{ok: boolean, reason?: string, path?: string, name?: string,
- *   frontmatter?: object, overwritten?: boolean}>}
+ * @param {string} projectDir
+ * @param {object} options CLI options (name, description, agents, triggers,
+ *   task-types, aliases, paths, modes, priority, load-tier, folder, force)
+ * @param {'rule'|'doc'} kind
+ * @returns {Promise<{ok: boolean, reason?: string, kind?: string, path?: string,
+ *   name?: string, frontmatter?: object, overwritten?: boolean, warnings?: string[]}>}
  */
-async function scaffoldRule(projectDir, options = {}) {
+async function scaffoldKnowledge(projectDir, options = {}, kind = 'rule') {
   const name = String(options.name || '').trim().toLowerCase();
   if (!name) return { ok: false, reason: 'name_required' };
   if (!KEBAB.test(name)) return { ok: false, reason: 'invalid_name', name };
+  const target = targetOf(kind, name, options);
+  if (target.error) return target.error;
+  if (!(await pathExists(path.join(projectDir, '.aioson')))) return { ok: false, reason: 'not_an_aioson_project' };
 
-  const rulesDir = path.join(projectDir, RULES_DIR);
-  try {
-    await fs.access(path.join(projectDir, '.aioson'));
-  } catch {
-    return { ok: false, reason: 'not_an_aioson_project' };
-  }
+  const filePath = path.join(projectDir, ...target.relPath.split('/'));
+  const exists = await pathExists(filePath);
+  // A file already on disk is project-authored content. Never clobber it silently.
+  if (exists && !options.force) return { ok: false, reason: 'already_exists', name, path: target.relPath };
 
-  const relPath = path.posix.join('.aioson', 'rules', `${name}.md`);
-  const filePath = path.join(rulesDir, `${name}.md`);
+  const built = frontmatterOf(kind, name, options);
+  if (built.error) return built.error;
+  const fm = built.frontmatter;
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${renderFrontmatter(fm)}\n${KINDS[kind].body(name, fm)}`, 'utf8');
 
-  let exists = false;
-  try {
-    await fs.access(filePath);
-    exists = true;
-  } catch {
-    exists = false;
-  }
-  // A rule already on disk is project-authored content. Never clobber it silently.
-  if (exists && !options.force) {
-    return { ok: false, reason: 'already_exists', name, path: relPath };
-  }
+  // Without at least one routing dimension the file only loads on load_tier: always.
+  const routed = [fm.agents, fm.triggers, fm.task_types, fm.aliases, fm.paths].some((list) => list.length > 0);
+  const warnings = !routed && fm.load_tier !== 'always' ? ['no_routing_dimension'] : [];
+  return { ok: true, kind, name, path: target.relPath, overwritten: exists, warnings, frontmatter: fm };
+}
 
-  const loadTier = String(options['load-tier'] || options.loadTier || DEFAULT_LOAD_TIER).trim();
-  if (!LOAD_TIERS.has(loadTier)) {
-    return { ok: false, reason: 'invalid_load_tier', name, load_tier: loadTier };
-  }
+function scaffoldRule(projectDir, options = {}) {
+  return scaffoldKnowledge(projectDir, options, 'rule');
+}
 
-  const priorityInput = options.priority === undefined ? DEFAULT_PRIORITY : Number(options.priority);
-  if (!Number.isFinite(priorityInput) || priorityInput < 0 || priorityInput > 100) {
-    return { ok: false, reason: 'invalid_priority', name, priority: options.priority };
-  }
-  const priority = Math.trunc(priorityInput);
-
-  const description = String(options.description || '').trim()
-    || `Project rule: ${titleize(name)}. Replace this description with what it enforces and why.`;
-  const agents = splitList(options.agents);
-  const triggers = splitList(options.triggers);
-  const taskTypes = splitList(options['task-types'] || options.taskTypes);
-  const pathPatterns = splitList(options.paths);
-  const modes = splitList(options.modes).length ? splitList(options.modes) : DEFAULT_MODES;
-
-  const frontmatterLines = [
-    '---',
-    `name: ${name}`,
-    `description: ${description.includes(':') ? `"${description.replace(/"/g, '\\"')}"` : description}`,
-    `priority: ${priority}`,
-    'version: 1.0.0'
-  ];
-  if (agents.length) frontmatterLines.push(`agents: ${yamlList(agents)}`);
-  frontmatterLines.push(`modes: ${yamlList(modes)}`);
-  if (taskTypes.length) frontmatterLines.push(`task_types: ${yamlList(taskTypes)}`);
-  frontmatterLines.push(`load_tier: ${loadTier}`);
-  if (triggers.length) frontmatterLines.push(`triggers: ${yamlList(triggers)}`);
-  if (pathPatterns.length) frontmatterLines.push(`paths: ${yamlList(pathPatterns)}`);
-  frontmatterLines.push('---', '');
-
-  const content = `${frontmatterLines.join('\n')}\n${ruleBody(name, {
-    description,
-    agents,
-    triggers,
-    paths: pathPatterns
-  })}`;
-
-  await fs.mkdir(rulesDir, { recursive: true });
-  await fs.writeFile(filePath, content, 'utf8');
-
-  // Without at least one routing dimension the rule only loads on load_tier: always.
-  const warnings = [];
-  if (!agents.length && !triggers.length && !taskTypes.length && !pathPatterns.length && loadTier !== 'always') {
-    warnings.push('no_routing_dimension');
-  }
-
-  return {
-    ok: true,
-    name,
-    path: relPath,
-    overwritten: exists,
-    warnings,
-    frontmatter: {
-      name,
-      description,
-      priority,
-      agents,
-      modes,
-      task_types: taskTypes,
-      load_tier: loadTier,
-      triggers,
-      paths: pathPatterns
-    }
-  };
+function scaffoldDoc(projectDir, options = {}) {
+  return scaffoldKnowledge(projectDir, options, 'doc');
 }
 
 module.exports = {
   DEFAULT_PRIORITY,
   DEFAULT_LOAD_TIER,
-  scaffoldRule
+  scaffoldKnowledge,
+  scaffoldRule,
+  scaffoldDoc
 };

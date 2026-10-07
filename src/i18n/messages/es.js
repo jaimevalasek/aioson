@@ -47,7 +47,9 @@ module.exports = {
     help_agent_epilogue:
       'aioson agent:epilogue [path] --agent=<agente> --summary=<texto> [--feature=<slug>] [--slug=<slug>] [--file=<path>] [--dir=<dir>] [--approve-gate=A|B|C|D] [--json] [--locale=es]',
     help_rule_new:
-      'aioson rule:new [ruta] --name=<nombre-kebab> [--description=<texto>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--priority=0-100] [--load-tier=trigger|always] [--force] [--json] [--locale=es]',
+      'aioson rule:new [ruta] --name=<nombre-kebab> [--description=<texto>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--priority=0-100] [--load-tier=trigger|always] [--aliases=a,b] [--examples="tarea|tarea"] [--no-evals] [--force] [--json] [--locale=es]',
+    help_doc_new:
+      'aioson doc:new [ruta] [--folder=<tema>] --name=<nombre-kebab> [--description=<texto>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--load-tier=trigger|always] [--aliases=a,b] [--examples="tarea|tarea"] [--no-evals] [--force] [--json] [--locale=es]',
     rule_new: {
       created: 'Regla "{name}" creada en {path}.',
       replaced: 'Regla "{name}" reemplazada en {path}.',

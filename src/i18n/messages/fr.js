@@ -47,7 +47,9 @@ module.exports = {
     help_agent_epilogue:
       'aioson agent:epilogue [path] --agent=<agent> --summary=<texte> [--feature=<slug>] [--slug=<slug>] [--file=<path>] [--dir=<dir>] [--approve-gate=A|B|C|D] [--json] [--locale=fr]',
     help_rule_new:
-      'aioson rule:new [chemin] --name=<nom-kebab> [--description=<texte>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--priority=0-100] [--load-tier=trigger|always] [--force] [--json] [--locale=fr]',
+      'aioson rule:new [chemin] --name=<nom-kebab> [--description=<texte>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--priority=0-100] [--load-tier=trigger|always] [--aliases=a,b] [--examples="tâche|tâche"] [--no-evals] [--force] [--json] [--locale=fr]',
+    help_doc_new:
+      'aioson doc:new [chemin] [--folder=<sujet>] --name=<nom-kebab> [--description=<texte>] [--agents=a,b] [--paths=glob,glob] [--triggers=t,t] [--task-types=t,t] [--load-tier=trigger|always] [--aliases=a,b] [--examples="tâche|tâche"] [--no-evals] [--force] [--json] [--locale=fr]',
     rule_new: {
       created: 'Regle "{name}" creee dans {path}.',
       replaced: 'Regle "{name}" remplacee dans {path}.',
