@@ -6,6 +6,7 @@ const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 const { withIndex } = require('./context-search');
 const { analyzeTaskVocabulary } = require('./lib/task-vocabulary');
 const { focusFile } = require('./lib/section-focus');
+const { pruneOptionalContext } = require('./lib/jev-context-filter');
 
 const CODE_AGENTS = new Set(['dev', 'qa', 'tester', 'pentester']);
 const IMPLEMENTATION_AGENTS = new Set(['dev']);
@@ -701,6 +702,26 @@ async function readPrdTitle(targetDir, slug) {
   return heading[1].replace(/^PRD\s*[—–:-]\s*/i, '').trim().slice(0, 160);
 }
 
+async function judgeOptionalContext(targetDir, jevFilter, input) {
+  const { shouldLoad, skills } = input;
+  if (!jevFilter) return { shouldLoad, skills, report: null, pruned: [] };
+  const tagged = [...shouldLoad.map((item) => ({ ...item, slot: 'should_load' })), ...skills.map((item) => ({ ...item, slot: 'skills' }))];
+  const result = await pruneOptionalContext({
+    projectDir: targetDir,
+    env: jevFilter.env,
+    config: jevFilter.config,
+    fetchImpl: jevFilter.fetchImpl,
+    task: input.task,
+    agent: input.agent,
+    mode: input.mode,
+    paths: input.paths,
+    items: tagged,
+    describe: (item) => String(parseFrontmatter(input.documents.get(item.path) || '').description || '')
+  });
+  const untag = (slot) => result.items.filter((item) => item.slot === slot).map(({ slot: _slot, ...item }) => item);
+  return { shouldLoad: untag('should_load'), skills: untag('skills'), report: result.report, pruned: result.pruned };
+}
+
 async function buildContextBrief(targetDir, options = {}) {
   const agent = normalizeToken(options.agent || 'dev');
   const mode = options.mode || 'planning';
@@ -778,6 +799,13 @@ async function buildContextBrief(targetDir, options = {}) {
   if (selection.semantic && selection.semantic.enabled) fallbackUsed.push('semantic_search');
   if (selection.memory && selection.memory.length > 0) fallbackUsed.push('runtime_memory');
 
+  // Optional context over the budget is judged by JEV when the caller asks for
+  // it (the context:brief CLI does); the guard, the evals and the activation
+  // stay deterministic. must_load is never offered to the judge.
+  const optional = await judgeOptionalContext(targetDir, options.jevFilter, {
+    task, agent: selection.agent, mode: selection.mode, paths: selection.paths, shouldLoad, skills, documents
+  });
+
   const recallQuery = [task, paths.join(' '), options.feature || options.slug || ''].filter(Boolean).join(' ').trim();
   const related = recallEnabled(options)
     ? await collectRecall(targetDir, recallQuery, selection, { ...options, stack })
@@ -801,8 +829,9 @@ async function buildContextBrief(targetDir, options = {}) {
       concerns
     },
     must_load: mustLoad,
-    should_load: shouldLoad,
-    skills,
+    should_load: optional.shouldLoad,
+    skills: optional.skills,
+    ...(optional.report ? { jev_filter: optional.report, pruned: optional.pruned } : {}),
     constraints,
     forbidden_patterns: forbiddenPatterns,
     suggested_structure: structure,

@@ -66,6 +66,8 @@ const BOOLEAN_FLAGS = new Set([
   'no-hooks', 'no-guard',
   // rule:new / doc:new birth-eval opt-out — `--no-evals .` must not swallow the path.
   'no-evals',
+  // context:brief JEV pruning opt-out — pure boolean.
+  'no-jev',
   // update downgrade-guard escape hatch — pure boolean; `--allow-downgrade .`
   // must not swallow the path positional.
   'allow-downgrade',

@@ -179,6 +179,15 @@ A comparação de `web:discover` é por palavra. A busca `modelos llm` também g
 
 O comando testa o Jev antes de filtrar. Se a prova responde, `relevance.trust_candidates` vem `true`. Se a prova falha, a lista por palavra permanece, `trust_candidates` vem `false` e quem está lendo o JSON julga cada item antes do collect.
 
+### Jev podando o contexto opcional do agente
+
+Com o Jev ativo no `aioson-models.json`, o `context:brief` usa o modelo como filtro de precisão quando oferece ao agente **mais de 4 referências opcionais** (`should_load` + `skills`). Cada opcional é julgada contra a tarefa ("o agente precisa deste documento para esta tarefa? Uma palavra em comum não basta"), e as que ficam abaixo de `min_noul` saem do pacote. A saída humana as lista em "Pruned by JEV"; o JSON traz `jev_filter` e `pruned`.
+
+- O `must_load` (a lei) nunca é enviado ao Jev nem podado.
+- Dentro do orçamento, nada é julgado e nada é enviado.
+- Jev desligado, sem chave, fora do ar ou com resposta incompleta: a seleção local fica intacta, e `jev_filter.status` diz qual desses casos aconteceu.
+- `--no-jev` pula o filtro. O guard, os evals e a ativação dos agentes nunca chamam o Jev: continuam determinísticos.
+
 ### Julgamentos reutilizáveis com Jev
 
 `jev:judge` recebe o estado, as perguntas TypeSafe e a política determinística em um arquivo. A chave continua exclusivamente no `aioson-models.json` da raiz ou nas variáveis de ambiente; ela nunca entra no arquivo de julgamento nem na saída.

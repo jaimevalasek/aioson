@@ -26,6 +26,9 @@ async function recordBriefEvent(targetDir, result, featureSlug) {
       // agent:done count these separately from a real consultation.
       generic_task: Boolean(result.task_vocabulary && result.task_vocabulary.generic)
     };
+    if (result.jev_filter) {
+      payload.jev = { status: result.jev_filter.status, offered: result.jev_filter.offered, pruned: (result.pruned || []).map((item) => item.path) };
+    }
     if (featureSlug) payload.feature_slug = String(featureSlug).trim();
     appendContextBriefEvent(handle.db, {
       agentName: result.agent,
@@ -58,7 +61,10 @@ async function runContextBrief({ args, options = {}, logger }) {
     feature: options.feature || options.slug || '',
     semantic: options.semantic,
     noSemantic: options.noSemantic || options['no-semantic'],
-    recall: !(options['no-recall'] || options.recall === false)
+    recall: !(options['no-recall'] || options.recall === false),
+    // A configured JEV prunes optional references over the budget; --no-jev
+    // keeps the local selection as is.
+    jevFilter: options['no-jev'] || options.jev === false ? null : { env: process.env }
   });
   await recordBriefEvent(targetDir, result, options.feature || options.slug || '');
 
@@ -88,6 +94,10 @@ async function runContextBrief({ args, options = {}, logger }) {
   if (result.skills && result.skills.length > 0) {
     logger.log('Matching skills (load per your kernel skill contract):');
     for (const item of result.skills) logger.log(`- ${item.path} ${item.reason}`);
+  }
+  if (result.jev_filter && result.jev_filter.status === 'used' && result.pruned.length > 0) {
+    logger.log(`Pruned by JEV (${result.pruned.length} of ${result.jev_filter.offered} optional, below noul ${result.jev_filter.min_noul}) — not needed for this task:`);
+    for (const item of result.pruned) logger.log(`- ${item.path} (${item.noul})`);
   }
   if (result.constraints.length > 0) {
     logger.log('Constraints:');
