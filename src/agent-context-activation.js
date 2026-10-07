@@ -14,6 +14,7 @@ function formatItems(items, limit = Infinity) {
     const line = reason ? `- ${item.path} — ${reason}` : `- ${item.path}`;
     // Large optional files carry the line ranges that match the task.
     if (item.read === 'sections') return `${line} [read only lines ${item.focus.map((entry) => entry.lines).join(', ')} of ${item.lines}]`;
+    if (item.read === 'lens') return `${line} [your lens: read lines ${item.focus.map((entry) => entry.lines).join(', ')} of ${item.lines}; the rest is addressed to other agents]`;
     if (item.read === 'outline') return `${line} [large: ${item.chars} chars — read by heading, not whole]`;
     return line;
   });

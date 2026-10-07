@@ -7,6 +7,7 @@ const { withIndex } = require('./context-search');
 const { analyzeTaskVocabulary } = require('./lib/task-vocabulary');
 const { focusFile } = require('./lib/section-focus');
 const { judgeBriefOptional } = require('./lib/jev-context-filter');
+const { applyLenses } = require('./lib/agent-lens');
 
 const CODE_AGENTS = new Set(['dev', 'qa', 'tester', 'pentester']);
 const IMPLEMENTATION_AGENTS = new Set(['dev']);
@@ -783,7 +784,7 @@ async function buildContextBrief(targetDir, options = {}) {
   // it (the context:brief CLI does); the guard, the evals and the activation
   // stay deterministic. must_load is never offered to the judge.
   const optional = await judgeBriefOptional(targetDir, options.jevFilter, {
-    task, agent: selection.agent, mode: selection.mode, paths: selection.paths, shouldLoad, skills,
+    task, agent: selection.agent, mode: selection.mode, paths: selection.paths, shouldLoad: applyLenses(shouldLoad, documents, selection.agent), skills,
     describe: (item) => String(parseFrontmatter(documents.get(item.path) || '').description || '')
   });
 
@@ -809,7 +810,8 @@ async function buildContextBrief(targetDir, options = {}) {
       stack,
       concerns
     },
-    must_load: mustLoad,
+    // A shared document read through this agent's lens (lib/agent-lens.js).
+    must_load: applyLenses(mustLoad, documents, selection.agent),
     should_load: optional.shouldLoad,
     skills: optional.skills,
     ...(optional.report ? { jev_filter: optional.report, pruned: optional.pruned } : {}),

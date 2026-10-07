@@ -42,6 +42,9 @@ async function recordBriefEvent(targetDir, result, featureSlug) {
 
 // A large optional file names the lines worth reading, never the whole file.
 function formatReadHint(item) {
+  if (item.read === 'lens') {
+    return [`your lens — read lines ${item.focus.map((entry) => entry.lines).join(', ')} of ${item.lines}; skip ${item.skipped_sections.join(' | ')} (addressed to other agents)`];
+  }
   if (item.read === 'sections') {
     return [`large (${item.chars} chars) — read only: ${item.focus.map((entry) => `lines ${entry.lines} "${entry.heading}"`).join('; ')}`];
   }
@@ -78,7 +81,10 @@ async function runContextBrief({ args, options = {}, logger }) {
 
   if (result.must_load.length > 0) {
     logger.log('Must load:');
-    for (const item of result.must_load) logger.log(`- ${item.path} [${item.surface}] ${item.reason}`);
+    for (const item of result.must_load) {
+      logger.log(`- ${item.path} [${item.surface}] ${item.reason}`);
+      for (const line of formatReadHint(item)) logger.log(`    ${line}`);
+    }
   }
   if (result.should_load.length > 0) {
     const budget = result.load_budget;

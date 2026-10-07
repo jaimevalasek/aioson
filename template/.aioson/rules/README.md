@@ -28,6 +28,8 @@ paths: [src/billing/**]                   # routing: matched against the files b
 ---
 ```
 
+**A lens per agent.** A rule or doc shared by several agents may address sections to some of them with a marker on the heading: `## Planning <!-- agents: planner -->`. Each agent reads the preamble, the sections addressed to nobody, and its own; sections addressed only to other agents are skipped (`context:brief` and the agent activation say `your lens: read lines …`). An H3 inherits its H2's audience. `aioson rule:new`/`doc:new` scaffold one section per agent when two or more are declared.
+
 List fields read the same in the inline form (`agents: [dev, planner]`) and as a YAML block list (`agents:` followed by `- dev` lines); a trailing `# comment` is never part of a value, and a quoted item keeps its commas (`["criar pastas, subpastas"]`). `aioson rules:lint . --docs` names the declarations that silently change who receives a rule: an `agents:` key left without a value (it reaches every agent — write `agents: []` when that is the intent), an agent id that is a near-miss of a real one, a mode other than `planning`/`executing`, and an unknown `load_tier`.
 
 ---

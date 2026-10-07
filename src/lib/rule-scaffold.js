@@ -50,6 +50,17 @@ function scopeLine(agents, pathPatterns) {
   return `${agents.length ? agents.map((a) => `\`@${a}\``).join(', ') : 'every agent'}${pathPatterns.length ? ` on ${pathPatterns.map((p) => `\`${p}\``).join(', ')}` : ''}`;
 }
 
+// With two or more agents, each gets a section addressed to it: an agent reads
+// the shared text and its own section, never the others' (lib/agent-lens.js).
+function lensSections(agents, what) {
+  if (agents.length < 2) return '';
+  return agents.map((agent) => `
+## For @${agent} <!-- agents: ${agent} -->
+
+- Replace this list with what @${agent} does with this ${what} — only @${agent} reads this section.
+`).join('');
+}
+
 function ruleBody(name, { description, agents, paths: pathPatterns }) {
   return `# ${titleize(name)}
 
@@ -68,7 +79,7 @@ Applies to ${scopeLine(agents, pathPatterns)}.
 - Replace this list with the concrete, checkable statements this rule enforces.
 - Write each one so an agent can tell whether it was followed, not as a preference.
 - State the exception explicitly when one exists; an unqualified rule gets applied where it should not.
-
+${lensSections(agents, 'rule')}
 ## Out of scope
 
 - Name what this rule deliberately does not govern, so it is not stretched into unrelated work.
@@ -90,7 +101,7 @@ Consulted by ${scopeLine(agents, pathPatterns)}.
 
 1. Replace these steps with the project's concrete procedure.
 2. Point to the existing code, contract, or integration to reuse before anything new is created.
-
+${lensSections(agents, 'procedure')}
 ## Expected evidence
 
 - What the agent shows to prove the procedure was followed: a path, a test, a command output.
