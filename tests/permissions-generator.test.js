@@ -277,7 +277,53 @@ test('SF-project-24: generatePermissions writes deny rules to .claude/settings.j
   assert.ok(Array.isArray(claude.permissions.deny), 'deny missing from generated .claude/settings.json');
   assert.ok(claude.permissions.deny.includes('Bash(git push:*)'), 'tier3 git push not denied');
   assert.ok(claude.permissions.deny.includes('Bash(rm -rf:*)'), 'tier3 rm -rf not denied');
-  assert.ok(claude.permissions.deny.includes('Bash(aioson cloud:publish:*:*)'), 'tier3 cloud:publish not denied');
+  assert.ok(claude.permissions.deny.includes('Bash(aioson cloud:publish*)'), 'tier3 cloud:publish not denied');
+});
+
+test('buildClaudeSettings never doubles a trailing wildcard on aioson commands', () => {
+  const out = buildClaudeSettings({
+    shellPatterns: [],
+    aiosonCommands: ['workflow:next'],
+    denyAiosonCommands: ['cloud:publish:*', 'genome:publish']
+  });
+  assert.deepEqual(out.permissions.allow, ['Bash(aioson workflow:next:*)']);
+  assert.deepEqual(out.permissions.deny, ['Bash(aioson cloud:publish*)', 'Bash(aioson genome:publish:*)']);
+  for (const rule of out.permissions.deny) {
+    assert.ok(!/\*.*:\*\)$/.test(rule), `rule mixes * with trailing :* — ${rule}`);
+  }
+});
+
+test('generatePermissions removes broken deny rules left by older generator versions', async () => {
+  const dir = await makeProject(PROTOCOL_V11);
+  await fs.mkdir(path.join(dir, '.claude'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, '.claude', 'settings.json'),
+    JSON.stringify({
+      permissions: {
+        allow: [],
+        deny: ['Bash(*>*)', 'Bash(aioson cloud:publish:*:*)', 'Bash(git push --force*)']
+      }
+    }, null, 2),
+    'utf8'
+  );
+
+  const result = await generatePermissions(dir);
+  const claude = JSON.parse(await fs.readFile(path.join(dir, '.claude/settings.json'), 'utf8'));
+  assert.ok(!claude.permissions.deny.includes('Bash(*>*)'));
+  assert.ok(!claude.permissions.deny.includes('Bash(aioson cloud:publish:*:*)'));
+  assert.ok(claude.permissions.deny.includes('Bash(git push --force*)'), 'operator deny rule must be preserved');
+  assert.ok(claude.permissions.deny.includes('Bash(aioson cloud:publish*)'));
+  const notice = result.notices.find((n) => n.kind === 'retired_claude_deny');
+  assert.deepEqual(notice.entries.sort(), ['Bash(*>*)', 'Bash(aioson cloud:publish:*:*)'].sort());
+});
+
+test('buildClaudeSettings skips leading-wildcard deny patterns such as the redirection guard', () => {
+  const out = buildClaudeSettings({
+    shellPatterns: [],
+    aiosonCommands: [],
+    denyShellPatterns: ['rm -rf /', 'curl * | sh', '*>*']
+  });
+  assert.deepEqual(out.permissions.deny, ['Bash(rm -rf /)', 'Bash(curl * | sh)']);
 });
 
 // SF-project-25: drift surface on existing allow entries

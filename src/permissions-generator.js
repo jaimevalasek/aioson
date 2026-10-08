@@ -137,10 +137,26 @@ function shellToClaudeRule(pattern) {
   return `Bash(${trimmed})`;
 }
 
+// A command that already ends in a wildcard (e.g. "cloud:publish:*") must not
+// get a second ":*" — Claude only honors ":*" as a trailing prefix marker and
+// treats any earlier "*" literally, so "cloud:publish:*:*" denied nothing real.
 function aiosonToClaudeRule(command) {
   const trimmed = String(command || '').trim();
   if (!trimmed) return null;
+  if (trimmed.endsWith('*')) {
+    const base = trimmed.replace(/:?\*+$/, '');
+    return base ? `Bash(aioson ${base}*)` : null;
+  }
   return `Bash(aioson ${trimmed}:*)`;
+}
+
+// A deny pattern that opens with a wildcard (e.g. the "*>*" redirection guard)
+// matches arbitrary commands in Claude's gate — it blocked every
+// "2>/dev/null || true" the agent instructions emit, even in bypass mode. The
+// pattern stays in the protocol for the aioson sandbox gate (sandbox.js); it is
+// just not materialized as a native Claude deny rule.
+function isTooBroadForClaudeDeny(pattern) {
+  return String(pattern || '').trim().startsWith('*');
 }
 
 function buildClaudeSettings({ shellPatterns, aiosonCommands, denyShellPatterns = [], denyAiosonCommands = [] }) {
@@ -158,6 +174,7 @@ function buildClaudeSettings({ shellPatterns, aiosonCommands, denyShellPatterns 
   // denial instead of relying on the "absent from allow" default.
   const deny = [];
   for (const p of denyShellPatterns) {
+    if (isTooBroadForClaudeDeny(p)) continue;
     const rule = shellToClaudeRule(p);
     if (rule) deny.push(rule);
   }
@@ -254,8 +271,11 @@ async function mergeClaudeSettings(targetDir, generated) {
   const generatedAllowSet = new Set(generatedAllow);
   const unexpectedAllow = existingAllow.filter((entry) => !generatedAllowSet.has(entry));
 
+  const keptDeny = existingDeny.filter((entry) => !isRetiredClaudeDeny(entry));
+  const retiredDeny = existingDeny.filter((entry) => isRetiredClaudeDeny(entry));
+
   const mergedAllow = [...new Set([...generatedAllow, ...existingAllow])];
-  const mergedDeny = [...new Set([...generatedDeny, ...existingDeny])];
+  const mergedDeny = [...new Set([...generatedDeny, ...keptDeny])];
 
   const mergedPermissions = {
     ...(existing.permissions || {}),
@@ -265,8 +285,19 @@ async function mergeClaudeSettings(targetDir, generated) {
 
   return {
     merged: { ...existing, permissions: mergedPermissions },
-    unexpectedAllow
+    unexpectedAllow,
+    retiredDeny
   };
+}
+
+// Deny rules older generator versions wrote and that are now known broken:
+// "*" mixed with a trailing ":*" (Claude reads the "*" literally and warns at
+// every launch) and the "*>*" guard that blocked every redirect. Existing deny
+// entries are otherwise preserved, so these would never leave on their own.
+function isRetiredClaudeDeny(entry) {
+  const rule = String(entry || '');
+  if (rule === 'Bash(*>*)') return true;
+  return /^Bash\(.*\*.*:\*\)$/.test(rule);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────
@@ -311,7 +342,16 @@ async function generatePermissions(targetDir, options = {}) {
     let content;
     if (name === 'claude') {
       const generated = buildClaudeSettings(sets);
-      const { merged, unexpectedAllow } = await mergeClaudeSettings(targetDir, generated);
+      const { merged, unexpectedAllow, retiredDeny } = await mergeClaudeSettings(targetDir, generated);
+      if (Array.isArray(retiredDeny) && retiredDeny.length > 0) {
+        notices.push({
+          kind: 'retired_claude_deny',
+          tool: 'claude',
+          path: outRel,
+          entries: retiredDeny,
+          message: `.claude/settings.json had ${retiredDeny.length} broken deny rule(s) from an older generator; they were removed.`
+        });
+      }
       if (Array.isArray(unexpectedAllow) && unexpectedAllow.length > 0) {
         notices.push({
           kind: 'unexpected_claude_allow',
