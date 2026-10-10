@@ -34,7 +34,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { REASONING_EFFORTS, MAX_MODEL_NAME_LENGTH, MAX_DEVELOPMENT_LANES, effortsForHost } = require('../agent-execution/schema');
 const { listExecutionHosts, getExecutionCapabilities } = require('./tool-capabilities');
-const { readSignatures, findSignature, signatureState, locateOnPath, DEFAULT_MODEL } = require('./host-signature');
+const { readSignatures, findSignature, signatureState, similarSignedModel, locateOnPath, DEFAULT_MODEL } = require('./host-signature');
 
 const EXECUTION_ROLES_RELATIVE_PATH = '.aioson/config/execution-roles.json';
 // The owner's "run with these defaults" answer lives beside the roles file,
@@ -468,6 +468,7 @@ async function checkRoleSignatures(roles, { env = process.env, now = Date.now() 
   for (const [key, role] of Object.entries(roles.roles)) {
     const entry = findSignature(store, { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort });
     const state = signatureState(entry, now);
+    const didYouMean = state === 'valid' ? null : similarSignedModel(store, role);
     report[key] = {
       host: role.host,
       model: role.model,
@@ -476,7 +477,8 @@ async function checkRoleSignatures(roles, { env = process.env, now = Date.now() 
       checked_at: entry?.checked_at || null,
       expires_at: entry?.expires_at || null,
       reason: entry?.reason || null,
-      hint: state === 'valid' ? null : signatureHint(role)
+      ...(didYouMean ? { did_you_mean: didYouMean } : {}),
+      hint: state === 'valid' ? null : signatureHint(didYouMean ? { ...role, model: didYouMean } : role)
     };
     if (state !== 'valid') missing.push({ role: key, ...report[key] });
   }

@@ -44,7 +44,7 @@ const {
   AC_ID_RE
 } = require('../lib/feature-completeness-format');
 const { readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, checkRoleSignatures, laneRoleKey, EXECUTION_ROLES_RELATIVE_PATH } = require('../lib/execution-roles');
-const { readSignatures, findSignature, signatureState } = require('../lib/host-signature');
+const { readSignatures, findSignature, signatureState, similarSignedModel } = require('../lib/host-signature');
 const { buildDevLaneProfile, DEV_KERNEL_RELATIVE_PATH } = require('./dev-lane-profile');
 const { MAX_DEVELOPMENT_LANES } = require('./schema');
 const { readExecutionPolicy, contextWindow } = require('./execution-policy');
@@ -554,7 +554,9 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
           sig = signatureFor(fallback);
         } else {
           const why = sig.state === 'invalid' && sig.entry?.reason ? ` (${sig.entry.reason})` : '';
-          error(`role_signature_${sig.state}`, `role "${role.role}" (${role.host}/${role.model}${role.reasoning_effort ? `/${role.reasoning_effort}` : ''}) has ${sig.state === 'missing' ? 'no' : `an ${sig.state}`} host signature on this machine${why}`, { lane: laneId, role: role.role, host: role.host, model: role.model, reasoning_effort: role.reasoning_effort, signature_reason: sig.entry?.reason || null, hint: roleHint(role) });
+          const didYouMean = store ? similarSignedModel(store, role) : null;
+          const typo = didYouMean ? ` — did you mean model "${didYouMean}"? This host already accepted that id; fix ${EXECUTION_ROLES_RELATIVE_PATH} before signing` : '';
+          error(`role_signature_${sig.state}`, `role "${role.role}" (${role.host}/${role.model}${role.reasoning_effort ? `/${role.reasoning_effort}` : ''}) has ${sig.state === 'missing' ? 'no' : `an ${sig.state}`} host signature on this machine${why}${typo}`, { lane: laneId, role: role.role, host: role.host, model: role.model, reasoning_effort: role.reasoning_effort, signature_reason: sig.entry?.reason || null, did_you_mean: didYouMean, hint: roleHint(didYouMean ? { ...role, model: didYouMean } : role) });
         }
       }
       lane[kind] = {

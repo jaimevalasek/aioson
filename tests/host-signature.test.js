@@ -17,10 +17,26 @@ const {
   readSignatures,
   signatureKey,
   signatureState,
+  similarSignedModel,
   writeSignatures
 } = require('../src/lib/host-signature');
 const { runHostSignature } = require('../src/commands/host-signature');
 const { MATRIX, capabilities } = require('../src/agent-execution/capabilities');
+
+test('similarSignedModel names an id the host accepted that differs only in separators', () => {
+  const store = { signatures: {
+    'claude|claude-opus-5-5|high': { host: 'claude', model: 'claude-opus-5-5', reasoning_effort: 'high', status: 'valid', expires_at: '2000-01-01T00:00:00.000Z' },
+    'claude|opus-5|max': { host: 'claude', model: 'opus-5', status: 'invalid' },
+    'codex|gpt-6-1-sol|': { host: 'codex', model: 'gpt-6-1-sol', status: 'valid' }
+  } };
+  assert.equal(similarSignedModel(store, { host: 'claude', model: 'claude-opus-5.5' }), 'claude-opus-5-5', 'an expired but once-valid id still proves the host accepts it');
+  assert.equal(similarSignedModel(store, { host: 'Claude', model: 'Claude_Opus 5.5' }), 'claude-opus-5-5');
+  assert.equal(similarSignedModel(store, { host: 'claude', model: 'claude-opus-5-5' }), null, 'the same id under another effort is not a typo');
+  assert.equal(similarSignedModel(store, { host: 'claude', model: 'opus.5' }), null, 'an invalid signature proves nothing');
+  assert.equal(similarSignedModel(store, { host: 'claude', model: 'gpt-6.1-sol' }), null, 'another host does not count');
+  assert.equal(similarSignedModel(store, { host: 'claude', model: 'configured-default' }), null);
+  assert.equal(similarSignedModel(null, { host: 'claude', model: 'claude-opus-5.5' }), null);
+});
 
 const ROOT = path.resolve(__dirname, '..');
 const CLI_PATH = path.join(ROOT, 'bin', 'aioson.js');

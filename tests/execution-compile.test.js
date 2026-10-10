@@ -288,6 +288,14 @@ test('execution:compile refuses when the roles or signatures are not there — t
   result = await compile(expired.dir, expired.env);
   assert.equal(result.errors.find((e) => e.check === 'role_signature_expired').hint, 'aioson host:signature . --host=codex --model=gpt-5.6 --effort=high');
 
+  // A separator typo of an id this host already accepted is named, not just re-signed.
+  const typo = await setup(t, { roles: { ...ROLES, roles: { ...ROLES.roles, frontend_dev: { ...ROLES.roles.frontend_dev, model: 'kimi.k3' } } } });
+  result = await compile(typo.dir, typo.env);
+  const typoError = result.errors.find((e) => e.check === 'role_signature_missing' && e.role === 'frontend_dev');
+  assert.equal(typoError.did_you_mean, 'kimi-k3');
+  assert.match(typoError.message, /did you mean model "kimi-k3"\?/);
+  assert.equal(typoError.hint, 'aioson host:signature . --host=kimi --model=kimi-k3');
+
   const noKernel = await setup(t, { kernel: false });
   result = await compile(noKernel.dir, noKernel.env);
   assert.ok(checks(result).includes('dev_kernel_missing'), checks(result).join(','));

@@ -132,6 +132,31 @@ async function lookupSignature({ host, model, reasoning_effort } = {}, options =
   return { state: signatureState(entry, options.now ?? Date.now()), entry, path: store.path };
 }
 
+// `claude-opus-5.5` and `claude-opus-5-5` read as one model to a person and as
+// two ids to the host CLI, so ids are compared with their separators folded.
+function foldModelId(model) {
+  return String(model || '').trim().toLowerCase().replace(/[\s._]+/g, '-');
+}
+
+/**
+ * A model id this host already accepted (a signature that probed valid, even
+ * if since expired) that differs from `model` only in separators or case —
+ * the usual typo behind a signature that can never pass. Null when none.
+ */
+function similarSignedModel(store, { host, model } = {}) {
+  const requested = normalizeModel(model);
+  if (requested === DEFAULT_MODEL) return null;
+  const folded = foldModelId(requested);
+  const hostKey = normalizeHost(host);
+  const signatures = store && store.signatures ? store.signatures : {};
+  for (const entry of Object.values(signatures)) {
+    if (!entry || normalizeHost(entry.host) !== hostKey || entry.status !== 'valid') continue;
+    const candidate = normalizeModel(entry.model);
+    if (candidate !== requested && foldModelId(candidate) === folded) return candidate;
+  }
+  return null;
+}
+
 function listSignatures(store, now = Date.now()) {
   const signatures = store && store.signatures ? store.signatures : {};
   return Object.entries(signatures)
@@ -511,5 +536,6 @@ module.exports = {
   signatureKey,
   signatureState,
   signaturesPath,
+  similarSignedModel,
   writeSignatures
 };

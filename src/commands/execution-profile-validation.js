@@ -15,6 +15,7 @@ const {
   readSignatures,
   signatureKey,
   signatureState,
+  similarSignedModel,
   writeSignatures
 } = require('../lib/host-signature');
 
@@ -74,8 +75,9 @@ async function mapConcurrent(items, concurrency, task) {
   return results;
 }
 
-function routeView(route, entry, now) {
+function routeView(route, entry, now, store = null) {
   const state = signatureState(entry, now);
+  const didYouMean = state === 'valid' || !store ? null : similarSignedModel(store, route);
   return {
     ...route,
     state,
@@ -83,7 +85,8 @@ function routeView(route, entry, now) {
     checked_at: entry?.checked_at || null,
     expires_at: entry?.expires_at || null,
     unattended: entry?.unattended?.yolo?.state || null,
-    command: signatureHint(route)
+    ...(didYouMean ? { did_you_mean: didYouMean } : {}),
+    command: signatureHint(didYouMean ? { ...route, model: didYouMean } : route)
   };
 }
 
@@ -189,8 +192,8 @@ async function runExecutionProfileValidation({
 
   const latest = await readSignatures(storeOptions);
   const at = clock();
-  const routeResults = routes.map(route => routeView(route, findSignature(latest, route), at));
-  const allRouteResults = collectRoutes(rolesRead.roles).map(route => routeView(route, findSignature(latest, route), at));
+  const routeResults = routes.map(route => routeView(route, findSignature(latest, route), at, latest));
+  const allRouteResults = collectRoutes(rolesRead.roles).map(route => routeView(route, findSignature(latest, route), at, latest));
   const routeStates = new Map(allRouteResults.map(route => [route.key, route]));
   const routing = routingReadiness(rolesRead.roles, routeStates);
   const invalid = routeResults.filter(route => route.state !== 'valid');
