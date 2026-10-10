@@ -1,6 +1,12 @@
 ---
-updated_at: 2026-06-10
+updated_at: 2026-10-06
 briefings:
+  - slug: motor-enxuto-sem-regressao
+    status: draft
+    source_plans: []
+    created_at: "2026-10-06"
+    approved_at: null
+    prd_generated: null
   - slug: harness-retrospective-optimization
     status: implemented
     source_plans: ["plans/HarnessEngineering.txt"]
@@ -67,6 +73,7 @@ briefings:
 
 | slug | status | source_plans | created | approved | prd | refinement |
 |------|--------|-------------|---------|----------|-----|------------|
+| motor-enxuto-sem-regressao | draft | conversational — external audit | 2026-10-06 | - | - | not_started |
 | harness-retrospective-optimization | implemented | plans/HarnessEngineering.txt | 2026-06-10 | 2026-06-10 | .aioson/context/prd-harness-retrospective-optimization.md | not_started |
 | fallow-quality-governance | implemented | external repo: https://github.com/fallow-rs/fallow, web research: researchs/fallow-rs-ai-agent-code-quality-2026/summary.md | 2026-06-01 | 2026-06-02 | .aioson/context/prd-quality-governance-baseline-and-new-regression-gate.md | not_started |
 | cross-tool-project-knowledge | implemented | plans/cross-tool-project-knowledge-and-gemini-phaseout.md | 2026-05-22 | 2026-05-23 | - | not_started |

@@ -1,0 +1,32 @@
+{
+  "packet_id": "sha256:f8faea289a6651c7a1a6505ac038a4cfc2dc972144ba317644cea6e318b7ce65",
+  "schema_version": "review-packet/v1",
+  "feature_slug": "motor-enxuto-sem-regressao",
+  "agent": "briefing",
+  "profile": "framing",
+  "review_mode": "self_review",
+  "artifact": {
+    "path": ".aioson/briefings/motor-enxuto-sem-regressao/briefings.md",
+    "sha256": "67912d05695347eba1766feb5f81dd4119310db572631f8588b3a246bd864817",
+    "bytes": 15269
+  },
+  "authorities": [
+    {
+      "kind": "project-context",
+      "path": ".aioson/context/project.context.md",
+      "sha256": "3f5b010815327ec426311265dca0ba3ea080f4fd62acdf1975936b1248b51b11",
+      "bytes": 2898
+    }
+  ],
+  "reference_path": ".aioson/skills/process/review-intelligence/references/framing.md",
+  "challenge_lenses": [
+    "problem",
+    "user-value",
+    "scope",
+    "assumptions",
+    "future-state",
+    "ownership"
+  ],
+  "max_passes": 2,
+  "prepared_at": "2026-10-07T01:34:47.124Z"
+}

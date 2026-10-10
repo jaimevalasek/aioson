@@ -1,0 +1,17 @@
+{
+  "schema_version": "review-report/v1",
+  "packet_id": "sha256:f8faea289a6651c7a1a6505ac038a4cfc2dc972144ba317644cea6e318b7ce65",
+  "feature_slug": "motor-enxuto-sem-regressao",
+  "agent": "briefing",
+  "profile": "framing",
+  "review_mode": "self_review",
+  "artifact": {
+    "path": ".aioson/briefings/motor-enxuto-sem-regressao/briefings.md",
+    "sha256": "67912d05695347eba1766feb5f81dd4119310db572631f8588b3a246bd864817"
+  },
+  "passes_completed": 2,
+  "review_status": "pass",
+  "summary": "Auto-revisão do enquadramento em duas passagens: fatos, hipóteses e propostas separados; três lacunas reproduzidas e limites dos 177 testes registrados; opções e piloto reversível definidos. PASS refere-se à completude deste registro, não à qualidade de uma implementação ou à eficácia de prompts novos. Auditoria externa sem handoff automático, mudança de workflow ou aprovação de escopo.",
+  "findings": [],
+  "completed_at": "2026-10-07T01:35:10.044Z"
+}
