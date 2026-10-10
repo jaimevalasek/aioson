@@ -21,6 +21,7 @@ const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
 const { getToolCapabilities, resolveResumeArgs, resolveLaunchPermission } = require('../lib/tool-capabilities');
 const { resolveTargetDir } = require('../lib/project-root');
+const { resolveNpmCmdShim } = require('../agent-execution/executable-resolver');
 
 const LIVE_EVENTS_LIMIT = 10;
 const LIVE_MESSAGE_LIMIT = 500;
@@ -297,13 +298,59 @@ async function resolveExecutablePath(command) {
   return null;
 }
 
-// Com `shell: true` (Windows), o comando vai pro cmd.exe. Um caminho com espaços
-// — ex.: "C:\Program Files\nodejs\codex.cmd" — quebra se não for quotado (o
-// cmd.exe corta no primeiro espaço e tenta rodar "C:\Program"). Quotamos o
-// executável; sem shell (Unix) ele vai cru. Resolve o ENOENT/falha ao iniciar
-// codex/claude no Windows quando o npm bin fica no Program Files.
-function spawnExecutable(binaryPath) {
-  return process.platform === 'win32' ? `"${binaryPath}"` : binaryPath;
+// No Windows a ferramenta abre sem `shell: true`. Com shell, o Node só junta os
+// argumentos com espaço, sem proteger nenhum — um `--tool-args` com espaço, `&`
+// ou `%` quebrava a linha — e o Node 24 imprime o aviso DEP0190 no terminal de
+// quem abriu a sessão. O atalho `.cmd` do npm vira `node <script>` (ou o `.exe`
+// que ele chama) pelo mesmo resolvedor da orquestração; `.exe` e `.com` abrem
+// direto; um `.cmd`/`.bat` que não é do npm vai pelo `cmd.exe`, com o comando e
+// cada argumento protegidos (mesmo algoritmo do `cross-spawn`), inclusive
+// caminho com espaço como "C:\Program Files\nodejs\codex.cmd".
+const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
+
+function escapeCmdCommand(file) {
+  return path.normalize(file).replace(CMD_META_CHARS, '^$1');
+}
+
+function escapeCmdArgument(arg) {
+  let text = `${arg}`;
+  // Barras antes de aspas dobram, e a aspa vira \" (regra do CommandLineToArgvW).
+  text = text.replace(/(?=(\\+?)?)\1"/g, '$1$1\\"');
+  // Barras no fim dobram, pra não escaparem a aspa que fecha.
+  text = text.replace(/(?=(\\+?)?)\1$/, '$1$1');
+  return `"${text}"`.replace(CMD_META_CHARS, '^$1');
+}
+
+async function resolveToolSpawn(binaryPath, args, platform = process.platform) {
+  if (platform !== 'win32') return { command: binaryPath, args, options: {} };
+  const ext = path.extname(binaryPath).toLowerCase();
+  if (ext === '.cmd') {
+    try {
+      const shim = await resolveNpmCmdShim(binaryPath);
+      return { command: shim.executable, args: [...shim.prefixArgs, ...args], options: {} };
+    } catch {
+      // `.cmd` escrito à mão, não gerado pelo npm: segue pelo cmd.exe abaixo.
+    }
+  }
+  if (ext === '.cmd' || ext === '.bat') {
+    const line = [escapeCmdCommand(binaryPath), ...args.map(escapeCmdArgument)].join(' ');
+    return {
+      command: process.env.ComSpec || 'cmd.exe',
+      args: ['/d', '/s', '/c', `"${line}"`],
+      options: { windowsVerbatimArguments: true }
+    };
+  }
+  return { command: binaryPath, args, options: {} };
+}
+
+async function spawnTool(binaryPath, args, cwd) {
+  const target = await resolveToolSpawn(binaryPath, args);
+  return spawn(target.command, target.args, {
+    cwd,
+    env: process.env,
+    stdio: 'inherit',
+    ...target.options
+  });
 }
 
 function isWindowsPidAlive(pid) {
@@ -1396,12 +1443,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           let attachResult = null;
 
           if (attach && !noLaunch) {
-            attachChild = trackChild(spawn(spawnExecutable(binaryPath), launchArgs(), {
-              cwd: targetDir,
-              env: process.env,
-              stdio: 'inherit',
-              shell: process.platform === 'win32'
-            }));
+            attachChild = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir));
             state.child_pid = attachChild.pid || null;
             if (existing.task?.task_key) {
               const taskMeta = parseTaskMeta(existing.task);
@@ -1506,12 +1548,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = trackChild(spawn(spawnExecutable(binaryPath), launchArgs(), {
-            cwd: targetDir,
-            env: process.env,
-            stdio: 'inherit',
-            shell: process.platform === 'win32'
-          }));
+          child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir));
           taskMeta.child_pid = child.pid || null;
           updateTask(db, {
             taskKey,
@@ -1519,12 +1556,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = trackChild(spawn(spawnExecutable(binaryPath), launchArgs(), {
-          cwd: targetDir,
-          env: process.env,
-          stdio: 'inherit',
-          shell: process.platform === 'win32'
-        }));
+        child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir));
         taskMeta.child_pid = child.pid || null;
         updateTask(db, {
           taskKey,
@@ -2321,6 +2353,7 @@ async function runLiveList({ args, options = {}, logger, t }) {
 module.exports = {
   buildLaunchArgs,
   resolveLiveToolBinary,
+  resolveToolSpawn,
   runLiveStart,
   runRuntimeEmit,
   runLiveHandoff,
