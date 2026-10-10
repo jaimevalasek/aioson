@@ -45,3 +45,48 @@ if (process.platform === 'win32') {
 if (!process.env.AIOSON_DESIGN_REGISTRY) {
   process.env.AIOSON_DESIGN_REGISTRY = require('node:path').join(__filename, 'no-registry', 'design-fingerprints.json');
 }
+
+// All platforms: one temp root per suite run. Hundreds of tests create
+// fixtures with fs.mkdtemp(os.tmpdir()…); a teardown that loses a Windows
+// handle race, or a test that never cleans, left its tree in the machine's
+// temp folder — measured at ~15 GB after four days of suite runs, until the
+// disk was full. The first process of a run (the test-runner parent) points
+// TEMP/TMP/TMPDIR at `aioson-t-<pid>` inside the real temp folder; every test
+// file and every CLI it spawns inherits it, the parent removes the whole root
+// on exit, and the next run sweeps roots whose runner is gone. The root also
+// holds the machine-wide stores a test would otherwise touch in the
+// developer's home: the agent:done doc snapshots, and the old shared recall
+// folder that opening a project's own recall index retires.
+if (!process.env.AIOSON_TEST_TMP_ROOT) {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const PREFIX = 'aioson-t-';
+  const STALE_MS = 12 * 60 * 60 * 1000;
+  const base = os.tmpdir();
+  const alive = (pid) => {
+    try { process.kill(pid, 0); return true; } catch (error) { return Boolean(error) && error.code === 'EPERM'; }
+  };
+  let names = [];
+  try { names = fs.readdirSync(base); } catch { /* no temp folder listing — nothing to sweep */ }
+  for (const name of names) {
+    if (!name.startsWith(PREFIX)) continue;
+    const full = path.join(base, name);
+    let age;
+    try { age = Date.now() - fs.statSync(full).mtimeMs; } catch { continue; }
+    const pid = Number(name.slice(PREFIX.length));
+    if (Number.isInteger(pid) && pid !== process.pid && alive(pid) && age < STALE_MS) continue;
+    try { fs.rmSync(full, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch { /* the next run sweeps it */ }
+  }
+  const root = path.join(base, `${PREFIX}${process.pid}`);
+  fs.mkdirSync(root, { recursive: true });
+  process.env.AIOSON_TEST_TMP_ROOT = root;
+  process.env.TMPDIR = root;
+  process.env.TEMP = root;
+  process.env.TMP = root;
+  if (!process.env.AIOSON_BACKUPS_DIR) process.env.AIOSON_BACKUPS_DIR = path.join(root, 'aioson-backups');
+  if (!process.env.AIOSON_SEARCH_DIR) process.env.AIOSON_SEARCH_DIR = path.join(root, 'aioson-search');
+  process.on('exit', () => {
+    try { fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); } catch { /* the next run sweeps it */ }
+  });
+}

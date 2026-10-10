@@ -25,6 +25,8 @@ const { assessRuntimeDbHealth, readDatabaseStats, maintainRuntimeDb } = require(
 const { isGitCheckout } = require('./lib/project-root');
 const { inspectDesignDocSeed } = require('./lib/design-doc-seed');
 const { inspectFeatureRegistry, tidyFeatureRegistry, featureRegistryParams } = require('./lib/feature-registry');
+const { featureLifecycleParams } = require('./lib/feature-lifecycle');
+const { diskFootprintParams } = require('./lib/storage-footprint');
 const { inspectRetiredDesignPresets } = require('./lib/design-presets');
 
 const BOOTSTRAP_REQUIRED = ['what-is.md', 'how-it-works.md', 'what-it-does.md', 'current-state.md'];
@@ -194,18 +196,61 @@ async function restoreTemplateFiles(targetDir, relPaths, options = {}) {
   return restored;
 }
 
-/** The feature-index advisory as a 0- or 1-element check list. */
+/**
+ * Delivered-but-never-closed and forgotten features as a 0- or 1-element
+ * advisory. Closing only happened when an agent remembered to; this makes
+ * the backlog visible on every doctor/update instead of only inside @neo.
+ */
+async function featureLifecycleChecks(targetDir) {
+  const params = await featureLifecycleParams(targetDir);
+  if (!params) return [];
+  return [{
+    id: 'context:feature_lifecycle',
+    severity: 'warning',
+    key: 'doctor.feature_lifecycle',
+    params,
+    ok: false,
+    hintKey: 'doctor.feature_lifecycle_hint'
+  }];
+}
+
+/** The features.md advisories: index shape, then where each feature stands. */
 async function featureRegistryChecks(targetDir) {
   const registry = await inspectFeatureRegistry(targetDir);
-  if (!registry.needsTidy) return [];
+  const shape = registry.needsTidy
+    ? [{
+      id: 'context:feature_registry_noise',
+      severity: 'warning',
+      key: 'doctor.feature_registry_noise',
+      params: featureRegistryParams(registry.measures),
+      ok: false,
+      hintKey: 'doctor.feature_registry_noise_hint'
+    }]
+    : [];
+  return [...shape, ...(await featureLifecycleChecks(targetDir))];
+}
+
+/**
+ * aioson's own disk footprint past its retention (doc snapshots, update
+ * rollback folders, oversized logs) as a 0- or 1-element advisory. Nothing
+ * measured it before; the first signal was a full disk.
+ */
+function diskFootprintChecks(targetDir) {
+  const params = diskFootprintParams(targetDir);
+  if (!params) return [];
   return [{
-    id: 'context:feature_registry_noise',
+    id: 'runtime:disk_footprint',
     severity: 'warning',
-    key: 'doctor.feature_registry_noise',
-    params: featureRegistryParams(registry.measures),
+    key: 'doctor.disk_footprint',
+    params,
     ok: false,
-    hintKey: 'doctor.feature_registry_noise_hint'
+    hintKey: 'doctor.disk_footprint_hint'
   }];
+}
+
+/** Project housekeeping advisories: the feature index, the lifecycle, the disk. */
+async function housekeepingChecks(targetDir) {
+  return [...(await featureRegistryChecks(targetDir)), ...diskFootprintChecks(targetDir)];
 }
 
 /** `--fix` for the feature-index advisory; returns the fix action. */
@@ -265,7 +310,7 @@ async function runDoctor(targetDir) {
   // Feature index carrying narrative (advisory). features.md is project-local,
   // so update never rewrites it; notes written into it never leave on
   // feature:close. `--fix` relocates them losslessly (feature:tidy).
-  checks.push(...(await featureRegistryChecks(targetDir)));
+  checks.push(...(await housekeepingChecks(targetDir)));
 
   // Retired fixed design presets (advisory). The template ships one design
   // skill — the engine — since 2026-08-28. A `design_skill` that still names a

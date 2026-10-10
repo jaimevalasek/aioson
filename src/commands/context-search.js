@@ -32,7 +32,7 @@ async function runContextSearch({ args, options, logger }) {
       source: options.source || options.sourceType || options['source-type']
     });
     return { ...search, index };
-  });
+  }, { projectDir: cwd });
 
   if (options.json) {
     return { ok: true, ...result };
@@ -62,7 +62,7 @@ async function runContextSearchIndex({ args, options, logger }) {
     const r = await idx.indexDirectory(cwd, { force });
     const stats = idx.stats();
     return { ...r, stats };
-  });
+  }, { projectDir: cwd });
 
   if (options.json) {
     return { ok: true, ...result };

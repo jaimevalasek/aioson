@@ -5,7 +5,8 @@ const { resolveTargetDir } = require('../lib/project-root');
 
 function printDoctorChecks(report, logger, t) {
   for (const check of report.checks) {
-    const icon = check.ok ? t('doctor.ok') : t('doctor.fail');
+    // An advisory is not a failure: it never flips the diagnosis, so it must not read like one.
+    const icon = check.ok ? t('doctor.ok') : t(check.severity === 'warning' ? 'doctor.warn' : 'doctor.fail');
     logger.log(
       t('doctor.check_line', {
         icon,

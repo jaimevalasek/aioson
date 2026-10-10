@@ -1,8 +1,8 @@
 ---
-description: Guarded local SQLite diagnosis, retention preview, pruning, and compaction for Neo — plus the regenerable browser evidence on disk
+description: Guarded local SQLite diagnosis, retention preview, pruning, and compaction for Neo — plus the regenerable browser evidence and the rest of the framework's own disk footprint
 agents: [neo]
-task_types: [runtime-storage, local-maintenance, telemetry-retention]
-triggers: [aios.sqlite large, runtime database size, remove old runtime data, prune, compact, screenshots taking space, visual-screenshots, walkthrough artifacts]
+task_types: [runtime-storage, local-maintenance, telemetry-retention, disk-footprint]
+triggers: [aios.sqlite large, runtime database size, remove old runtime data, prune, compact, screenshots taking space, visual-screenshots, walkthrough artifacts, disk full, free disk space, disco cheio, liberar espaço, backups taking space, storage:triage]
 ---
 
 # Neo Runtime Storage
@@ -64,5 +64,33 @@ lists what is orphaned or heavy under `heavy_evidence_artifacts`.
   longer references — are the default scope; `--all` removes every capture and snapshot, never a report.
 - Execute only on an explicit request, after showing the preview: `aioson evidence:prune .` or `aioson evidence:prune . --all`.
 - Never delete the reports (`visual-evidence.json`, `browser/{script}.json|.md`) or anything outside these folders.
+
+## Disk footprint
+
+The rest of the framework's own disk footprint: the doc snapshots `agent:done` writes after @product, @sheldon and @planner
+(`~/.aioson/backups/{project}/`), the rollback folders `aioson update` leaves in `.aioson/backups/`, logs an agent or tool
+let grow inside `.aioson/`, and heavy paths the framework cannot regenerate (scratch under `.aioson/runtime/` or `.aioson/tmp/`, a
+backup the framework did not write, raw research output under `researchs/`). The producers keep the newest 10 snapshots and the
+newest 5 rollback folders on their own; `hygiene:scan` lists what is left under `disk_footprint`, and `doctor`/`update`
+warn when retention is past due. The recall index (`.aioson/runtime/context-search.sqlite`) is a cache each project
+rebuilds from its own Markdown and is deleted with the project; it is never a cleanup target. The machine-wide index every
+project shared before (`~/.aioson/search/`) is retired the first time a project opens its own.
+
+1. Diagnose read-only: `aioson storage:triage . --json`. Add `--global` when the request is about the machine's disk:
+   every project's snapshots, the old machine-wide recall index, and files someone left in `~/.aioson/search/`.
+2. Present two groups: **Mechanical** (`decides: auto` — snapshots and rollback folders past retention, oversized logs
+   trimmed to their head and tail, the old machine-wide recall index) and **Owner decisions** (`decides: owner` — each
+   heavy path with its size and reason).
+3. Preview: `aioson storage:triage . --apply --dry-run`, plus `--remove=<path> --dry-run` for each path the owner names.
+4. Ask once. A request such as "free disk space now" approves the mechanical group after the preview; an owner path goes
+   only when the owner names it.
+5. Execute only the approved scope: `aioson storage:triage . --apply`, then `aioson storage:triage . --remove=<path>` with
+   each path exactly as the report prints it. One path the report did not list refuses the whole call; nothing changes.
+6. Report the bytes freed per item and every failure (a file another process holds open stays, and is named).
+
+- Never delete these files by hand, and never remove a path the report did not list.
+- The runtime database is never part of this procedure — it follows the Procedure above.
+- A heavy path the owner keeps on purpose goes into `.aioson/context/hygiene-retention.md` as
+  `| <path> | retained | <reason> | <date> |`; hygiene stops listing it.
 
 Do not route to another agent merely to run these commands. After maintenance, return to Neo's normal read-only routing behavior.

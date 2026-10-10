@@ -6,7 +6,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 
-const { IndexManager, sanitizeFtsQuery } = require('../src/context-search');
+const { IndexManager, withIndex, sanitizeFtsQuery } = require('../src/context-search');
 const { runContextSearch, resolveSearchTarget } = require('../src/commands/context-search');
 const { selectContext } = require('../src/context-selector');
 
@@ -785,6 +785,62 @@ test('indexDirectory default policy indexes markdown only — no .json/.txt thra
     );
   } finally {
     idx.close();
+    await removeTmp(tmp);
+  }
+});
+
+async function aiosonProject(root, name) {
+  const dir = path.join(root, name);
+  await writeFile(dir, '.aioson/config.md', '# config\n');
+  await writeFile(dir, '.aioson/context/project.context.md', '---\nproject_name: demo\n---\n');
+  await writeFile(dir, 'docs/billing.md', '# Billing\n\nThe dunning worker retries unpaid invoices nightly.\n');
+  return dir;
+}
+
+function recallHits(dir) {
+  return withIndex(async (idx) => {
+    await idx.indexDirectory(dir);
+    return idx.searchPackage('dunning worker', { projectDir: dir }).results.map((hit) => hit.relPath);
+  }, { projectDir: dir });
+}
+
+test('withIndex — a project keeps its own recall index, deleted with the project', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const dir = await aiosonProject(tmp, 'app');
+    assert.ok((await recallHits(dir)).includes('docs/billing.md'));
+    await fs.access(path.join(dir, '.aioson', 'runtime', 'context-search.sqlite'));
+  } finally {
+    await removeTmp(tmp);
+  }
+});
+
+test('withIndex — a folder that is not an AIOSON project is indexed in memory only', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const dir = path.join(tmp, 'plain');
+    await writeFile(dir, 'notes.md', '# Notes\n\nThe dunning worker retries unpaid invoices.\n');
+    assert.ok((await recallHits(dir)).includes('notes.md'));
+    assert.deepEqual(await fs.readdir(dir), ['notes.md'], 'nothing is written beside the files');
+  } finally {
+    await removeTmp(tmp);
+  }
+});
+
+test('withIndex — a copied project drops the rows it carried from the original path', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const original = await aiosonProject(tmp, 'original');
+    await recallHits(original);
+    const copy = path.join(tmp, 'copy');
+    await fs.cp(original, copy, { recursive: true });
+    await fs.rm(original, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+
+    assert.ok((await recallHits(copy)).includes('docs/billing.md'));
+    const keys = await withIndex((idx) => ['docs', 'docs_meta'].flatMap((table) => idx._db.prepare(`SELECT DISTINCT project_dir FROM ${table}`).all().map((row) => row.project_dir)), { projectDir: copy });
+    const own = process.platform === 'win32' ? path.resolve(copy).toLowerCase() : path.resolve(copy);
+    assert.deepEqual(keys, [own, own], 'only the copy\'s own rows remain');
+  } finally {
     await removeTmp(tmp);
   }
 });

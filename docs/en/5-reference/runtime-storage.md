@@ -4,6 +4,10 @@ AIOSON uses one local database per clone: `.aioson/runtime/aios.sqlite`. It rema
 `aioson update`, must not be versioned, and needs no server. Each developer owns their operational runtime; shared
 project history remains in versioned feature, learning, brain, rule, documentation, dossier, and plan files.
 
+The recall index (`context:search`, `context:brief --recall`) sits beside it in `.aioson/runtime/context-search.sqlite`:
+a cache rebuilt from the project's Markdown whenever it is missing, and deleted with the project. It used to be one
+machine-wide file in `~/.aioson/search/` that kept every project ever indexed; opening a project's own index retires it.
+
 ## What uses SQLite
 
 | Command family | Main state | Current value | Retention |

@@ -12,6 +12,8 @@ const { getCliVersionLabelSync } = require('../version');
 const { resolveTargetDir } = require('../lib/project-root');
 const { inspectDesignDocSeed } = require('../lib/design-doc-seed');
 const { inspectFeatureRegistry, featureRegistryParams } = require('../lib/feature-registry');
+const { featureLifecycleParams } = require('../lib/feature-lifecycle');
+const { diskFootprintParams } = require('../lib/storage-footprint');
 const { inspectRetiredDesignPresets } = require('../lib/design-presets');
 
 // Project-local files update never rewrites, so the update is where the
@@ -36,7 +38,18 @@ async function logProjectLocalAdvisories(targetDir, logger, t) {
     logger.log(t('doctor.feature_registry_noise', featureRegistryParams(registry.measures)));
     logger.log(t('doctor.feature_registry_noise_hint'));
   }
+  const lifecycle = await featureLifecycleParams(targetDir);
+  logAdvisory(logger, t, 'doctor.feature_lifecycle', lifecycle);
+  logAdvisory(logger, t, 'doctor.disk_footprint', diskFootprintParams(targetDir));
   return designDocSeed;
+}
+
+// One advisory and its hint (`{key}_hint`), only when it has params.
+function logAdvisory(logger, t, key, params) {
+  if (!params) return;
+  logger.log('');
+  logger.log(t(key, params));
+  logger.log(t(`${key}_hint`));
 }
 
 async function runUpdate({ args, options, logger, t }) {

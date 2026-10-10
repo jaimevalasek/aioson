@@ -8,6 +8,9 @@ const { runFeatureArchive, runFeatureSweep } = require('./feature-archive');
 const { scanRuntimeRecoveryCandidates } = require('../runtime-recovery-scan');
 const { resolveTargetDir } = require('../lib/project-root');
 const { heavyEvidenceArtifacts } = require('../lib/evidence-artifacts');
+const { triageFeatures, findingsOf } = require('../lib/feature-lifecycle');
+const { canonicalStatus } = require('../lib/feature-registry');
+const { storageHygieneItems } = require('../lib/storage-footprint');
 
 const REVIEW_PREFIXES = new Set(['qa-report', 'security-findings']);
 const GLOBAL_REVIEW_SLUGS = new Set(['project', 'test-coverage']);
@@ -33,6 +36,9 @@ const ARTIFACT_PREFIXES = [
   'qa-report',
   'readiness',
   'test-plan',
+  // Before `spec`: first match wins, and `spec-analyze-{slug}.json` read as
+  // `spec-{analyze-slug}` reported every analyzed feature as an orphan.
+  'spec-analyze',
   'spec',
   'prd'
 ];
@@ -88,7 +94,7 @@ async function readFeatureRegistry(ctxDir) {
         suggested_action: 'keep one canonical row with the current status and dates'
       });
     }
-    bySlug.set(slug, { slug, status: match[2].trim().toLowerCase() });
+    bySlug.set(slug, { slug, status: canonicalStatus(match[2]) || match[2].trim().toLowerCase() });
   }
   return { bySlug, duplicates };
 }
@@ -113,7 +119,8 @@ async function readRetainedArtifactPaths(ctxDir) {
   if (!content) return retained;
 
   for (const line of content.split(/\r?\n/)) {
-    const match = line.match(/^\|\s*(\.aioson\/context\/[^|]+?)\s*\|/);
+    // Context artifacts, and heavy paths the owner keeps on purpose (disk_footprint).
+    const match = line.match(/^\|\s*((?:\.aioson|researchs)\/[^|]+?)\s*\|/);
     if (match) retained.add(match[1].trim());
   }
   return retained;
@@ -176,6 +183,34 @@ async function scanDoneFeaturesPendingArchive(targetDir) {
     });
   }
   return items;
+}
+
+// Open rows the context says are finished (QA passed) or forgotten (no
+// activity past the threshold), and rows spelled so no reader sees them.
+// `feature:triage` owns the measurement and the guarded cleanup.
+async function scanFeatureLifecycle(targetDir) {
+  const empty = { readyToClose: [], stale: [], aliases: [] };
+  let triage;
+  try {
+    triage = await triageFeatures(targetDir);
+  } catch {
+    return empty;
+  }
+  if (!triage || !triage.ok) return empty;
+  const item = (entry) => ({
+    slug: entry.slug,
+    path: '.aioson/context/features.md',
+    status: entry.status,
+    reason: entry.reason,
+    decides: entry.decides,
+    suggested_command: entry.commands[0],
+    ...(entry.idle_days !== undefined ? { idle_days: entry.idle_days } : {})
+  });
+  return {
+    readyToClose: findingsOf(triage, 'ready_to_close').map(item),
+    stale: [...findingsOf(triage, 'stale_open'), ...findingsOf(triage, 'stale_paused')].map(item),
+    aliases: findingsOf(triage, 'status_alias').map(item)
+  };
 }
 
 async function scanStaleDevState(ctxDir, featureRegistry) {
@@ -454,6 +489,10 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
   // Regenerable browser evidence (captures, walkthrough snapshots) that is
   // either orphaned by its latest report or heavy enough to weigh on the tree.
   const evidenceArtifacts = heavyEvidenceArtifacts(targetDir);
+  const lifecycle = await scanFeatureLifecycle(targetDir);
+  // aioson's own disk footprint: retention past due, oversized logs, and heavy
+  // paths aioson cannot regenerate that the owner has not chosen to keep.
+  const diskFootprint = storageHygieneItems(targetDir, retainedPaths);
 
   const buckets = {
     pending_chain_noises: chainNoises.pending,
@@ -461,10 +500,14 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
     stale_runtime_sessions: staleRuntimeSessions,
     duplicate_feature_rows: featureRegistryResult.duplicates,
     done_features_pending_archive: doneFeaturesPendingArchive,
+    features_ready_to_close: lifecycle.readyToClose,
+    stale_features: lifecycle.stale,
+    feature_status_aliases: lifecycle.aliases,
     stale_state_files: staleStateFiles,
     on_demand_review_artifacts: reviewArtifacts,
     orphan_slug_artifacts: orphanSlugArtifacts,
-    heavy_evidence_artifacts: evidenceArtifacts
+    heavy_evidence_artifacts: evidenceArtifacts,
+    disk_footprint: diskFootprint
   };
   const result = {
     ok: true,
@@ -474,18 +517,21 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
     buckets
   };
 
-  if (!jsonOut && logger) {
-    logger.log(`hygiene:scan — ${result.summary.status} (${result.summary.total} item(s))`);
-    for (const [bucket, items] of Object.entries(buckets)) {
-      if (items.length === 0) continue;
-      logger.log(`  ${bucket}: ${items.length}`);
-      for (const item of items.slice(0, 10)) {
-        logger.log(`    - ${item.path || item.slug}: ${item.reason}`);
-      }
+  if (!jsonOut && logger) logScan(logger, result);
+  return result;
+}
+
+function logScan(logger, result) {
+  logger.log(`hygiene:scan — ${result.summary.status} (${result.summary.total} item(s))`);
+  for (const [bucket, items] of Object.entries(result.buckets)) {
+    if (items.length === 0) continue;
+    logger.log(`  ${bucket}: ${items.length}`);
+    for (const item of items.slice(0, 10)) {
+      // Registry-level items all live in features.md; the slug is what tells them apart.
+      const label = item.slug && item.path === '.aioson/context/features.md' ? item.slug : (item.path || item.slug);
+      logger.log(`    - ${label}: ${item.reason}`);
     }
   }
-
-  return result;
 }
 
 module.exports = {

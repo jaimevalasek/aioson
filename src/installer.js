@@ -10,6 +10,7 @@ const { generatePermissions } = require('./permissions-generator');
 const { isConfigMergePath, mergeConfigFile } = require('./installer-config-merge');
 const { isGatewayPointerPath, mergeGatewayPointer } = require('./gateway-pointer-merge');
 const { listTrackedIgnoredPaths } = require('./lib/git-stage');
+const { ROLLBACK_KEEP, pruneStamped } = require('./lib/storage-footprint');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
@@ -448,6 +449,24 @@ async function backupExistingFile(targetDir, relPath, backupRoot) {
   return dest;
 }
 
+/**
+ * The last steps of a real install/update. Derives native harness permissions
+ * from autonomy-protocol.json (best-effort: never block installation on a
+ * permissions sync failure), then keeps the newest rollback folders — every
+ * update that overwrote something left one, and nothing removed them
+ * (thousands of files per project). Returns the permissions result.
+ */
+async function settleInstall(targetDir) {
+  let permissions;
+  try {
+    permissions = await generatePermissions(targetDir);
+  } catch (err) {
+    permissions = { error: err && err.message ? err.message : String(err) };
+  }
+  pruneStamped(path.join(targetDir, '.aioson', 'backups'), ROLLBACK_KEEP);
+  return permissions;
+}
+
 async function installTemplate(targetDir, options = {}) {
   const {
     overwrite = false,
@@ -632,16 +651,7 @@ async function installTemplate(targetDir, options = {}) {
     runtime = await ensureProjectRuntime(targetDir);
   }
 
-  // Derive native harness permissions from autonomy-protocol.json
-  // (best-effort: never block installation on permissions sync failure).
-  let permissions = null;
-  if (!dryRun) {
-    try {
-      permissions = await generatePermissions(targetDir);
-    } catch (err) {
-      permissions = { error: err && err.message ? err.message : String(err) };
-    }
-  }
+  const permissions = dryRun ? null : await settleInstall(targetDir);
 
   // Detect if this is an existing project with many files
   const projectFileCount = await countProjectFiles(targetDir);

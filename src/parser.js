@@ -36,6 +36,10 @@ const BOOLEAN_FLAGS = new Set([
   'no-coverage',
   // feature:archive — pure boolean; `--keep-diagnostics .` must not swallow the path.
   'keep-diagnostics',
+  // feature:triage — pure boolean; `--include-active .` must not swallow the path.
+  'include-active',
+  // storage:triage — pure boolean; `--global .` must not swallow the path.
+  'global',
   // host:signature / learning:rollback / pentester:report — pure boolean;
   // `--list .` must not swallow the path positional.
   'list',

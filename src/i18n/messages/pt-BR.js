@@ -36,6 +36,7 @@ module.exports = {
     help_doctor: 'aioson doctor [path] [--fix] [--dry-run] [--json] [--locale=pt-BR]',
     help_hygiene_scan: 'aioson hygiene:scan [path] [--json] [--locale=pt-BR]',
     help_evidence_prune: 'aioson evidence:prune [path] [--slug=<feature>] [--all] [--dry-run] [--json] [--locale=pt-BR]',
+    help_storage_triage: 'aioson storage:triage [path] [--global] [--apply] [--remove=<path>[,<path>]] [--dry-run] [--json] [--locale=pt-BR]',
     help_i18n_add: 'aioson i18n:add <locale> [--force] [--dry-run] [--locale=pt-BR]',
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=pt-BR]',
     help_agent_prompt:
@@ -259,6 +260,8 @@ module.exports = {
       'aioson feature:register [caminho] --feature=<slug> [--status=planning|in_progress|paused|qa_blocked|abandoned] [--started=YYYY-MM-DD] [--json] [--locale=pt-BR]',
     help_feature_tidy:
       'aioson feature:tidy [caminho] [--dry-run] [--json] [--locale=pt-BR]',
+    help_feature_triage:
+      'aioson feature:triage [caminho] [--apply] [--close=<slug,...>] [--pause=<slug,...>] [--abandon=<slug,...>] [--resume=<slug,...>] [--include-active] [--stale-days=21] [--paused-days=60] [--dry-run] [--json] [--locale=pt-BR]',
     help_feature_current:
       'aioson feature:current [caminho] [--with-summary] [--json] [--locale=pt-BR]',
     help_feature_trace:
@@ -611,6 +614,7 @@ module.exports = {
   doctor: {
     ok: 'OK',
     fail: 'FALHA',
+    warn: 'AVISO',
     diagnosis_ok: 'Diagnostico: instalacao saudavel.',
     diagnosis_fail: 'Diagnostico: {count} problema(s) encontrado(s).',
     hint_prefix: '-> {hint}',
@@ -687,8 +691,12 @@ module.exports = {
     no_nested_project_root: 'Sem raiz AIOSON aninhada dentro de .aioson/ ({count} encontradas)',
     no_nested_project_root_hint: 'Armazenamento AIOSON orfao, criado por um comando rodado de dentro de .aioson/: {paths}. Nada le esse conteudo e o estado de runtime nunca reconcilia com o real — apague esses diretorios. O CLI agora redireciona essas execucoes para a raiz do projeto dona.',
     retired_design_doc_seed: 'Semente aposentada de design-doc em .aioson/context/design-doc.md ({kind})',
-    feature_registry_noise: 'features.md carrega {notes} bloco(s) de notas ({noteKb} KB de {totalKb} KB) e {headerless} linha(s) fora de um cabeçalho de tabela — o índice deve ter só linhas',
+    feature_registry_noise: 'features.md carrega {notes} bloco(s) de notas ({noteKb} KB de {totalKb} KB) e {headerless} linha(s) fora de um cabeçalho de tabela, {aliases} status com grafia que nenhum leitor reconhece (ex.: in-progress, active) — o índice deve ter só linhas',
     feature_registry_noise_hint: 'Rode `aioson feature:tidy . --dry-run` para ver a prévia e depois `aioson feature:tidy .` (ou `aioson doctor . --fix`): as linhas são reagrupadas numa tabela por situação (em andamento, planejamento, pausadas, concluídas, abandonadas) e cada nota vai sem alteração para a pasta da sua feature, com backup em .aioson/backups/features-registry/.',
+    feature_lifecycle: 'Ciclo de vida das features: {ready} feature(s) passaram no QA mas nunca foram fechadas, {stale} feature(s) abertas ou pausadas sem atividade além do limite, {unarchived} feature(s) fechadas ainda no contexto vivo',
+    feature_lifecycle_hint: 'Rode `aioson feature:triage .` para ver cada uma com a evidência (ou peça ao @neo para limpar o ciclo de vida das features). `aioson feature:triage . --apply` faz a parte mecânica; fechar, pausar e abandonar continuam decisão do dono, slug por slug.',
+    disk_footprint: 'Espaço em disco: {snapshots} snapshot(s) de documentos e {rollback} pasta(s) de rollback do update além da retenção, {logs} log(s) gigante(s)',
+    disk_footprint_hint: 'Rode `aioson storage:triage .` para ver o que ele libera (ou peça ao @neo para liberar espaço). `aioson storage:triage . --apply` mantém os snapshots e pastas de rollback mais recentes e apara os logs; caminhos pesados que o aioson não regenera continuam sendo decisão do dono, um por um.',
     retired_design_doc_seed_hint_verbatim: '{path} e a semente de organizacao de codigo que instaladores antigos copiavam ao pe da letra — o layout do proprio CLI Node.js do framework, nao o deste projeto. Nada a produz nem a exige; a governanca estrutural vive em .aioson/design-docs/. Apague o arquivo (`aioson doctor . --fix` remove uma copia identica).',
     retired_design_doc_seed_hint_derived: '{path} ainda carrega o cabecalho da semente aposentada ("carregado obrigatoriamente antes de qualquer implementacao", "gerado por @discovery-design-doc") e o layout de CLI Node.js. Mantenha so o que este projeto decidiu, como registro nomeado de decisao tecnica, ou apague o arquivo; a governanca estrutural vive em .aioson/design-docs/.',
     fix_action_retired_design_doc_seed: 'Apagar .aioson/context/design-doc.md quando for a semente aposentada copiada ao pe da letra (copias editadas sao mantidas para revisao)',

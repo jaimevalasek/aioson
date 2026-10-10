@@ -116,6 +116,12 @@ function kb(bytes) {
   return (Number(bytes || 0) / 1024).toFixed(1);
 }
 
+function logNormalized(logger, normalized = [], dryRun) {
+  for (const entry of normalized) {
+    logger.log(`  ${entry.slug}: status "${entry.from}" ${dryRun ? '→' : 'rewritten as'} ${entry.to}`);
+  }
+}
+
 async function runFeatureTidy({ args = [], options = {}, logger } = {}) {
   const targetDir = resolveTargetDir(args);
   const jsonOut = Boolean(options.json);
@@ -142,6 +148,7 @@ async function runFeatureTidy({ args = [], options = {}, logger } = {}) {
   if (before.headerlessRows > 0) logger.log(`  ${before.headerlessRows} row(s) sat outside a table header — rejoined`);
   if (before.unclosedComment) logger.log('  an unclosed <!-- comment hid the rest of the file — its text was moved like any note');
   if (before.duplicates > 0) logger.log(`  ${before.duplicates} duplicate row(s) — the last one wins, earlier ones kept as notes`);
+  logNormalized(logger, result.normalized, dryRun);
   for (const moved of result.moved) {
     logger.log(`  ${moved.notes} note(s) ${dryRun ? '→' : 'moved to'} ${moved.path}`);
   }

@@ -652,7 +652,7 @@ async function collectRecall(targetDir, query, selection, options) {
         mode: selection.mode,
         paths: (selection.paths || []).join(',')
       });
-    }, options.searchDir);
+    }, { projectDir: targetDir, searchDir: options.searchDir });
 
     const hits = pkg.results || [];
     const seen = new Set();

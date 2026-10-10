@@ -29,6 +29,33 @@ const EMPTY_CELL = '—';
 const KNOWN_STATUSES = new Set([
   'planning', 'in_progress', 'paused', 'qa_failed', 'qa_blocked', 'done', 'abandoned'
 ]);
+// Spellings agents and owners write by hand, measured on consumer indexes
+// (`in-progress`, `active`, `em andamento`…). Every reader matches the
+// canonical token exactly, so an alias row is invisible to routing, sweep and
+// hygiene. Delivery spellings (`completed`, `shipped`) are deliberately absent:
+// `done` comes only from feature:close and its gates.
+const STATUS_ALIASES = new Map([
+  ...['in_progress', 'inprogress', 'active', 'wip', 'doing', 'ongoing', 'em_andamento', 'andamento', 'em_progresso']
+    .map((alias) => [alias, 'in_progress']),
+  ...['paused', 'on_hold', 'hold', 'pausado', 'pausada', 'suspended', 'suspenso', 'suspensa']
+    .map((alias) => [alias, 'paused']),
+  ...['planning', 'planned', 'draft', 'todo', 'to_do', 'backlog', 'planejamento', 'planejado', 'planejada', 'rascunho']
+    .map((alias) => [alias, 'planning']),
+  ...['abandoned', 'cancelled', 'canceled', 'dropped', 'discarded', 'cancelado', 'cancelada', 'abandonado', 'abandonada', 'descartado', 'descartada']
+    .map((alias) => [alias, 'abandoned']),
+  ['qa_failed', 'qa_failed'], ['failed_qa', 'qa_failed'],
+  ['qa_blocked', 'qa_blocked'], ['blocked_qa', 'qa_blocked'],
+  ['done', 'done']
+]);
+
+/** Canonical status for a hand-written spelling, or null when it has none. */
+function canonicalStatus(raw) {
+  const key = String(raw || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return STATUS_ALIASES.get(key) || null;
+}
+
 // No dots and no separators: a slug is always a single safe path segment.
 const SAFE_SLUG = /^[a-z0-9][a-z0-9_-]*$/;
 const LEGACY_NOTES_HEADING = '## Legacy notes';
@@ -105,9 +132,13 @@ function isGeneratedLine(trimmed) {
 }
 
 function rowFromCells(cells) {
+  const raw = cells[1] || 'unknown';
   return {
     slug: cells[0],
-    status: cells[1] || 'unknown',
+    // An alias is rewritten to its canonical token on the next write; a
+    // status with no canonical meaning is kept verbatim (section "Other").
+    status: canonicalStatus(raw) || raw,
+    rawStatus: raw,
     started: cells[2] || EMPTY_CELL,
     completed: cells[3] || EMPTY_CELL,
     extra: cells.slice(4)
@@ -158,7 +189,8 @@ function measure(raw, state, notes, unclosed) {
     noteBytes: visible.reduce((sum, note) => sum + Buffer.byteLength(note.text, 'utf8'), 0),
     headerlessRows: state.headerlessRows,
     unclosedComment: unclosed,
-    duplicates: state.superseded.length
+    duplicates: state.superseded.length,
+    aliasStatuses: state.rows.filter((row) => row.rawStatus !== row.status).length
   };
 }
 
@@ -196,7 +228,8 @@ function parseFeatureRegistry(content) {
 function needsTidy(measures) {
   return Boolean(
     measures &&
-      (measures.notes > 0 || measures.headerlessRows > 0 || measures.unclosedComment || measures.duplicates > 0)
+      (measures.notes > 0 || measures.headerlessRows > 0 || measures.unclosedComment || measures.duplicates > 0 ||
+        measures.aliasStatuses > 0)
   );
 }
 
@@ -207,7 +240,8 @@ function featureRegistryParams(measures) {
     notes: m.notes || 0,
     noteKb: ((m.noteBytes || 0) / 1024).toFixed(1),
     totalKb: ((m.bytes || 0) / 1024).toFixed(1),
-    headerless: m.headerlessRows || 0
+    headerless: m.headerlessRows || 0,
+    aliases: m.aliasStatuses || 0
   };
 }
 
@@ -444,6 +478,9 @@ async function tidyFeatureRegistry(targetDir, { dryRun = false, now } = {}) {
     changed,
     dryRun,
     before: registry.measures,
+    normalized: registry.rows
+      .filter((row) => row.rawStatus !== row.status)
+      .map((row) => ({ slug: row.slug, from: row.rawStatus, to: row.status })),
     afterBytes: Buffer.byteLength(next, 'utf8'),
     moved,
     backup
@@ -475,6 +512,7 @@ module.exports = {
   EMPTY_CELL,
   KNOWN_STATUSES,
   SAFE_SLUG,
+  canonicalStatus,
   featureRegistryParams,
   inspectFeatureRegistry,
   parseFeatureRegistry,

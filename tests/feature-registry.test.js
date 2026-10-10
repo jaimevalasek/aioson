@@ -112,7 +112,7 @@ describe('feature registry — canonical serialization', () => {
       '| blocked | qa_blocked | 2026-03-02 | — |',
       '| dropped | abandoned | 2026-02-03 | 2026-02-04 |',
       '| wip-b | in_progress | 2026-01-15 | — |',
-      '| odd | draft | — | — |'
+      '| odd | shipped | — | — |'
     ].join('\n')));
     const order = (heading) => {
       const section = out.split(`## ${heading}\n`)[1].split('\n## ')[0];

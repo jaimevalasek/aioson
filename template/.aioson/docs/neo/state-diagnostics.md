@@ -63,13 +63,18 @@ Summarize only non-zero actionable buckets from `hygiene:scan`:
 - pending Neural Chain noises
 - stale resolved Neural Chain projections
 - completed features pending archive
+- features ready to close (QA passed, row still open), stale open/paused features, status spellings no reader matches
 - stale state
 - stale runtime sessions/runs
 - on-demand review artifacts
 - orphan slug artifacts
 - heavy or orphan evidence artifacts (runtime captures, walkthrough snapshots — regenerable; `runtime-storage.md` names the prune)
+- disk footprint (doc snapshots or rollback folders past retention, oversized logs, heavy paths the framework cannot regenerate)
 
 No hygiene bucket authorizes cleanup. Ask one focused question only when cleanup materially blocks the next route.
+When feature-lifecycle buckets are non-zero, the dashboard Hygiene line shows their counts and offers the guarded
+cleanup in `feature-lifecycle.md`; `disk_footprint` does the same with the disk-footprint cleanup in
+`runtime-storage.md`. Either runs only after the operator accepts.
 
 ## Dashboard evidence
 

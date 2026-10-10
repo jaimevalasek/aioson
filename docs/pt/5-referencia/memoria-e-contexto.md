@@ -45,7 +45,7 @@ AIOSON resolve com **memória externa**: decisões importantes viram arquivos em
            ▼
 ┌────────────────────────────────────────────────────────────┐
 │  CAMADA 3 — Active retrieval (2026)                        │
-│  ~/.aioson/search/context-search.sqlite                    │
+│  .aioson/runtime/context-search.sqlite                     │
 │                                                            │
 │  FTS5 index. Agentes BUSCAM o que precisam em vez de       │
 │  carregar tudo. Bônus de recência, ranking BM25.           │
@@ -122,7 +122,7 @@ Agentes carregam apenas os nós relevantes para a task, usando o índice `bootst
 
 A camada mais recente (adicionada em 2026, commit `5cc7074`). Antes, agentes tinham que carregar blocos fixos de contexto. Com active retrieval, eles podem **buscar** o que precisam usando termos naturais.
 
-O índice é um SQLite com FTS5, salvo em `~/.aioson/search/context-search.sqlite`.
+O índice é um SQLite com FTS5, salvo no próprio projeto em `.aioson/runtime/context-search.sqlite` (fora do git). É um cache: refeito a partir do Markdown do projeto quando falta, e vai embora junto com o projeto. Uma pasta que não é projeto AIOSON é indexada só em memória. O índice único que todos os projetos dividiam em `~/.aioson/search/` é removido na primeira vez que um projeto abre o seu.
 
 ---
 
@@ -336,20 +336,19 @@ seu-projeto/
     ├── brains/              ← Camada 2: nós Zettelkasten (commitável)
     │   └── discover/
     └── runtime/
-        └── aios.sqlite      ← telemetria local (não commitar)
+        ├── aios.sqlite      ← telemetria local (não commitar)
+        └── context-search.sqlite  ← índice FTS5 do projeto (context:search:index)
 
 ~/.aioson/
-    ├── temp/                ← cache de snapshot (context:cache:save)
-    │   └── <sessionId>/
-    │       └── context.md
-    └── search/
-        └── context-search.sqlite  ← índice FTS5 (context:search:index)
+    └── temp/                ← cache de snapshot (context:cache:save)
+        └── <sessionId>/
+            └── context.md
 ```
 
 **O que commitar:**
 - Pode commitar `.aioson/context/` — é memória do projeto.
 - Pode commitar `.aioson/brains/` quando for parte real do trabalho.
-- **Não commitar:** `.aioson/runtime/`, `~/.aioson/temp/`, `~/.aioson/search/`.
+- **Não commitar:** `.aioson/runtime/`, `~/.aioson/temp/`.
 - **Não commitar** (gerenciados pelo framework): `.aioson/agents/`, `.aioson/locales/`, `.aioson/skills/`, `.aioson/schemas/`, `.aioson/tasks/`, `.aioson/templates/`.
 
 ---

@@ -2,14 +2,15 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const os = require('node:os');
 const Database = require('better-sqlite3');
 const { parseFrontmatter, parseAgentList } = require('./preflight-engine');
 const { parseFrontmatterList } = require('./lib/frontmatter');
 const { canonicalAgentId } = require('./agents');
 const { pathMatchesPattern: selectorPathMatchesPattern } = require('./context-selector');
+const { retireLegacyRecallIndex } = require('./lib/storage-footprint');
+const { isProjectRoot } = require('./lib/project-root');
+const { resolveRuntimePaths } = require('./runtime-store');
 
-const SEARCH_DIR = path.join(os.homedir(), '.aioson', 'search');
 const DB_FILE = 'context-search.sqlite';
 const SCHEMA_VERSION = 3;
 const MAX_STALE_MS = 24 * 60 * 60 * 1000; // 24h
@@ -44,8 +45,9 @@ async function ensureDir(dir) {
 
 function normalizeProjectDir(dir) {
   const resolved = path.resolve(dir);
-  // The recall index is one global DB shared across callers. Windows paths are
-  // case-insensitive, so fold case on win32 to keep a single partition per
+  // Rows are keyed by project folder: a project's own index keeps only its
+  // own, a shared index (an explicit search dir) holds several. Windows paths
+  // are case-insensitive, so fold case on win32 to keep a single partition per
   // project regardless of drive-letter/segment casing drift between callers
   // (a lowercased drive letter, a symlink, cwd casing differing across tools).
   return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
@@ -186,18 +188,40 @@ function ensureMetaSchema(db) {
 }
 
 class IndexManager {
-  constructor(searchDir) {
-    this._dir = searchDir || SEARCH_DIR;
+  /**
+   * @param {string|null} searchDir — folder holding the index file; without
+   *   one the index lives in memory only.
+   * @param {object} opts — { owner? } the project this index belongs to: its
+   *   rows are the only ones kept.
+   */
+  constructor(searchDir = null, { owner = null } = {}) {
+    this._dir = searchDir || null;
+    this._owner = owner ? normalizeProjectDir(owner) : null;
     this._db = null;
   }
 
   async open() {
     if (!this._db) {
-      await ensureDir(this._dir);
-      const dbPath = path.join(this._dir, DB_FILE);
-      this._db = openDb(dbPath);
+      if (this._dir) {
+        await ensureDir(this._dir);
+        this._db = openDb(path.join(this._dir, DB_FILE));
+      } else {
+        this._db = initDb(':memory:');
+      }
+      if (this._owner) this._purgeForeignPartitions(this._owner);
     }
     return this;
+  }
+
+  // A project's own index travels with its folder: after a move or a copy its
+  // rows still carry the old path, which nothing queries again.
+  _purgeForeignPartitions(projectDir) {
+    const foreign = this._db.prepare('SELECT 1 FROM docs_meta WHERE project_dir != ? LIMIT 1').get(projectDir);
+    if (!foreign) return;
+    this._db.transaction(() => {
+      this._db.prepare('DELETE FROM docs WHERE project_dir != ?').run(projectDir);
+      this._db.prepare('DELETE FROM docs_meta WHERE project_dir != ?').run(projectDir);
+    })();
   }
 
   close() {
@@ -533,7 +557,7 @@ class IndexManager {
     const { totalSize } = this._db.prepare(
       'SELECT COALESCE(SUM(size), 0) AS totalSize FROM docs_meta'
     ).get();
-    const dbPath = path.join(this._dir, DB_FILE);
+    const dbPath = this._dir ? path.join(this._dir, DB_FILE) : ':memory:';
     return { totalDocs, totalSize, dbPath };
   }
 
@@ -992,10 +1016,17 @@ function normalizeToken(value) {
 }
 
 /**
- * Convenience: open a global IndexManager, use it, close it.
+ * Convenience: open the recall index, use it, close it. An AIOSON project's
+ * index is its own (`.aioson/runtime/context-search.sqlite`, gitignored), so
+ * it is deleted with the project; any other folder is indexed in memory only.
+ * An explicit `searchDir` keeps one index for several projects (tests).
  */
-async function withIndex(fn, searchDir) {
-  const idx = new IndexManager(searchDir);
+async function withIndex(fn, { projectDir = null, searchDir = null } = {}) {
+  const own = !searchDir && Boolean(projectDir) && isProjectRoot(projectDir);
+  if (own) retireLegacyRecallIndex(projectDir);
+  const idx = own
+    ? new IndexManager(resolveRuntimePaths(projectDir).runtimeDir, { owner: projectDir })
+    : new IndexManager(searchDir);
   await idx.open();
   try {
     return await fn(idx);

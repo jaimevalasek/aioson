@@ -555,7 +555,34 @@ aioson feature:tidy .                                            # apply it
 
 - `feature:register` upserts one row; `--status` accepts `planning`, `in_progress`, `paused`, `qa_failed`, `qa_blocked`, `abandoned` (sets the completed date). `done` is refused — only `feature:close` closes a feature.
 - `feature:tidy` migrates an index that grew narrative: rows are regrouped into one table per situation (rows that sat outside a table header are rejoined; for a duplicated slug the last row wins and the earlier one is kept as a note), and every `<!-- slug: … -->` note moves verbatim to `registry-notes.md` in that feature's folder — live (`features/{slug}/`) or archived (`done/{slug}/dossier/`). Notes naming no registered feature go to `done/registry-notes.md`. The previous file is kept in `.aioson/backups/features-registry/`.
-- `aioson doctor` warns when the index carries notes or headerless rows, `aioson doctor --fix` runs the same migration, and `aioson update` prints the advisory — it never rewrites `features.md` itself.
+- `aioson doctor` warns when the index carries notes, headerless rows or status spellings no reader matches (`in-progress`, `active`, `em andamento`…), `aioson doctor --fix` runs the same migration, and `aioson update` prints the advisory — it never rewrites `features.md` itself.
+- Spellings with a canonical meaning are rewritten by `feature:tidy` (`in-progress`/`active` → `in_progress`, `on-hold` → `paused`, `draft` → `planning`, `cancelled` → `abandoned`). Delivery spellings (`completed`, `shipped`) are never mapped to `done`.
+
+---
+
+## feature:triage
+
+Measures where every registered feature really stands and cleans the lifecycle through the commands that own it. Read-only without flags; `@neo` runs it in its guarded feature-lifecycle mode.
+
+```bash
+aioson feature:triage .                                   # report (add --json)
+aioson feature:triage . --apply --dry-run                 # preview the mechanical fixes
+aioson feature:triage . --apply                           # rewrite spellings, archive closed work, clear a pulse naming a closed feature
+aioson feature:triage . --close=checkout --pause=search --abandon=old-import --resume=reports
+```
+
+| Finding | Decided by | Meaning |
+|---|---|---|
+| `ready_to_close` | owner | QA verdict PASS (or ACCEPTED_WITH_FOLLOWUPS) and the row is still open. `changed_after_qa` marks a spec/plan rewritten after the verdict — re-verify first |
+| `stale_open` / `stale_paused` | owner | No artifact activity for `--stale-days` (21) / `--paused-days` (60); the active feature is never stale |
+| `status_alias` / `unknown_status` | mechanical / owner | A spelling no reader matches / a status with no lifecycle meaning |
+| `closed_not_archived` | mechanical | `done`/`abandoned` row whose files are still in the live context |
+| `active_is_closed` / `active_not_registered` | mechanical / owner | The pulse names a closed feature / a slug nothing in the project carries |
+
+- Every decision is checked before any runs; one refusal (no current QA PASS, spec changed after QA, active feature without `--include-active`, wrong status) and nothing changes.
+- `--close` runs `feature:close` with the verdict QA recorded. Its gates still apply: a blocked close is reported with its `--preflight` command and never forced.
+- `--pause`/`--abandon`/`--resume` go through `feature:register` (abandoning archives to `abandoned/{slug}/`).
+- `hygiene:scan` carries the same findings in `features_ready_to_close`, `stale_features` and `feature_status_aliases`.
 
 ---
 
@@ -574,6 +601,33 @@ aioson evidence:prune . --all
 - `--slug=<feature>` narrows to one owner (feature, briefing, or archived feature); `--dry-run` counts without deleting; `--json` returns the per-folder table.
 
 `hygiene:scan` lists the same folders under `heavy_evidence_artifacts` when they are orphaned or above 1 MB, and `feature:archive` drops them (instead of moving them into `done/`) unless `--keep-diagnostics` is passed.
+
+---
+
+## storage:triage
+
+How much disk aioson itself takes — in the project, and with `--global` on the machine — and the cleanup that is safe. Read-only without flags.
+
+```bash
+aioson storage:triage .                                   # report (add --json)
+aioson storage:triage . --global                          # every project's doc snapshots + the old machine-wide recall index
+aioson storage:triage . --apply --dry-run                 # preview the mechanical cleanup
+aioson storage:triage . --apply                           # retention + log trimming
+aioson storage:triage . --remove=.aioson/runtime/scratch-db --dry-run
+```
+
+| Finding | Decides | What `--apply` / `--remove` does |
+|---|---|---|
+| `doc_snapshots` | auto | Keeps the newest 10 doc snapshots `agent:done` took in `~/.aioson/backups/{project}/` and removes the rest |
+| `rollback_backups` | auto | Keeps the newest 5 update rollback folders in `.aioson/backups/` and removes the rest |
+| `oversized_log` | auto | Trims a `.log`/`.out`/`.err` above 20 MB inside `.aioson/` to its first 64 KB and last 256 KB (a log written in the last 10 minutes is left alone) |
+| `legacy_recall_index` | auto | `--global`: retires `~/.aioson/search/context-search.sqlite`, the recall index every project shared before each kept its own |
+| `heavy_path` | owner | A path of 50 MB or more aioson cannot regenerate: scratch under `.aioson/runtime/` or `.aioson/tmp/`, a backup aioson did not write, a `researchs/{slug}` folder, a file someone left in `~/.aioson/search/` (`--global`). Removed only by `--remove=<path>`, exactly as the report prints it |
+
+- One `--remove` path the report did not list refuses the whole call and nothing changes. Links are never followed; the runtime database, live sessions and the evidence binaries keep their own procedures (`runtime:prune`, `agent:recover`, `evidence:prune`).
+- The producers keep the same retention on their own: `agent:done` (and `backup:local`) skips a snapshot when nothing changed, leaves closed-feature archives (`done/`, `abandoned/`) out of it, never snapshots a project that lives under the OS temp folder into `~/.aioson` (set `AIOSON_BACKUPS_DIR` to keep one elsewhere), and keeps the newest 10; `aioson update` keeps the newest 5 rollback folders.
+- `hygiene:scan` lists what is left under `disk_footprint` (an owner path listed in `.aioson/context/hygiene-retention.md` is no longer reported), and `doctor`/`update` warn (`runtime:disk_footprint`) while retention is past due.
+- The recall index (`context:search`, `context:brief --recall`) lives in each project's `.aioson/runtime/context-search.sqlite` (gitignored): rebuilt from the project's Markdown when missing, deleted with the project, never a cleanup target. A folder that is not an AIOSON project is indexed in memory only, and opening a project's own index retires the old machine-wide one.
 
 ---
 
