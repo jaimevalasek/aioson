@@ -46,6 +46,9 @@ function parseTarget(input) {
   if (!prefixed) return { kind: 'css', value: body, options: {}, nth, raw: text };
   const kind = prefixed[1].toLowerCase();
   let rest = prefixed[2];
+  // A css/xpath selector is passed to Playwright whole: its trailing
+  // `[name="status"]` is an attribute filter, not a locator option.
+  if (kind === 'css' || kind === 'xpath') return { kind, value: rest.trim(), options: {}, nth, raw: text };
   const options = {};
   const attrs = [];
   // trailing [key=value] / [flag] groups

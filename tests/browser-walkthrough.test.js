@@ -177,6 +177,9 @@ test('targets parse accessibility-first with options, regexes, and nth chains', 
   assert.equal(parseTarget('text=Order created').kind, 'text');
   assert.deepEqual(parseTarget('#rows tr>>last'), { kind: 'css', value: '#rows tr', options: {}, nth: -1, raw: '#rows tr>>last' });
   assert.equal(parseTarget('xpath=//main').kind, 'xpath');
+  // A trailing attribute filter is CSS, never a role option.
+  assert.deepEqual(parseTarget('css=[data-testid="run-filters"] select[name="status"]>>nth=0'), { kind: 'css', value: '[data-testid="run-filters"] select[name="status"]', options: {}, nth: 0, raw: 'css=[data-testid="run-filters"] select[name="status"]>>nth=0' });
+  assert.equal(parseTarget('xpath=//select[@name="status"]').value, '//select[@name="status"]');
   assert.equal(parseTarget('role=heading[level=2]').options.level, 2);
   assert.equal(parseTarget(''), null);
 });
