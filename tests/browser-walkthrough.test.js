@@ -104,6 +104,69 @@ function hit(page, method, url, status) {
 
 const fastClock = { now: () => Date.now(), wait: async () => {} };
 
+test('network saturation preserves late action boundaries and their real response status', async (t) => {
+  const { MAX_NETWORK_ROWS } = require('../src/lib/browser-walkthrough/script');
+  for (const status of [201, 503, 0]) {
+    await t.test(`late response ${status}`, async () => {
+      const root = await tmp();
+      const page = fakePage({ elements: {
+        'role=button[name=Load]': { onClick: (p) => {
+          hit(p, 'POST', 'http://127.0.0.1:3000/api/orders', 201);
+          for (let index = 0; index < MAX_NETWORK_ROWS + 40; index += 1)
+            hit(p, 'GET', `http://127.0.0.1:3000/module-${index}.js`, 200);
+        } },
+        'role=button[name=Save]': { onClick: (p) => {
+          for (let index = 0; index < MAX_NETWORK_ROWS + 40; index += 1)
+            hit(p, 'GET', `http://127.0.0.1:3000/lazy-${index}.js`, 200);
+          const request = { method: () => 'POST', url: () => 'http://127.0.0.1:3000/api/orders?token=private' };
+          p.emit('request', request);
+          if (status === 0) p.emit('requestfailed', request);
+          else p.emit('response', { request: () => request, status: () => status });
+        } },
+      } });
+      const script = normalizeScript({ name: 'late-boundary', boundary_wait: 10, steps: [
+        { do: 'click', target: 'role=button[name="Load"]' },
+        { do: 'click', target: 'role=button[name="Save"]', boundary: 'POST /api/orders -> 201', ac: 'AC-02' },
+      ] }).script;
+      try {
+        const report = await runWalkthrough({ targetDir: root, script, url: 'http://127.0.0.1:3000',
+          slug: 'orders', open: fakeOpener(page), clock: fastClock, persist: false });
+        assert.equal(report.ok, status === 201);
+        assert.equal(report.steps[1].boundary.status, status, 'late response is observed, never replaced by startup success');
+        assert.ok(report.network.rows.length <= MAX_NETWORK_ROWS, 'the diagnostic report remains bounded');
+        assert.ok(report.network.rows.some((row) => row.method === 'POST' && row.url.endsWith('/api/orders') && row.status === status),
+          'the action request remains reviewable after startup traffic saturates the report');
+        assert.doesNotMatch(JSON.stringify(report), /token=private/);
+      } finally { await fs.rm(root, { recursive: true, force: true }); }
+    });
+  }
+});
+
+test('network saturation does not reuse the preceding action as a repeated boundary', async () => {
+  const { MAX_NETWORK_ROWS } = require('../src/lib/browser-walkthrough/script');
+  const root = await tmp();
+  const page = fakePage({ elements: {
+    'role=button[name=Load]': { onClick: (p) => {
+      for (let index = 0; index < MAX_NETWORK_ROWS + 40; index += 1)
+        hit(p, 'GET', `http://127.0.0.1:3000/module-${index}.js`, 200);
+    } },
+    'role=button[name=Save]': { onClick: (p) => hit(p, 'POST', 'http://127.0.0.1:3000/api/orders', 201) },
+    'role=button[name=Again]': { onClick: (p) => hit(p, 'GET', 'http://127.0.0.1:3000/api/orders', 200) },
+  } });
+  const script = normalizeScript({ name: 'repeat-late-boundary', boundary_wait: 10, steps: [
+    { do: 'click', target: 'role=button[name="Load"]' },
+    { do: 'click', target: 'role=button[name="Save"]', boundary: 'POST /api/orders -> 201' },
+    { do: 'click', target: 'role=button[name="Again"]', boundary: 'POST /api/orders -> 201' },
+  ] }).script;
+  try {
+    const report = await runWalkthrough({ targetDir: root, script, url: 'http://127.0.0.1:3000', slug: 'orders',
+      open: fakeOpener(page), clock: fastClock, persist: false });
+    assert.equal(report.steps[1].ok, true);
+    assert.equal(report.steps[2].ok, false);
+    assert.match(report.steps[2].error, /POST \/api\/orders -> 201 not requested/);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
 test('targets parse accessibility-first with options, regexes, and nth chains', () => {
   assert.deepEqual(parseTarget('role=button[name="Save order"][exact]>>nth=1'), {
     kind: 'role', value: 'button', options: { name: 'Save order', exact: true }, nth: 1, raw: 'role=button[name="Save order"][exact]>>nth=1'

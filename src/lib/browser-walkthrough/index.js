@@ -182,7 +182,8 @@ async function runWalkthrough(options) {
   let superseded = { files: 0, bytes: 0 };
 
   const consoleLog = { errors: 0, warnings: 0, page_errors: 0, samples: [] };
-  const network = { rows: [], failed: 0 };
+  const network = { rows: [], failed: 0, supportsBoundaryCapture: true, activeBoundary: null };
+  const rowsByRequest = new WeakMap();
   const warnings = [];
   const executed = [];
   const ariaSeen = [];
@@ -216,17 +217,31 @@ async function runWalkthrough(options) {
         if (consoleLog.samples.length < MAX_CONSOLE_SAMPLES) consoleLog.samples.push(consoleSample('pageerror', error && error.message || error));
       });
       page.on('request', (request) => {
-        if (network.rows.length >= MAX_NETWORK_ROWS) return;
         const row = { method: String(request.method()).toUpperCase(), url: String(request.url()), status: null, failed: false, _request: request };
+        const capture = network.activeBoundary;
+        const matchesBoundary = capture && boundaryHit(capture.boundary, row);
+        if (network.rows.length >= MAX_NETWORK_ROWS && !matchesBoundary) return;
+        if (matchesBoundary) {
+          capture.rows.push(row);
+          if (capture.rows.length > MAX_NETWORK_ROWS) capture.rows.shift();
+        }
+        // Startup assets must not hide the request an action needs to prove.
+        // Both the diagnostic history and current matching window stay bounded.
+        row._boundary = Boolean(matchesBoundary);
+        if (network.rows.length >= MAX_NETWORK_ROWS) {
+          const discard = network.rows.findIndex((entry) => !entry._boundary);
+          network.rows.splice(Math.max(0, discard), 1);
+        }
         network.rows.push(row);
+        rowsByRequest.set(request, row);
       });
       page.on('response', (response) => {
         const request = response.request();
-        const row = network.rows.find((r) => r._request === request);
+        const row = rowsByRequest.get(request);
         if (row) row.status = response.status();
       });
       page.on('requestfailed', (request) => {
-        const row = network.rows.find((r) => r._request === request);
+        const row = rowsByRequest.get(request);
         if (row) { row.failed = true; row.status = row.status === null ? 0 : row.status; }
         network.failed += 1;
       });

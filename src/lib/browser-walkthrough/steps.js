@@ -170,6 +170,8 @@ async function executeStep({ page, step, script, baseUrl, artifactDir, artifactP
   };
   const boundary = parseBoundary(step.boundary);
   const networkMark = network.rows.length;
+  const boundaryCapture = boundary && network.supportsBoundaryCapture ? { boundary, rows: [] } : null;
+  if (boundaryCapture) network.activeBoundary = boundaryCapture;
   const started = clock.now();
   try {
     switch (step.do) {
@@ -298,7 +300,8 @@ async function executeStep({ page, step, script, baseUrl, artifactDir, artifactP
     if (boundary) {
       const settle = Number(step.boundary_wait) > 0 ? Number(step.boundary_wait) : script.boundary_wait;
       const result = await until(async () => {
-        const hits = network.rows.slice(networkMark).filter((row) => boundaryHit(boundary, row));
+        const hits = (boundaryCapture ? boundaryCapture.rows : network.rows.slice(networkMark))
+          .filter((row) => boundaryHit(boundary, row));
         const answered = hits.filter((row) => row.status !== null);
         if (answered.length === 0) return { ok: false, detail: hits.length > 0 ? `${boundary.raw} requested, no response yet` : `${boundary.raw} not requested` };
         const last = answered[answered.length - 1];
@@ -316,6 +319,7 @@ async function executeStep({ page, step, script, baseUrl, artifactDir, artifactP
     record.ok = false;
     record.error = clip(String(error && error.message || error), 600).replace(/\s*Call log:[\s\S]*$/, '');
   }
+  if (boundaryCapture && network.activeBoundary === boundaryCapture) network.activeBoundary = null;
   record.ms = Math.max(0, clock.now() - started);
   try { record.url = sanitizeUrl(page.url()); } catch { record.url = ''; }
   if (step.do === 'goto' && record.ok && LOGIN_WALL_RE.test(record.url) && !LOGIN_WALL_RE.test(String(step.url))) {
