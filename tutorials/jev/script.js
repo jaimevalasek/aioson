@@ -61,7 +61,7 @@ const templates = {
     questions: {
       route: {
         type: 'choice', instructions: 'Which route best matches `request`?',
-        criteria: { dev: 'Specified implementation', ux_ui: 'One bounded visual decision', exploration: 'Compare multiple directions' }
+        criteria: { dev: 'Specified implementation', visual_fix: 'One bounded visual adjustment', exploration: 'Compare multiple directions' }
       }
     },
     decision: { type: 'select', question: 'route', min_confidence: 0.55, min_probability: 0.55, on_uncertain: 'human_review' }

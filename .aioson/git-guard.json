@@ -84,6 +84,13 @@
       "reason": "The orchestration tutorial displays the crsr_SUA_CHAVE_AQUI placeholder to explain Cursor environment setup; no credential is present."
     },
     {
+      "path": "tutorials/orquestration-jev/index.html",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "The orchestration-with-Jev tutorial shows an aioson-models.json example whose api_key holds the environment variable name OPENROUTER_API_KEY; no credential is present."
+    },
+    {
       "path": "tests/jev-key-config.test.js",
       "rules": [
         "openai_secret"

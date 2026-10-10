@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Orquestração com Jev no AIOSON: o que o Jev decide durante a execução das lanes, o que muda com e sem ele, números medidos numa feature real e como ativar passo a passo.">
+  <meta name="reviewed-at" content="2026-10-01">
+  <meta name="color-scheme" content="dark light">
+  <title>Orquestração com Jev — vale a pena?</title>
+  <link rel="stylesheet" href="../memories/tokens.css">
+  <link rel="stylesheet" href="../memories/style.css">
+  <link rel="stylesheet" href="../jev/style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">a.</span><span>AIOSON <span class="brand-divider">/</span> Orquestração + Jev</span></a>
+  <div class="header-actions"><a href="#verdict">Vale a pena?</a><a href="#activate">Ativar</a><button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button><button id="print-page" type="button" hidden>Imprimir / PDF</button></div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow">Guia prático · medido em 01 out 2026 numa feature real</p>
+      <h1 id="hero-title">O escalonador dá a velocidade.<br>O Jev decide onde<br>não arriscar.</h1>
+      <p class="hero-intro">Quando o AIOSON roda uma feature em lanes paralelas, quatro decisões aparecem a cada unidade: quão fundo revisar, o que fazer quando um worker cai, se uma revisão pode correr junto com a anterior e se uma implementação pode começar antes das anteriores da mesma lane. Este guia mostra o que o Jev decide em cada uma, o que acontece sem ele e quando ele compensa.</p>
+      <div class="hero-actions"><a class="primary-link" href="#verdict">Ir direto ao veredito ↓</a><a class="text-link" href="#activate">Ativar em 6 passos →</a></div>
+      <div class="edition"><span>4 decisões opcionais</span><span>Queda segura sem chave</span><span>Só metadados saem da máquina</span></div>
+    </div>
+    <figure class="time-console" aria-labelledby="time-title">
+      <div class="console-top"><span id="time-title">play-vivo · 32 unidades · 2 lanes</span><span class="live-dot">medido</span></div>
+      <ol class="time-bars" aria-label="Tempo total projetado por modo de execução">
+        <li style="--w: 100%"><span>waves (padrão antigo)</span><strong>8h45</strong></li>
+        <li style="--w: 62%" class="is-safe"><span>lanes + revisão em ordem, sem Jev</span><strong>5h25</strong></li>
+        <li style="--w: 57%" class="is-best"><span>lanes + revisão em ordem, com Jev</span><strong>5h00</strong></li>
+        <li style="--w: 45%" class="is-risky"><span>lanes after_dev, sem guarda</span><strong>3h55</strong></li>
+      </ol>
+      <figcaption>Projeção do próprio motor com a mediana medida na execução: DEV 10 min, revisão 15 min por unidade. A barra mais curta é a única que aceita aprovar uma unidade antes de a anterior ser corrigida.</figcaption>
+    </figure>
+  </section>
+
+  <div class="staff" aria-hidden="true"></div>
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do tutorial"><p class="machine-label">Neste guia</p><ol>
+        <li><a href="#concept">O que muda</a></li>
+        <li><a href="#speed">De onde vem a velocidade</a></li>
+        <li><a href="#decisions">As quatro decisões</a></li>
+        <li><a href="#compare">Com e sem Jev</a></li>
+        <li><a href="#measured">Medido numa feature real</a></li>
+        <li><a href="#verdict">Vale a pena?</a></li>
+        <li><a href="#modes">Escolha o seu modo</a></li>
+        <li><a href="#activate">Como ativar</a></li>
+        <li><a href="#privacy">O que sai da máquina</a></li>
+        <li><a href="#troubleshooting">Quando algo falha</a></li>
+        <li><a href="#reference">Referência rápida</a></li>
+      </ol></nav>
+      <p class="sidebar-note">Pré-requisitos: <a href="../orquestration/index.html">Orquestração e dashboard</a> para entender lanes, ondas e QA por unidade; <a href="../jev/index.html">Jev no AIOSON</a> para o modelo de decisão tipada.</p>
+    </aside>
+
+    <article class="article">
+      <section id="concept" aria-labelledby="concept-title">
+        <p class="section-number">01 / O que muda</p>
+        <h2 id="concept-title">O motor continua decidindo. O Jev só responde três perguntas que o código não sabe calcular.</h2>
+        <p>Na orquestração, cada unidade do plano passa por um DEV e por uma revisão (QA) em processos separados, com o modelo que você escolheu em <code>.aioson/config/execution-roles.json</code>. Quase tudo ali é regra exata: quem pode começar, quais arquivos cada unidade escreve, quando pausar. Três decisões, porém, dependem de entender o conteúdo, e é nelas que o Jev entra.</p>
+        <div class="compare-grid">
+          <div><span class="machine-label">Pergunta 1</span><h3>Quão fundo revisar?</h3><p>Uma tela de texto e uma migration não merecem o mesmo esforço de revisão.</p></div>
+          <div><span class="machine-label">Pergunta 2</span><h3>O worker caiu: tento de novo?</h3><p>Uma queda de rede passa sozinha; um teste quebrado precisa de alguém.</p></div>
+          <div><span class="machine-label">Pergunta 3</span><h3>Esta revisão espera a anterior?</h3><p>Se a unidade usa funções exatas da anterior, a revisão dela precisa ver a anterior já corrigida.</p></div>
+        </div>
+        <div class="note"><strong>Regra que nunca muda:</strong> o Jev devolve uma escolha com probabilidade; a política em código decide se aceita. Na dúvida, sem chave, com a API fora do ar ou com resposta inválida, o motor faz o que faria sem o Jev — sempre o caminho mais seguro.</div>
+      </section>
+
+      <section id="speed" aria-labelledby="speed-title">
+        <p class="section-number">02 / Velocidade</p>
+        <h2 id="speed-title">Quem acelera a execução é o escalonador, não o Jev.</h2>
+        <p>Antes de falar do Jev, é preciso separar as coisas. O ganho grande de tempo vem de duas chaves do bloco <code>parallel</code> do <code>execution-roles.json</code>:</p>
+        <dl class="term-list">
+          <div><dt>scheduling</dt><dd><code>waves</code> (padrão): uma unidade só começa quando <em>todas</em> as unidades das ondas anteriores, de todas as lanes, passaram no DEV e na revisão. <code>lanes</code>: ela espera só a unidade anterior da <em>própria</em> lane. A fronteira entre lanes passa a ser o <code>## Interface Contract</code> do plano; sem ele, o motor mantém <code>waves</code> e avisa.</dd></div>
+          <div><dt>lane_gate</dt><dd><code>after_qa</code> (padrão): a próxima unidade da lane espera a revisão da anterior terminar. <code>after_dev</code>: ela começa assim que o DEV da anterior passa, enquanto a revisão anterior ainda roda.</dd></div>
+        </dl>
+        <p>Duas unidades que escrevem o mesmo arquivo nunca rodam ao mesmo tempo, em nenhum modo — esse bloqueio por arquivo é o que mais limita o paralelismo de um plano. O motor mostra o quanto o formato do seu plano permite antes de você gastar com workers:</p>
+        <pre><code>aioson execution:compile . --feature=&lt;slug&gt; --dry-run
+aioson execution:graph . --feature=&lt;slug&gt;</code></pre>
+        <pre class="output-sample"><code>projection (DEV 10 / QA 15 min per unit, measured over 12 attempt(s)):
+  waves 8h45 · lanes after_qa 8h45 · lanes after_dev 3h55 · file ceiling 3h20
+shared files that serialize their units: pt-BR.json ×8, en.json ×8, _root.ts ×5, services.ts ×5</code></pre>
+        <div class="warning"><strong>O risco do modo rápido</strong><span>Com <code>after_dev</code>, a próxima unidade é construída sobre código que ainda está em revisão. Se a revisão corrigir uma função que a próxima usa, a próxima pode ser aprovada com base em algo que mudou. É exatamente esse risco que a decisão de ordem de revisão do Jev existe para controlar.</span></div>
+      </section>
+
+      <section id="decisions" aria-labelledby="decisions-title">
+        <p class="section-number">03 / As quatro decisões</p>
+        <h2 id="decisions-title">Cada decisão é opcional, tem uma regra fixa e um caminho seguro.</h2>
+        <div class="mode-grid">
+          <article><span>review_depth</span><h3>Profundidade da revisão</h3><p>O Jev classifica a unidade como <em>deep</em> (dado persistido, auth, segredos, dinheiro, concorrência, agendamento, rede, instalador) ou <em>standard</em> (tela, texto, formatação, documentação). Standard é revisada em <code>high</code> em vez do esforço configurado.</p><p><strong>Regra fixa:</strong> caminhos de risco (migrations, <code>prisma</code>, auth, segredos, pagamentos, <code>install.sh</code>, <code>systemd</code>) mantêm o esforço configurado sem consultar. O Jev nunca sobe o esforço.</p><code>na dúvida → esforço configurado</code></article>
+          <article><span>triage</span><h3>Triagem de pausas</h3><p>Quando um worker cai, o Jev lê o registro da falha e diz se foi do ambiente (capacidade, rede, processo morto) ou do trabalho. Falha passageira ganha uma nova tentativa automática da mesma etapa.</p><p><strong>Regra fixa:</strong> só falhas de ambiente (<code>crashed</code>, <code>unavailable</code>, <code>capacity</code>, <code>timeout</code>, <code>stalled</code>) são consultadas; reprovação de QA nunca. Uma tentativa por unidade e etapa; tentar de novo é o único efeito automático.</p><code>na dúvida → pausa para você</code></article>
+          <article><span>review_order</span><h3>Ordem das revisões</h3><p>Com <code>lane_gate: after_dev</code>, o DEV da próxima continua começando cedo. O Jev julga se a próxima unidade usa funções, tipos ou rotas exatas da anterior. Se usa, a <em>revisão</em> da próxima espera a revisão da anterior terminar, e testa contra o código já corrigido.</p><p><strong>Regra fixa:</strong> se a anterior parar numa decisão, a espera termina — o motor nunca trava esperando.</p><code>na dúvida → a revisão espera</code></article>
+          <article><span>start_order</span><h3>Ordem de início</h3><p>O plano encadeia cada lane em ondas, mas uma unidade adiante muitas vezes não precisa de nada das anteriores (outro app, outra tabela, outro router). Quando uma unidade está parada só porque as anteriores da lane ainda não foram implementadas, o Jev julga, par a par, se ela pode ser feita antes delas existirem. Independente de todas → ela começa já, em paralelo.</p><p><strong>Regra fixa:</strong> um par dependente mantém a ordem do plano. A trava de arquivos vale sempre: duas unidades que dividem um arquivo nunca escrevem ao mesmo tempo.</p><code>na dúvida → ordem do plano</code></article>
+          <article><span>evidência</span><h3>O que o Jev lê para decidir</h3><p>Para cada unidade: id, lane, caminhos dos arquivos, o texto "Required change" do Implementation Delta para cada arquivo, os CAP e o comportamento observável de cada AC do PRD. Para a triagem: o tipo e o motivo da falha.</p><p>Com o "Required change" incluído, os julgamentos incertos caíram de 13 para 8 em 25 pares nesta medição.</p><code>nunca conteúdo de arquivo</code></article>
+        </div>
+      </section>
+
+      <section id="compare" aria-labelledby="compare-title">
+        <p class="section-number">04 / Com e sem Jev</p>
+        <h2 id="compare-title">Sem o Jev, o motor faz o conservador. Com ele, faz o conservador só onde importa.</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Decisão</th><th>Sem Jev</th><th>Com Jev</th><th>O que você ganha</th></tr></thead>
+          <tbody>
+            <tr><td><code>review_depth</code></td><td>Toda unidade revisada no esforço configurado (ex.: <code>max</code>).</td><td>Unidades de baixo risco revisadas em <code>high</code>.</td><td>Tempo e custo de revisão — proporcional à quantidade de unidades de UI, texto e docs.</td></tr>
+            <tr><td><code>triage</code></td><td>Toda queda vira pausa e espera você responder.</td><td>Queda passageira é tentada de novo uma vez, sozinha.</td><td>Execuções longas e sem supervisão (à noite) não param por uma queda de rede.</td></tr>
+            <tr><td><code>review_order</code></td><td>Ordem para todos os pares (seguro, mais lento) ou para nenhum (rápido, com risco) — você escolhe um só.</td><td>Ordem só nos pares que dependem de verdade.</td><td>A segurança da ordem com a velocidade possível nos pares independentes.</td></tr>
+            <tr><td><code>start_order</code></td><td>A lane é uma fila: cada DEV espera o DEV anterior, mesmo sem depender dele.</td><td>Unidades independentes da lane começam juntas; as dependentes seguem a ordem.</td><td>Mais implementações ao mesmo tempo quando o plano juntou trabalho independente numa lane só.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="measured" aria-labelledby="measured-title">
+        <p class="section-number">05 / Medido</p>
+        <h2 id="measured-title">Uma feature real: 32 unidades, 2 lanes, 21 ondas.</h2>
+        <p>A feature <code>play-vivo</code> do projeto Play Online (motor de agendamento, filas, workers e telas de execução) foi a primeira a rodar com estas peças. DEV com <code>claude-opus-5-5</code>, revisão com <code>gpt-6-luna</code> em <code>max</code>. Na execução real, a mediana foi de 10 min por DEV e 15 min por revisão — a revisão é o gargalo.</p>
+        <div class="fact-grid">
+          <div><span class="machine-label">review_depth</span><strong>1 de 32</strong><p>unidades desceriam para <code>high</code>. 8 ficaram na regra fixa de caminho de risco; o Jev julgou quase todo o resto <em>deep</em>, com razão: é uma feature de agendamento e retentativas.</p></div>
+          <div><span class="machine-label">review_order</span><strong>28 de 30</strong><p>pares dependentes de verdade (incluindo 5 que dividem arquivo). Só 2 pares puderam revisar em paralelo.</p></div>
+          <div><span class="machine-label">latência</span><strong>~0,55 s</strong><p>por julgamento via OpenRouter (<code>typesafe/jev-1.13</code>), contra 15 min de uma revisão.</p></div>
+          <div><span class="machine-label">ganho</span><strong>25 min</strong><p>de 5h25 para 5h00 na revisão em ordem: o Jev liberou os 2 pares independentes.</p></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Modo</th><th>Tempo projetado</th><th>Processos em média</th><th>Qualidade</th></tr></thead>
+          <tbody>
+            <tr><td><code>waves</code></td><td>8h45</td><td>1,5</td><td>Cada unidade espera tudo antes dela.</td></tr>
+            <tr><td><code>lanes</code> + <code>after_qa</code></td><td>8h45</td><td>1,5</td><td>Igual ao anterior neste plano: a lane backend, com 21 unidades em sequência, é o caminho crítico.</td></tr>
+            <tr><td><code>lanes</code> + <code>after_dev</code> + revisão em ordem, sem Jev</td><td>5h25</td><td>2,5</td><td>Toda revisão vê a anterior já corrigida.</td></tr>
+            <tr><td><code>lanes</code> + <code>after_dev</code> + <code>review_order</code> com Jev</td><td><strong>5h00</strong></td><td>2,7</td><td>Igual ao anterior, liberando só os pares independentes.</td></tr>
+            <tr><td><code>lanes</code> + <code>after_dev</code>, sem ordem</td><td>3h55</td><td>3,4</td><td>Uma unidade pode ser aprovada antes de a anterior ser corrigida; só a integração final pega.</td></tr>
+            <tr><td>teto teórico (só arquivos em comum bloqueiam)</td><td>3h20</td><td>4,0</td><td>Ignora toda dependência entre unidades — não é um modo, é o limite do plano.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="verdict" aria-labelledby="verdict-title">
+        <p class="section-number">06 / Veredito</p>
+        <h2 id="verdict-title">Vale a pena — pelo motivo certo.</h2>
+        <p>O Jev não deixa a execução mais rápida sozinho. Quem corta o tempo de 8h45 para 5h é o escalonador (<code>lanes</code> + <code>after_dev</code>). O que o Jev faz é permitir usar esse modo rápido sem abrir mão da qualidade, e tirar você do caminho nas falhas que não precisam de você.</p>
+        <div class="verdict-grid">
+          <div class="is-yes"><span class="machine-label">Compensa quando</span><ul>
+            <li>A execução roda sem você olhando (à noite, em lote): a triagem evita que uma queda de rede pare tudo por horas.</li>
+            <li>Você usa <code>after_dev</code>: a ordem de revisão é a diferença entre rápido e rápido-e-arriscado.</li>
+            <li>O plano tem muitas unidades de baixo risco (telas, textos, docs, ajustes visuais): a profundidade de revisão economiza o maior custo da execução.</li>
+            <li>O plano tem unidades realmente independentes, como serviços em pastas separadas.</li>
+          </ul></div>
+          <div class="is-no"><span class="machine-label">Não muda quase nada quando</span><ul>
+            <li>O plano é uma cadeia em sequência, em que cada unidade usa a anterior: o Jev vai confirmar a dependência e você terá o mesmo tempo da ordem total.</li>
+            <li>A feature é quase toda de alto risco (dados, segurança, agendamento): a revisão fica no esforço máximo, como deve.</li>
+            <li>Você acompanha a execução e responde as pausas na hora.</li>
+            <li>O projeto não pode mandar metadados do plano para um serviço externo — aí deixe as quatro decisões desligadas.</li>
+          </ul></div>
+        </div>
+        <div class="note"><strong>Custo de ligar e não precisar:</strong> praticamente zero. Cada julgamento leva cerca de meio segundo e é feito uma vez por unidade ou par; sem chave ou com qualquer falha, o comportamento é exatamente o de antes. Por isso a recomendação é ligar as três sempre que houver chave e não houver restrição de privacidade.</div>
+      </section>
+
+      <section id="modes" aria-labelledby="modes-title">
+        <p class="section-number">07 / Escolha</p>
+        <h2 id="modes-title">Escolha o seu modo e copie a configuração.</h2>
+        <div class="route-switcher" role="group" aria-label="Escolher modo de execução">
+          <button type="button" data-mode="safe" aria-pressed="false">Seguro</button>
+          <button type="button" data-mode="balanced" aria-pressed="true">Rápido com qualidade</button>
+          <button type="button" data-mode="fast" aria-pressed="false">Rápido, com risco</button>
+        </div>
+        <div class="mode-panel" data-mode-panel="safe" hidden>
+          <p><strong>Para o primeiro uso ou um plano sem Interface Contract.</strong> Uma unidade só começa quando tudo antes dela foi revisado. Nenhuma chave necessária.</p>
+          <pre><code>"parallel": { "max_concurrent_lanes": 10, "scheduling": "waves" }</code></pre>
+        </div>
+        <div class="mode-panel" data-mode-panel="balanced">
+          <p><strong>Recomendado.</strong> O DEV avança em paralelo; a revisão de cada unidade dependente vê a anterior já corrigida. Sem chave, o motor trata todos os pares como dependentes (5h25 no caso medido); com chave, libera só os independentes (5h00).</p>
+          <pre><code>"parallel": { "max_concurrent_lanes": 10, "scheduling": "lanes", "lane_gate": "after_dev" },
+"execution": { "jev": { "review_depth": true, "triage": true, "review_order": true, "start_order": true } }</code></pre>
+        </div>
+        <div class="mode-panel" data-mode-panel="fast" hidden>
+          <p><strong>Para protótipos e planos curtos.</strong> Máximo paralelismo; uma correção de revisão pode deixar a unidade seguinte inconsistente até a integração final.</p>
+          <pre><code>"parallel": { "max_concurrent_lanes": 10, "scheduling": "lanes", "lane_gate": "after_dev" },
+"execution": { "jev": { "triage": true } }</code></pre>
+        </div>
+      </section>
+
+      <section id="activate" aria-labelledby="activate-title">
+        <p class="section-number">08 / Ativar</p>
+        <h2 id="activate-title">Seis passos, na raiz do projeto que vai ser implementado.</h2>
+        <ol class="steps">
+          <li><strong>Coloque a chave num lugar que o Git ignora.</strong> O mais simples é o <code>.env</code> do próprio projeto:
+            <pre><code>OPENROUTER_API_KEY=sk-or-v1-...</code></pre>
+            O AIOSON lê essa chave só para montar a configuração do Jev; ela não vai para o ambiente dos workers que o motor lança. Uma variável do sistema com o mesmo nome tem prioridade. Nunca cole a chave numa conversa com um agente.</li>
+          <li><strong>Ligue o Jev no <code>aioson-models.json</code></strong> da raiz do projeto (também ignorado pelo Git):
+            <pre><code>{
+  "providers": { "openrouter": { "api_key": "OPENROUTER_API_KEY" } },
+  "jev": { "enabled": true, "route": "openrouter" }
+}</code></pre>
+            Um <code>api_key</code> que é só o nome da variável (<code>OPENROUTER_API_KEY</code>, <code>$OPENROUTER_API_KEY</code> ou <code>${OPENROUTER_API_KEY}</code>) é lido do ambiente ou do <code>.env</code>; a chave escrita direto no arquivo também funciona.</li>
+          <li><strong>Confirme que funciona:</strong>
+            <pre><code>aioson jev:judge . --check</code></pre>
+            <pre class="output-sample"><code>Jev config: ready — route openrouter, model typesafe/jev-1.13
+Key: OPENROUTER_API_KEY from project .env
+Live answer: ok in 532 ms (typesafe/jev-1.13-20260917)</code></pre>
+            O check sempre faz uma chamada real, sem cache, e diz de onde a chave veio sem mostrá-la.</li>
+          <li><strong>Escolha o modo</strong> no <code>.aioson/config/execution-roles.json</code> (capítulo 07). As chaves de <code>parallel</code> e <code>execution.jev</code> são relidas a cada ciclo, sem recompilar o plano.</li>
+          <li><strong>Veja a projeção antes de gastar:</strong>
+            <pre><code>aioson execution:compile . --feature=&lt;slug&gt;
+aioson execution:graph . --feature=&lt;slug&gt;</code></pre></li>
+          <li><strong>Rode e acompanhe as decisões:</strong>
+            <pre><code>aioson execution:run . --feature=&lt;slug&gt; --detach
+aioson execution:status . --feature=&lt;slug&gt; --watch</code></pre>
+            Cada decisão aparece como evento <code>jev</code> no log do motor e fica gravada na própria unidade, no estado da execução:
+            <pre class="output-sample"><code>wave 2 · phase-1b-backend: jev review_depth: review deep (max) [floor: risky_path:apps/core/prisma/schema.prisma]
+wave 4 · phase-2a-frontend: jev review_order: review of phase-2a-frontend waits for phase-1c-frontend [jev]
+wave 3 · phase-1c-backend: jev triage: dev retry [jev]</code></pre></li>
+        </ol>
+        <div class="warning"><strong>Ligando no meio de uma execução</strong><span>Um motor que já estava rodando carregou o código antigo. Ele relê o arquivo de papéis, mas um motor anterior a estas opções vê <code>execution.jev</code> como campo desconhecido. Os motores atuais mantêm a última configuração válida e avisam (<code>roles_invalid_kept_previous</code>). Para que as decisões novas valham, pare o motor e retome com <code>aioson execution:run . --feature=&lt;slug&gt; --resume</code>.</span></div>
+      </section>
+
+      <section id="privacy" aria-labelledby="privacy-title">
+        <p class="section-number">09 / Privacidade</p>
+        <h2 id="privacy-title">O que sai da máquina — e o que nunca sai.</h2>
+        <ul class="guard-list">
+          <li><strong>Sai:</strong> id e lane da unidade, caminhos de arquivo, CAP, comportamento observável dos ACs do PRD, o texto "Required change" de cada arquivo no plano, e, na triagem, o tipo e o motivo de uma falha.</li>
+          <li><strong>Nunca sai:</strong> conteúdo de arquivo, código, diffs, variáveis de ambiente, segredos. Antes do envio, o Jev ainda remove qualquer coisa com cara de chave, token, senha ou credencial em URL.</li>
+          <li><strong>A chave:</strong> fica no <code>.env</code> ou no <code>aioson-models.json</code> do projeto, ambos ignorados pelo Git; nunca entra em arquivo de julgamento, relatório ou log.</li>
+          <li><strong>Para não enviar nada:</strong> deixe <code>execution.jev</code> desligado ou <code>jev.enabled: false</code>. O motor funciona igual, no modo conservador.</li>
+        </ul>
+      </section>
+
+      <section id="troubleshooting" aria-labelledby="troubleshooting-title">
+        <p class="section-number">10 / Problemas</p>
+        <h2 id="troubleshooting-title">Quando algo falha, o motor continua — e diz o porquê.</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Você vê</th><th>Significa</th><th>O que fazer</th></tr></thead>
+          <tbody>
+            <tr><td><code>api_key_env_unset</code></td><td>O <code>api_key</code> aponta para uma variável que não existe nem no ambiente nem no <code>.env</code>.</td><td>Crie a variável no <code>.env</code> do projeto ou no sistema.</td></tr>
+            <tr><td><code>auth_failed</code></td><td>O provedor recusou a chave (HTTP 401/403).</td><td>Gere uma chave nova e rode <code>aioson jev:judge . --check</code>.</td></tr>
+            <tr><td><code>[fallback: jev_unconfigured]</code></td><td>O projeto não tem <code>aioson-models.json</code> com o Jev ligado.</td><td>Passos 1 e 2 do capítulo 08. Até lá, o modo conservador vale.</td></tr>
+            <tr><td><code>[fallback: uncertain]</code></td><td>O Jev respondeu, mas sem confiança suficiente.</td><td>Nada: o caminho seguro foi aplicado. Planos com "Required change" mais concreto geram menos incerteza.</td></tr>
+            <tr><td><code>lanes_scheduling_without_contract</code></td><td><code>scheduling: lanes</code> sem <code>## Interface Contract</code> no plano ou PRD.</td><td>O motor manteve <code>waves</code>. Peça ao Planner o contrato entre lanes.</td></tr>
+            <tr><td><code>integration_deferred</code></td><td>Você limitou a execução com <code>--wave=N</code>, e o <code>integration_dev</code> só roda depois da última onda.</td><td>Integre a fatia na sessão ou retome sem <code>--wave</code>.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="reference" aria-labelledby="reference-title">
+        <p class="section-number">11 / Referência</p>
+        <h2 id="reference-title">Tudo numa página.</h2>
+        <dl class="term-list">
+          <div><dt>Chave</dt><dd><code>OPENROUTER_API_KEY</code> ou <code>TYPESAFE_API_KEY</code> no ambiente ou no <code>.env</code> do projeto; ou o valor em <code>providers.*.api_key</code> do <code>aioson-models.json</code>.</dd></div>
+          <div><dt>Ligar o Jev</dt><dd><code>aioson-models.json</code> → <code>"jev": { "enabled": true, "route": "openrouter" }</code></dd></div>
+          <div><dt>Checar</dt><dd><code>aioson jev:judge . --check</code></dd></div>
+          <div><dt>Escalonar</dt><dd><code>execution-roles.json</code> → <code>parallel.scheduling: "lanes"</code>, <code>parallel.lane_gate: "after_dev"</code></dd></div>
+          <div><dt>Decisões</dt><dd><code>execution-roles.json</code> → <code>execution.jev.review_depth | triage | review_order | start_order: true</code></dd></div>
+          <div><dt>Projeção</dt><dd><code>aioson execution:graph . --feature=&lt;slug&gt;</code></dd></div>
+          <div><dt>Eventos</dt><dd><code>jev</code> (decisão e fonte: <code>jev</code>, <code>floor</code> ou <code>fallback</code>), <code>unit … waiting</code> (revisão em ordem), <code>unit … rework (jev_transient_retry)</code></dd></div>
+          <div><dt>Estado</dt><dd>Em cada unidade: <code>jev.review_depth</code>, <code>jev.triage</code>, <code>jev.retried</code>; na execução: <code>jev_review_order</code> e <code>jev_start_order</code></dd></div>
+        </dl>
+        <div class="next-step"><span class="machine-label">Próximo passo</span><strong>Ligue no modo "Rápido com qualidade" e compare a projeção do seu plano.</strong><p>Se a projeção de <code>after_dev</code> não ficar bem abaixo de <code>waves</code>, o gargalo está no formato do plano (uma cadeia longa numa lane ou arquivos em comum), não no motor — peça ao Planner unidades menores, com arquivos separados.</p></div>
+      </section>
+    </article>
+  </div>
+</main>
+</body>
+</html>
