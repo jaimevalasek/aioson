@@ -10,17 +10,16 @@
 
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
-const fsSync = require('node:fs');
 const path = require('node:path');
-const { execFileSync, execSync } = require('node:child_process');
+const { execSync } = require('node:child_process');
 const { readFileSafe, fileExists } = require('./preflight-engine');
 const { ensureDir } = require('./utils');
+const { readConfiguration, runChecks } = require('./lib/quality/checks');
+const { computeImplementationFingerprint, checkIdentity, MAX_FINGERPRINT_FILE_BYTES, MAX_FINGERPRINT_TOTAL_BYTES } = require('./lib/implementation-fingerprint');
 
 const MAX_OUTPUT_LINES = 60;
 const EVIDENCE_RELATIVE_PATH = '.aioson/runtime/technical-evidence.json';
 const MAX_EVIDENCE_ENTRIES = 20;
-const MAX_FINGERPRINT_FILE_BYTES = 16 * 1024 * 1024;
-const MAX_FINGERPRINT_TOTAL_BYTES = 64 * 1024 * 1024;
 
 async function detectStack(targetDir) {
   const checks = [];
@@ -91,6 +90,8 @@ function runCheck(targetDir, check) {
     });
     return {
       ok: true,
+      status: 'pass',
+      exit_code: 0,
       check: check.id,
       name: check.name,
       command: check.command,
@@ -100,6 +101,8 @@ function runCheck(targetDir, check) {
   } catch (err) {
     return {
       ok: false,
+      status: Number.isInteger(err.status) ? 'fail' : 'error',
+      exit_code: err.status ?? null,
       check: check.id,
       name: check.name,
       command: check.command,
@@ -118,94 +121,6 @@ function hashParts(parts) {
   return hash.digest('hex');
 }
 
-function computeImplementationFingerprint(targetDir, checks, limits = {}) {
-  try {
-    const normalizeLimit = (value, fallback) => {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
-    };
-    const maxFileBytes = normalizeLimit(limits.maxFileBytes, MAX_FINGERPRINT_FILE_BYTES);
-    const maxTotalBytes = normalizeLimit(limits.maxTotalBytes, MAX_FINGERPRINT_TOTAL_BYTES);
-    const implementationPathspec = [
-      '.',
-      ':(exclude).aioson/runtime/**',
-      ':(exclude).aioson/context/**'
-    ];
-    const repoRoot = String(execFileSync('git', ['rev-parse', '--show-toplevel'], {
-      cwd: targetDir,
-      encoding: 'utf8',
-      timeout: 10000,
-      stdio: ['ignore', 'pipe', 'ignore']
-    })).trim();
-    const head = execFileSync('git', ['rev-parse', 'HEAD'], {
-      cwd: targetDir,
-      encoding: null,
-      timeout: 10000,
-      stdio: ['ignore', 'pipe', 'ignore']
-    });
-    const diff = execFileSync('git', ['diff', '--binary', '--no-ext-diff', 'HEAD', '--', ...implementationPathspec], {
-      cwd: targetDir,
-      encoding: null,
-      maxBuffer: 64 * 1024 * 1024,
-      timeout: 30000,
-      stdio: ['ignore', 'pipe', 'ignore']
-    });
-    const untrackedRaw = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z', '--', ...implementationPathspec], {
-      cwd: targetDir,
-      encoding: 'utf8',
-      maxBuffer: 16 * 1024 * 1024,
-      timeout: 30000,
-      stdio: ['ignore', 'pipe', 'ignore']
-    });
-    const hash = crypto.createHash('sha256');
-    const update = (part) => {
-      hash.update(Buffer.isBuffer(part) ? part : Buffer.from(String(part)));
-      hash.update('\0');
-    };
-    update(head);
-    update(diff);
-    update(JSON.stringify(checks.map((check) => [check.id, check.command])));
-    let totalBytes = 0;
-    for (const relativePath of untrackedRaw.split('\0').filter(Boolean).sort()) {
-      const absolute = path.resolve(repoRoot, relativePath);
-      const insideRepo = path.relative(repoRoot, absolute);
-      if (insideRepo.startsWith('..') || path.isAbsolute(insideRepo)) continue;
-      update(relativePath);
-      try {
-        const stat = fsSync.lstatSync(absolute);
-        if (stat.isSymbolicLink()) {
-          update(`<symlink:${fsSync.readlinkSync(absolute)}>`);
-          continue;
-        }
-        if (!stat.isFile()) {
-          update('<non-regular>');
-          continue;
-        }
-        if (stat.size > maxFileBytes || totalBytes + stat.size > maxTotalBytes) {
-          return null;
-        }
-        totalBytes += stat.size;
-        const handle = fsSync.openSync(absolute, 'r');
-        try {
-          const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, Math.max(1, stat.size)));
-          let bytesRead;
-          do {
-            bytesRead = fsSync.readSync(handle, buffer, 0, buffer.length, null);
-            if (bytesRead > 0) hash.update(buffer.subarray(0, bytesRead));
-          } while (bytesRead > 0);
-          hash.update('\0');
-        } finally {
-          fsSync.closeSync(handle);
-        }
-      } catch {
-        update('<unreadable>');
-      }
-    }
-    return `sha256:${hash.digest('hex')}`;
-  } catch {
-    return null;
-  }
-}
 
 async function readEvidence(targetDir) {
   try {
@@ -226,112 +141,111 @@ async function writeEvidence(targetDir, payload) {
 }
 
 function evidenceKey(stage, checks) {
-  return hashParts([stage, JSON.stringify(checks.map((check) => [check.id, check.command]))]);
+  return hashParts([stage, JSON.stringify(checks.map(checkIdentity))]);
+}
+
+async function selectTechnicalChecks(targetDir, stage) {
+  const configuration = ['dev', 'qa'].includes(stage)
+    ? await readConfiguration(path.join(targetDir, '.aioson/quality.json'), false) : null;
+  const detected = await detectStack(targetDir);
+  if (!detected.length && !configuration) return { checks: [], reason: 'No detectable stack — skipping technical gate.' };
+  const configured = configuration?.checks.filter(check => (check.stage || 'qa') === stage) || [];
+  if (configuration && (stage === 'qa' || configured.length)) {
+    return { checks: configured, configured: true, reason: 'No configured verification command for this stage.' };
+  }
+  if (stage === 'dev') {
+    return { checks: detected.filter(check => check.kind === 'compile'), reason: 'No compile gate for this stack; focused implementation checks remain DEV-owned.' };
+  }
+  if (stage === 'qa') {
+    const verification = detected.filter(check => check.kind === 'verify');
+    return { checks: verification.length ? verification : detected.filter(check => check.kind === 'compile'), reason: 'No comprehensive verification command detected.' };
+  }
+  return { checks: [], reason: 'No technical gate for this stage.' };
+}
+
+async function measureTechnicalChecks(targetDir, stage, selection) {
+  if (selection.configured) {
+    const measured = await runChecks(targetDir, { stage });
+    const results = await Promise.all(measured.result.checks.map(async result => {
+      const log = JSON.parse(await fs.readFile(path.join(targetDir, result.log), 'utf8'));
+      return { ...result, check: result.id, name: result.id, command: JSON.stringify(result.argv), ok: result.status === 'pass', output: truncateOutput(log.stdout, log.stderr) };
+    }));
+    const reasons = results.filter(result => !result.ok && result.required).map(result => result.name + ' ' + result.status);
+    if (measured.result.reason) reasons.push(measured.result.reason);
+    if (!measured.ok && !reasons.length) reasons.push('No configured checks executed.');
+    return { ok: measured.ok, status: measured.result.status, results, reasons, fingerprint: measured.result.source.fingerprint, result_path: measured.output };
+  }
+  const results = selection.checks.map(check => runCheck(targetDir, check));
+  const failures = results.filter(result => !result.ok);
+  return {
+    ok: !failures.length,
+    status: results.some(result => result.status === 'error') ? 'error' : failures.length ? 'fail' : 'pass',
+    results,
+    reasons: failures.map(result => result.name + ' failed'),
+    fingerprint: null,
+    result_path: null
+  };
+}
+
+async function cacheTechnicalEvidence(targetDir, cacheKey, entry) {
+  const evidence = await readEvidence(targetDir);
+  evidence.entries[cacheKey] = entry;
+  evidence.entries = Object.fromEntries(Object.entries(evidence.entries)
+    .sort(([, left], [, right]) => String(right.completed_at || '').localeCompare(String(left.completed_at || '')))
+    .slice(0, MAX_EVIDENCE_ENTRIES));
+  await writeEvidence(targetDir, evidence);
 }
 
 async function runTechnicalGate(targetDir, stage, options = {}) {
-  if (options.force) {
-    return { ok: true, stage, forced: true, results: [] };
-  }
+  if (options.force) return { ok: true, status: 'not_run', stage, forced: true, results: [] };
+  let selection;
+  try { selection = await selectTechnicalChecks(targetDir, stage); }
+  catch (error) { return { ok: false, status: 'error', stage, blocked: true, reasons: ['Invalid quality configuration: ' + error.message], results: [] }; }
+  if (!selection.checks.length) return { ok: true, status: 'not_run', stage, results: [], reason: selection.reason };
 
-  const checks = await detectStack(targetDir);
-  if (checks.length === 0) {
-    return { ok: true, stage, results: [], reason: 'No detectable stack — skipping technical gate.' };
-  }
-
-  let relevantChecks = [];
-  if (stage === 'dev') {
-    relevantChecks = checks
-      .filter((check) => check.kind === 'compile')
-      .map((check) => ({ ...check, blocking: true }));
-  } else if (stage === 'qa') {
-    const verification = checks.filter((check) => check.kind === 'verify');
-    relevantChecks = (verification.length > 0 ? verification : checks.filter((check) => check.kind === 'compile'))
-      .map((check) => ({ ...check, blocking: true }));
-  } else {
-    return { ok: true, stage, results: [], reason: 'No technical gate for this stage.' };
-  }
-
-  if (relevantChecks.length === 0) {
-    return {
-      ok: true,
-      stage,
-      results: [],
-      reason: stage === 'dev'
-        ? 'No compile gate for this stack; focused implementation checks remain DEV-owned.'
-        : 'No comprehensive verification command detected.'
-    };
-  }
-
-  const fingerprint = options.fingerprint
-    || computeImplementationFingerprint(targetDir, relevantChecks);
-  const cacheKey = evidenceKey(stage, relevantChecks);
+  const checks = selection.checks;
+  const fingerprint = options.fingerprint || computeImplementationFingerprint(targetDir, checks);
+  const cacheKey = evidenceKey(stage, checks);
   if (fingerprint && options.cache !== false) {
     const evidence = await readEvidence(targetDir);
     const cached = evidence.entries[cacheKey];
-    if (cached && cached.ok === true && cached.fingerprint === fingerprint) {
+    if (cached && cached.ok === true && cached.status === 'pass' && cached.fingerprint === fingerprint && Array.isArray(cached.results)) {
       return {
-        ok: true,
-        stage,
-        cached: true,
-        fingerprint,
-        evidence_path: EVIDENCE_RELATIVE_PATH,
+        ok: true, status: 'pass', stage, cached: true, fingerprint,
+        evidence_path: EVIDENCE_RELATIVE_PATH, result_path: cached.result_path || null,
         completed_at: cached.completed_at,
-        results: cached.results.map((result) => ({ ...result, cached: true }))
+        results: cached.results.map(result => ({ ...result, cached: true }))
       };
     }
   }
 
-  const results = [];
-  let blocked = false;
-  const blockReasons = [];
-
-  for (const check of relevantChecks) {
-    const result = runCheck(targetDir, check);
-    results.push(result);
-    if (!result.ok && check.blocking) {
-      blocked = true;
-      blockReasons.push(`${check.name} failed`);
-    }
-  }
-
-  if (blocked) {
+  let measured;
+  try { measured = await measureTechnicalChecks(targetDir, stage, selection); }
+  catch (error) { return { ok: false, status: 'error', stage, blocked: true, reasons: [error.message], results: [] }; }
+  const finishedFingerprint = options.fingerprint || computeImplementationFingerprint(targetDir, checks);
+  const sourceChanged = fingerprint && (finishedFingerprint !== fingerprint || (measured.fingerprint && measured.fingerprint !== fingerprint));
+  if (sourceChanged && !measured.reasons.includes('implementation_changed_during_checks')) measured.reasons.push('implementation_changed_during_checks');
+  const status = sourceChanged ? 'error' : measured.status;
+  if (!measured.ok || sourceChanged) {
     return {
-      ok: false,
-      stage,
-      blocked: true,
-      reasons: blockReasons,
-      fingerprint,
-      results
+      ok: false, status, stage, blocked: true, reasons: measured.reasons,
+      fingerprint, finished_fingerprint: finishedFingerprint,
+      result_path: measured.result_path, results: measured.results
     };
   }
 
   const completedAt = new Date().toISOString();
-  if (fingerprint && options.cache !== false) {
-    const evidence = await readEvidence(targetDir);
-    evidence.entries[cacheKey] = {
-      stage,
-      fingerprint,
-      ok: true,
-      completed_at: completedAt,
-      checks: relevantChecks.map((check) => ({ id: check.id, command: check.command })),
-      results
-    };
-    const entries = Object.entries(evidence.entries)
-      .sort(([, left], [, right]) => String(right.completed_at || '').localeCompare(String(left.completed_at || '')))
-      .slice(0, MAX_EVIDENCE_ENTRIES);
-    evidence.entries = Object.fromEntries(entries);
-    await writeEvidence(targetDir, evidence);
+  const cacheable = fingerprint && status === 'pass' && options.cache !== false;
+  if (cacheable) {
+    await cacheTechnicalEvidence(targetDir, cacheKey, {
+      stage, fingerprint, ok: true, status, completed_at: completedAt,
+      result_path: measured.result_path, checks: checks.map(checkIdentity), results: measured.results
+    });
   }
-
   return {
-    ok: true,
-    stage,
-    cached: false,
-    fingerprint,
-    evidence_path: fingerprint ? EVIDENCE_RELATIVE_PATH : null,
-    completed_at: completedAt,
-    results
+    ok: true, status, stage, cached: false, fingerprint,
+    evidence_path: cacheable ? EVIDENCE_RELATIVE_PATH : null,
+    result_path: measured.result_path, completed_at: completedAt, results: measured.results
   };
 }
 

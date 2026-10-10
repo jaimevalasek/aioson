@@ -133,8 +133,78 @@ describe('workflow-gates.js — runTechnicalGate', () => {
     await fs.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2));
     const result = await runTechnicalGate(tmpDir, 'dev');
     assert.equal(result.ok, true);
+    assert.equal(result.status, 'not_run');
     assert.equal(result.results.length, 0);
     assert.match(result.reason, /No compile gate/);
+  });
+
+  it('runs configured commands for an unknown stack, with required failures and optional warnings', async () => {
+    await ensureDir(path.join(tmpDir, '.aioson'));
+    await fs.writeFile(path.join(tmpDir, 'go.mod'), 'module example.local/project\n');
+    const configPath = path.join(tmpDir, '.aioson/quality.json');
+    const config = { schema_version: 1, checks: [{ id: 'native-tests', argv: ['node', '-e', 'console.error("assertion failed");process.exit(1)'] }] };
+    await fs.writeFile(configPath, JSON.stringify(config));
+    const dev = await runTechnicalGate(tmpDir, 'dev');
+    assert.equal(dev.status, 'not_run');
+    const qa = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(qa.ok, false);
+    assert.equal(qa.status, 'fail');
+    assert.equal(qa.results[0].exit_code, 1);
+    assert.match(qa.results[0].output, /assertion failed/);
+    assert.ok(qa.result_path);
+    config.checks[0].required = false;
+    await fs.writeFile(configPath, JSON.stringify(config));
+    const advisory = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(advisory.ok, true);
+    assert.equal(advisory.status, 'warn');
+    assert.equal(advisory.results[0].ok, false);
+    await fs.writeFile(configPath, '{');
+    assert.equal((await runTechnicalGate(tmpDir, 'qa')).status, 'error');
+    const forced = await runTechnicalGate(tmpDir, 'qa', { force: true });
+    assert.equal(forced.ok, true);
+    assert.equal(forced.status, 'not_run');
+  });
+
+  it('invalidates cached evidence when code or configured commands change and rejects edits during a check', async () => {
+    await ensureDir(path.join(tmpDir, '.aioson'));
+    await fs.writeFile(path.join(tmpDir, 'app.cjs'), 'module.exports = 1;');
+    await fs.writeFile(path.join(tmpDir, 'check.cjs'), 'require("node:assert/strict").equal(require("./app.cjs"),1);');
+    const config = { schema_version: 1, checks: [{ id: 'tests', argv: ['node', 'check.cjs'] }] };
+    const configPath = path.join(tmpDir, '.aioson/quality.json');
+    await fs.writeFile(configPath, JSON.stringify(config));
+    execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['add', '.'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['-c', 'user.name=AIOSON Test', '-c', 'user.email=test@aioson.local', 'commit', '-m', 'fixture'], { cwd: tmpDir, stdio: 'ignore' });
+    const first = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(first.ok, true);
+    assert.equal((await runTechnicalGate(tmpDir, 'qa')).cached, true);
+    await fs.writeFile(path.join(tmpDir, 'app.cjs'), 'module.exports = 2;');
+    assert.equal((await runTechnicalGate(tmpDir, 'qa')).status, 'fail');
+    config.checks[0].argv = ['node', '-e', 'process.exit(0)'];
+    await fs.writeFile(configPath, JSON.stringify(config));
+    const newCommand = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(newCommand.cached, false);
+    assert.equal(newCommand.status, 'pass');
+    config.checks[0].argv = ['node', '-e', 'require("node:fs").writeFileSync("app.cjs","module.exports = 3;")'];
+    await fs.writeFile(configPath, JSON.stringify(config));
+    const changedDuringRun = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(changedDuringRun.status, 'error');
+    assert.equal(changedDuringRun.blocked, true);
+    assert.ok(changedDuringRun.reasons.includes('implementation_changed_during_checks'));
+  });
+
+  it('fingerprints untracked files relative to a nested project rather than the repository root', async () => {
+    await fs.writeFile(path.join(tmpDir, 'root.txt'), 'root');
+    execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['add', '.'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['-c', 'user.name=AIOSON Test', '-c', 'user.email=test@aioson.local', 'commit', '-m', 'fixture'], { cwd: tmpDir, stdio: 'ignore' });
+    const nested = path.join(tmpDir, 'packages', 'app');
+    await ensureDir(nested);
+    await fs.writeFile(path.join(nested, 'new.cjs'), 'module.exports=1;');
+    const first = computeImplementationFingerprint(nested, []);
+    assert.match(first, /^sha256:/);
+    await fs.writeFile(path.join(nested, 'new.cjs'), 'module.exports=2;');
+    assert.notEqual(computeImplementationFingerprint(nested, []), first);
   });
 
   it('runs checks for qa stage with Node.js stack', async () => {

@@ -230,6 +230,13 @@ test('Gate D requires plan approval, QA PASS, real files, and AC-linked assertio
   await write(root, '.aioson/context/qa-report-demo.md', qaExecutionReport());
   const result = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'D' }, logger });
   assert.equal(result.result, 'PASS');
+  const technical = result.evidence.find(item => item.type === 'technical_gate');
+  assert.equal(technical.ok, true, 'the simple flow remains available without a runner');
+  assert.equal(technical.status, 'not_run', 'workflow eligibility does not imply checks were executed');
+  const lines = [];
+  await runGateCheck({ args: [root], options: { feature: 'demo', gate: 'D' }, logger: { log: line => lines.push(line), error() {} } });
+  assert.match(lines.find(line => line.includes('Technical verification:')), /not run/);
+  assert.doesNotMatch(lines.join('\n'), /Technical verification: executed now/);
 });
 
 test('Gate D rejects a PASS label without AC test evidence', async () => {

@@ -264,6 +264,9 @@ async function checkGate(targetDir, slug, gateLetter) {
       evidence.push({
         type: 'technical_gate',
         ok: technicalGate.ok,
+        status: technicalGate.status,
+        reason: technicalGate.reason || null,
+        result_path: technicalGate.result_path || null,
         cached: technicalGate.cached === true,
         fingerprint: technicalGate.fingerprint || null,
         evidence_path: technicalGate.evidence_path || null,
@@ -429,8 +432,9 @@ async function runGateCheck({ args, options = {}, logger }) {
         logger.log(`${icon} AC test audit: ${s.covered || 0}/${s.acs_total || 0} covered${s.deferred ? `; ${s.deferred} deferred with followups` : ''}${missing}`);
       }
       if (q.type === 'technical_gate') {
-        const source = q.cached ? 'cached evidence' : 'executed now';
-        logger.log(`${icon} Technical verification: ${source}`);
+        const source = q.status === 'not_run' ? `not run — ${q.reason || 'no checks executed'}` : q.cached ? 'cached evidence' : `executed now (${q.status})`;
+        const measurementIcon = q.status === 'not_run' ? '  –' : q.status === 'warn' ? '  !' : icon;
+        logger.log(`${measurementIcon} Technical verification: ${source}`);
       }
     }
   }

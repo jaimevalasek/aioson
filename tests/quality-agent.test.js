@@ -6,6 +6,62 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const { qualityPlan, runChecks } = require('../src/lib/quality/checks');
+const { execFileSync } = require('node:child_process');
+
+test('configured checks select a stage and optional failures remain visible without blocking', async t => {
+  const root = await project(t);
+  const checks = [
+    { id: 'compile', stage: 'dev', argv: ['node', '-e', 'process.exit(0)'] },
+    { id: 'tests', argv: ['node', '-e', 'process.exit(0)'] },
+    { id: 'advisory', required: false, argv: ['node', '-e', 'process.exit(1)'] },
+    { id: 'missing-tool', required: false, argv: ['aioson-nonexistent-quality-tool'] }
+  ];
+  await fs.writeFile(path.join(root, '.aioson/quality.json'), JSON.stringify({ schema_version: 1, checks }));
+  const dev = await runChecks(root, { stage: 'dev' });
+  assert.equal(dev.result.status, 'pass');
+  assert.deepEqual(dev.result.checks.map(check => check.id), ['compile']);
+  const qa = await runChecks(root, { stage: 'qa' });
+  assert.equal(qa.ok, true);
+  assert.equal(qa.exitCode, 0);
+  assert.equal(qa.result.status, 'warn');
+  assert.deepEqual(qa.result.checks.map(check => check.status), ['pass', 'fail', 'error']);
+  assert.equal(qa.result.source.binding, 'unavailable', 'unversioned projects still execute checks without claiming source freshness');
+  checks[2].required = true;
+  await fs.writeFile(path.join(root, '.aioson/quality.json'), JSON.stringify({ schema_version: 1, checks }));
+  assert.equal((await runChecks(root, { stage: 'qa' })).exitCode, 1);
+  checks[3].required = true;
+  await fs.writeFile(path.join(root, '.aioson/quality.json'), JSON.stringify({ schema_version: 1, checks }));
+  assert.equal((await runChecks(root, { stage: 'qa' })).exitCode, 2);
+  for (const extra of [{ required: 'false' }, { stage: 'deploy' }]) {
+    await fs.writeFile(path.join(root, '.aioson/quality.json'), JSON.stringify({ schema_version: 1, checks: [{ ...checks[0], ...extra }] }));
+    await assert.rejects(runChecks(root), /must be/);
+  }
+  await assert.rejects(qualityPlan(root, { stage: 'deploy' }), /stage/);
+});
+
+test('engine evidence binds the executed argv and exit code to source and detects edits during checks', async t => {
+  const root = await project(t);
+  await fs.writeFile(path.join(root, 'app.cjs'), 'module.exports = 1;');
+  await fs.writeFile(path.join(root, 'check.cjs'), 'require("node:assert/strict").equal(require("./app.cjs"),1);');
+  const configuration = { schema_version: 1, checks: [{ id: 'native', argv: ['node', 'check.cjs'] }] };
+  await fs.writeFile(path.join(root, '.aioson/quality.json'), JSON.stringify(configuration));
+  execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
+  execFileSync('git', ['add', '.'], { cwd: root, stdio: 'ignore' });
+  execFileSync('git', ['-c', 'user.name=AIOSON Test', '-c', 'user.email=test@aioson.local', 'commit', '-m', 'fixture'], { cwd: root, stdio: 'ignore' });
+  const first = await runChecks(root);
+  assert.equal(first.result.source.binding, 'unchanged');
+  const log = JSON.parse(await fs.readFile(path.join(root, first.result.checks[0].log), 'utf8'));
+  assert.equal(log.exit_code, 0);
+  assert.equal(log.run_id, first.result.run_id);
+  assert.equal(log.source.fingerprint, first.result.source.fingerprint);
+  assert.deepEqual(log.argv, ['node', 'check.cjs']);
+  await fs.writeFile(path.join(root, 'check.cjs'), 'require("node:fs").writeFileSync("app.cjs","module.exports = 2;");');
+  const changed = await runChecks(root);
+  assert.equal(changed.ok, false);
+  assert.equal(changed.exitCode, 2);
+  assert.equal(changed.result.reason, 'implementation_changed_during_checks');
+  assert.equal(changed.result.checks[0].status, 'pass', 'command success does not certify a different final source snapshot');
+});
 
 async function project(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-quality-product-'));
