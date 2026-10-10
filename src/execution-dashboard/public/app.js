@@ -644,7 +644,7 @@ function render(status) {
   const firstSnapshot = !current || current.feature !== status.feature;
   current = status;
   $('recovery-bar').hidden = !(recovering || status.recovery?.visible);
-  $('recovery-title').textContent = status.recovery?.phase === 'maintenance' ? 'Correção técnica em andamento pelo supervisor' : recovering || status.recovery?.busy ? 'Recuperação em andamento' : 'Execução interrompida — precisa de recuperação';
+  $('recovery-title').textContent = status.recovery?.phase === 'maintenance' ? 'Correção técnica em andamento pelo supervisor' : recovering || status.recovery?.busy ? 'Recuperação em andamento' : status.recovery?.stalled ? 'Execução travada — reparo e revisões em espera circular' : 'Execução interrompida — precisa de recuperação';
   $('recover-run').disabled = !canRecover(status);
   $('recover-run').textContent = recovering || status.recovery?.busy ? 'Retomada em andamento…' : 'Corrigir e continuar execução';
   const localMessage = actionMessage?.feature === status.feature && actionMessage.run_id === status.run?.run_id ? actionMessage.text : null;
@@ -765,7 +765,7 @@ async function refresh() {
 }
 
 function canRecover(status) {
-  return Boolean(actionToken && !status.archived && status.run && ['paused', 'decision_required', 'running'].includes(status.run.status) && !status.engine?.alive && !status.recovery?.busy && !recovering);
+  return Boolean(actionToken && !status.archived && status.run && ['paused', 'decision_required', 'running'].includes(status.run.status) && (!status.engine?.alive || status.recovery?.stalled) && !status.recovery?.busy && !recovering);
 }
 
 async function recoverExecution(unit) {

@@ -18,7 +18,7 @@ function normalizePolicy(value = {}) {
     for (const key of Object.keys(item)) if (!allowed.includes(key)) errors.push(`${prefix}.${key}: unknown field`);
     return true;
   };
-  if (!keys(value, ['version', 'context', 'qa'], 'policy')) return { ok: false, errors };
+  if (!keys(value, ['version', 'context', 'qa', 'execution'], 'policy')) return { ok: false, errors };
   if (value.version !== undefined && value.version !== 1) errors.push('version: must be 1');
   const context = { ...DEFAULT_POLICY.context, ...value.context };
   const qa = { ...DEFAULT_POLICY.qa, ...value.qa };
@@ -27,6 +27,9 @@ function normalizePolicy(value = {}) {
   // process; context is observed and reported after each attempt.
   if (value.context !== undefined) keys(value.context, ['max_fraction', 'max_tokens', 'max_continuations', 'models'], 'context');
   if (value.qa !== undefined) keys(value.qa, ['require_pass', 'max_rework_rounds'], 'qa');
+  if (value.execution !== undefined && keys(value.execution, ['require_spawner'], 'execution')) {
+    if (value.execution.require_spawner !== undefined && typeof value.execution.require_spawner !== 'boolean') errors.push('execution.require_spawner: must be boolean');
+  }
   if (typeof qa.require_pass !== 'boolean') errors.push('qa.require_pass: must be boolean');
   if (!Number.isInteger(qa.max_rework_rounds) || qa.max_rework_rounds < 0 || qa.max_rework_rounds > 3) errors.push('qa.max_rework_rounds: must be 0..3');
   if (!Array.isArray(context.models) || context.models.length > 100) errors.push('context.models: must contain at most 100 entries');
@@ -49,7 +52,10 @@ function normalizePolicy(value = {}) {
       .filter(object)
       .map(({ host, model, context_window_tokens }) => ({ host, model, context_window_tokens }))
     : [];
-  return { ok: errors.length === 0, errors, policy: { version: 1, context: { models }, qa } };
+  // Keep the default policy byte-compatible with already compiled plans.
+  const policy = { version: 1, context: { models }, qa };
+  if (value.execution?.require_spawner === true) policy.execution = { require_spawner: true };
+  return { ok: errors.length === 0, errors, policy };
 }
 
 async function readExecutionPolicy(projectDir) {

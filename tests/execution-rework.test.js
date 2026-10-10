@@ -107,7 +107,7 @@ function fakeAdapter(host, { script = {}, prompts = {}, calls = {} } = {}) {
         verdict: behaviour.verdict || 'PASS',
         findings: behaviour.findings || [],
         messages: behaviour.messages || [],
-        evidence: [`${key} #${calls[key]}`]
+        evidence: Object.hasOwn(behaviour, 'evidence') ? behaviour.evidence : [`${key} #${calls[key]}`]
       };
       const effort = get('reasoning_effort');
       if (behaviour.missing_run_id) delete report.run_id;
@@ -267,13 +267,87 @@ test('continuous recovery hands an exhausted lane to the configured integration 
   assert.ok(state.decisions.some(decision => decision.source === 'automatic_supervisor_takeover'));
 });
 
+// A review fails on a file no lane unit owns (here the integration-owned
+// wiring), so routing cannot pick a producer. A continuous run used to park
+// there until a person decided; the integration supervisor now takes the
+// unit with authority over exactly that path.
+function unownedWiringFailure(n) {
+  return n === 1 ? {
+    verdict: 'FAIL',
+    findings: [{ severity: 'high', kind: 'verification_failed', path: 'src/app.ts:3', summary: 'The app wiring never mounts the orders screen' }],
+    messages: [{ to: 'orchestrator', kind: 'contract_change', text: 'Mount the orders screen in the app wiring', paths: ['src/app.ts'] }]
+  } : {};
+}
+
+test('continuous recovery hands an unassignable cross-unit review failure to the integration supervisor', async t => {
+  const ctx = await setup(t, { reworkRounds: 0, autopilot: true, integrationDev: true });
+  const calls = {}, prompts = {}, events = [];
+  const script = { 'qa:phase-2': unownedWiringFailure };
+  const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, calls, prompts })]));
+  const result = await run(ctx, { registry, events, extra: { 'bounded-recovery': false } });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal(events.some(event => event.type === 'decision_required'), false, 'nobody was asked');
+  const takeover = events.find(event => event.reason === 'integration_supervisor_takeover');
+  assert.ok(takeover, 'the supervisor took the unit');
+  assert.equal(takeover.trigger, 'owner_missing');
+  assert.equal(calls['dev:phase-2'], 2);
+  assert.match(prompts['dev:phase-2'][1], /Integration supervisor authorization/);
+  assert.match(prompts['dev:phase-2'][1], /- src\/app\.ts/);
+  assert.match(prompts['dev:phase-2'][1], /The app wiring never mounts the orders screen/, 'the takeover DEV receives the review findings');
+  assert.doesNotMatch(prompts['dev:phase-2'][0], /Integration supervisor authorization/);
+  const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
+  assert.equal(state.units['phase-2'].dev.host, 'codex', 'the configured integration_dev route implemented the repair');
+  assert.deepEqual(state.units['phase-2'].supervisor_takeover.cross_unit_paths, ['src/app.ts']);
+  assert.equal(state.units['phase-2'].supervisor_takeover.status, 'approved');
+  assert.ok(state.decisions.some(decision => decision.source === 'automatic_supervisor_takeover' && decision.reason_before === 'cross_unit_repair_unresolved'));
+});
+
+test('without an integration supervisor an unassignable cross-unit failure still waits for a person', async t => {
+  const ctx = await setup(t, { reworkRounds: 0, autopilot: true });
+  const calls = {};
+  const script = { 'qa:phase-2': unownedWiringFailure };
+  const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, calls })]));
+  const result = await run(ctx, { registry, extra: { 'bounded-recovery': false } });
+  assert.equal(result.status, 'decision_required');
+  assert.equal(result.decisions_pending[0].reason, 'cross_unit_repair_unresolved');
+  assert.equal(calls['dev:phase-2'], 1, 'the consumer is never sent back to repair a file it does not own');
+  const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
+  assert.match(state.units['phase-2'].pending_decision.detail, /src\/app\.ts/);
+});
+
+test('a cross-unit takeover waits for the writing owner and gets the configured route even when it already reviewed the unit', () => {
+  const { queueSupervisorTakeover, crossUnitTakeoverNote } = require('../src/agent-execution/execution-recovery');
+  const route = { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high', routing_profile: 'roles01' };
+  const unit = () => ({
+    id: 'phase-2',
+    status: 'decision_required',
+    dev: { status: 'passed', host: 'kimi', model: 'kimi-k3' },
+    qa: { status: 'failed', host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high', findings: [{ severity: 'high', path: 'src/app.ts:3', summary: 'wiring' }], messages: [{ to: 'orchestrator', kind: 'contract_change', paths: ['src/app.ts'] }] }
+  });
+  const reviewFailure = { kind: 'failed', reason: 'qa_acceptance_failed' };
+  assert.equal(queueSupervisorTakeover(unit(), 'qa', reviewFailure, [route]), false, 'an ordinary review failure is not a supervisor case');
+
+  const crossUnit = unit();
+  assert.equal(queueSupervisorTakeover(crossUnit, 'qa', { kind: 'failed', reason: 'cross_unit_repair_unresolved' }, [route], '2026-10-03T03:00:00.000Z', { paths: ['src/app.ts'], waitFor: ['phase-3'] }), true);
+  assert.equal(crossUnit.supervisor_takeover.next.host, 'codex', 'authority, not a different model: the reviewer route is still the configured supervisor');
+  assert.deepEqual(crossUnit.supervisor_takeover.cross_unit_paths, ['src/app.ts']);
+  assert.deepEqual(crossUnit.repair_dependencies, ['phase-3']);
+  assert.equal(crossUnit.retry_context.dev.findings[0].summary, 'wiring');
+  assert.equal(crossUnit.status, 'pending');
+  assert.equal(crossUnit.pending_decision, null);
+  assert.match(crossUnitTakeoverNote(crossUnit.supervisor_takeover), /- src\/app\.ts/);
+  assert.equal(crossUnitTakeoverNote({ reason: 'timeout' }), '');
+  assert.equal(queueSupervisorTakeover(crossUnit, 'qa', { kind: 'failed', reason: 'cross_unit_repair_unresolved' }, [route]), false, 'one takeover per unit; the next failure waits for a person');
+});
+
 test('continuous recovery never sends one unit through more than five QA to DEV returns', async t => {
   const ctx = await setup(t, { reworkRounds: 1, autopilot: true });
   const calls = {};
-  // Distinct evidence avoids the identical-failure circuit so this fixture
-  // reaches the independent QA→DEV convergence cap itself.
+  // Distinct failures (a different path each round; the fingerprint ignores
+  // wording) avoid the identical-failure circuit so this fixture reaches the
+  // independent QA→DEV convergence cap itself.
   const defects = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot'];
-  const script = { 'qa:phase-2': n => ({ verdict: 'FAIL', findings: [{ severity: 'high', path: 'src/ui/Orders.tsx', summary: `Distinct unresolved defect ${defects[n - 1]}` }] }) };
+  const script = { 'qa:phase-2': n => ({ verdict: 'FAIL', findings: [{ severity: 'high', path: `src/ui/${defects[n - 1]}.tsx`, summary: `Distinct unresolved defect ${defects[n - 1]}` }] }) };
   const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, calls })]));
   const result = await run(ctx, { registry, extra: { 'bounded-recovery': false } });
   assert.equal(result.status, 'decision_required');
@@ -297,6 +371,32 @@ test('continuous recovery retries a live lane configuration error on the same st
   assert.equal(unit.dev.status, 'pending');
   assert.equal(unit.retry_context.dev.error, 'invalid active profile');
   assert.equal(unit.technical_retries.dev, 1);
+});
+
+test('continuous recovery stops at its absolute cap even when every failure is worded differently and touches files', () => {
+  const { queueRecovery, MAX_RECOVERY_ATTEMPTS } = require('../src/agent-execution/execution-recovery');
+  const unit = { id: 'integration-supervisor', status: 'decision_required', dev: { status: 'blocked' }, qa: { status: 'pending' } };
+  let queued = 0;
+  for (let round = 1; round <= MAX_RECOVERY_ATTEMPTS + 3; round += 1) {
+    // Each round "changes files" (a regenerated schema) and words the same blocker anew.
+    unit.dev = { status: 'blocked', activity: { files_changed: 2 }, findings: [{ severity: 'high', kind: 'integration_verification_failure', path: 'docker/release/Dockerfile', summary: `Docker storage is read-only (try ${round}, worded ${'differently '.repeat(round)})` }] };
+    if (!queueRecovery(unit, 'dev', { kind: 'blocked', verdict: 'BLOCKED' }, 5)) break;
+    queued += 1;
+  }
+  assert.equal(queued, MAX_RECOVERY_ATTEMPTS);
+  assert.equal(unit.recovery.circuit_breaker.reason, 'recovery_cap_reached');
+  assert.equal(unit.recovery.circuit_breaker.attempts, MAX_RECOVERY_ATTEMPTS);
+});
+
+test('the no-progress fingerprint ignores the wording of a repeated failure', () => {
+  const { queueRecovery } = require('../src/agent-execution/execution-recovery');
+  const unit = { id: 'phase-1', status: 'decision_required', dev: { status: 'blocked' }, qa: { status: 'pending' } };
+  const blocked = (summary) => ({ status: 'blocked', findings: [{ severity: 'high', kind: 'environment', path: 'docker/release/Dockerfile', summary }] });
+  unit.dev = blocked('The Docker daemon is unavailable.');
+  assert.equal(queueRecovery(unit, 'dev', { kind: 'blocked' }, 5), true);
+  unit.dev = blocked('Could not reach the Linux engine; Docker storage became read-only.');
+  assert.equal(queueRecovery(unit, 'dev', { kind: 'blocked' }, 5), false, 'same failure, new words, no file change: the circuit opens');
+  assert.equal(unit.recovery.circuit_breaker.reason, 'recovery_no_progress');
 });
 
 test('continuous autopilot reroutes a failed consumer to a transitive producer and revalidates passed descendants', async t => {
@@ -497,6 +597,22 @@ test('autopilot rejects a malformed DEV report then requests a fresh bound repor
   assert.equal(state.units['phase-2'].rework, undefined);
   assert.equal(state.units['phase-2'].report_repair.rounds, 1);
   assert.equal(state.units['phase-2'].report_repair.pending, false);
+});
+
+test('autopilot repairs malformed evidence in DEV and QA without requiring a new user decision', async t => {
+  for (const role of ['dev', 'qa']) {
+    const ctx = await setup(t, { reworkRounds: 2 });
+    const prompts = {}, calls = {};
+    const script = { [`${role}:phase-2`]: n => ({ evidence: n === 1 ? null : [] }) };
+    const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, prompts, calls })]));
+    const result = await run(ctx, { registry });
+    assert.equal(result.status, 'completed', JSON.stringify(result));
+    assert.equal(calls[`${role}:phase-2`], 2);
+    assert.equal(calls[`${role === 'dev' ? 'qa' : 'dev'}:phase-2`], 1);
+    assert.match(prompts[`${role}:phase-2`][1], /\$\.evidence/);
+    const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
+    assert.deepEqual(state.units['phase-2'][role].verification, { source: 'agent_report', status: 'not_recorded', evidence_count: 0 });
+  }
 });
 
 test('autopilot repairs a rejected QA report without rerunning DEV or accepting the stale attempt', async t => {

@@ -4,6 +4,30 @@ const {initManifest}=require('../src/agent-execution/manifest');const {acquireLe
 async function fixture(mode='external'){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'aed-e2e-'));const made=await initManifest(dir,'demo','codex');await fs.writeFile(path.join(dir,'.aioson/context/dev-state.md'),'Perform the test work.');made.manifest.agents.dev.mode=mode;await fs.writeFile(made.path,JSON.stringify(made.manifest));return{dir,made}}
 function fakeExecutableAdapter({verdict='PASS',capacityOnce=false}={}){let calls=0,lastInput=null;return{build:()=>({ok:true}),execute(input){calls++;lastInput=input;if(capacityOnce&&calls===1)return Promise.resolve({ok:false,reason:'capacity'});const marker='AIOSON EXECUTION CONTRACT';const contract=input.prompt_text.slice(input.prompt_text.indexOf(marker));const get=name=>contract.match(new RegExp(`${name}=([^,\\n]+)`))?.[1].trim();const reportRel=contract.match(/report to: ([^\n]+)/)?.[1].trim();const roots=JSON.parse(contract.match(/writable_roots=(\[[^\n]*\]), started_at/)?.[1]||'[]');const report={version:1,feature:get('feature'),run_id:get('run_id'),attempt_id:get('attempt_id'),agent:get('agent'),host:get('host'),model_requested:get('model_requested'),model_resolved:get('model_resolved'),model_resolution_strategy:get('model_resolution_strategy'),manifest_digest:get('manifest_digest'),writable_roots:roots,started_at:'2026-01-01',finished_at:'2026-01-01',verdict,findings:[],evidence:[]};const lane=get('lane');if(lane){report.lane=lane;report.write_paths=JSON.parse(contract.match(/write_paths=(\[[^\n]*?\])\./)?.[1]||'[]')}const effort=get('reasoning_effort');if(effort&&effort!=='null')report.reasoning_effort=effort;const writer=`const fs=require('fs'),path=require('path');const p=process.argv[1];fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,${JSON.stringify(JSON.stringify(report))});`;return new Promise(resolve=>{const child=spawn(process.execPath,['-e',writer,path.resolve(input.cwd,reportRel)],{cwd:input.cwd,shell:false});child.on('close',code=>resolve({ok:code===0,code}));child.on('error',e=>resolve({ok:false,reason:'crash',error:e.message}))})},get calls(){return calls},get lastInput(){return lastInput}}}
 // AC-AED-07 AC-AED-08 AC-AED-09 AC-AED-16
+test('empty evidence stays compatible and explicitly unverified in returned and persisted results', async t => {
+  const { dir } = await fixture();
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const result = await dispatch({ projectDir: dir, feature: 'demo', adapterRegistry: { codex: fakeExecutableAdapter() } });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.verification, { source: 'agent_report', status: 'not_recorded', evidence_count: 0 });
+  const persisted = JSON.parse(await fs.readFile(statePath(dir, 'demo'), 'utf8'));
+  assert.deepEqual(persisted.attempts[0].verification, result.verification);
+});
+
+test('direct dispatch cannot bypass an explicit external executor requirement', async t => {
+  const { dir } = await fixture();
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  await fs.mkdir(path.join(dir, '.aioson/config'), { recursive: true });
+  const policyFile = path.join(dir, '.aioson/config/execution-policy.json');
+  await fs.writeFile(policyFile, JSON.stringify({ version: 1, execution: { require_spawner: true } }));
+  const fake = fakeExecutableAdapter();
+  const result = await dispatch({ projectDir: dir, feature: 'demo', adapterRegistry: { codex: fake } });
+  assert.equal(result.reason, 'external_spawner_required');
+  assert.equal(fake.calls, 0);
+  await fs.writeFile(policyFile, '{');
+  assert.equal((await dispatch({ projectDir: dir, feature: 'demo', adapterRegistry: { codex: fake } })).reason, 'execution_policy_invalid');
+  assert.equal(fake.calls, 0);
+});
 test('E2E external executable spawns, waits and accepts only bound report',async()=>{const {dir}=await fixture();const fake=fakeExecutableAdapter();const r=await dispatch({projectDir:dir,feature:'demo',adapterRegistry:{codex:fake}});assert.equal(r.ok,true);assert.equal(r.report.verdict,'PASS');assert.equal(r.state.attempts[0].status,'completed');assert.equal(fake.calls,1)});
 test('missing report pauses rather than fabricating PASS',async()=>{const {dir}=await fixture();const fake={build:()=>({ok:true}),execute:async()=>({ok:true})};const r=await dispatch({projectDir:dir,feature:'demo',adapterRegistry:{codex:fake}});assert.equal(r.ok,false);assert.equal(r.reason,'report_missing')});
 test('concurrent dispatch is serialized by an exclusive lease',async()=>{const {dir}=await fixture();const lease=await acquireLease(dir,'demo');const blocked=await dispatch({projectDir:dir,feature:'demo',adapterRegistry:{codex:fakeExecutableAdapter()}});assert.equal(blocked.reason,'lease_held');await releaseLease(lease)});

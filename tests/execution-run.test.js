@@ -127,7 +127,7 @@ function fakeAdapter(host, { script = {}, delayMs = 25, log = [] } = {}) {
       const key = `${role}:${unit}`;
       const behaviour = typeof script[key] === 'function' ? script[key](input) : (script[key] || {});
       active += 1;
-      const entry = { key, host, model: input.model, effort: input.reasoning_effort ?? null, sandbox: input.sandbox_mode, timeout: input.timeout, start: Date.now(), active_at_start: active };
+      const entry = { key, host, model: input.model, effort: input.reasoning_effort ?? null, sandbox: input.sandbox_mode, timeout: input.timeout, start: Date.now(), active_at_start: active, single_session: input.prompt_text.includes('SINGLE SESSION:') && input.prompt_text.includes('ENVIRONMENT LIMITS:'), concurrent: (input.prompt_text.match(/^- (phase-[a-z0-9-]+) \((?:implementing|under review)\)/gm) || []).map((line) => line.slice(2).split(' ')[0]) };
       log.push(entry);
       input.onStdout?.(`${key} working on ${host}\n`);
       // `touch_early`: a write that lands while the role is still running —
@@ -1020,6 +1020,569 @@ test('integration_dev runs one final correcting supervisor and independent QA af
   assert.equal(state.units['integration-supervisor'].qa.status, 'passed');
   assert.equal(state.units['phase-3'].status, 'passed', 'the supervisor delivers explicitly planned integration-owned work');
   assert.ok(result.reports.some(report => report.unit === 'integration-supervisor'));
+});
+
+test('integration QA preserves a zero correction budget and exposes reported rather than verified evidence', async t => {
+  const roles = { ...ROLES, roles: { ...ROLES.roles, integration_dev: { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' } } };
+  const ctx = await setup(t, { roles });
+  const manifestFile = path.join(ctx.dir, '.aioson/context', `agent-execution-${SLUG}.json`);
+  const manifest = JSON.parse(await fs.readFile(manifestFile, 'utf8'));
+  for (const lane of Object.values(manifest.development_lanes.lanes)) if (lane.qa) lane.qa.max_fix_files = 0;
+  await fs.writeFile(manifestFile, JSON.stringify(manifest));
+  assert.equal((await runCommand({ args: [ctx.dir], options: { sub: 'compile', feature: SLUG, json: true }, logger, env: ctx.env })).ok, true);
+  const fakes = adapters({
+    'qa:integration-supervisor': input => {
+      assert.match(input.prompt_text, /at most 0 file\(s\)/);
+      return { touch: ['src/app.ts'], verdict: 'PASS' };
+    }
+  });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'decision_required');
+  const qa = (await readState(ctx)).units['integration-supervisor'].qa;
+  assert.equal(qa.corrections_cap_exceeded, true);
+  assert.equal(qa.status, 'failed');
+  const observed = (await status(ctx)).units.find(unit => unit.id === 'integration-supervisor');
+  assert.equal(observed.qa.verification.source, 'agent_report');
+  assert.equal(observed.qa.verification.status, 'reported');
+});
+
+test('--wave below the last lane wave names the configured integration_dev it will not reach', async (t) => {
+  const roles = { ...ROLES, roles: { ...ROLES.roles, integration_dev: { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' } } };
+  const ctx = await setup(t, { roles });
+  const fakes = adapters();
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, extra: { wave: '1' } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.reason, 'stop_after_wave');
+  assert.equal(result.integration_deferred.route, 'codex/gpt-5.6/high');
+  assert.equal(result.integration_deferred.stop_after_wave, 1);
+  assert.match(result.integration_deferred.message, /runs only after the last lane wave/);
+  const notice = events.find(event => event.type === 'notice' && event.check === 'integration_deferred');
+  assert.ok(notice, 'the deferral is announced when the run starts, not only at the pause');
+  assert.match(formatProgress(notice), /integration_dev \(codex\/gpt-5\.6\/high\)/);
+  assert.equal(fakes.log.filter(entry => entry.key.includes('integration-supervisor')).length, 0);
+
+  const lastWave = Math.max(...(await readState(ctx)).waves.map(wave => wave.wave));
+  const reached = [];
+  const finished = await run(ctx, { registry: fakes.registry, events: reached, extra: { resume: true, wave: String(lastWave) } });
+  assert.equal(finished.integration_deferred, undefined, 'a limit at the last lane wave reaches the supervisor');
+  assert.ok(!reached.some(event => event.type === 'notice' && event.check === 'integration_deferred'));
+  assert.equal(fakes.log.filter(entry => entry.key === 'dev:integration-supervisor').length, 1);
+});
+
+// ───────────────────────── lanes scheduling ─────────────────────────
+
+const LANES_PLAN = [
+  '---',
+  'feature: orders',
+  'status: approved',
+  '---',
+  '# Implementation Plan — orders',
+  '',
+  '## Capability Delivery Plan',
+  '| CAP | Phase | Files | Verification |',
+  '|---|---|---|---|',
+  '| CAP-orders-api | 1 | src/api/orders.ts, tests/api/orders.test.ts, src/api/store.ts | npm test -- orders.api |',
+  '| CAP-orders-ui | 1 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx, src/ui/List.tsx | npm test -- orders.ui |',
+  '',
+  '## Interface Contract',
+  '| Interface | Boundary | Input | Output | Failure | CAP |',
+  '|---|---|---|---|---|---|',
+  '| IF-orders-01 | GET /orders | none | order list | 500 | CAP-orders-api |',
+  '',
+  '## Development execution lanes',
+  '| Lane | Host | Model | Exact write paths | Integration owner |',
+  '|---|---|---|---|---|',
+  '| backend | codex | gpt-5.6 | src/api/**, tests/api/** | dev |',
+  '| frontend | kimi | kimi-k3 | src/ui/**, tests/ui/** | dev |',
+  '',
+  '## Execution Sequence',
+  '| Phase | Wave | Files | Scope | Done when |',
+  '|---|---|---|---|---|',
+  '| 1a-backend | 1 | src/api/orders.ts, tests/api/orders.test.ts | CAP-orders-api | npm test -- orders.api passes |',
+  '| 1a-frontend | 1 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx | CAP-orders-ui | npm test -- orders.ui passes |',
+  '| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |',
+  '| 2a-frontend | 2 | src/ui/List.tsx | CAP-orders-ui | npm test -- orders.ui passes |',
+  ''
+].join('\n');
+
+const lanesRoles = (parallel) => ({ ...ROLES, parallel: { max_concurrent_lanes: 4, ...parallel } });
+const entry = (fakes, key) => fakes.log.find(item => item.key === key);
+
+test('lanes scheduling: a slow review in one lane never holds the next unit of the other lane', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes' }) });
+  const fakes = adapters({ 'qa:phase-1a-frontend': { delay_ms: 600 } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  const nextBackend = entry(fakes, 'dev:phase-2a-backend');
+  assert.ok(nextBackend.start < entry(fakes, 'qa:phase-1a-frontend').end, 'backend wave 2 started while the frontend review of wave 1 was still running');
+  assert.ok(nextBackend.start >= entry(fakes, 'qa:phase-1a-backend').end, 'after_qa (default): its own lane review finished first');
+  assert.ok(entry(fakes, 'dev:phase-2a-frontend').start >= entry(fakes, 'qa:phase-1a-frontend').end);
+});
+
+test('lanes scheduling with after_dev pipelines the next unit of a lane behind its review', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes', lane_gate: 'after_dev' }) });
+  const fakes = adapters({ 'qa:phase-1a-backend': { delay_ms: 600 } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  const nextBackend = entry(fakes, 'dev:phase-2a-backend');
+  assert.ok(nextBackend.start >= entry(fakes, 'dev:phase-1a-backend').end, 'never before its own lane implementation passed');
+  assert.ok(nextBackend.start < entry(fakes, 'qa:phase-1a-backend').end, 'the next implementation overlaps the previous review');
+  const state = await readState(ctx);
+  assert.ok(['phase-1a-backend', 'phase-2a-backend'].every(id => state.units[id].qa.status === 'passed'), 'every unit still gets its own review');
+});
+
+const SAME_WAVE_PLAN = LANES_PLAN
+  .replace('| 1a-frontend | 1 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx | CAP-orders-ui | npm test -- orders.ui passes |', '| 1b-backend | 1 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |')
+  .replace('| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |\n', '')
+  .replace('| 2a-frontend | 2 | src/ui/List.tsx | CAP-orders-ui | npm test -- orders.ui passes |', '| 2a-frontend | 2 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx | CAP-orders-ui | npm test -- orders.ui passes |');
+
+test('lanes scheduling: two units of one lane in the same wave run side by side, as under waves', async (t) => {
+  assert.match(SAME_WAVE_PLAN, /\| 1b-backend \| 1 \|/);
+  const ctx = await setup(t, { plan: SAME_WAVE_PLAN, roles: lanesRoles({ scheduling: 'lanes', lane_gate: 'after_dev' }) });
+  const fakes = adapters({ 'dev:phase-1a-backend': { delay_ms: 300 } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(entry(fakes, 'dev:phase-1b-backend').start < entry(fakes, 'dev:phase-1a-backend').end, 'no chain inside one wave of a lane');
+});
+
+const DEV_EDGE_PLAN = LANES_PLAN
+  .replace('| Phase | Wave | Files | Scope | Done when |\n|---|---|---|---|---|', '| Phase | Wave | Files | Scope | Done when | Depends on |\n|---|---|---|---|---|---|')
+  .replace('| 1a-backend | 1 | src/api/orders.ts, tests/api/orders.test.ts | CAP-orders-api | npm test -- orders.api passes |', '| 1a-backend | 1 | src/api/orders.ts, tests/api/orders.test.ts | CAP-orders-api | npm test -- orders.api passes | — |')
+  .replace('| 1a-frontend | 1 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx | CAP-orders-ui | npm test -- orders.ui passes |', '| 1a-frontend | 1 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx | CAP-orders-ui | npm test -- orders.ui passes | — |')
+  .replace('| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |', '| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes | 1a-backend (dev) |')
+  .replace('| 2a-frontend | 2 | src/ui/List.tsx | CAP-orders-ui | npm test -- orders.ui passes |', '| 2a-frontend | 2 | src/ui/List.tsx | CAP-orders-ui | npm test -- orders.ui passes | 1a-frontend |');
+
+test('an explicit (dev) edge starts the implementation early but the review waits for the dependency review', async (t) => {
+  assert.match(DEV_EDGE_PLAN, /1a-backend \(dev\) \|/);
+  const ctx = await setup(t, { plan: DEV_EDGE_PLAN, roles: lanesRoles({}) });
+  const fakes = adapters({ 'qa:phase-1a-backend': { delay_ms: 600 } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(entry(fakes, 'dev:phase-2a-backend').start < entry(fakes, 'qa:phase-1a-backend').end, 'the implementation overlaps the dependency review');
+  assert.ok(entry(fakes, 'qa:phase-2a-backend').start >= entry(fakes, 'qa:phase-1a-backend').end, 'the review tests against the reviewed dependency');
+  assert.ok(events.some((event) => event.type === 'unit' && event.status === 'waiting' && event.unit === 'phase-2a-backend'));
+});
+
+test('waves scheduling (default) keeps the cross-lane barrier', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({}) });
+  const fakes = adapters({ 'qa:phase-1a-frontend': { delay_ms: 400 } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(entry(fakes, 'dev:phase-2a-backend').start >= entry(fakes, 'qa:phase-1a-frontend').end);
+});
+
+test('lanes scheduling without an Interface Contract keeps the wave barrier and says so', async (t) => {
+  const plan = LANES_PLAN.replace(/## Interface Contract\n(?:\|.*\n)+\n/, '');
+  assert.doesNotMatch(plan, /Interface Contract/);
+  const ctx = await setup(t, { plan, roles: lanesRoles({ scheduling: 'lanes', lane_gate: 'after_dev' }) });
+  const fakes = adapters({ 'qa:phase-1a-frontend': { delay_ms: 400 } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(events.some(event => event.type === 'notice' && event.check === 'lanes_scheduling_without_contract'));
+  assert.ok(entry(fakes, 'dev:phase-2a-backend').start >= entry(fakes, 'qa:phase-1a-frontend').end);
+});
+
+test('a roles file edited into an invalid shape mid-run keeps the last valid configuration instead of crashing units', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({}) });
+  const rolesFile = path.join(ctx.dir, '.aioson', 'config', 'execution-roles.json');
+  const fakes = adapters({
+    'dev:phase-1a-backend': () => {
+      require('node:fs').writeFileSync(rolesFile, JSON.stringify({ ...lanesRoles({}), parallel: { max_concurrent_lanes: 4, newer_engine_key: true } }, null, 2));
+      return {};
+    }
+  });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  const notices = events.filter((event) => event.type === 'notice' && event.check === 'roles_invalid_kept_previous');
+  assert.equal(notices.length, 1, 'said once per file version');
+  assert.match(notices[0].message, /newer_engine_key unknown field/);
+});
+
+test('a DEV blocked only by checks this environment cannot run continues to review; the checks move to integration', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({}) });
+  const notRun = { severity: 'blocking', kind: 'verification_not_run', text: 'docker exec on the bench was denied; the walkthrough did not run', paths: ['src/ui/List.tsx'] };
+  const fakes = adapters({ 'dev:phase-2a-backend': { verdict: 'BLOCKED', findings: [notRun] } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-2a-backend'].qa.status, 'passed', 'the unit was reviewed');
+  assert.equal(state.units['phase-2a-frontend'].contract_repairs || 0, 0, 'no repair is routed to the owner of a path the note named');
+  const deferred = state.findings.filter((finding) => finding.check === 'verification_deferred');
+  assert.equal(deferred.length, 1);
+  assert.equal(deferred[0].to, 'integration');
+  assert.match(deferred[0].message, /docker exec on the bench was denied/);
+  assert.ok(events.some((event) => event.type === 'notice' && event.check === 'verification_deferred'));
+});
+
+test('a review blocked only by a check this environment cannot run passes the unit and hands the check to integration', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({}) });
+  const benchOnly = { severity: 'medium', kind: 'verification_not_run', path: 'qa/walkthroughs/queues.json', summary: 'the VPS walkthrough needs the integrated build' };
+  const fakes = adapters({
+    'qa:phase-2a-backend': { verdict: 'BLOCKED', findings: [benchOnly] },
+    'qa:phase-2a-frontend': { verdict: 'PASS', findings: [{ ...benchOnly, severity: 'high' }] }
+  });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  assert.equal(fakes.log.filter((item) => item.key === 'dev:phase-2a-backend').length, 1, 'no rework round for a check nobody here can run');
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-2a-backend'].qa.status, 'passed');
+  assert.equal(state.units['phase-2a-frontend'].qa.status, 'passed', 'a high-severity environment finding does not fail the review either');
+  const deferred = state.findings.filter((finding) => finding.check === 'verification_deferred' && finding.stage === 'qa');
+  assert.ok(deferred.some((finding) => finding.unit === 'phase-2a-backend' && finding.to === 'integration'));
+});
+
+test('a DEV blocked by a real defect still stops for a decision', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({}) });
+  const fakes = adapters({ 'dev:phase-2a-backend': { verdict: 'BLOCKED', findings: [
+    { severity: 'blocking', kind: 'verification_not_run', text: 'bench unavailable' },
+    { severity: 'high', kind: 'test_failure', text: 'store test fails after the change' }
+  ] } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'decision_required');
+});
+
+// ───────────────────────── Jev decisions ─────────────────────────
+
+const { applyDecision } = require('../src/lib/jev-judgment');
+
+/** A Jev double that answers through the real decision rules; `choose(spec)` picks the option. */
+function fakeJev(choose, { confidence = 0.9 } = {}) {
+  const calls = [];
+  return {
+    calls,
+    engine: {
+      jevConfigLoader: () => ({ status: 'ready', enabled: true }),
+      jevJudge: async ({ spec }) => {
+        const [questionId, question] = Object.entries(spec.questions)[0];
+        const options = Object.keys(question.criteria);
+        const choice = choose(spec);
+        calls.push({ id: spec.id, choice, state: spec.state });
+        const probabilities = Object.fromEntries(options.map((option) => [option, option === choice ? confidence : (1 - confidence) / (options.length - 1)]));
+        const answers = { [questionId]: { type: 'choice', choice, confidence, probabilities } };
+        return { ok: true, answers, decision: applyDecision(spec, answers) };
+      }
+    }
+  };
+}
+
+const JEV_SIGNED = {
+  ...ALL_SIGNED,
+  [signatureKey('claude', 'claude-sonnet-5', 'max')]: signed('claude', 'claude-sonnet-5', 'max'),
+  [signatureKey('claude', 'claude-sonnet-5', 'high')]: signed('claude', 'claude-sonnet-5', 'high')
+};
+const jevRoles = (jev, parallel = {}) => ({
+  ...ROLES,
+  roles: { ...ROLES.roles, qa: { host: 'claude', model: 'claude-sonnet-5', reasoning_effort: 'max' } },
+  parallel: { max_concurrent_lanes: 4, ...parallel },
+  execution: { jev }
+});
+
+test('jev review depth: a unit judged standard is reviewed at high, a deep one keeps the configured effort', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: jevRoles({ review_depth: true }), signatures: JEV_SIGNED });
+  const jev = fakeJev((spec) => (spec.state.unit.lane === 'frontend' ? 'standard' : 'deep'));
+  const fakes = adapters();
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: jev.engine });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(entry(fakes, 'qa:phase-1a-frontend').effort, 'high');
+  assert.equal(entry(fakes, 'qa:phase-1a-backend').effort, 'max');
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1a-frontend'].jev.review_depth.configured_effort, 'max');
+  assert.equal(state.units['phase-1a-frontend'].jev.review_depth.source, 'jev');
+  assert.equal(jev.calls.filter((call) => call.id === 'execution-review-depth').length, 4, 'one judgment per unit');
+  const line = formatProgress(events.find((event) => event.type === 'jev' && event.unit === 'phase-1a-frontend'));
+  assert.match(line, /jev review_depth: review standard \(high\) \[jev\]/);
+  assert.deepEqual(jev.calls[0].state.unit.files.length > 0, true, 'the judgment sees paths, never file contents');
+});
+
+test('jev review depth without a ready Jev keeps the configured effort', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: jevRoles({ review_depth: true }), signatures: JEV_SIGNED });
+  const fakes = adapters();
+  const result = await run(ctx, { registry: fakes.registry, engine: { jevConfigLoader: () => ({ status: 'unconfigured' }) } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(fakes.log.filter((item) => item.key.startsWith('qa:')).every((item) => item.effort === 'max'));
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1a-frontend'].jev.review_depth.reason, 'jev_unconfigured');
+});
+
+test('jev triage: a transient crash is retried once automatically; a second one waits for a person', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: jevRoles({ triage: true }), signatures: JEV_SIGNED });
+  const jev = fakeJev(() => 'transient');
+  let calls = 0;
+  const fakes = adapters({ 'dev:phase-1a-backend': () => (++calls <= 2 ? { fail: 'crash' } : {}) });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: jev.engine });
+  assert.equal(result.status, 'decision_required', 'the second crash is not retried by Jev');
+  assert.equal(calls, 2);
+  assert.ok(events.some((event) => event.type === 'unit' && event.reason === 'jev_transient_retry' && event.unit === 'phase-1a-backend'));
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1a-backend'].jev.retried.dev, true);
+  assert.equal(jev.calls.filter((call) => call.id === 'execution-failure-triage').length, 1);
+});
+
+test('jev triage never retries a failure it judges a defect', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: jevRoles({ triage: true }), signatures: JEV_SIGNED });
+  const jev = fakeJev(() => 'defect');
+  const fakes = adapters({ 'dev:phase-1a-backend': { fail: 'crash' } });
+  const result = await run(ctx, { registry: fakes.registry, engine: jev.engine });
+  assert.equal(result.status, 'decision_required');
+  assert.equal(fakes.log.filter((item) => item.key === 'dev:phase-1a-backend').length, 1);
+});
+
+test('jev review order: every next implementation overlaps the previous review; only a coupled pair orders the reviews', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: jevRoles({ review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev((spec) => (spec.state.next.lane === 'backend' ? 'independent' : 'coupled'));
+  const fakes = adapters({ 'qa:phase-1a-backend': { delay_ms: 600 }, 'qa:phase-1a-frontend': { delay_ms: 600 } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  for (const lane of ['backend', 'frontend']) {
+    assert.ok(entry(fakes, `dev:phase-2a-${lane}`).start < entry(fakes, `qa:phase-1a-${lane}`).end, `${lane}: the implementation still starts after_dev`);
+  }
+  assert.ok(entry(fakes, 'qa:phase-2a-backend').start < entry(fakes, 'qa:phase-1a-backend').end, 'independent: the reviews overlap');
+  assert.ok(entry(fakes, 'qa:phase-2a-frontend').start >= entry(fakes, 'qa:phase-1a-frontend').end, 'coupled: the review tests against the reviewed predecessor');
+  const state = await readState(ctx);
+  assert.equal(state.jev_review_order['phase-1a-backend>phase-2a-backend'].wait, false);
+  assert.equal(state.jev_review_order['phase-1a-frontend>phase-2a-frontend'].wait, true);
+  assert.ok(events.some((event) => event.type === 'unit' && event.status === 'waiting' && event.unit === 'phase-2a-frontend'));
+  assert.match(formatProgress(events.find((event) => event.type === 'jev' && event.unit === 'phase-2a-frontend')), /review of phase-2a-frontend waits for phase-1a-frontend/);
+});
+
+test('jev review order: a previous unit stopped on a decision releases the waiting review', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: jevRoles({ review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev(() => 'coupled');
+  const fakes = adapters({ 'qa:phase-1a-backend': { delay_ms: 300, fail: 'crash' } });
+  const result = await run(ctx, { registry: fakes.registry, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.status, 'decision_required', 'the run pauses instead of waiting forever');
+  assert.ok(entry(fakes, 'qa:phase-2a-backend'), 'the waiting review ran once the predecessor stopped');
+});
+
+test('resume repairs a persisted circular review wait and repeats QA without rebuilding the review-only consumer', { timeout: 15000 }, async t => {
+  const ctx = await setup(t, { plan: DEV_EDGE_PLAN, roles: lanesRoles({ max_concurrent_lanes: 2 }) });
+  assert.equal((await run(ctx, { registry: adapters().registry })).status, 'completed');
+  const state = await readState(ctx);
+  const consumer = state.units['phase-1a-frontend'];
+  const descendant = state.units['phase-2a-backend'];
+  const outcome = { kind: 'failed', reason: 'qa_acceptance_failed', findings: [{ path: 'src/api/orders.ts', severity: 'high', summary: 'Shared contract fails' }], messages: [{ to: 'unit:phase-1a-backend', kind: 'contract_change', paths: ['src/api/orders.ts'], text: 'Repair the shared contract' }] };
+  state.status = 'running';
+  state.until_complete = true;
+  consumer.status = 'pending';
+  consumer.qa = { status: 'failed', ...outcome };
+  consumer.repair_dependencies = [descendant.id];
+  consumer.deferred_contract_repair = { stage: 'qa', producer: 'phase-1a-backend', paths: ['src/api/orders.ts'], blockers: [descendant.id], outcome, queued_at: new Date().toISOString() };
+  descendant.status = 'passed';
+  descendant.qa = { status: 'pending' };
+  descendant.waiting = { stage: 'qa', reason: 'review_order', holders: [consumer.id], since: new Date().toISOString() };
+  await fs.writeFile(runStatePath(ctx.dir, SLUG), JSON.stringify(state));
+  const fakes = adapters();
+  const result = await run(ctx, { registry: fakes.registry, extra: { resume: true, 'bounded-recovery': false, 'until-complete': true } });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.ok(entry(fakes, 'dev:phase-1a-backend'), 'producer repairs its own contract');
+  assert.ok(entry(fakes, 'dev:phase-2a-backend'), 'invalidated descendant reruns before QA');
+  assert.equal(entry(fakes, 'dev:phase-1a-frontend'), undefined, 'review-only consumer keeps its delivered DEV');
+  assert.ok(entry(fakes, 'qa:phase-1a-frontend'), 'failed consumer receives a fresh independent review');
+  assert.equal(result.run_id, state.run_id, 'same execution is resumed');
+});
+
+// A backend lane whose last two units share a registry file (the shape of a
+// router `_root.ts` or an i18n catalog), with the reviews kept in order.
+const REGISTRY_CHAIN_PLAN = LANES_PLAN
+  .replace('| CAP-orders-api | 1 | src/api/orders.ts, tests/api/orders.test.ts, src/api/store.ts | npm test -- orders.api |', '| CAP-orders-api | 1 | src/api/orders.ts, tests/api/orders.test.ts, src/api/store.ts, src/api/registry.ts, src/api/audit.ts | npm test -- orders.api |')
+  .replace('| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |', '| 2a-backend | 2 | src/api/store.ts, src/api/registry.ts | CAP-orders-api | npm test -- orders.api passes |\n| 3a-backend | 3 | src/api/audit.ts, src/api/registry.ts | CAP-orders-api | npm test -- orders.api passes |');
+
+test('write lock: a unit waiting for its review slot does not hold a shared file against the next implementer', async (t) => {
+  const ctx = await setup(t, { plan: REGISTRY_CHAIN_PLAN, roles: jevRoles({ review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev(() => 'coupled');
+  const fakes = adapters({ 'qa:phase-1a-backend': { delay_ms: 600 } });
+  const result = await run(ctx, { registry: fakes.registry, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  const dev3 = entry(fakes, 'dev:phase-3a-backend');
+  const qa2 = entry(fakes, 'qa:phase-2a-backend');
+  assert.ok(dev3.start < entry(fakes, 'qa:phase-1a-backend').end, 'the next implementer of registry.ts ran while phase-2a-backend only waited for the review of phase-1a-backend');
+  assert.ok(dev3.end <= qa2.start || qa2.end <= dev3.start, 'the implementer and the review of a shared file never write at the same time');
+  const state = await readState(ctx);
+  assert.ok(['phase-1a-backend', 'phase-2a-backend', 'phase-3a-backend'].every(id => state.units[id].qa.status === 'passed'));
+});
+
+test('write lock: a review waits for the implementer that is writing a file it shares', async (t) => {
+  const ctx = await setup(t, { plan: REGISTRY_CHAIN_PLAN, roles: jevRoles({ review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev(() => 'coupled');
+  const fakes = adapters({ 'qa:phase-1a-backend': { delay_ms: 400 }, 'dev:phase-3a-backend': { delay_ms: 900 } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  const dev3 = entry(fakes, 'dev:phase-3a-backend');
+  const qa2 = entry(fakes, 'qa:phase-2a-backend');
+  assert.ok(dev3.end <= qa2.start || qa2.end <= dev3.start, 'the review and the implementer of registry.ts never write at the same time');
+  // Which one waits depends on who reached the file first; on a loaded machine
+  // either can. The one that waited names the holder.
+  const reviewWaited = events.some((event) => event.type === 'unit' && event.unit === 'phase-2a-backend' && event.status === 'waiting' && event.reason === 'write_lock:phase-3a-backend');
+  const implementerWaited = events.some((event) => event.type === 'unit' && event.unit === 'phase-3a-backend' && event.role === 'dev' && event.status === 'waiting' && event.reason === 'write_lock:phase-2a-backend');
+  assert.ok(qa2.start >= dev3.start ? reviewWaited : implementerWaited);
+});
+
+test('write lock: an implementer held by a review that may fix the shared file says who holds it', async (t) => {
+  const ctx = await setup(t, { plan: REGISTRY_CHAIN_PLAN, roles: jevRoles({ review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev(() => 'independent');
+  const fakes = adapters({ 'qa:phase-2a-backend': { delay_ms: 500 } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(entry(fakes, 'dev:phase-3a-backend').start >= entry(fakes, 'qa:phase-2a-backend').end, 'the implementer waited for the review of registry.ts');
+  assert.ok(events.some((event) => event.type === 'unit' && event.role === 'dev' && event.unit === 'phase-3a-backend' && event.status === 'waiting' && event.reason === 'write_lock:phase-2a-backend'));
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-3a-backend'].waiting, undefined, 'the hold is cleared once the unit starts');
+});
+
+test('every worker prompt says the session ends with the turn and forbids waiting on background work', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes' }) });
+  const fakes = adapters();
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.ok(fakes.log.length >= 8, 'DEV and review of every unit');
+  assert.ok(fakes.log.every((item) => item.single_session), `prompts without the rule: ${fakes.log.filter((item) => !item.single_session).map((item) => item.key).join(', ')}`);
+});
+
+const refusal = (code) => Object.assign(new Error(`${code}: operation not permitted, rename`), { code });
+
+test('a state write Windows keeps refusing for a while never stops the scheduler', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes' }) });
+  const fakes = adapters();
+  const events = [];
+  let calls = 0;
+  const realWrite = async (file, value) => {
+    const tmp = `${file}.test.tmp`;
+    await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    await fs.rename(tmp, file);
+  };
+  const stateWriter = async (file, value) => {
+    calls += 1;
+    if (calls >= 4 && calls <= 9) throw refusal('EPERM');
+    return realWrite(file, value);
+  };
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { stateWriter } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed', 'every unit still ran');
+  assert.ok(events.some((event) => event.type === 'notice' && event.check === 'state_write_refused'));
+  assert.ok(events.some((event) => event.type === 'notice' && event.check === 'state_write_recovered'));
+  assert.equal((await readState(ctx)).status, 'completed', 'the file caught up with the run');
+});
+
+test('a scheduler that throws pauses the run with the reason instead of leaving live-looking workers', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes' }) });
+  const fakes = adapters({ 'qa:phase-1a-frontend': { delay_ms: 800 } });
+  const events = [];
+  let thrown = false;
+  const stateWriter = async (file, value) => {
+    // The first write that records wave 1 completed comes from the scheduler loop.
+    if (!thrown && value.waves?.some((wave) => wave.status === 'completed')) {
+      thrown = true;
+      throw Object.assign(new Error('EIO: i/o error, write'), { code: 'EIO' });
+    }
+    const tmp = `${file}.test.tmp`;
+    await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    await fs.rename(tmp, file);
+  };
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { stateWriter } });
+  assert.equal(result.status, 'paused', JSON.stringify(result));
+  assert.equal(result.reason, 'scheduler_error');
+  assert.match(result.error, /EIO/);
+  assert.ok(events.some((event) => event.type === 'notice' && event.check === 'scheduler_stopped'));
+  const state = await readState(ctx);
+  assert.equal(state.status, 'paused');
+  assert.equal(state.reason, 'scheduler_error');
+});
+
+test('a worker learns which other units write files while it works', async (t) => {
+  const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes' }) });
+  const fakes = adapters({ 'dev:phase-1a-backend': { delay_ms: 600 } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  const review = entry(fakes, 'qa:phase-1a-frontend');
+  assert.ok(review.start < entry(fakes, 'dev:phase-1a-backend').end, 'the frontend review ran while the backend implementer wrote');
+  assert.deepEqual(review.concurrent, ['phase-1a-backend']);
+  assert.ok(!entry(fakes, 'qa:phase-1a-frontend').concurrent.includes('phase-1a-frontend'), 'a unit is never listed as its own concurrent work');
+});
+
+test('status shows each held unit and what holds it', () => {
+  const { renderStatus, renderStatusLine } = require('../src/commands/execution');
+  const result = {
+    feature: 'orders',
+    run: { status: 'running', current_wave: 2, waves: [{}, {}, {}], units: { passed: 2, lane: 3, qa_passed: 1, qa_failed: 0 }, decisions_pending: [] },
+    engine: { alive: true },
+    running: [],
+    waiting: [
+      { unit: 'phase-2a-backend', stage: 'qa', reason: 'review_order', holders: ['phase-1a-backend'] },
+      { unit: 'phase-3a-backend', stage: 'dev', reason: 'write_lock', holders: ['phase-2a-backend'] }
+    ],
+    decisions_pending: []
+  };
+  const line = renderStatusLine(result);
+  assert.match(line, /⏸ phase-2a-backend qa \(review waits for phase-1a-backend\)/);
+  assert.match(line, /⏸ phase-3a-backend dev \(file in use by phase-2a-backend\)/);
+  assert.equal(typeof renderStatus, 'function');
+});
+
+// A backend lane of three units that share no file.
+const START_ORDER_PLAN = LANES_PLAN
+  .replace('| CAP-orders-api | 1 | src/api/orders.ts, tests/api/orders.test.ts, src/api/store.ts | npm test -- orders.api |', '| CAP-orders-api | 1 | src/api/orders.ts, tests/api/orders.test.ts, src/api/store.ts, src/api/audit.ts | npm test -- orders.api |')
+  .replace('| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |', '| 2a-backend | 2 | src/api/store.ts | CAP-orders-api | npm test -- orders.api passes |\n| 3a-backend | 3 | src/api/audit.ts | CAP-orders-api | npm test -- orders.api passes |');
+
+const startOrderJudge = (independentPairs) => (spec) => {
+  if (spec.id === 'execution-start-order') return independentPairs.includes(`${spec.state.earlier.id}>${spec.state.later.id}`) ? 'independent' : 'depends';
+  return 'coupled';
+};
+
+test('jev start order: a later lane unit judged independent of the unfinished earlier one starts before it', async (t) => {
+  const ctx = await setup(t, { plan: START_ORDER_PLAN, roles: jevRoles({ start_order: true, review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev(startOrderJudge(['phase-2a-backend>phase-3a-backend']));
+  const fakes = adapters({ 'dev:phase-2a-backend': { delay_ms: 700 } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  const dev3 = entry(fakes, 'dev:phase-3a-backend');
+  assert.ok(dev3.start < entry(fakes, 'dev:phase-2a-backend').end, 'phase-3a-backend started while phase-2a-backend was still being implemented');
+  assert.ok(dev3.start >= entry(fakes, 'dev:phase-1a-backend').end, 'it still waited for phase-1a-backend, judged a dependency');
+  const state = await readState(ctx);
+  assert.equal(state.jev_start_order['phase-2a-backend>phase-3a-backend'].wait, false);
+  assert.equal(state.jev_start_order['phase-1a-backend>phase-2a-backend'].wait, true, 'the first pass asks every waiting unit about its nearest unfinished predecessor');
+  assert.equal(state.jev_start_order['phase-1a-backend>phase-3a-backend'], undefined, 'phase-1a-backend was implemented before that pair mattered, so it was never asked');
+  assert.equal(state.jev_review_order?.['phase-2a-backend>phase-3a-backend'], undefined, 'a pair judged independent to start asks no review-order question');
+  assert.ok(['phase-1a-backend', 'phase-2a-backend', 'phase-3a-backend'].every(id => state.units[id].qa.status === 'passed'));
+  assert.match(formatProgress(events.find((event) => event.type === 'jev' && event.decision === 'start_order' && event.wait === false)), /jev start_order: phase-3a-backend starts before phase-2a-backend \[jev\]/);
+});
+
+test('jev start order: a pair judged dependent, or an unavailable Jev, keeps the plan order', async (t) => {
+  for (const engine of [fakeJev(startOrderJudge([])).engine, { jevConfigLoader: () => ({ status: 'unconfigured' }) }]) {
+    const ctx = await setup(t, { plan: START_ORDER_PLAN, roles: jevRoles({ start_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+    const fakes = adapters({ 'dev:phase-2a-backend': { delay_ms: 400 } });
+    const result = await run(ctx, { registry: fakes.registry, engine: { ...engine, reviewOrderPollMs: 10 } });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(entry(fakes, 'dev:phase-3a-backend').start >= entry(fakes, 'dev:phase-2a-backend').end);
+  }
+});
+
+test('jev start order is opt-in: without the flag no start-order question is asked', async (t) => {
+  const ctx = await setup(t, { plan: START_ORDER_PLAN, roles: jevRoles({ review_order: true }, { scheduling: 'lanes', lane_gate: 'after_dev' }), signatures: JEV_SIGNED });
+  const jev = fakeJev(startOrderJudge(['phase-2a-backend>phase-3a-backend', 'phase-1a-backend>phase-3a-backend']));
+  const fakes = adapters({ 'dev:phase-2a-backend': { delay_ms: 400 } });
+  const result = await run(ctx, { registry: fakes.registry, engine: { ...jev.engine, reviewOrderPollMs: 10 } });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(jev.calls.filter((call) => call.id === 'execution-start-order').length, 0);
+  assert.ok(entry(fakes, 'dev:phase-3a-backend').start >= entry(fakes, 'dev:phase-2a-backend').end);
 });
 
 // ───────────────────────── manual checks never stall the final supervisor ─────────────────────────

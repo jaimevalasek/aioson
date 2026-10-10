@@ -165,6 +165,13 @@ test('execution-roles: the unlock file is validated strictly — hosts from the 
   assert.match(byPath['$.on_unavailable'], /ask, fallback, pause/);
   assert.equal(laneRoleKey('mobile-app', 'qa'), 'mobile_app_qa');
 
+  assert.equal(validateExecutionRoles({ ...ROLES, parallel: { max_concurrent_lanes: 4, scheduling: 'lanes', lane_gate: 'after_dev' } }).ok, true);
+  const badParallel = validateExecutionRoles({ ...ROLES, parallel: { scheduling: 'eager', lane_gate: 'after_build', speed: 2 } });
+  const parallelErrors = Object.fromEntries(badParallel.errors.map((error) => [error.path, error.message]));
+  assert.match(parallelErrors['$.parallel.scheduling'], /waves, lanes/);
+  assert.match(parallelErrors['$.parallel.lane_gate'], /after_qa, after_dev/);
+  assert.match(parallelErrors['$.parallel.speed'], /unknown field/);
+
   const profiled = {
     version: 1, enabled: true, active_profile: 'economy',
     profiles: {

@@ -105,6 +105,15 @@ function formatProgress(event) {
       return `wave ${event.wave}${event.unit ? ` · ${event.unit}` : ''}: ${event.check} ${event.path}${event.lane ? ` (lane ${event.lane})` : ''}`;
     case 'message':
       return `${where}: message [${event.kind}] → ${event.to}: ${event.text}`;
+    case 'notice':
+      return `notice [${event.check}]: ${event.message}`;
+    case 'jev': {
+      const outcome = event.decision === 'review_depth' ? `review ${event.choice}${event.effort ? ` (${event.effort})` : ''}`
+        : event.decision === 'review_order' ? `review of ${event.unit} ${event.wait ? 'waits for' : 'runs alongside'} ${event.previous}`
+          : event.decision === 'start_order' ? `${event.unit} ${event.wait ? 'keeps the plan order after' : 'starts before'} ${event.previous}`
+            : `${event.stage} ${event.choice}`;
+      return `${where}: jev ${event.decision}: ${outcome} [${event.source}${event.reason ? `: ${event.reason}` : ''}]`;
+    }
     default:
       return JSON.stringify(event);
   }
@@ -134,6 +143,7 @@ function logRun(logger, result) {
   for (const decision of result.decisions_pending || []) {
     logger.log(`  ? ${decision.unit} [${decision.stage}] ${decision.reason}${decision.detail ? ` — ${decision.detail}` : ''} → ${decision.hint}`);
   }
+  if (result.integration_deferred) logger.log(`  ⚠ ${result.integration_deferred.message}`);
   if (result.resume_command) logger.log(`Resume: ${result.resume_command}`);
 }
 
@@ -172,10 +182,17 @@ function renderStatus(result) {
   for (const item of result.running || []) {
     lines.push(`  ▶ ${item.unit} ${item.stage} ${item.host}/${item.model} · ${describeLive(item.live ? { ...item.live, elapsed_ms: item.elapsed_ms ?? item.live.elapsed_ms } : (item.elapsed_ms !== null && item.elapsed_ms !== undefined ? { elapsed_ms: item.elapsed_ms, last_write_age_ms: null, files_changed: 0 } : null))}`);
   }
+  for (const item of result.waiting || []) lines.push(`  ⏸ ${item.unit} ${item.stage} · ${describeWait(item)}`);
   for (const decision of result.decisions_pending) lines.push(`  ? ${decision.unit} [${decision.stage}] ${decision.reason} → ${decision.hint}`);
   if (result.follow_command) lines.push(`Follow: ${result.follow_command}`);
   if (result.resume_command && !result.engine?.alive) lines.push(`Resume: ${result.resume_command}`);
   return lines;
+}
+
+/** Why a held unit waits: a shared file another unit is writing, or the review order. */
+function describeWait(item) {
+  const holders = (item.holders || []).join(', ') || '?';
+  return item.reason === 'write_lock' ? `file in use by ${holders}` : `review waits for ${holders}`;
 }
 
 /** One line for a status pane or a bar: feature, state, wave, counts, what runs now. */
@@ -196,6 +213,7 @@ function renderStatusLine(result) {
       : (item.live && item.live.last_write_age_ms !== null && item.live.last_write_age_ms !== undefined ? `write ${describeAge(item.live.last_write_age_ms)} ago` : 'no write yet');
     parts.push(`▶ ${item.unit} ${item.stage} ${describeAge(item.elapsed_ms ?? item.live?.elapsed_ms ?? 0)} (${write})`);
   }
+  for (const item of result.waiting || []) parts.push(`⏸ ${item.unit} ${item.stage} (${describeWait(item)})`);
   if (r.decisions_pending.length) parts.push(`decisions ${r.decisions_pending.length}`);
   return parts.join(' · ');
 }

@@ -261,6 +261,40 @@ test('execution:offer reports the client seam — spawner_supported, the spawner
 
 // ───────────────────────── the seam at work ─────────────────────────
 
+test('opt-in external execution rejects missing spawners before probes and stays required on resume', async t => {
+  const ctx = await setup(t);
+  const policyFile = path.join(ctx.dir, '.aioson/config/execution-policy.json');
+  await fs.writeFile(policyFile, JSON.stringify({ version: 1, execution: { require_spawner: true } }));
+  assert.equal((await runCommand({ args: [ctx.dir], options: { sub: 'compile', feature: SLUG, json: true }, logger, env: ctx.env })).ok, true);
+  let probes = 0, direct = 0;
+  const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, {
+    ...require(`../src/agent-execution/adapters/${host}`),
+    execute: async () => { direct += 1; throw new Error('direct execution must not happen'); }
+  }]));
+  const engine = { adapterRegistry: registry, profileProbe: async () => { probes += 1; throw new Error('direct probe must not happen'); } };
+  await writeSignatures({ signatures: {} }, { env: ctx.env });
+  const missing = await run(ctx, { env: { [SPAWNER_ENV]: '' }, engine });
+  assert.equal(missing.reason, 'preflight_failed');
+  assert.ok(missing.preflight.checks.some(check => check.id === 'execution-boundary' && !check.ok));
+  assert.equal(probes, 0);
+  assert.equal(direct, 0);
+  await writeSignatures({ signatures: ALL_SIGNED }, { env: ctx.env });
+  const completed = await run(ctx, { engine });
+  assert.equal(completed.status, 'completed', JSON.stringify(completed));
+  assert.ok((await spawnerLog(ctx)).some(envelope => envelope.action === 'spawn'));
+  assert.equal(probes, 0);
+  assert.equal(direct, 0);
+  const resumed = await run(ctx, { env: { [SPAWNER_ENV]: '' }, extra: { resume: true }, engine });
+  assert.equal(resumed.reason, 'preflight_failed');
+  assert.ok(resumed.preflight.checks.some(check => check.id === 'execution-boundary' && !check.ok));
+  assert.equal(direct, 0);
+  await fs.writeFile(policyFile, '{');
+  const malformed = await run(ctx, { engine });
+  assert.equal(malformed.reason, 'preflight_failed');
+  assert.ok(malformed.preflight.checks.some(check => check.id === 'execution-policy' && !check.ok));
+  assert.equal(probes, 0);
+});
+
 test('with a spawner in force the engine hands every unit to the client as an envelope, waits for the bound report the client\'s terminal writes, and records the session per unit', async (t) => {
   const ctx = await setup(t, { config: { delay_ms: 60, touch: { 'phase-1:dev': ['src/api/orders.ts'], 'phase-2:dev': ['src/ui/Orders.tsx'] } } });
   const events = [];

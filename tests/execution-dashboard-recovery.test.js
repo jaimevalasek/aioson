@@ -4,8 +4,66 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { createRecoveryController } = require('../src/execution-dashboard/recovery');
+const { createRecoveryController, stalledReviewCycle } = require('../src/execution-dashboard/recovery');
 const { createExecutionDashboard, presentRecovery } = require('../src/execution-dashboard/server');
+
+function circularSnapshot() {
+  return { run: { run_id: 'run-1', status: 'running' }, until_complete: true, engine: { alive: true, pid: 123 }, running: [], decisions_pending: [],
+    units: [{ id: 'gate', status: 'pending', dev: { status: 'passed' }, qa: { status: 'failed' }, deferred_contract_repair: { blockers: ['later'], queued_at: '2026-01-01T00:00:00.000Z' } },
+      { id: 'later', status: 'passed', dev: { status: 'passed' }, qa: { status: 'pending' } }],
+    waiting: [{ unit: 'later', reason: 'review_order', holders: ['gate'], since: '2026-01-01T00:00:00.000Z' }]
+  };
+}
+
+test('a live idle engine with a proven circular review wait exposes recovery without auto-restarting it', async () => {
+  const snapshot = circularSnapshot();
+  const controller = createRecoveryController('/project', { launch: async () => assert.fail('observing must not restart a live engine') });
+  assert.equal(stalledReviewCycle(snapshot), true);
+  const recovery = controller.status('feature', snapshot);
+  assert.equal(recovery.stalled, true);
+  assert.equal(presentRecovery(snapshot, recovery).visible, true, 'heartbeat alone cannot hide a deadlock');
+  await controller.observe('feature', snapshot);
+  for (const changed of [
+    { running: [{ unit: 'later', stage: 'dev' }] },
+    { units: [...snapshot.units, { id: 'active', dev: { status: 'running' } }] },
+    { run: { run_id: 'run-1', status: 'completed' } }, { archived: true },
+    { waiting: [{ unit: 'later', reason: 'review_order', holders: ['other'] }] },
+    { units: [{ ...snapshot.units[0], deferred_contract_repair: { blockers: ['later'], queued_at: new Date().toISOString() } }] }
+  ]) assert.equal(stalledReviewCycle({ ...snapshot, ...changed }), false, JSON.stringify(changed));
+});
+
+test('manual circular-wait recovery stops only the bound idle engine before resuming the same run', async () => {
+  const snapshot = circularSnapshot();
+  const stops = [], launches = [];
+  let alive = true;
+  const controller = createRecoveryController('/project', {
+    status: async () => snapshot,
+    isProcessAlive: pid => { assert.equal(pid, 123); return alive; },
+    stopEngine: async pid => { stops.push(pid); alive = false; },
+    decide: async () => assert.fail('failed QA is not approved or bypassed'),
+    launch: async args => { assert.equal(alive, false); launches.push(args); return { pid: 456 }; }
+  });
+  assert.equal((await controller.recover('feature', { run_id: 'old' })).code, 409);
+  assert.equal(stops.length, 0);
+  assert.equal((await controller.recover('feature', { run_id: 'run-1' })).code, 202);
+  assert.deepEqual(stops, [123]);
+  assert.equal(launches[0].runId, 'run-1');
+  assert.equal(snapshot.units[0].qa.status, 'failed', 'recovery itself never changes QA');
+  assert.equal((await controller.recover('feature', { run_id: 'run-1' })).code, 409, 'duplicate clicks cannot start competing engines');
+});
+
+test('new worker activity or changed engine identity cancels a live deadlock recovery', async () => {
+  for (const change of [{ running: [{ unit: 'later', stage: 'qa' }] }, { engine: { alive: true, pid: 999 } }, { run: { run_id: 'run-2', status: 'running' } }]) {
+    let reads = 0;
+    const snapshot = circularSnapshot();
+    const controller = createRecoveryController('/project', {
+      status: async () => ++reads === 1 ? snapshot : { ...snapshot, ...change },
+      stopEngine: async () => assert.fail('must not interrupt a changed run'),
+      launch: async () => assert.fail('must not launch a duplicate engine')
+    });
+    assert.equal((await controller.recover('feature', { run_id: 'run-1' })).code, 409);
+  }
+});
 
 test('recovery banner follows the live engine instead of a stale recovery failure', () => {
   const run = { run_id: 'run-1', status: 'running' };

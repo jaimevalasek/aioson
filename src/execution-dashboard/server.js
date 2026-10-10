@@ -131,7 +131,7 @@ async function readReport(projectDir, feature, unitId, stage) {
 }
 
 function presentRecovery(snapshot, recovery = {}) {
-  const stopped = !snapshot.engine?.alive;
+  const stopped = !snapshot.engine?.alive || recovery.stalled === true;
   const actionable = snapshot.run
     && ['paused', 'decision_required', 'running'].includes(snapshot.run.status)
     && stopped;

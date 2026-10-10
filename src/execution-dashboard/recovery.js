@@ -19,6 +19,35 @@ function processAlive(pid) {
   try { process.kill(pid, 0); return true; } catch (error) { return error.code !== 'ESRCH'; }
 }
 
+function stalledReviewCycle(snapshot, now = Date.now()) {
+  if (snapshot.archived || snapshot.run?.status !== 'running' || !snapshot.engine?.alive
+      || !Number.isInteger(snapshot.engine.pid) || (snapshot.running || []).length
+      || (snapshot.units || []).some(unit => unit.dev?.status === 'running' || unit.qa?.status === 'running')) return false;
+  const waits = new Map((snapshot.waiting || []).filter(row => row.reason === 'review_order').map(row => [row.unit, row]));
+  const reaches = (id, target, visited = new Set()) => {
+    if (id === target) return true;
+    if (visited.has(id)) return false;
+    visited.add(id);
+    return (waits.get(id)?.holders || []).some(holder => reaches(holder, target, visited));
+  };
+  return (snapshot.units || []).some(unit => {
+    const repair = unit.deferred_contract_repair;
+    const since = Date.parse(repair?.queued_at);
+    return repair && Number.isFinite(since) && now - since >= 30000
+      && (repair.blockers || []).some(blocker => reaches(blocker, unit.id));
+  });
+}
+
+async function stopIdleEngine(pid) {
+  if (pid === process.pid) throw new Error('refusing to stop the dashboard process');
+  process.kill(pid, 'SIGTERM');
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (!processAlive(pid)) return;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  throw new Error('engine did not stop');
+}
+
 function launchRecovery({ projectDir, feature, runId, onFinish }) {
   const relative = `.aioson/runtime/dashboard-recovery/${crypto.randomUUID()}`;
   const directory = path.join(projectDir, relative);
@@ -40,7 +69,7 @@ function launchRecovery({ projectDir, feature, runId, onFinish }) {
   });
 }
 
-function createRecoveryController(projectDir, { status = statusExecution, decide = decideExecution, launch = launchRecovery, isProcessAlive = processAlive, now = Date.now } = {}) {
+function createRecoveryController(projectDir, { status = statusExecution, decide = decideExecution, launch = launchRecovery, isProcessAlive = processAlive, stopEngine = stopIdleEngine, now = Date.now } = {}) {
   const jobs = new Map();
   const observed = new Map();
   return {
@@ -62,6 +91,7 @@ function createRecoveryController(projectDir, { status = statusExecution, decide
     },
     status(feature, snapshot) {
       if (supervisedMaintenance(projectDir, feature, snapshot)) return { busy: true, phase: 'maintenance', message: 'O supervisor está corrigindo esta execução e preservando as aprovações. A retomada será automática após a correção; nenhuma confirmação é necessária.' };
+      if (!jobs.get(feature)?.busy && stalledReviewCycle(snapshot, now())) return { busy: false, stalled: true, phase: 'stalled', message: 'O motor está vivo, mas o reparo e as revisões aguardam uns pelos outros. A recuperação reinicia o motor sem trabalhadores ativos e preserva os relatórios, as aprovações e o QA obrigatório.' };
       const job = jobs.get(feature);
       if (!job || job.run_id !== snapshot.run?.run_id) return { busy: false };
       if (snapshot.engine?.alive && !job.busy) {
@@ -81,7 +111,19 @@ function createRecoveryController(projectDir, { status = statusExecution, decide
         const snapshot = await status({ projectDir, feature });
         if (!snapshot.run || snapshot.run.run_id !== payload.run_id) return { code: 409, data: { error: 'A execução mudou. Atualize o painel.' } };
         if (supervisedMaintenance(projectDir, feature, snapshot)) return { code: 409, data: { error: 'Correção pelo supervisor em andamento. A retomada será automática ao liberar os arquivos.' } };
-        if (snapshot.engine?.alive || !['paused', 'decision_required', 'running'].includes(snapshot.run.status)) return { code: 409, data: { error: 'A execução está ativa ou já terminou.' } };
+        if (snapshot.engine?.alive) {
+          if (payload.unit || !stalledReviewCycle(snapshot, now())) return { code: 409, data: { error: 'A execução está ativa ou já terminou.' } };
+          // Re-read immediately before stopping the exact bound engine. A new
+          // worker or changed run cancels recovery; never restart over it.
+          const checked = await status({ projectDir, feature });
+          if (checked.run?.run_id !== payload.run_id || checked.engine?.pid !== snapshot.engine.pid
+              || !stalledReviewCycle(checked, now())) return { code: 409, data: { error: 'A execução voltou a progredir ou mudou. Atualize o painel.' } };
+          await stopEngine(snapshot.engine.pid);
+          const stopped = await status({ projectDir, feature });
+          if (stopped.run?.run_id !== payload.run_id || isProcessAlive(snapshot.engine.pid)
+              || stopped.engine?.pid !== snapshot.engine.pid) return { code: 409, data: { error: 'O motor mudou durante a recuperação. Atualize o painel.' } };
+        }
+        if (!['paused', 'decision_required', 'running'].includes(snapshot.run.status)) return { code: 409, data: { error: 'A execução está ativa ou já terminou.' } };
         const pending = snapshot.decisions_pending || [];
         const targets = payload.unit ? pending.filter(item => item.unit === payload.unit) : pending;
         if (payload.unit && targets.length !== 1) return { code: 409, data: { error: 'Esta unidade não possui mais uma decisão pendente.' } };
@@ -109,4 +151,4 @@ function createRecoveryController(projectDir, { status = statusExecution, decide
   };
 }
 
-module.exports = { createRecoveryController, launchRecovery };
+module.exports = { createRecoveryController, launchRecovery, stalledReviewCycle };

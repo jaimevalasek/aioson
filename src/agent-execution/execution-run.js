@@ -35,9 +35,11 @@ const crypto = require('node:crypto');
 const { notesRelative, continuityPrompt } = require('./execution-notes');
 const { listRootTemporaryArtifacts, cleanupExecutionTemporaryArtifacts } = require('./execution-temporary-artifacts');
 const { INVALID_REPORT_REASONS, prepareReportRepair, reportRepairPrompt } = require('./execution-report-repair');
-const { externalRepairPaths, contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs } = require('./execution-contract-repair');
-const { MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, queueRecovery, queueSupervisorTakeover, recoveryPrompt, routeKey } = require('./execution-recovery');
+const { contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs, ownersInFlight } = require('./execution-contract-repair');
+const { MAX_DEV_QA_REWORK_ROUNDS, CROSS_UNIT_TAKEOVER_REASON, crossUnitTakeoverNote, devQaCycleLimitReached, queueRecovery, queueSupervisorTakeover, recoveryPrompt, routeKey } = require('./execution-recovery');
 const { readExecutionPlan, verifyExecutionPlan, executionPlanRelative, pathOwns } = require('./execution-plan');
+const { extractSection } = require('../lib/feature-completeness-format');
+const { createExecutionJev } = require('./execution-jev');
 const { stripInjectionChars, scanInjectionPayloads } = require('../lib/llm-content-sanitizer');
 const { loadManifest, resolveExecutionEntry, assertFeatureSlug } = require('./manifest');
 const {
@@ -52,7 +54,7 @@ const {
   fallbackReasonCategory
 } = require('./dispatcher');
 const { safeReportPath } = require('./reports');
-const { contextWindow } = require('./execution-policy');
+const { contextWindow, readExecutionPolicy } = require('./execution-policy');
 const { readPriceCatalog, findTariff, estimateCost } = require('./execution-cost');
 const { attemptContext, executionMetrics } = require('./execution-metrics');
 const { loadModelCatalog } = require('./model-catalog');
@@ -86,6 +88,17 @@ const LEASE_MS = 30000;
 const DEV_CHOICES = ['retry', 'fallback:<host>/<model>[/<effort>]', 'skip', 'abort'];
 const QA_CHOICES = ['retry', 'fallback:<host>/<model>[/<effort>]', 'skip-qa', 'abort'];
 const MAX_EXCERPT_ITEMS = 20;
+// A headless worker's session ends with its turn. In the first play-vivo run a
+// DEV put its 8-minute verification in a background shell, ended the turn "to
+// wait for it" and exited without a report; the report-repair worker repeated
+// it. Nothing re-invokes a worker, so every prompt says so.
+const SINGLE_SESSION_RULE = 'SINGLE SESSION: this is one unattended session. It ends the moment you end your turn, and nothing wakes it again. Run every command — the verification commands above included — directly in the foreground and wait for its exit code, giving a long command a long timeout (split a chain into separate foreground calls if one would exceed it). Never start a background task, background shell or monitor, and never detach a process (spawn detached, nohup, start /b, a script that launches the check and returns) to wait for a marker file later: a detached check dies with the session. A check left by an earlier attempt is not running; run it again. Write the report at the path above before your final message — when a check is unfinished or failed, report that as a finding instead of waiting.';
+// A lane worker cannot run what only exists after integration (a re-provisioned
+// bench, a live service). In play-vivo, units reported that as BLOCKED with an
+// untyped finding; the engine read it as a defect, sent sound units to rework
+// and then failed to route a repair to the walkthrough's owner. Integration
+// owns those checks, so the worker types them and passes the unit on.
+const ENVIRONMENT_RULE = 'ENVIRONMENT LIMITS: a check this environment cannot run — a bench or VPS walkthrough, a live service, a command denied here, a build that only exists after integration — is not a defect of the unit, a rework cannot make it run, and you must not provision shared environments to force it. Run every check you can; when they pass, report PASS and list each check you could not run as a finding with "kind": "verification_not_run" and "severity": "medium", naming the command and why it could not run, plus a messages[] note to "integration" with the steps to run it. Report FAIL or BLOCKED only for a defect you observed or a check you could run that fails.';
 // Orchestrated workers have no AIOSON wall-clock deadline. Progress is bounded
 // by evidence instead: structured loop detection, no-progress recovery and a
 // hard QA→DEV convergence cap. Provider/client process limits remain external.
@@ -203,20 +216,23 @@ async function moveStateAside(file) {
   }
 }
 
+const WINDOWS_RENAME_REFUSALS = ['EPERM', 'EBUSY', 'EACCES'];
+
 async function atomicWrite(file, value) {
   await fs.mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
   await fs.writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
   // Windows refuses a rename onto a file another handle still holds (EPERM/
   // EBUSY) — an indexer, an antivirus scan, a reader mid-poll. Under load
-  // those holds last longer than a few milliseconds: retry with a growing
-  // backoff (~1.4s in total) before giving up.
+  // those holds last longer than a few milliseconds — a run state of several
+  // hundred KB invites a scan on every write: retry with a growing backoff
+  // (~5s in total) before giving up.
   for (let attempt = 0; ; attempt += 1) {
     try {
       await fs.rename(tmp, file);
       return;
     } catch (error) {
-      if (!['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt >= 10) {
+      if (!WINDOWS_RENAME_REFUSALS.includes(error.code) || attempt >= 20) {
         await fs.rm(tmp, { force: true }).catch(() => {});
         throw error;
       }
@@ -240,10 +256,10 @@ function createLeaseMonitor(lease, { intervalMs = Math.floor(LEASE_MS / 3) } = {
   let lost = false;
   let running = false;
   let inFlight = Promise.resolve();
-  const lose = () => {
+  const lose = (reason = new Error('lease_lost')) => {
     if (lost) return;
     lost = true;
-    controller.abort(new Error('lease_lost'));
+    controller.abort(reason);
   };
   const tick = () => {
     if (lost || running) return;
@@ -251,12 +267,13 @@ function createLeaseMonitor(lease, { intervalMs = Math.floor(LEASE_MS / 3) } = {
     inFlight = Promise.resolve()
       .then(() => renewLease(lease))
       .then((ok) => { if (!ok) lose(); })
-      .catch(lose)
+      .catch(() => lose())
       .finally(() => { running = false; });
   };
   const timer = setInterval(tick, Math.max(1, Number(intervalMs) || 1));
   timer.unref?.();
-  return { signal: controller.signal, get lost() { return lost; }, async stop() { clearInterval(timer); await inFlight; } };
+  // `abort` stops every worker of the run for another reason than the lease.
+  return { signal: controller.signal, get lost() { return lost; }, abort: (reason) => lose(reason), async stop() { clearInterval(timer); await inFlight; } };
 }
 
 // ─── the feature lease: wait out a dead run, never delete a live lock ───
@@ -856,10 +873,39 @@ function buildIntegrationSupervisor(plan, integrationRole = plan?.integration?.r
     write_paths: files,
     integration_owner: 'dev',
     dev: { role: 'integration_dev', ...integrationRole },
-    qa: laneQa ? { ...laneQa, max_fix_files: Math.max(1, Math.min(files.length || 1, 20)), max_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS } : null,
+    qa: laneQa ? { ...laneQa, max_fix_files: laneQa.max_fix_files === 0 ? 0 : Math.max(1, Math.min(files.length || 1, 20)), max_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS } : null,
     units: [unit.id]
   };
   return { unit, lane };
+}
+
+/**
+ * The final supervisor sits after the last lane wave, so `--wave=N` below that
+ * wave pauses before it. A configured integration_dev then never sees the
+ * bounded slice; the run says so instead of letting the owner assume the
+ * configured integrator reviewed it.
+ */
+function integrationDeferral(supervisor, waveLimit) {
+  if (!supervisor || waveLimit === null || !Number.isFinite(waveLimit)) return null;
+  const lastLaneWave = supervisor.unit.wave - 1;
+  if (waveLimit >= lastLaneWave) return null;
+  const role = supervisor.lane.dev;
+  const route = [role.host, role.model, role.reasoning_effort].filter(Boolean).join('/');
+  return {
+    role: 'integration_dev',
+    route,
+    stop_after_wave: waveLimit,
+    last_lane_wave: lastLaneWave,
+    message: `integration_dev (${route}) runs only after the last lane wave (${lastLaneWave}); this run stops after wave ${waveLimit}, so integrating waves 1-${waveLimit} stays with the session DEV — resume without --wave to reach the supervisor`
+  };
+}
+
+async function planDeclaresInterfaceContract(projectDir, plan) {
+  for (const relative of [plan?.source?.plan, plan?.source?.prd].filter(Boolean)) {
+    const content = await fs.readFile(path.join(projectDir, relative), 'utf8').catch(() => null);
+    if (content && extractSection(content, ['Interface Contract', 'Contrato de Interface']) !== null) return true;
+  }
+  return false;
 }
 
 function integrationDevRoutes(roles) {
@@ -1070,7 +1116,7 @@ async function executeRole({
     // Some harnesses correctly announce `cwd` but run their own shell tool in
     // the operator home. Give the model an absolute workspace and report path;
     // source ownership remains the relative unit contract validated by AIOSON.
-    prompt_text: `${buildExecutionPrompt(promptText, expected, reportFile)}\nAIOSON WORKSPACE ROOT: ${projectDir}\nAnchor every file and shell operation to this absolute workspace. Do not search sibling drives or the operator home. The absolute report path above is the only accepted report destination.\n`,
+    prompt_text: `${buildExecutionPrompt(promptText, expected, reportFile)}\nAIOSON WORKSPACE ROOT: ${projectDir}\nAnchor every file and shell operation to this absolute workspace. Do not search sibling drives or the operator home. The absolute report path above is the only accepted report destination.\n${SINGLE_SESSION_RULE}\n${unit.owner === 'lane' ? `${ENVIRONMENT_RULE}\n` : ''}`,
     timeout,
     signal,
     abortReason: 'lease_lost',
@@ -1191,16 +1237,42 @@ async function executeRole({
   try { telemetry.transition(verdict === 'PASS' ? 'passed' : 'failed', verdict === 'PASS' ? null : `verdict_${String(verdict).toLowerCase()}`); } catch { /* tolerance */ }
   telemetry.close();
   const mailbox = normalizeMessages(report.report.messages);
+  const findings = Array.isArray(report.report.findings) ? report.report.findings : [];
+  // BLOCKED only because this environment could not run a check (a bench,
+  // a denied command, a live session) is not a defect in the unit: the work
+  // goes on to review and the checks move to integration, which owns the
+  // full verification. Any other blocking finding still blocks.
+  const deferred = verdict === 'BLOCKED' ? environmentOnlyBlockers(findings) : null;
   return {
     ...base,
-    kind: verdict === 'PASS' ? 'passed' : (verdict === 'FAIL' ? 'failed' : 'blocked'),
+    kind: verdict === 'PASS' || deferred ? 'passed' : (verdict === 'FAIL' ? 'failed' : 'blocked'),
     verdict,
-    findings: Array.isArray(report.report.findings) ? report.report.findings : [],
+    ...(deferred ? { deferred_verification: deferred } : {}),
+    findings,
     evidence: Array.isArray(report.report.evidence) ? report.report.evidence : [],
+    verification: report.verification,
     corrections: Array.isArray(report.report.corrections) ? report.report.corrections : [],
     messages: mailbox.messages,
     messages_dropped: mailbox.dropped
   };
+}
+
+// Findings that say a check could not run here, not that the work is wrong.
+const ENVIRONMENT_FINDING_KINDS = new Set(['verification_not_run', 'manual_verification_deferred']);
+const BLOCKING_SEVERITIES = new Set(['blocking', 'critical', 'high']);
+
+/**
+ * The environment findings of a BLOCKED report when they are the whole reason
+ * for it: at least one finding says a check could not run here, and every
+ * blocking-severity finding is of that kind. A BLOCKED report with no
+ * environment finding, or with a real defect, stays blocked.
+ */
+function environmentOnlyBlockers(findings) {
+  const list = findings || [];
+  const environment = list.filter((finding) => ENVIRONMENT_FINDING_KINDS.has(String(finding?.kind || '')));
+  if (environment.length === 0) return null;
+  const blocking = list.filter((finding) => BLOCKING_SEVERITIES.has(String(finding?.severity || '').toLowerCase()));
+  return blocking.every((finding) => ENVIRONMENT_FINDING_KINDS.has(String(finding?.kind || ''))) ? environment : null;
 }
 
 // ─── run state ───
@@ -1320,6 +1392,8 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
   check('manifest', Boolean(loaded.exists && loaded.ok), loaded.exists ? (loaded.ok ? null : 'invalid') : 'missing');
   const rolesRead = await readExecutionRoles(projectDir);
   const store = await readSignatures({ env });
+  const policyRead = await readExecutionPolicy(projectDir);
+  if (!policyRead.ok) check('execution-policy', false, policyRead.errors.join('; '));
   const routingWarnings = [];
   const routeRuntimeRole = (laneId, kind, configured, planned) => {
     const role = configured || planned;
@@ -1402,6 +1476,9 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
   check('units', laneUnits.length > 0, laneUnits.length > 0 ? null : 'the plan has no lane units to run');
   // The client seam: a spawner in force must be resolvable before anything is handed to it.
   const spawner = resolveSpawner({ roles: rolesRead.ok ? rolesRead.roles : null, env });
+  if (policyRead.ok && policyRead.policy.execution?.require_spawner) {
+    check('execution-boundary', Boolean(spawner), spawner ? 'External executor required by project policy.' : 'external_spawner_required: configure execution.spawner or AIOSON_EXECUTION_SPAWNER before starting workers.');
+  }
   if (spawner) {
     try {
       await resolveExecutable(spawner.command, resolverOptions);
@@ -1423,6 +1500,7 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
     verification: verified,
     runtimeRoles: rolesRead.ok && rolesRead.enabled ? rolesRead.roles : null,
     spawner,
+    requireSpawner: policyRead.ok && policyRead.policy.execution?.require_spawner === true,
     timeLimitEnabled: false,
     requireIndependentQa: rolesRead.ok ? rolesRead.roles.execution?.require_independent_qa === true : false
   };
@@ -1443,6 +1521,14 @@ async function runExecution({
   stopAfterWave = null,
   adapterRegistry = DEFAULT_ADAPTERS,
   catalogLoader,
+  // Injectable Jev seams (tests); production loads the project's config.
+  jevJudge,
+  jevConfigLoader,
+  reviewOrderPollMs = 2000,
+  // How long refused state writes may last before the run stops (see persist).
+  persistGiveUpMs = 180000,
+  // Seam for tests: the rename used by every state write.
+  stateWriter = null,
   env = process.env,
   now = () => Date.now(),
   progress = () => {},
@@ -1476,6 +1562,12 @@ async function runExecution({
     return [roles.active_profile, ...profileFallbackOrder(roles)].join(',');
   };
   const validateRuntimeProfiles = async (rolesSnapshot) => {
+    // Profile probes launch host processes directly. Under an external boundary,
+    // use existing signatures; the runner must not launch an unwrapped probe.
+    const policyRead = await readExecutionPolicy(projectDir);
+    if (!policyRead.ok || policyRead.policy.execution?.require_spawner) {
+      return { roles: rolesSnapshot, result: null, digest: null };
+    }
     let current = rolesSnapshot;
     let result = null;
     // A save can land while its previous contents are being probed. Follow the
@@ -1536,6 +1628,7 @@ async function runExecution({
     issues: preflight.issues,
     warnings: preflight.warnings || [],
     spawner: preflight.spawner ? { command: preflight.spawner.command, source: preflight.spawner.source } : null,
+    require_spawner: preflight.requireSpawner,
     ...(automaticProfileValidation ? { profile_validation: { ok: automaticProfileValidation.ok, reason: automaticProfileValidation.reason, probed: automaticProfileValidation.probed, cached: automaticProfileValidation.cached, routing_ready: automaticProfileValidation.routing?.ready === true } } : {})
   };
   if (!preflight.ok) {
@@ -1545,6 +1638,7 @@ async function runExecution({
     return { ok: true, status: 'ready', reason: null, feature, preflight: preflightReport, plan: preflight.plan.summary, follow_command: followCommand(feature), exitCode: 0 };
   }
   const { plan, manifest, planDigest } = preflight;
+  const jev = createExecutionJev({ projectDir, plan, env, ...(jevJudge ? { judge: jevJudge } : {}), ...(jevConfigLoader ? { loadConfig: jevConfigLoader } : {}) });
   let supervisor = buildIntegrationSupervisor(plan, preflight.runtimeRoles?.roles?.integration_dev || null);
   if (supervisor) plan.lanes = { ...plan.lanes, integration: supervisor.lane };
   const stateFile = runStatePath(projectDir, feature);
@@ -1670,8 +1764,36 @@ async function runExecution({
     else if (typeof state.until_complete !== 'boolean') state.until_complete = manifest.manifest?.orchestration?.mode === 'autopilot';
     const continuousRecovery = state.until_complete && !step;
     const startupSupervisorRoutes = integrationDevRoutes(preflight.runtimeRoles);
+    const rerouted = new Set();
     if (continuousRecovery) for (const unit of Object.values(state.units || {})) {
-      const decision = unit.pending_decision;
+      let decision = unit.pending_decision;
+      // A parked cross-unit failure is judged again with the current routing
+      // rules: its owner first, then the integration supervisor. Only one that
+      // no supervisor can take keeps waiting for a person.
+      if (decision?.reason === CROSS_UNIT_TAKEOVER_REASON && unit.owner !== 'supervisor') {
+        const outcome = repairOutcomeFromState(unit);
+        const resolution = outcome ? contractRepairResolution(plan, state, unit.id, outcome, true, decision.stage) : null;
+        if (resolution?.status === 'routable' && applyContractRepair(plan, state, unit.id, resolution.repair, nowIso())) {
+          rerouted.add(unit.id);
+          state.decisions.push({ unit: unit.id, stage: decision.stage, choice: 'reroute', target: resolution.repair.unit, reason_before: decision.reason, source: 'automatic_contract_repair_resume', at: nowIso() });
+          emit({ type: 'contract_repair', status: 'routed', producer: resolution.repair.unit, consumer: unit.id, paths: resolution.repair.paths, affected: resolution.repair.affected });
+          continue;
+        }
+        if (resolution?.status === 'deferred' && deferContractRepair(unit, decision.stage, resolution, outcome, nowIso())) {
+          rerouted.add(unit.id);
+          continue;
+        }
+        if (resolution?.status === 'unresolved' && resolution.paths?.length) {
+          if (queueSupervisorTakeover(unit, decision.stage, { ...decision, reason: CROSS_UNIT_TAKEOVER_REASON }, startupSupervisorRoutes, nowIso(), { paths: resolution.paths, waitFor: ownersInFlight(plan, state, unit.id, resolution.paths) })) {
+            rerouted.add(unit.id);
+            state.decisions.push({ unit: unit.id, stage: decision.stage, choice: 'supervisor', reason_before: decision.reason, source: 'automatic_supervisor_takeover', trigger: resolution.reason, paths: resolution.paths, at: nowIso() });
+          }
+          continue;
+        }
+        // No path another unit owns now (only future deliverables): the
+        // failure is the unit's own again and follows ordinary recovery.
+        decision = unit.pending_decision = { ...decision, reason: decision.stage === 'qa' ? 'qa_acceptance_failed' : `verdict_${decision.kind || 'failed'}` };
+      }
       const supervisorOutcome = decision?.reason === 'recovery_no_progress'
         ? { ...decision, reason: unit.recovery?.last_reason || unit.retry_context?.[decision.stage]?.reason || decision.reason }
         : decision;
@@ -1689,7 +1811,7 @@ async function runExecution({
     // copy of the same consumer attempt.
     if (resume && continuousRecovery) for (const planned of plan.units || []) {
       const consumer = state.units[planned.id];
-      if (!consumer || !['pending', 'running', 'decision_required'].includes(consumer.status)) continue;
+      if (!consumer || consumer.deferred_contract_repair || rerouted.has(planned.id) || !['pending', 'running', 'decision_required'].includes(consumer.status)) continue;
       const outcome = repairOutcomeFromState(consumer);
       if (!outcome) continue;
       const repair = contractRepairTarget(plan, state, planned.id, outcome, true);
@@ -1714,6 +1836,13 @@ async function runExecution({
     // writes are serialized (a rename racing another rename onto the same
     // target is exactly what Windows refuses).
     let persistChain = Promise.resolve();
+    // The state in memory is the run; the file is its copy. A write Windows
+    // refuses past atomicWrite's retries (an antivirus scan, a reader holding
+    // the file) used to reject into the scheduler loop and stop it while the
+    // workers and their heartbeats kept the process alive — a run that looked
+    // healthy and never started another unit. Now the run continues and the
+    // next write carries the newer state; only a file refused for minutes stops it.
+    let persistRefused = null;
     const persist = () => {
       const write = persistChain.then(async () => {
         state.updated_at = nowIso();
@@ -1721,28 +1850,72 @@ async function runExecution({
         // reader should expect, so `execution:status` can tell a run that is
         // thinking from a run whose process is gone.
         state.engine = { pid: process.pid, heartbeat_at: state.updated_at, heartbeat_ms: heartbeatMs || null };
-        await atomicWrite(stateFile, state);
+        try {
+          await (stateWriter || atomicWrite)(stateFile, state);
+          if (persistRefused) {
+            emit({ type: 'notice', check: 'state_write_recovered', message: `the run state is written again after ${describeMs(Date.now() - persistRefused.since)} of refused writes (${persistRefused.code})` });
+            persistRefused = null;
+          }
+        } catch (error) {
+          if (!WINDOWS_RENAME_REFUSALS.includes(error.code)) throw error;
+          if (!persistRefused) {
+            persistRefused = { since: Date.now(), code: error.code };
+            emit({ type: 'notice', check: 'state_write_refused', message: `${error.code} writing ${runStateRelative(feature)} (another process holds it) — the run continues and writes the newer state on its next change` });
+          } else if (Date.now() - persistRefused.since > persistGiveUpMs) {
+            throw error;
+          }
+        }
       });
       persistChain = write.catch(() => {});
       return write;
     };
+    // The Jev decisions the roles file enables right now (re-read every cycle).
+    let jevFlags = preflight.runtimeRoles?.execution?.jev || {};
+    // A roles file edited into an invalid shape mid-run (a typo, or a key a
+    // newer AIOSON added while this engine still runs older code) must not
+    // crash the units that start next: the last valid configuration stays in
+    // force and the run says so once per file version.
+    let lastValidRoles = null;
+    let invalidRolesNoticed = null;
+    const noticeInvalidRoles = (current) => {
+      if (!current || current.reason !== 'roles_invalid' || invalidRolesNoticed === current.file_digest) return;
+      invalidRolesNoticed = current.file_digest;
+      emit({ type: 'notice', check: 'roles_invalid_kept_previous', message: `${current.path || 'execution-roles.json'} is invalid (${(current.errors || []).map((item) => `${item.path} ${item.message}`).join('; ') || 'unreadable'}) — the run keeps its last valid configuration until the file is fixed` });
+    };
     const refreshRuntimePolicy = async () => {
       const current = await readExecutionRoles(projectDir).catch(() => null);
-      if (!current?.ok || !current.enabled) return null;
+      if (!current?.ok || !current.enabled) {
+        noticeInvalidRoles(current);
+        return null;
+      }
+      lastValidRoles = current;
+      jevFlags = current.roles.execution?.jev || {};
       const capacity = current.roles.parallel?.max_concurrent_lanes || 1;
-      const previous = state.parallel?.max_concurrent_lanes || 1;
-      state.parallel = { max_concurrent_lanes: capacity };
+      const scheduling = current.roles.parallel?.scheduling || 'waves';
+      const laneGate = current.roles.parallel?.lane_gate || 'after_qa';
+      const previous = state.parallel || {};
+      state.parallel = { max_concurrent_lanes: capacity, scheduling, lane_gate: laneGate };
       state.on_unavailable = current.roles.on_unavailable || 'ask';
-      if (previous !== capacity) emit({ type: 'config', status: 'reloaded', key: 'parallel.max_concurrent_lanes', previous, value: capacity });
+      if ((previous.max_concurrent_lanes || 1) !== capacity) emit({ type: 'config', status: 'reloaded', key: 'parallel.max_concurrent_lanes', previous: previous.max_concurrent_lanes || 1, value: capacity });
+      if ((previous.scheduling || 'waves') !== scheduling) emit({ type: 'config', status: 'reloaded', key: 'parallel.scheduling', previous: previous.scheduling || 'waves', value: scheduling });
+      if ((previous.lane_gate || 'after_qa') !== laneGate) emit({ type: 'config', status: 'reloaded', key: 'parallel.lane_gate', previous: previous.lane_gate || 'after_qa', value: laneGate });
       return current.roles;
     };
     await refreshRuntimePolicy();
+    // The cross-lane boundary `lanes` scheduling relies on: without an
+    // Interface Contract in the plan or PRD the run keeps the wave barrier.
+    const laneBoundary = await planDeclaresInterfaceContract(projectDir, plan);
+    if (state.parallel?.scheduling === 'lanes' && !laneBoundary) {
+      emit({ type: 'notice', check: 'lanes_scheduling_without_contract', message: 'parallel.scheduling is "lanes" but neither the plan nor the PRD has an Interface Contract — units keep the wave barrier' });
+    }
     state.status = 'running';
     state.reason = null;
     state.spawner = spawner ? { command: spawner.command, args: spawner.args, source: spawner.source } : null;
     await persist();
     emit({ type: 'run', status: 'started', run_id: state.run_id, waves: state.waves.length, resumed: Boolean(resume), spawner: spawner ? spawner.command : null, follow: followCommand(feature) });
     emit({ type: 'limits', context_enforced: false, time_enforced: false, max_dev_qa_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS });
+    const startDeferral = integrationDeferral(supervisor, stopAfterWave === null ? null : Number(stopAfterWave));
+    if (startDeferral) emit({ type: 'notice', check: 'integration_deferred', ...startDeferral });
 
     const planUnits = Object.fromEntries((plan.units || []).map((unit) => [unit.id, unit]));
     if (supervisor) planUnits[supervisor.unit.id] = supervisor.unit;
@@ -1775,6 +1948,7 @@ async function runExecution({
     let validatedRuntimeConfig = initiallyValidatedDigest;
     let runtimeValidation = null;
     const validateChangedRuntimeConfig = async (currentRoles) => {
+      if (preflight.requireSpawner) return currentRoles;
       let observed = currentRoles;
       for (let pass = 0; pass < 3 && observed?.file_digest !== validatedRuntimeConfig; pass += 1) {
         if (!runtimeValidation) {
@@ -1809,8 +1983,16 @@ async function runExecution({
         if (currentRoles.ok && currentRoles.enabled) break;
         if (readAttempt < 2) await new Promise(resolve => setTimeout(resolve, 100));
       }
+      let keptPrevious = false;
+      if (currentRoles.reason === 'roles_invalid' && lastValidRoles) {
+        noticeInvalidRoles(currentRoles);
+        currentRoles = lastValidRoles;
+        keptPrevious = true;
+      }
       if (!currentRoles.ok || !currentRoles.enabled) throw new Error(`${currentRoles.reason || 'roles_unavailable'}: ${currentRoles.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles.path}`);
-      currentRoles = await validateChangedRuntimeConfig(currentRoles);
+      // The kept configuration was validated when it was read; re-validating
+      // would read the invalid file again.
+      if (!keptPrevious) currentRoles = await validateChangedRuntimeConfig(currentRoles);
       if (!currentRoles?.ok || !currentRoles.enabled) throw new Error(`${currentRoles?.reason || 'roles_unavailable'}: ${currentRoles?.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles?.path || 'execution roles changed during validation'}`);
       const supervisorTakeover = !override && role === 'dev' && Boolean(unitState.supervisor_takeover);
       const routingLaneId = supervisorTakeover ? 'integration' : laneId;
@@ -1819,7 +2001,7 @@ async function runExecution({
       let liveRole = override || selected;
       let routingProfile = currentRoles.roles.active_profile || 'legacy';
       const signatureProbe = profileProbe || probeHostSignature;
-      const ensureOptions = { env, now, adapterRegistry, resolverOptions, probe: signatureProbe };
+      const ensureOptions = { env, now, adapterRegistry, resolverOptions, probe: signatureProbe, ...(preflight.requireSpawner ? { refreshStates: new Set() } : {}) };
       const resolveSignedRoute = async (route, profile) => {
         const ensured = await ensureHostSignature(
           { host: route.host, model: route.model, reasoning_effort: route.reasoning_effort || null },
@@ -1855,7 +2037,25 @@ async function runExecution({
           on: ['capacity', 'unavailable']
         });
       }
-      let resolvedRoute = await resolveSignedRoute(liveRole, routingProfile);
+      // Review depth (opt-in Jev): a low-risk unit may be reviewed at `high`
+      // instead of the configured effort. The decision is kept on the unit so
+      // a review after rework uses the same depth; an unsigned lower route
+      // falls back to the configured one.
+      let reviewDepth = null;
+      if (role === 'qa' && !override && currentRoles.roles.execution?.jev?.review_depth === true) {
+        unitState.jev ||= {};
+        if (!unitState.jev.review_depth) {
+          const decided = await jev.reviewDepth(planUnits[unitState.id] || { id: unitState.id, files: [] }, liveRole);
+          unitState.jev.review_depth = { ...decided, configured_effort: liveRole.reasoning_effort || null, at: nowIso() };
+          emit({ type: 'jev', decision: 'review_depth', wave: unitState.wave, unit: unitState.id, lane: laneId, choice: decided.choice, effort: decided.effort || null, source: decided.source, reason: decided.reason || null });
+        }
+        reviewDepth = unitState.jev.review_depth;
+      }
+      let resolvedRoute = null;
+      if (reviewDepth?.effort && reviewDepth.effort !== liveRole.reasoning_effort) {
+        resolvedRoute = await resolveSignedRoute({ ...liveRole, reasoning_effort: reviewDepth.effort }, routingProfile);
+      }
+      resolvedRoute ||= await resolveSignedRoute(liveRole, routingProfile);
       if (!resolvedRoute && !override) {
         for (const fallback of resolveProfileFallbacks(currentRoles.roles, routingLaneId, role)) {
           resolvedRoute = await resolveSignedRoute(fallback, fallback.profile);
@@ -1920,11 +2120,12 @@ async function runExecution({
       emit({ type: 'integration', status: 'manual_verification_deferred', unit: unitState.id, stage, checks: list.length });
     };
 
-    const routeUnitToSupervisor = async (unitState, stage, outcome, trigger) => {
+    const routeUnitToSupervisor = async (unitState, stage, outcome, trigger, crossUnitPaths = []) => {
       const currentRoles = await refreshRuntimePolicy();
-      if (!queueSupervisorTakeover(unitState, stage, outcome, integrationDevRoutes(currentRoles))) return false;
+      const waitFor = ownersInFlight(plan, state, unitState.id, crossUnitPaths);
+      if (!queueSupervisorTakeover(unitState, stage, outcome, integrationDevRoutes(currentRoles), nowIso(), { paths: crossUnitPaths, waitFor })) return false;
       const next = unitState.supervisor_takeover.next;
-      state.decisions.push({ unit: unitState.id, stage, choice: 'supervisor', reason_before: outcome.reason, source: 'automatic_supervisor_takeover', trigger, at: nowIso() });
+      state.decisions.push({ unit: unitState.id, stage, choice: 'supervisor', reason_before: outcome.reason, source: 'automatic_supervisor_takeover', trigger, ...(crossUnitPaths.length ? { paths: crossUnitPaths } : {}), at: nowIso() });
       emit({
         type: 'unit',
         role: stage,
@@ -1952,9 +2153,8 @@ async function runExecution({
         messages: outcome.messages?.length ? outcome.messages : observed.messages || []
       };
       const isSupervisor = unitState.owner === 'supervisor';
-      const repairPaths = autopilot && !isSupervisor ? externalRepairPaths(plan, unitState.id, repairOutcome) : [];
       const contractResolution = autopilot && !isSupervisor
-        ? contractRepairResolution(plan, state, unitState.id, repairOutcome, continuousRecovery)
+        ? contractRepairResolution(plan, state, unitState.id, repairOutcome, continuousRecovery, stage)
         : null;
       const contractTarget = contractResolution?.status === 'routable' ? contractResolution.repair : null;
       if (contractTarget) {
@@ -1971,8 +2171,15 @@ async function runExecution({
       }
       // Structured evidence that names another compiled unit must never be
       // fed back to the same consumer indefinitely. If ownership cannot be
-      // resolved unambiguously, surface the plan defect after this attempt.
-      const crossUnitUnresolved = repairPaths.length > 0;
+      // resolved unambiguously, the integration supervisor takes the unit
+      // with authority over exactly those paths (continuous runs); only when
+      // no supervisor can take it does the plan defect wait for a person.
+      const crossUnitPaths = contractResolution?.status === 'unresolved' ? contractResolution.paths || [] : [];
+      const crossUnitUnresolved = crossUnitPaths.length > 0;
+      if (crossUnitUnresolved && continuousRecovery
+          && await routeUnitToSupervisor(unitState, stage, { ...repairOutcome, reason: CROSS_UNIT_TAKEOVER_REASON }, contractResolution.reason, crossUnitPaths)) {
+        return;
+      }
       // Planner-authorized technical repair uses the same bounded rework ledger
       // as QA. Host/capacity/configuration failures never change models here.
       const maxRepair = plan.lanes[unitState.lane]?.qa?.max_rework_rounds || 0;
@@ -2028,10 +2235,34 @@ async function runExecution({
         recoveryCircuitOpened = unitState.recovery?.circuit_breaker?.stage === stage;
         if (recoveryCircuitOpened && await routeUnitToSupervisor(unitState, stage, outcome, 'recovery_no_progress')) return;
       }
+      // Triage (opt-in Jev): an environment failure judged transient earns one
+      // automatic retry of the same stage per unit. Retrying is the only
+      // automatic effect; everything else still waits for a person.
+      if (jevFlags.triage === true && !crossUnitUnresolved && !devQaCycleLimit && !recoveryCircuitOpened && !unitState.jev?.retried?.[stage]) {
+        const verdict = await jev.triage(planUnits[unitState.id] || { id: unitState.id, files: [] }, stage, outcome);
+        unitState.jev ||= {};
+        unitState.jev.triage = [...(unitState.jev.triage || []), { stage, at: nowIso(), ...verdict }];
+        emit({ type: 'jev', decision: 'triage', wave: unitState.wave, unit: unitState.id, lane: unitState.lane, stage, choice: verdict.choice, source: verdict.source, reason: verdict.reason || null });
+        if (verdict.choice === 'retry') {
+          unitState.jev.retried = { ...(unitState.jev.retried || {}), [stage]: true };
+          if (stage === 'dev') {
+            unitState.dev = { status: 'pending' };
+            unitState.qa = { status: 'pending' };
+            unitState.status = 'pending';
+          } else {
+            unitState.qa = { status: 'pending' };
+            unitState.status = 'passed';
+          }
+          emit({ type: 'unit', role: stage, status: 'rework', unit: unitState.id, lane: unitState.lane, wave: unitState.wave, reason: 'jev_transient_retry' });
+          await persist();
+          wakeUp();
+          return;
+        }
+      }
       unitState.pending_decision = {
         stage,
         kind: outcome.kind,
-        reason: crossUnitUnresolved ? 'cross_unit_repair_unresolved' : devQaCycleLimit ? 'dev_qa_cycle_limit' : recoveryCircuitOpened ? 'recovery_no_progress' : outcome.reason || (outcome.verdict ? `verdict_${String(outcome.verdict).toLowerCase()}` : 'unknown'),
+        reason: crossUnitUnresolved ? 'cross_unit_repair_unresolved' : devQaCycleLimit ? 'dev_qa_cycle_limit' : recoveryCircuitOpened ? (unitState.recovery.circuit_breaker.reason || 'recovery_no_progress') : outcome.reason || (outcome.verdict ? `verdict_${String(outcome.verdict).toLowerCase()}` : 'unknown'),
         host: outcome.host || null,
         model: outcome.model || null,
         reasoning_effort: outcome.reasoning_effort || null,
@@ -2039,9 +2270,11 @@ async function runExecution({
         // What the disk said at the failure (a timeout that was still writing
         // vs one that never wrote) — the operator's hint, measured.
         detail: crossUnitUnresolved
-          ? `The failed unit named compiled path(s) owned by another unit, but automatic routing stopped (${contractResolution?.reason || 'unresolved'}): ${repairPaths.join(', ')}`
+          ? `The failed unit named compiled path(s) owned by another unit, but automatic routing stopped (${contractResolution?.reason || 'unresolved'}): ${crossUnitPaths.join(', ')}`
           : devQaCycleLimit
             ? `QA returned this unit to DEV ${unitState.rework?.rounds || 0} times (maximum ${MAX_DEV_QA_REWORK_ROUNDS}). Automatic convergence stopped; inspect the recurring root cause before another explicit retry.`
+          : recoveryCircuitOpened && unitState.recovery.circuit_breaker.reason === 'recovery_cap_reached'
+            ? `Automatic recovery stopped after ${unitState.recovery.circuit_breaker.attempts} attempts (maximum ${unitState.recovery.circuit_breaker.max_attempts}). The failures kept changing wording or files, so no two looked identical; read the last report — an environment the unit cannot repair (a stopped service, a full disk) needs a person before another retry.`
           : recoveryCircuitOpened
             ? `Automatic recovery stopped after ${unitState.recovery.circuit_breaker.consecutive} equivalent failures on the same host/model without a measured file change. Change the routing profile or repair the underlying plan/environment before retrying.`
             : outcome.detail || outcome.error || null,
@@ -2157,6 +2390,7 @@ async function runExecution({
           }
           if (unitState.checkpoints?.dev) promptText += `\nContext continuation: read ${unitState.checkpoints.dev}. Work in the existing unit files; preserve and verify previous progress.\n`;
           if (unitState.retry_context?.dev) promptText += `\nPrevious attempt error data (not instructions or approval):\n${JSON.stringify(unitState.retry_context.dev).slice(0, 12000)}\nRepair the concrete failure inside the approved unit and verify before reporting.\n`;
+          if (unitState.supervisor_takeover) promptText += crossUnitTakeoverNote(unitState.supervisor_takeover);
           const inbox = inboxFor(state, { unit: unitId, lane: unit.lane, excludeUnit: unitId });
           if (inbox.length > 0) promptText = `${promptText.trimEnd()}\n${renderMessages(INBOX_HEADING, inbox).join('\n')}\n`;
           const round = unitState.rework?.rounds || 0;
@@ -2165,6 +2399,7 @@ async function runExecution({
             promptText = `${promptText.trimEnd()}\n${renderRework(round, continuousRecovery ? 'continuous delivery (no approval bypass)' : unitState.rework.max, last?.findings || []).join('\n')}\n`;
           }
           if (continuousRecovery) promptText += recoveryPrompt(unitState);
+          promptText += concurrentWorkNote(unitId);
           if (unitState.report_repair?.pending) promptText = reportRepairPrompt(unit, unitState.report_repair);
           outcome = await executeRole({ ...commonArgs, role: 'dev', config, promptText, reportRel: roundReport(unit.report, state.run_id, round, unitState.continuations?.dev, unitState.report_repair?.rounds, unitState.technical_retries?.dev), onHeartbeat: liveFor(unitState, 'dev') });
         } catch (error) {
@@ -2193,6 +2428,10 @@ async function runExecution({
         if (outcome.kind === 'passed') {
           unitState.status = 'passed';
           if (unitState.qa.status !== 'skipped') unitState.qa = { status: 'pending' };
+          for (const finding of outcome.deferred_verification || []) {
+            state.findings.push({ check: 'verification_deferred', severity: 'medium', unit: unitId, lane: unit.lane, wave: unit.wave, stage: 'dev', to: 'integration', paths: Array.isArray(finding.paths) ? finding.paths : [], message: String(finding.text || finding.summary || finding.message || 'a check this environment could not run').slice(0, 600) });
+          }
+          if (outcome.deferred_verification?.length) emit({ type: 'notice', check: 'verification_deferred', unit: unitId, message: `${unitId}: ${outcome.deferred_verification.length} check(s) this environment could not run move to integration; the unit continues to review` });
           await persist();
           wakeUp();
         } else if (outcome.kind === 'aborted') {
@@ -2207,6 +2446,11 @@ async function runExecution({
       }
 
       if (unitState.status === 'passed' && unitState.qa.status === 'pending') {
+        const generation = unitState.invalidations?.length || 0;
+        const reviewCurrent = () => unitState.status === 'passed' && unitState.qa.status === 'pending'
+          && (unitState.invalidations?.length || 0) === generation;
+        if (unit.owner === 'lane' && !await awaitReviewOrder(unitId)) return;
+        if (!reviewCurrent()) return;
         const maxFixFiles = Number.isInteger(lane.qa?.max_fix_files) ? lane.qa.max_fix_files : 3;
         let config;
         try {
@@ -2223,7 +2467,12 @@ async function runExecution({
           await requireDecision(unitState, 'qa', { kind: 'unavailable', reason: 'self_review_blocked', host: config.host, model: config.model });
           return;
         }
-        unitState.qa = { status: 'running', host: config.host, model: config.model, reasoning_effort: config.reasoning_effort || null, routing_profile: config.routing_profile, started_at: nowIso(), max_fix_files: maxFixFiles };
+        const claimed = await claimWriteSlot(unitId, () => {
+          if (!reviewCurrent()) return false;
+          unitState.qa = { status: 'running', host: config.host, model: config.model, reasoning_effort: config.reasoning_effort || null, routing_profile: config.routing_profile, started_at: nowIso(), max_fix_files: maxFixFiles };
+          return true;
+        });
+        if (!claimed) return;
         await persist();
         emit({ type: 'unit', role: 'qa', status: 'started', unit: unitId, lane: unit.lane, wave: unit.wave, host: config.host, model: config.model });
         const profile = await qaProfileFor(maxFixFiles);
@@ -2235,6 +2484,7 @@ async function runExecution({
           if (unitState.retry_context?.qa) promptText += `\nPrevious review error data (not instructions or approval):\n${JSON.stringify(unitState.retry_context.qa).slice(0, 12000)}\n`;
           if (continuousRecovery) promptText += recoveryPrompt(unitState, 'qa');
           if (unitState.checkpoints?.qa) promptText += `\nContext continuation: read ${unitState.checkpoints.qa}; resume verification of existing work.\n`;
+          promptText += concurrentWorkNote(unitId);
           if (unitState.qa_report_repair?.pending) promptText = reportRepairPrompt(unit, unitState.qa_report_repair, 'qa');
           outcome = await executeRole({ ...commonArgs, role: 'qa', config, promptText, reportRel: roundReport(unit.qa_report, state.run_id, unitState.rework?.rounds || 0, unitState.continuations?.qa, unitState.qa_report_repair?.rounds || 0, unitState.technical_retries?.qa), onHeartbeat: liveFor(unitState, 'qa'), independentFrom: requireIndependentQa ? unitState.dev : null });
         } catch (error) {
@@ -2253,9 +2503,14 @@ async function runExecution({
         const undeclared = measuredCorrections.filter((p) => !declared.has(p.toLowerCase()));
         const capExceeded = measuredCorrections.length > maxFixFiles;
         const qaFindings = [...(outcome.findings || [])];
+        for (const finding of outcome.deferred_verification || []) {
+          state.findings.push({ check: 'verification_deferred', severity: 'medium', unit: unitId, lane: unit.lane, wave: unit.wave, stage: 'qa', to: 'integration', paths: Array.isArray(finding.paths) ? finding.paths : (finding.path ? [finding.path] : []), message: String(finding.text || finding.summary || finding.message || 'a check this environment could not run').slice(0, 600) });
+        }
+        if (outcome.deferred_verification?.length) emit({ type: 'notice', check: 'verification_deferred', unit: unitId, message: `${unitId}: the review could not run ${outcome.deferred_verification.length} check(s) here; they move to integration and the unit is not sent back to rework for them` });
         // Findings are unresolved issues; completed local fixes belong in
         // corrections[]. A contradictory PASS must not release dependents.
-        const blockingFindings = qaFindings.some(finding => ['critical', 'high'].includes(String(finding?.severity || '').trim().toLowerCase()));
+        // A check that could not run here is the integration's, not a blocker of the unit.
+        const blockingFindings = qaFindings.some(finding => ['critical', 'high'].includes(String(finding?.severity || '').trim().toLowerCase()) && !ENVIRONMENT_FINDING_KINDS.has(String(finding?.kind || '')));
         if (capExceeded) qaFindings.push({ severity: 'high', check: 'corrections_cap_exceeded', summary: `lane review changed ${measuredCorrections.length} unit file(s); the cap is ${maxFixFiles} — review the diff before integrating`, paths: measuredCorrections });
         if (undeclared.length > 0) qaFindings.push({ severity: 'medium', check: 'undeclared_correction', summary: 'lane review changed unit files it did not list in corrections[]', paths: undeclared });
         unitState.qa = {
@@ -2358,14 +2613,179 @@ async function runExecution({
       if (!target || target.owner !== 'lane') return true;
       return dep.gate === 'after_dev' ? devDone(target) : pipelineDone(target);
     };
+    // Under `lanes` scheduling a unit without explicit edges waits only for the
+    // units of its own lane in the nearest earlier wave, at `lane_gate`; units
+    // of one lane in the same wave run side by side, as under `waves`. Units
+    // that share a file with any active pipeline (DEV or QA) still wait — see
+    // the fill below.
+    const lanePredecessors = new Map();
+    for (const id of laneIds) {
+      const { lane, wave } = state.units[id];
+      const earlier = laneIds.filter((other) => state.units[other].lane === lane && state.units[other].wave < wave);
+      const nearest = earlier.length ? Math.max(...earlier.map((other) => state.units[other].wave)) : null;
+      lanePredecessors.set(id, earlier.filter((other) => state.units[other].wave === nearest));
+    }
     const isReady = (id) => {
       if (!runnable(id)) return false;
       const u = state.units[id];
       if (waveLimit !== null && u.wave > waveLimit) return false;
+      if (u.status === 'passed' && u.waiting?.reason === 'review_order'
+          && u.waiting.holders.some(other => !pipelineDone(state.units[other] || {})
+            && state.units[other]?.status !== 'decision_required')) return false;
       if ((u.repair_dependencies || []).some(dependency => !pipelineDone(state.units[dependency] || {}))) return false;
+      // A parked review has already passed the DEV admission gate. As before,
+      // a predecessor paused on a decision releases it so the run can settle.
+      if (u.status === 'passed' && u.waiting?.reason === 'review_order') return true;
       const deps = planUnits[id].depends_on || [];
       if (deps.length > 0) return deps.every(gateSatisfied);
+      if (laneBoundary && state.parallel?.scheduling === 'lanes') {
+        const gate = state.parallel.lane_gate || 'after_qa';
+        if (lanePredecessors.get(id).every((previous) => gateSatisfied({ unit: previous, gate }))) return true;
+        return startsAhead(id);
+      }
       return laneUnitsBefore(u.wave).every((other) => pipelineDone(state.units[other]));
+    };
+    // Start order (opt-in Jev judgment). The plan chains a lane in waves, but
+    // a later unit often needs nothing the earlier ones create (another app, a
+    // separate table, a different router). A unit whose lane gate is not met
+    // may still start when Jev judged it independent of every earlier unit of
+    // its lane that has not reached the gate; one pair judged dependent, or an
+    // uncertain or unavailable Jev, keeps the plan order. The write lock still
+    // keeps two writers off a shared file.
+    const startOrderOn = () => jevFlags.start_order === true && laneBoundary && state.parallel?.scheduling === 'lanes';
+    const blockingEarlier = (id) => {
+      const { lane, wave } = state.units[id];
+      const gate = state.parallel?.lane_gate || 'after_qa';
+      return laneIds
+        .filter((other) => state.units[other].lane === lane && state.units[other].wave < wave && !gateSatisfied({ unit: other, gate }))
+        .reverse(); // nearest first: the likeliest dependency ends the questions soonest
+    };
+    const startsAhead = (id) => {
+      if (!startOrderOn() || (planUnits[id].depends_on || []).length > 0) return false;
+      const blocking = blockingEarlier(id);
+      return blocking.length > 0 && blocking.every((earlier) => state.jev_start_order?.[`${earlier}>${id}`]?.wait === false);
+    };
+    // One unanswered pair per waiting unit per pass, asked side by side.
+    const judgeStartOrder = async () => {
+      if (!startOrderOn() || monitor.lost) return;
+      const asks = [];
+      for (const id of laneIds) {
+        const u = state.units[id];
+        if (u.status !== 'pending' || !runnable(id) || running.has(id) || (planUnits[id].depends_on || []).length > 0) continue;
+        if (waveLimit !== null && u.wave > waveLimit) continue;
+        const gate = state.parallel.lane_gate || 'after_qa';
+        if (lanePredecessors.get(id).every((previous) => gateSatisfied({ unit: previous, gate }))) continue;
+        for (const earlier of blockingEarlier(id)) {
+          const known = state.jev_start_order?.[`${earlier}>${id}`];
+          if (known?.wait) break;
+          if (known) continue;
+          asks.push({ earlier, id });
+          break;
+        }
+      }
+      if (asks.length === 0) return;
+      const verdicts = await Promise.all(asks.map(({ earlier, id }) => jev.startOrder(planUnits[earlier], planUnits[id])));
+      state.jev_start_order ||= {};
+      asks.forEach(({ earlier, id }, index) => {
+        const verdict = verdicts[index];
+        state.jev_start_order[`${earlier}>${id}`] = { earlier, unit: id, at: nowIso(), ...verdict };
+        emit({ type: 'jev', decision: 'start_order', wave: state.units[id].wave, unit: id, previous: earlier, lane: state.units[id].lane, wait: verdict.wait, source: verdict.source, reason: verdict.reason || null });
+      });
+      await persist();
+    };
+    // Review order. An implementation may start on a dependency's
+    // implementation (an explicit `(dev)` edge, or `lane_gate: after_dev`), but
+    // its review must test against the dependency's reviewed code:
+    //  - explicit after_dev edges always order the reviews (the edge itself
+    //    says the unit builds on that work);
+    //  - lane predecessors under after_dev order the reviews when the opt-in
+    //    Jev judgment does not call the pair independent.
+    // A blocked review is parked on the ledger and releases its pipeline slot.
+    // The scheduler retries it after its holders settle. An upstream repair
+    // may invalidate parked implementations, without an old promise reviewing
+    // them or consuming every slot needed to run that repair.
+    const awaitReviewOrder = async (id) => {
+      const settled = (other) => pipelineDone(state.units[other]) || state.units[other].status === 'decision_required' || monitor.lost;
+      const waitFor = new Set((planUnits[id].depends_on || [])
+        .filter((dep) => dep.gate === 'after_dev' && state.units[dep.unit]?.owner === 'lane')
+        .map((dep) => dep.unit));
+      const laneOrdered = (planUnits[id].depends_on || []).length === 0 && laneBoundary && state.parallel?.scheduling === 'lanes'
+        && state.parallel.lane_gate === 'after_dev' && jevFlags.review_order === true;
+      if (laneOrdered) {
+        for (const previous of lanePredecessors.get(id)) {
+          if (settled(previous)) continue;
+          // Judged able to start before `previous` existed: a correction of
+          // `previous` cannot invalidate it, so no second question is needed.
+          if (state.jev_start_order?.[`${previous}>${id}`]?.wait === false) continue;
+          state.jev_review_order ||= {};
+          const key = `${previous}>${id}`;
+          if (!state.jev_review_order[key]) {
+            const verdict = await jev.reviewOrder(planUnits[previous], planUnits[id]);
+            state.jev_review_order[key] = { previous, unit: id, at: nowIso(), ...verdict };
+            emit({ type: 'jev', decision: 'review_order', wave: state.units[id].wave, unit: id, previous, lane: state.units[id].lane, wait: verdict.wait, source: verdict.source, reason: verdict.reason || null });
+            await persist();
+          }
+          if (state.jev_review_order[key].wait) waitFor.add(previous);
+        }
+      }
+      const pending = [...waitFor].filter((other) => !settled(other));
+      if (pending.length === 0) return true;
+      markWaiting(id, { stage: 'qa', reason: 'review_order', holders: pending });
+      emit({ type: 'unit', role: 'qa', status: 'waiting', unit: id, lane: state.units[id].lane, wave: state.units[id].wave, reason: `review_order_after:${pending.join(',')}` });
+      await persist();
+      return false;
+    };
+    // Write lock. Two units that share a file never write at the same time, but
+    // a unit holds its files only while something in it can write: its
+    // implementer (from launch until the DEV report) or its reviewer (the review
+    // may fix up to max_fix_files). A unit that passed DEV and only waits for a
+    // review slot writes nothing, so it no longer keeps the next implementer of
+    // a shared file (a router registry, an i18n catalog) idle behind the queue.
+    const sharesFiles = (a, b) => {
+      const paths = new Set(planUnits[a].files.map(file => file.toLowerCase()));
+      return planUnits[b].files.some(file => paths.has(file.toLowerCase()));
+    };
+    const writing = (id) => {
+      const u = state.units[id];
+      if (!u || !running.has(id)) return false;
+      return u.status === 'pending' || u.status === 'running' || u.qa?.status === 'running';
+    };
+    // The check and the claim run in one synchronous step, so two reviews (or a
+    // review and a launch) can never both see the slot free.
+    const claimWriteSlot = async (unitId, claim) => {
+      let announced = false;
+      while (!monitor.lost && [...running.keys()].some((other) => other !== unitId && writing(other) && sharesFiles(other, unitId))) {
+        if (!announced) {
+          const holders = [...running.keys()].filter((other) => other !== unitId && writing(other) && sharesFiles(other, unitId));
+          markWaiting(unitId, { stage: 'qa', reason: 'write_lock', holders });
+          emit({ type: 'unit', role: 'qa', status: 'waiting', unit: unitId, lane: state.units[unitId].lane, wave: state.units[unitId].wave, reason: `write_lock:${holders.join(',')}` });
+          await persist();
+          announced = true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, reviewOrderPollMs));
+      }
+      delete state.units[unitId].waiting;
+      return claim();
+    };
+    // Units write side by side, so a whole-suite run can catch another unit's
+    // file mid-edit: the first play-vivo reviews failed core tests on files a
+    // concurrent rework was writing and sent a sound unit back to rework. Each
+    // worker learns, when it starts, who else writes and which files.
+    const concurrentWorkNote = (unitId) => {
+      const others = [...running.keys()].filter((other) => other !== unitId && writing(other));
+      if (others.length === 0) return '';
+      const lines = others.map((other) => {
+        const files = planUnits[other].files;
+        return `- ${other} (${state.units[other].status === 'running' ? 'implementing' : 'under review'}): ${files.slice(0, 12).join(', ')}${files.length > 12 ? `, +${files.length - 12} more` : ''}`;
+      });
+      return `\nCONCURRENT WORK (other units of this run write these files while you work; their edits are not yours to review or repair):\n${lines.join('\n')}\nWhen a test or build fails only on these files or on code that imports them, run it again before attributing the failure to this unit; if it still fails, report it as a finding naming the other unit instead of changing its files.\n`;
+    };
+    // Why a unit that could otherwise run is held, for `execution:status`.
+    const markWaiting = (unitId, { stage, reason, holders }) => {
+      const previous = state.units[unitId].waiting;
+      const same = previous && previous.stage === stage && previous.reason === reason && previous.holders.join(',') === holders.join(',');
+      if (!same) state.units[unitId].waiting = { stage, reason, holders, since: nowIso() };
+      return !same;
     };
     const refreshWaves = () => {
       for (const wave of state.waves) {
@@ -2460,43 +2880,75 @@ async function runExecution({
       for (const unresolved of result.unresolved) await requireDecision(state.units[unresolved.unit], unresolved.stage, unresolved.outcome);
     };
 
-    while (true) {
-      await refreshRuntimePolicy();
-      await routeDeferredContractRepairs();
-      if (!monitor.lost) {
-        const starting = [];
-        while (running.size + starting.length < state.parallel.max_concurrent_lanes) {
-          const activeIds = [...running.keys(), ...starting];
-          const next = laneIds.find((id) => !running.has(id) && !starting.includes(id) && isReady(id) && !activeIds.some(active => {
-            const paths = new Set(planUnits[active].files.map(file => file.toLowerCase()));
-            return planUnits[id].files.some(file => paths.has(file.toLowerCase()));
-          }));
-          if (!next) break;
-          starting.push(next);
+    // A scheduler that throws must not leave a process whose workers and
+    // heartbeats still look alive while nothing is ever started again: it
+    // stops the workers and pauses the run with the reason.
+    let schedulerError = null;
+    try {
+      while (true) {
+        await refreshRuntimePolicy();
+        await routeDeferredContractRepairs();
+        await judgeStartOrder();
+        if (!monitor.lost) {
+          const starting = [];
+          while (running.size + starting.length < state.parallel.max_concurrent_lanes) {
+            const writers = [...[...running.keys()].filter(writing), ...starting];
+            const ready = laneIds.filter((id) => !running.has(id) && !starting.includes(id) && isReady(id));
+            const next = ready.find((id) => !writers.some(active => sharesFiles(active, id)));
+            // A ready unit held only by the write lock says so once per holder set.
+            let held = false;
+            for (const id of ready) {
+              if (id === next) break;
+              const holders = writers.filter((active) => sharesFiles(active, id));
+              // A unit resumed with its DEV passed relaunches for its review.
+              const stage = state.units[id].status === 'passed' ? 'qa' : 'dev';
+              if (markWaiting(id, { stage, reason: 'write_lock', holders })) {
+                emit({ type: 'unit', role: stage, status: 'waiting', unit: id, lane: state.units[id].lane, wave: state.units[id].wave, reason: `write_lock:${holders.join(',')}` });
+                held = true;
+              }
+            }
+            if (held) await persist();
+            if (!next) break;
+            delete state.units[next].waiting;
+            starting.push(next);
+          }
+          if (starting.length > 0) {
+            const sharedBaseline = await gitBaseline(projectDir).catch(() => null);
+            for (const id of starting) await launch(id, sharedBaseline);
+          }
         }
-        if (starting.length > 0) {
-          const sharedBaseline = await gitBaseline(projectDir).catch(() => null);
-          for (const id of starting) await launch(id, sharedBaseline);
+        if (running.size === 0) break;
+        await sleep();
+        while (finished.length > 0) {
+          const id = finished.shift();
+          running.delete(id);
+          await settleWindow(id);
         }
-      }
-      if (running.size === 0) break;
-      await sleep();
-      while (finished.length > 0) {
-        const id = finished.shift();
-        running.delete(id);
-        await settleWindow(id);
-      }
-      refreshWaves();
-      for (const wave of state.waves) {
-        if (wave.status === 'completed' && !completedWaves.has(wave.wave)) {
-          completedWaves.add(wave.wave);
-          await persist();
-          emit({ type: 'wave', status: 'completed', wave: wave.wave });
+        refreshWaves();
+        for (const wave of state.waves) {
+          if (wave.status === 'completed' && !completedWaves.has(wave.wave)) {
+            completedWaves.add(wave.wave);
+            await persist();
+            emit({ type: 'wave', status: 'completed', wave: wave.wave });
+          }
         }
+        await persist();
       }
-      await persist();
+    } catch (error) {
+      schedulerError = error;
     }
     refreshWaves();
+
+    if (schedulerError) {
+      emit({ type: 'notice', check: 'scheduler_stopped', message: `the scheduler stopped on an engine error (${schedulerError.message}) — the running workers are stopped and the run pauses; resume with ${resumeCommand(feature)}` });
+      monitor.abort(schedulerError);
+      await Promise.allSettled([...running.values()]);
+      for (const wave of state.waves) if (wave.status === 'running') wave.status = 'paused';
+      state.status = 'paused';
+      state.reason = 'scheduler_error';
+      await persist().catch(() => {});
+      return { ok: false, status: 'paused', reason: 'scheduler_error', error: schedulerError.message, feature, run_id: state.run_id, path: runStateRelative(feature), resume_command: resumeCommand(feature), summary: summarizeState(state, feature), exitCode: 1 };
+    }
 
     if (monitor.lost) {
       for (const wave of state.waves) if (wave.status === 'running') wave.status = 'paused';
@@ -2520,7 +2972,10 @@ async function runExecution({
       state.status = 'paused';
       state.reason = 'stop_after_wave';
       await persist();
-      return { ok: true, status: 'paused', reason: 'stop_after_wave', feature, run_id: state.run_id, path: runStateRelative(feature), resume_command: resumeCommand(feature), summary: summarizeState(state, feature), findings: state.findings, exitCode: 0 };
+      const liveRoles = await readExecutionRoles(projectDir).catch(() => null);
+      const liveIntegration = liveRoles?.ok && liveRoles.enabled ? liveRoles.roles.roles?.integration_dev || null : null;
+      const deferral = integrationDeferral(buildIntegrationSupervisor(plan, liveIntegration), waveLimit);
+      return { ok: true, status: 'paused', reason: 'stop_after_wave', feature, run_id: state.run_id, path: runStateRelative(feature), resume_command: resumeCommand(feature), ...(deferral ? { integration_deferred: deferral } : {}), summary: summarizeState(state, feature), findings: state.findings, exitCode: 0 };
     }
     const remaining = laneIds.filter(runnable);
     if (remaining.length > 0) {
@@ -2730,6 +3185,8 @@ async function decideExecution({ projectDir, feature: featureInput, unit: unitId
     if (parsed.choice === 'skip' && stage !== 'dev') return { ok: false, reason: 'invalid_choice', feature, unit: unitState.id, message: 'skip applies to a dev decision; use skip-qa for the review', valid: QA_CHOICES };
 
     if (parsed.choice === 'fallback') {
+      const policyRead = await readExecutionPolicy(projectDir);
+      if (!policyRead.ok) return { ok: false, reason: 'execution_policy_invalid', feature, errors: policyRead.errors };
       const caps = getExecutionCapabilities(parsed.host);
       if (!caps) return { ok: false, reason: 'unknown_host', feature, unit: unitState.id, host: parsed.host };
       if (parsed.reasoning_effort && !caps.reasoning_effort) return { ok: false, reason: 'effort_unsupported_by_host', feature, unit: unitState.id, host: parsed.host };
@@ -2737,7 +3194,7 @@ async function decideExecution({ projectDir, feature: featureInput, unit: unitId
       if (parsed.reasoning_effort && !effortsForHost(parsed.host).includes(parsed.reasoning_effort)) return { ok: false, reason: 'effort_unsupported_by_host', feature, unit: unitState.id, host: parsed.host, supported: effortsForHost(parsed.host) };
       const ensured = await ensureHostSignature(
         { host: parsed.host, model: parsed.model, reasoning_effort: parsed.reasoning_effort },
-        { env, now, probe: probeHostSignature }
+        { env, now, probe: probeHostSignature, ...(policyRead.policy.execution?.require_spawner ? { refreshStates: new Set() } : {}) }
       );
       if (!ensured.ok) {
         return { ok: false, reason: `fallback_signature_${ensured.state}`, feature, unit: unitState.id, host: parsed.host, model: parsed.model, hint: `aioson host:signature . --host=${parsed.host} --model=${parsed.model}${parsed.reasoning_effort ? ` --effort=${parsed.reasoning_effort}` : ''}` };
@@ -2908,6 +3365,7 @@ function stageRow(stage, now) {
     live: stage.status === 'running' ? currentActivity(stage.live, now) : null,
     activity: stage.activity || null,
     usage: stage.usage || null,
+    verification: stage.verification || null,
     context_window: stage.context_window || null,
     context: attemptContext(stage)
   };
@@ -3003,6 +3461,11 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     // What is running right now, measured from the disk by the engine's heartbeat.
     running: (state.status === 'running' && engine.alive ? unitRows : [])
       .flatMap((row) => ['dev', 'qa'].filter((stage) => row[stage]?.status === 'running').map((stage) => ({ unit: row.id, lane: row.lane, wave: row.wave, stage, host: row[stage].host, model: row[stage].model, routing_profile: row[stage].routing_profile, elapsed_ms: row[stage].elapsed_ms, live: row[stage].live })))
+      .sort((a, b) => (a.wave - b.wave) || a.unit.localeCompare(b.unit)),
+    // What could run but is held, and by whom (a write lock or the review order).
+    waiting: (state.status === 'running' && engine.alive ? Object.values(state.units || {}) : [])
+      .filter((u) => u.waiting && u.status !== 'running' && u.qa?.status !== 'running')
+      .map((u) => ({ unit: u.id, lane: u.lane, wave: u.wave, stage: u.waiting.stage, reason: u.waiting.reason, holders: u.waiting.holders || [], since: u.waiting.since || null }))
       .sort((a, b) => (a.wave - b.wave) || a.unit.localeCompare(b.unit)),
     follow_command: state.status === 'running' ? followCommand(feature) : null,
     spawner: state.spawner || null,

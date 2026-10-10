@@ -46,7 +46,10 @@ const LANE_ID = /^[a-z][a-z0-9-]*$/;
 const EXECUTION_ROLES_VERSION = 1;
 const ROLE_KEY = /^[a-z][a-z0-9_]*$/;
 const ROOT_KEYS = ['version', 'source', 'enabled', 'roles', 'profiles', 'active_profile', 'parallel', 'on_unavailable', 'execution'];
-const EXECUTION_KEYS = ['spawner', 'unit_timeout_ms', 'require_independent_qa'];
+const EXECUTION_KEYS = ['spawner', 'unit_timeout_ms', 'require_independent_qa', 'jev'];
+// Engine decisions that may consult a typed Jev judgment (see
+// agent-execution/execution-jev.js). Each is off unless set to true here.
+const JEV_DECISIONS = ['review_depth', 'triage', 'review_order', 'start_order'];
 const SPAWNER_KEYS = ['command', 'args'];
 const MAX_SPAWNER_ARGS = 16;
 const MAX_SPAWNER_TOKEN_LENGTH = 200;
@@ -68,6 +71,15 @@ const DEFAULT_ON_UNAVAILABLE = 'ask';
 // conflicts still reduce the ready pool safely.
 const MAX_CONCURRENT_UNIT_PIPELINES = 10;
 const DEFAULT_MAX_CONCURRENT_LANES = MAX_CONCURRENT_UNIT_PIPELINES;
+// `waves`: a unit without explicit edges waits for every earlier wave of every
+// lane. `lanes`: it waits only for the previous unit of its own lane (at
+// `lane_gate`), because the plan's Interface Contract is the cross-lane
+// boundary; the engine falls back to waves when the plan has none.
+const SCHEDULING_MODES = ['waves', 'lanes'];
+const DEFAULT_SCHEDULING = 'waves';
+const LANE_GATES = ['after_qa', 'after_dev'];
+const DEFAULT_LANE_GATE = 'after_qa';
+const PARALLEL_KEYS = ['max_concurrent_lanes', 'scheduling', 'lane_gate'];
 const SECRET_KEY = /token|secret|password|authorization|api[_-]?key/i;
 
 function isPlainObject(value) {
@@ -245,6 +257,17 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
       if (independent !== undefined && independent !== null && typeof independent !== 'boolean') {
         add('$.execution.require_independent_qa', 'must be a boolean');
       }
+      const jev = value.execution.jev;
+      if (jev !== undefined && jev !== null) {
+        if (!isPlainObject(jev)) {
+          add('$.execution.jev', `must be an object of booleans (${JEV_DECISIONS.join(', ')})`);
+        } else {
+          for (const [key, flag] of Object.entries(jev)) {
+            if (!JEV_DECISIONS.includes(key)) add(`$.execution.jev.${key}`, `unknown decision; use ${JEV_DECISIONS.join(', ')}`);
+            else if (typeof flag !== 'boolean') add(`$.execution.jev.${key}`, 'must be a boolean');
+          }
+        }
+      }
     }
   }
   if (value.parallel !== undefined) {
@@ -252,11 +275,17 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
       add('$.parallel', 'must be an object');
     } else {
       for (const key of Object.keys(value.parallel)) {
-        if (key !== 'max_concurrent_lanes') add(`$.parallel.${key}`, 'unknown field');
+        if (!PARALLEL_KEYS.includes(key)) add(`$.parallel.${key}`, 'unknown field');
       }
       const max = value.parallel.max_concurrent_lanes;
       if (max !== undefined && (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_UNIT_PIPELINES)) {
         add('$.parallel.max_concurrent_lanes', `must be an integer between 1 and ${MAX_CONCURRENT_UNIT_PIPELINES}`);
+      }
+      if (value.parallel.scheduling !== undefined && !SCHEDULING_MODES.includes(value.parallel.scheduling)) {
+        add('$.parallel.scheduling', `must be one of ${SCHEDULING_MODES.join(', ')}`);
+      }
+      if (value.parallel.lane_gate !== undefined && !LANE_GATES.includes(value.parallel.lane_gate)) {
+        add('$.parallel.lane_gate', `must be one of ${LANE_GATES.join(', ')}`);
       }
     }
   }
@@ -288,7 +317,9 @@ function normalizeExecutionRoles(value) {
     profiles,
     roles,
     parallel: {
-      max_concurrent_lanes: value.parallel?.max_concurrent_lanes || DEFAULT_MAX_CONCURRENT_LANES
+      max_concurrent_lanes: value.parallel?.max_concurrent_lanes || DEFAULT_MAX_CONCURRENT_LANES,
+      scheduling: value.parallel?.scheduling || DEFAULT_SCHEDULING,
+      lane_gate: value.parallel?.lane_gate || DEFAULT_LANE_GATE
     },
     on_unavailable: value.on_unavailable || DEFAULT_ON_UNAVAILABLE,
     execution: normalizeExecutionBlock(value.execution)
@@ -300,13 +331,15 @@ function normalizeExecutionRoles(value) {
 // compile warns (`self_review_same_model`); on, the same condition refuses the
 // plan. A client that proves two hosts on the machine turns it on.
 function normalizeExecutionBlock(value) {
-  if (!isPlainObject(value)) return { spawner: null, require_independent_qa: false };
+  const jevOff = Object.fromEntries(JEV_DECISIONS.map((key) => [key, false]));
+  if (!isPlainObject(value)) return { spawner: null, require_independent_qa: false, jev: jevOff };
   const spawner = isPlainObject(value.spawner) && typeof value.spawner.command === 'string' && value.spawner.command.trim()
     ? { command: value.spawner.command.trim(), args: Array.isArray(value.spawner.args) ? value.spawner.args.map(String) : [] }
     : null;
   return {
     spawner,
-    require_independent_qa: value.require_independent_qa === true
+    require_independent_qa: value.require_independent_qa === true,
+    jev: Object.fromEntries(JEV_DECISIONS.map((key) => [key, isPlainObject(value.jev) && value.jev[key] === true]))
   };
 }
 
@@ -746,6 +779,8 @@ async function offerExecution(projectDir, { env = process.env, now = Date.now(),
 
 module.exports = {
   DEFAULT_MAX_CONCURRENT_LANES,
+  SCHEDULING_MODES,
+  LANE_GATES,
   MAX_CONCURRENT_UNIT_PIPELINES,
   DEFAULT_ON_UNAVAILABLE,
   DEFAULT_SPAWNER_UNIT_TIMEOUT_MS,

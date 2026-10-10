@@ -6,6 +6,12 @@ const PROCESS_REASONS = new Set(['crash', 'engine_error', 'timeout', 'context_bu
 // change opens the circuit instead of paying for two more full model runs.
 const MAX_IDENTICAL_NO_PROGRESS_RECOVERIES = 1;
 const MAX_DEV_QA_REWORK_ROUNDS = 5;
+// Whatever the fingerprints say, a unit gets this many automatic recoveries and
+// then waits for a person. In play-vivo the integration supervisor ran 43
+// rounds (~8 hours) against a Docker daemon that was down: every round edited
+// a generated file (counted as progress) and worded its findings differently
+// (a new fingerprint), so the no-progress circuit never opened.
+const MAX_RECOVERY_ATTEMPTS = 6;
 const SUPERVISOR_TAKEOVER_REASONS = new Set([
   'unproductive_loop',
   'context_budget_exceeded',
@@ -24,11 +30,12 @@ function normalizedFailureText(value) {
 
 function recoveryFingerprint(unit, stage, outcome, target) {
   const failed = unit[stage] || {};
+  // What failed, not how the model worded it: free text changes every round.
   const findings = (failed.findings?.length ? failed.findings : outcome.findings || []).map(finding => ({
     severity: normalizedFailureText(finding?.severity),
-    path: normalizedFailureText(finding?.path || (finding?.paths || []).join(',')),
-    summary: normalizedFailureText(finding?.summary || finding?.message)
-  }));
+    kind: normalizedFailureText(finding?.kind || finding?.check),
+    path: normalizedFailureText(finding?.path || (finding?.paths || []).join(','))
+  })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
   return JSON.stringify({
     stage,
     target,
@@ -81,6 +88,13 @@ function queueRecovery(unit, stage, outcome, max, at = new Date().toISOString())
   const failed = unit[stage] || {};
   const fingerprint = recoveryFingerprint(unit, stage, outcome, target);
   const priorRecovery = unit.recovery || {};
+  if ((priorRecovery.attempts || 0) >= MAX_RECOVERY_ATTEMPTS) {
+    unit.recovery = {
+      ...priorRecovery,
+      circuit_breaker: { reason: 'recovery_cap_reached', stage, target, attempts: priorRecovery.attempts, max_attempts: MAX_RECOVERY_ATTEMPTS, at }
+    };
+    return false;
+  }
   const noProgress = !madeProgress(unit, stage);
   const consecutive = noProgress
     ? (priorRecovery.fingerprint === fingerprint ? (priorRecovery.consecutive_no_progress || 0) + 1 : 1)
@@ -128,9 +142,15 @@ function routeKey(route) {
   return `${route.host}\u0000${route.model}\u0000${route.reasoning_effort || ''}`;
 }
 
-function queueSupervisorTakeover(unit, stage, outcome, routes, at = new Date().toISOString()) {
-  if (stage !== 'dev' || unit?.owner === 'supervisor' || unit?.supervisor_takeover) return false;
-  if (!SUPERVISOR_TAKEOVER_REASONS.has(outcome?.reason)) return false;
+// A failure that names files of other units which automatic routing could not
+// assign to one owner. It needs the integration owner's authority over those
+// files, not a different model, and it may surface in either stage.
+const CROSS_UNIT_TAKEOVER_REASON = 'cross_unit_repair_unresolved';
+
+function queueSupervisorTakeover(unit, stage, outcome, routes, at = new Date().toISOString(), { paths = [], waitFor = [] } = {}) {
+  const crossUnit = outcome?.reason === CROSS_UNIT_TAKEOVER_REASON;
+  if ((stage !== 'dev' && !crossUnit) || unit?.owner === 'supervisor' || unit?.supervisor_takeover) return false;
+  if (!crossUnit && !SUPERVISOR_TAKEOVER_REASONS.has(outcome?.reason)) return false;
   const configured = (routes || []).filter(route => routeKey(route));
   if (!configured.length) return false;
   const failed = unit[stage] || {};
@@ -138,7 +158,7 @@ function queueSupervisorTakeover(unit, stage, outcome, routes, at = new Date().t
     .map(routeKey)
     .filter(Boolean);
   const attempted = new Set(attemptedRoutes);
-  const next = configured.find(route => !attempted.has(routeKey(route)));
+  const next = configured.find(route => !attempted.has(routeKey(route))) || (crossUnit ? configured[0] : null);
   if (!next) return false;
   const previous = unit.retry_context?.dev || {};
   unit.retry_context = {
@@ -160,10 +180,12 @@ function queueSupervisorTakeover(unit, stage, outcome, routes, at = new Date().t
     configured_role: 'integration_dev',
     from: attemptedRoutes.map(key => key.split('\u0000').slice(0, 2).join('/')),
     next: { host: next.host, model: next.model, reasoning_effort: next.reasoning_effort || null, routing_profile: next.routing_profile || null },
+    ...(crossUnit ? { cross_unit_paths: [...new Set(paths)] } : {}),
     at
   };
   unit.recovery = { ...(unit.recovery || {}), supervisor_takeover_at: at };
   delete unit.recovery.circuit_breaker;
+  if (waitFor.length) unit.repair_dependencies = [...new Set([...(unit.repair_dependencies || []), ...waitFor])];
   unit.dev = { status: 'pending' };
   unit.qa = { status: 'pending' };
   unit.status = 'pending';
@@ -171,10 +193,27 @@ function queueSupervisorTakeover(unit, stage, outcome, routes, at = new Date().t
   return true;
 }
 
+// The takeover DEV inherits the unit contract, whose write scope stops at the
+// unit's own files. The integration owner's extra authority is exact paths.
+function crossUnitTakeoverNote(takeover) {
+  const paths = takeover?.cross_unit_paths || [];
+  if (!paths.length) return '';
+  return [
+    '',
+    'Integration supervisor authorization: the previous attempt failed on files owned by other units, and automatic routing could not assign that failure to a single owning unit. As the integration owner you may also edit these exact paths, only to repair the reproduced failure:',
+    ...paths.map(file => `- ${file}`),
+    'Reproduce the failure first. Keep the owning units\' behavior and tests intact, list every such edit in corrections[], and leave a note message to the owning unit describing it. Any other path stays outside your scope.',
+    ''
+  ].join('\n');
+}
+
 module.exports = {
   MAX_IDENTICAL_NO_PROGRESS_RECOVERIES,
   MAX_DEV_QA_REWORK_ROUNDS,
+  MAX_RECOVERY_ATTEMPTS,
   SUPERVISOR_TAKEOVER_REASONS,
+  CROSS_UNIT_TAKEOVER_REASON,
+  crossUnitTakeoverNote,
   devQaCycleLimitReached,
   recoveryAction,
   queueRecovery,

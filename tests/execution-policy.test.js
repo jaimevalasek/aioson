@@ -3,6 +3,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { normalizePolicy, contextWindow } = require('../src/agent-execution/execution-policy');
 
+test('requiring an external spawner is opt-in without changing default plan identities', () => {
+  assert.deepEqual(normalizePolicy({ execution: { require_spawner: false } }).policy, normalizePolicy().policy);
+  assert.deepEqual(normalizePolicy({ execution: {} }).policy, normalizePolicy().policy);
+  assert.deepEqual(normalizePolicy({ execution: { require_spawner: true } }).policy.execution, { require_spawner: true });
+  for (const execution of [null, [], { require_spawner: 'true' }, { require_spawner: true, unknown: true }]) {
+    assert.equal(normalizePolicy({ execution }).ok, false);
+  }
+});
+
 test('context windows are reported without imposing a quality ceiling', () => {
   const { policy } = normalizePolicy();
   assert.deepEqual(contextWindow(policy, 'codex', 'large', 1000000), { limit_tokens: 1000000, source: 'harness_or_catalog' });
