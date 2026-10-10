@@ -1,6 +1,7 @@
 'use strict';
 
 const { readModelsConfig } = require('./models-config');
+const { mergeDotEnvKeys } = require('./project-env');
 
 const ROUTES = {
   openrouter: {
@@ -66,6 +67,16 @@ function isPlaceholderKey(value) {
   return /^YOUR_[A-Z0-9_]+$/.test(text);
 }
 
+// `OPENROUTER_API_KEY`, `$OPENROUTER_API_KEY` or `${OPENROUTER_API_KEY}` in
+// `api_key` names an environment variable; no provider key is upper-case
+// letters and underscores only, so the shape cannot hide a real key.
+const ENV_REFERENCE = /^\$?\{?([A-Z][A-Z0-9_]{2,})\}?$/;
+
+function envReference(value) {
+  const match = String(value || '').trim().match(ENV_REFERENCE);
+  return match && !isPlaceholderKey(match[1]) ? match[1] : null;
+}
+
 function endpointAllowed(endpoint, route) {
   const expected = ROUTES[route]?.endpoint;
   if (!expected) return false;
@@ -117,7 +128,17 @@ function resolveJevSection(data, source, env) {
   }
 
   const fromEnv = String(env?.[defaults.apiKeyEnv] || '').trim();
-  const fromProvider = provider && !isPlaceholderKey(provider.api_key) ? String(provider.api_key).trim() : '';
+  const reference = provider ? envReference(provider.api_key) : null;
+  if (reference && !fromEnv) {
+    const referenced = String(env?.[reference] || '').trim();
+    if (!referenced) {
+      // A variable name in the file was being sent as the key itself; say what is missing instead.
+      return invalid('api_key_env_unset', { route, model, endpoint, apiKeyEnv: reference, minNoul, source });
+    }
+  }
+  const fromProvider = provider && !isPlaceholderKey(provider.api_key)
+    ? (reference ? String(env?.[reference] || '').trim() : String(provider.api_key).trim())
+    : '';
   const apiKey = fromEnv || fromProvider;
   if (!apiKey || (enabledFlag == null && !fromProvider)) {
     if (enabledFlag === true) {
@@ -157,8 +178,26 @@ function loadJevConfig(projectDir, env = process.env) {
       source: loaded.rel
     });
   }
-  const resolved = resolveJevSection(loaded.data, loaded.rel, env);
-  return resolved;
+  // The Jev key may live in the project's `.env` (gitignored, like the app
+  // secrets). It is merged into a private copy for this resolution only —
+  // never into `process.env`, so orchestrated workers do not inherit it.
+  const route = ROUTE_ALIASES[String(loaded.data?.jev?.route || 'openrouter').trim().toLowerCase()] || String(loaded.data?.jev?.route || 'openrouter').trim().toLowerCase();
+  const reference = envReference(loaded.data?.providers?.[ROUTES[route]?.provider]?.api_key);
+  const keys = [...new Set([...Object.values(ROUTES).map((item) => item.apiKeyEnv), reference].filter(Boolean))];
+  let merged = env;
+  try {
+    merged = mergeDotEnvKeys(projectDir, env, keys);
+  } catch {
+    // An unreadable `.env` leaves the process environment as the only source.
+  }
+  const resolved = resolveJevSection(loaded.data, loaded.rel, merged);
+  if (resolved.status !== 'ready') return resolved;
+  // Where the key came from — named, never shown — so a check can say which file to fix.
+  const name = env?.[ROUTES[route]?.apiKeyEnv] || merged?.[ROUTES[route]?.apiKeyEnv] ? ROUTES[route]?.apiKeyEnv : reference;
+  const keySource = name && String(env?.[name] || '').trim() ? 'environment'
+    : name && String(merged?.[name] || '').trim() ? 'project .env'
+      : loaded.rel;
+  return { ...resolved, keySource, keyName: name || null };
 }
 
 module.exports = {

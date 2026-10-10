@@ -82,6 +82,20 @@
         "generic_secret_assignment"
       ],
       "reason": "The orchestration tutorial displays the crsr_SUA_CHAVE_AQUI placeholder to explain Cursor environment setup; no credential is present."
+    },
+    {
+      "path": "tests/jev-key-config.test.js",
+      "rules": [
+        "openai_secret"
+      ],
+      "reason": "Jev key-resolution tests use a named synthetic OpenRouter-style literal to prove an api_key written in the models file is used as written; it is never a real credential."
+    },
+    {
+      "path": "tests/jev-key-config.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Jev key-resolution tests assign named synthetic OpenRouter-style values to OPENROUTER_API_KEY in temporary .env files and env maps to prove .env and environment precedence; they are never real credentials."
     }
   ],
   "blockPaths": [

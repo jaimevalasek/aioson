@@ -354,7 +354,7 @@ module.exports = {
     help_web_collect:
       'aioson web:collect [path] --slug=<slug> [--url=<url>] [--urls=<url,url>] [--candidates=<arquivo>] [--query=<texto>] [--json] [--locale=pt-BR]',
     help_jev_judge:
-      'aioson jev:judge [path] --file=<julgamento.json> [--dry-run] [--out=<arquivo>] [--require-pass] [--json] | --example=raw|gate|select|rank|all',
+      'aioson jev:judge [path] --file=<julgamento.json> [--dry-run] [--out=<arquivo>] [--require-pass] [--json] | --example=raw|gate|select|rank|all [--dry-run] | --check',
     help_jev_review:
       'aioson jev:review [path] [--file=<html>|--dir=<interface>|--slug=<feature>|--url=<app>] [--profile=premium|prototype|qa|design-system|accessibility|code-quality] [--runtime] [--criteria=<arquivo>] [--include-source] [--evidence-only|--dry-run] [--require-pass] [--out=<arquivo>] [--json]',
     help_jev_agent_review:

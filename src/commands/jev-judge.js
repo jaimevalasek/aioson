@@ -53,15 +53,15 @@ function examples() {
     select: {
       version: 1,
       id: 'agent-route',
-      state: { request: 'Create three genuinely different visual directions before implementation.' },
+      state: { request: 'The checkout test QA reported is failing after the last change; fix it.' },
       questions: {
         route: {
           type: 'choice',
           instructions: 'Which bounded AIOSON route best matches `request`?',
           criteria: {
-            dev: 'Implement a specified technical change.',
-            ux_ui: 'Resolve one visual or interaction decision.',
-            exploration: 'Produce and compare multiple visual directions.'
+            dev: 'Implement or repair a specified technical change.',
+            qa: 'Verify delivered behaviour against the acceptance criteria.',
+            product: 'Decide what the product should do before anyone builds it.'
           }
         }
       },
@@ -129,6 +129,38 @@ function logHuman(logger, result) {
   }
 }
 
+// The smallest judgment that proves the key and the route answer. Its state
+// is unique per call so no cache layer can answer for the provider.
+function probeSpec() {
+  return {
+    version: 1,
+    id: 'jev-check',
+    state: { statement: 'Water boils at 100 °C at sea level.', nonce: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}` },
+    questions: { true_statement: { type: 'noul', instructions: 'Is `statement` true?' } },
+    decision: { type: 'raw' }
+  };
+}
+
+/** `--check`: configuration, where the key came from (never its value), and one live, uncached answer. */
+async function checkJev({ targetDir, options, logger, fetchImpl, env }) {
+  const config = loadJevConfig(targetDir, env);
+  const report = { ok: false, status: 'checked', config_status: config.status, config_reason: config.reason || null, route: config.route, model: config.model, key_source: config.keySource || null, key_name: config.keyName || config.apiKeyEnv || null, probe: null };
+  if (config.status === 'ready') {
+    const probe = await runJevJudgment({ spec: probeSpec(), projectDir: targetDir, config: { ...config, cacheEnabled: false }, fetchImpl, retries: 0 });
+    report.probe = probe.ok
+      ? { ok: true, status: probe.status, duration_ms: probe.duration_ms, model: probe.model }
+      : { ok: false, status: probe.status, reason: probe.reason || null, http_status: probe.http_status || null };
+    report.ok = probe.ok;
+  }
+  if (!report.ok) report.exitCode = 1;
+  if (!options.json && logger) {
+    logger.log(`Jev config: ${report.config_status}${report.config_reason ? ` (${report.config_reason})` : ''} — route ${report.route || '-'}, model ${report.model || '-'}`);
+    if (report.key_name) logger.log(`Key: ${report.key_name}${report.key_source ? ` from ${report.key_source}` : ' (not found)'}`);
+    if (report.probe) logger.log(report.probe.ok ? `Live answer: ok in ${report.probe.duration_ms} ms (${report.probe.model})` : `Live answer: FAILED — ${report.probe.status}${report.probe.reason ? `: ${report.probe.reason}` : ''}`);
+  }
+  return report;
+}
+
 async function runJevJudge({ args = [], options = {}, logger, fetchImpl, env = process.env } = {}) {
   const targetDir = resolveTargetDir(args);
   const fail = (status, reason) => {
@@ -136,9 +168,16 @@ async function runJevJudge({ args = [], options = {}, logger, fetchImpl, env = p
     if (!options.json && logger) logger.error(`Jev judgment failed: ${reason}`);
     return result;
   };
+  if (options.check) return checkJev({ targetDir, options, logger, fetchImpl, env });
   const example = options.example ? buildExample(options.example) : null;
   if (options.example && !example) {
     return fail('invalid_example', 'example must be raw, gate, select, rank, or all');
+  }
+  // `--example=<one> --dry-run` validates that example against this project's configuration.
+  if (example && options['dry-run'] && example.version) {
+    const result = await runJevJudgment({ spec: example, projectDir: targetDir, config: loadJevConfig(targetDir, env), dryRun: true });
+    if (!options.json) logHuman(logger, result);
+    return { ...result, example: options.example };
   }
   if (example) {
     const out = await writeOutput(targetDir, options.out, example);

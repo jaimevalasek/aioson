@@ -103,10 +103,14 @@ async function requestJev({
     }
 
     if (!response.ok) {
+      // A rejected key is a configuration problem the owner fixes, not an outage to wait out.
+      const authFailed = response.status === 401 || response.status === 403;
       last = {
         ok: false,
-        status: 'unavailable',
-        reason: publicReason(errorMessage(response.status, data), config.apiKey),
+        status: authFailed ? 'auth_failed' : 'unavailable',
+        reason: authFailed
+          ? `the provider rejected the ${config.apiKeyEnv || 'API'} key (HTTP ${response.status}: ${publicReason(errorMessage(response.status, data), config.apiKey)}) — fix the key in aioson-models.json or the environment`
+          : publicReason(errorMessage(response.status, data), config.apiKey),
         http_status: response.status,
         route: config.route,
         attempts: attempt + 1

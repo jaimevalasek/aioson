@@ -98,7 +98,7 @@ test('gate combines noul, score, confidence, and choice probabilities in determi
 test('select confidence-gates routing and rank orders independent semantic scores', () => {
   const select = examples().select;
   const uncertain = applyDecision(select, {
-    route: { type: 'choice', choice: 'exploration', confidence: 0.4, probabilities: { dev: 0.2, ux_ui: 0.25, exploration: 0.55 } }
+    route: { type: 'choice', choice: 'dev', confidence: 0.4, probabilities: { dev: 0.55, qa: 0.25, product: 0.2 } }
   });
   assert.equal(uncertain.accepted, false);
   assert.equal(uncertain.selected, null);

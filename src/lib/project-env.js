@@ -45,16 +45,21 @@ function readProjectDotEnv(projectDir) {
   }
 }
 
-/** Merge whitelisted `.env` entries into `env`. Existing OS/process values win. */
-function mergeProjectEnv(projectDir, env = process.env) {
+/** Merge the named `.env` entries into a copy of `env`. Existing OS/process values win. */
+function mergeDotEnvKeys(projectDir, env, keys) {
   const { values } = readProjectDotEnv(projectDir);
   const merged = { ...env };
-  for (const key of ORCHESTRATION_DOTENV_KEYS) {
+  for (const key of keys) {
     if (merged[key]) continue;
     const value = values[key];
     if (typeof value === 'string' && value.trim()) merged[key] = value.trim();
   }
   return merged;
+}
+
+/** Merge whitelisted `.env` entries into `env`. Existing OS/process values win. */
+function mergeProjectEnv(projectDir, env = process.env) {
+  return mergeDotEnvKeys(projectDir, env, ORCHESTRATION_DOTENV_KEYS);
 }
 
 /** Apply whitelisted `.env` entries to `process.env` (OS values kept). */
@@ -71,6 +76,7 @@ module.exports = {
   ORCHESTRATION_DOTENV_KEYS,
   parseDotEnv,
   readProjectDotEnv,
+  mergeDotEnvKeys,
   mergeProjectEnv,
   applyProjectEnv,
   dotEnvPath
