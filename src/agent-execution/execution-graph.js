@@ -19,6 +19,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { readExecutionPlan, executionPlanRelative } = require('./execution-plan');
 const { assertFeatureSlug } = require('./manifest');
+const { projectSchedule, formatProjection, measuredDurations } = require('./schedule-projection');
 
 const GRAPH_VERSION = 1;
 
@@ -103,13 +104,19 @@ function buildExecutionGraph({ plan, state = null }) {
     units: wave.units,
     status: state?.waves?.find((w) => w.wave === wave.wave)?.status || null
   }));
+  // A run applies the roles file's policy at runtime; the compiled value is
+  // only what the plan declared.
+  const runtime = state?.parallel || null;
+  const measured = measuredDurations(state);
+  const projection = projectSchedule(plan, measured ? { ...measured, maxConcurrent: runtime?.max_concurrent_lanes, source: `measured over ${measured.samples} attempt(s)` } : { maxConcurrent: runtime?.max_concurrent_lanes });
   return {
     version: GRAPH_VERSION,
     feature: plan.feature,
-    scheduling: plan.scheduling || (explicit.length > 0 ? 'dependencies' : 'waves'),
+    scheduling: runtime?.scheduling === 'lanes' ? `lanes (${runtime.lane_gate || 'after_qa'})` : (plan.scheduling || (explicit.length > 0 ? 'dependencies' : 'waves')),
+    projection,
     plan: { path: executionPlanRelative(plan.feature), generated_at: plan.generated_at || null, digest: plan.source?.plan_digest || null },
     run: state ? { run_id: state.run_id, status: state.status, reason: state.reason || null, current_wave: state.current_wave ?? null, decisions_pending: Object.values(state.units || {}).filter((u) => u.pending_decision).length } : null,
-    parallel: plan.parallel || { max_concurrent_lanes: 1 },
+    parallel: runtime ? { max_concurrent_lanes: runtime.max_concurrent_lanes } : (plan.parallel || { max_concurrent_lanes: 1 }),
     waves,
     nodes,
     edges,
@@ -208,8 +215,10 @@ function renderAscii(graph) {
     lines.push('edges (explicit)');
     for (const edge of explicit) lines.push(`  ${edge.from} ─${edge.gate}→ ${edge.to}`);
   }
-  if (graph.edges.some((e) => !e.explicit)) lines.push(`barrier: units without \`Depends on\` wait for every lane unit of the earlier waves (${graph.edges.filter((e) => !e.explicit).length} implicit edge(s))`);
+  if (String(graph.scheduling).startsWith('lanes')) lines.push('lanes: units without `Depends on` follow only the previous unit of their own lane; two units sharing a file never write at once (a DEV, or a review that may fix files); a unit only waiting for its review slot holds nothing');
+  else if (graph.edges.some((e) => !e.explicit)) lines.push(`barrier: units without \`Depends on\` wait for every lane unit of the earlier waves (${graph.edges.filter((e) => !e.explicit).length} implicit edge(s))`);
   if (graph.integration?.units?.length) lines.push(`integration (session ${graph.integration.owner}): ${graph.integration.units.join(', ')}`);
+  lines.push(...formatProjection(graph.projection));
   return `${lines.join('\n')}\n`;
 }
 

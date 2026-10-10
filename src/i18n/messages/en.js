@@ -477,6 +477,8 @@ module.exports = {
       'aioson execution:dashboard [path] [--feature=<slug>] [--port=4181] [--json]',
     help_execution_graph:
       'aioson execution:graph [path] --feature=<slug> [--format=ascii|mermaid|json] [--json] [--locale=en]',
+    help_execution_dependencies:
+      'aioson execution:dependencies [path] --feature=<slug> [--dev-minutes=<n>] [--qa-minutes=<n>] [--json]  — Jev infers the real Depends on edges and waves of the plan',
     help_execution_prices:
       'aioson execution:prices [path] [--refresh] [--json]',
     help_live_start:

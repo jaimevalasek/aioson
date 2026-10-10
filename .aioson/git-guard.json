@@ -96,6 +96,13 @@
         "generic_secret_assignment"
       ],
       "reason": "Jev key-resolution tests assign named synthetic OpenRouter-style values to OPENROUTER_API_KEY in temporary .env files and env maps to prove .env and environment precedence; they are never real credentials."
+    },
+    {
+      "path": "src/agent-execution/dependency-inference.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "The Jev setup steps print an aioson-models.json example whose api_key holds the environment variable name OPENROUTER_API_KEY, which the config resolves from the environment; no credential is present."
     }
   ],
   "blockPaths": [

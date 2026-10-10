@@ -49,10 +49,42 @@ const {
 const { runExecution, decideExecution, statusExecution, describeMs, describeAge, describeMeasuredOn } = require('../agent-execution/execution-run');
 const { launchDetachedRun } = require('../agent-execution/execution-detach');
 const { graphExecution, FORMATS: GRAPH_FORMATS } = require('../agent-execution/execution-graph');
+const { projectSchedule, formatProjection } = require('../agent-execution/schedule-projection');
+const { inferDependencies } = require('../agent-execution/dependency-inference');
+
+function formatHours(minutes) {
+  return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/** `execution:dependencies`: the suggestion table, the projection, and what to do next. */
+function logDependencies(logger, result) {
+  if (result.status === 'jev_unready') {
+    logger.log(`Jev is not ready in this project (${result.config_status}${result.config_reason ? `: ${result.config_reason}` : ''}), so no dependency was judged.`);
+    logger.log('To let the planner infer real dependencies with Jev:');
+    result.setup.forEach((step, index) => logger.log(`  ${index + 1}. ${step}`));
+    logger.log('Without Jev, keep the plan\'s waves or write the Depends on column by hand.');
+    return;
+  }
+  if (!result.ok) {
+    logger.error(`Dependencies unavailable (${result.status}): ${result.message}`);
+    return;
+  }
+  const p = result.pairs;
+  logger.log(`Dependencies judged by Jev for ${result.feature}: ${p.judged} pair(s) — ${p.depends} depend, ${p.independent} independent, ${p.uncertain} uncertain`);
+  const width = Math.max(5, ...result.units.map((unit) => unit.phase.length));
+  logger.log(`  ${'Phase'.padEnd(width)}  Lane       Wave→  Depends on (confirmed)`);
+  for (const unit of result.units) {
+    const decide = unit.to_decide.length ? `   to decide: ${unit.to_decide.join(', ')}` : '';
+    logger.log(`  ${unit.phase.padEnd(width)}  ${String(unit.lane || '-').padEnd(9)}  ${String(unit.wave).padStart(2)}→${String(unit.suggested_wave).padEnd(2)}  ${unit.depends_on_cell}${decide}`);
+  }
+  const j = result.projection;
+  logger.log(`  projection (DEV ${j.assumptions.dev_minutes} / QA ${j.assumptions.qa_minutes} min per unit): as written ${formatHours(j.as_written.minutes)} · suggested ${formatHours(j.suggested_uncertain_as_dependency.minutes)} (uncertain = dependency) · ${formatHours(j.suggested_confirmed_only.minutes)} (confirmed only)`);
+  logger.log('Next: write the Depends on cells and the suggested waves into the Execution Sequence; settle each "to decide" pair (keep it as a dependency unless the plan proves otherwise); then run execution:compile.');
+}
 const { renderMonitor } = require('../agent-execution/execution-terminal');
 const { runExecutionProfileValidation } = require('./execution-profile-validation');
 
-const SUBCOMMANDS = ['offer', 'seed', 'profiles:validate', 'compile', 'run', 'decide', 'status', 'graph', 'dashboard', 'prices'];
+const SUBCOMMANDS = ['offer', 'seed', 'profiles:validate', 'compile', 'run', 'decide', 'status', 'graph', 'dependencies', 'dashboard', 'prices'];
 const STATUS_FORMATS = ['full', 'line', 'table'];
 const DEFAULT_WATCH_SECONDS = 5;
 
@@ -264,6 +296,7 @@ function logCompile(logger, result) {
     const s = result.summary || {};
     logger.log(`${result.dry_run ? 'Execution plan (dry run)' : 'Execution plan compiled'}: ${result.path}`);
     logger.log(`  lanes ${s.lanes} | units ${s.units} (lane ${s.lane_units}, integration ${s.integration_units}) | waves ${s.waves}${s.edges ? ` | edges ${s.edges}` : ''} | processes ${s.processes}`);
+    for (const line of formatProjection(result.projection)) logger.log(`  ${line}`);
     if (result.manifest) {
       logger.log(`  manifest: ${result.manifest.path}${result.dry_run ? (result.manifest.would_create ? ' (would be created)' : ' (would be updated)') : (result.manifest.created ? ' (created)' : ' (updated)')}`);
     }
@@ -457,6 +490,8 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
   if (sub === 'compile') {
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
     const result = await compileFeatureExecution(projectDir, feature, { env, now, dryRun: options['dry-run'] === true });
+    // Output only, never the plan file: the plan digest binds resumable runs.
+    if (result.ok && result.plan) result.projection = projectSchedule(result.plan);
     if (!options.json) logCompile(logger, result);
     return result;
   }
@@ -578,6 +613,14 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       if (result.ok) logger.log(result.rendered.replace(/\n$/, ''));
       else logger.error(`Execution graph unavailable (${result.reason})${result.message ? `: ${result.message}` : ''}`);
     }
+    return result;
+  }
+
+  if (sub === 'dependencies') {
+    if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
+    const minutes = (value) => (value === undefined ? undefined : Number(value));
+    const result = await inferDependencies({ projectDir, feature, env, devMinutes: minutes(options['dev-minutes']), qaMinutes: minutes(options['qa-minutes']) });
+    if (!options.json) logDependencies(logger, result);
     return result;
   }
 

@@ -764,6 +764,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'execution-prices',
   'execution:graph',
   'execution-graph',
+  'execution:dependencies',
+  'execution-dependencies',
   'scaffold:complete',
   'scaffold-complete',
   'deliver',
@@ -1303,6 +1305,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_execution_dashboard');
   logHelpLine(t, logger, 'cli.help_execution_prices');
   logHelpLine(t, logger, 'cli.help_execution_graph');
+  logHelpLine(t, logger, 'cli.help_execution_dependencies');
   logHelpLine(t, logger, 'cli.help_live_start');
   logHelpLine(t, logger, 'cli.help_live_status');
   logHelpLine(t, logger, 'cli.help_live_handoff');
