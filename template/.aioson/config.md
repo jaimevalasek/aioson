@@ -389,16 +389,17 @@ exit 0
 
 ## Agent file size guidelines
 
-The Claude Code harness enforces a hard limit of ~4,000 chars per auto-loaded
-instruction file (`CLAUDE.md` hierarchy). Files are truncated silently.
-Agent files in `.aioson/agents/` are read manually (not auto-loaded) so they
-are not subject to this truncation, but large files consume context budget.
+These are AIOSON context-budget targets, not provider truncation limits.
+Loading rules depend on the host and version; check its current documentation
+before claiming a hard limit (for Claude Code: https://code.claude.com/docs/en/memory).
+Agent files in `.aioson/agents/` are loaded on demand, but everything read into
+the session still consumes context. Moving text only helps when it stays unloaded.
 
 Recommended targets:
 
 | File type | Target | Notes |
 |-----------|--------|-------|
-| `CLAUDE.md` / `AGENTS.md` | ≤ 3,500 chars | Auto-loaded — hard truncation applies |
+| `CLAUDE.md` / `AGENTS.md` | ≤ 3,500 chars | Small routing kernel; advisory target |
 | Focused agents (qa, tester) | ≤ 8,000 chars | Keep lean |
 | Generalist agents (dev, planner) | ≤ 15,000 chars | Move optional sections to `.aioson/docs/` |
 | Orchestrator agents (orchestrator, squad) | ≤ 12,000 chars | Move boilerplate to `.aioson/rules/` |
