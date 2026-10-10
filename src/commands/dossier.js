@@ -34,6 +34,28 @@ async function readProjectClassification(ctxDir) {
   return null;
 }
 
+/**
+ * DEV, QA and planner append to the dossier best-effort (`|| true`), and no
+ * agent instruction creates it, so a missing dossier silently dropped every
+ * trail line. A slug with its own PRD is a real feature: the first write
+ * bootstraps the dossier from its artifacts instead of refusing. A slug
+ * without a PRD (a typo) still gets `not_found`.
+ */
+async function bootstrapForWrite(targetDir, ctxDir, slug) {
+  try {
+    await fs.access(path.join(ctxDir, `prd-${slug}.md`));
+  } catch {
+    return false;
+  }
+  const classification = (await readProjectClassification(ctxDir)) || 'MEDIUM';
+  try {
+    await initFromExisting({ slug, contextDir: ctxDir, classification, targetDir: resolveTargetDir(targetDir) });
+    return true;
+  } catch (err) {
+    return Boolean(err && err.code === 'EDOSSIEREXISTS');
+  }
+}
+
 async function runDossierInit({ args = [], options = {}, logger } = {}) {
   const targetDir = args[0] || '.';
   const slug = pickSlug(options);
@@ -238,24 +260,30 @@ async function runDossierAddFinding({ args = [], options = {}, logger } = {}) {
   }
 
   const ctxDir = resolveContextDir(targetDir);
+  const add = () => store.addFinding({ slug, contextDir: ctxDir, agent, section, content });
 
+  let result;
+  let bootstrapped = false;
   try {
-    const result = await store.addFinding({ slug, contextDir: ctxDir, agent, section, content });
-    if (jsonOut) return { ok: true, slug, added: result.added, hash: result.hash };
-    if (result.added) {
-      log(`Finding added to dossier "${slug}" (section: ${section}, agent: ${agent}).`);
-    } else {
-      log(`Finding already recorded (idempotent — no-op).`);
-    }
-    return { ok: true, slug, added: result.added, hash: result.hash };
+    result = await add();
   } catch (err) {
-    if (err && err.code === 'EDOSSIERMISSING') {
+    if (!(err && err.code === 'EDOSSIERMISSING')) throw err;
+    if (!(await bootstrapForWrite(targetDir, ctxDir, slug))) {
       if (jsonOut) return { ok: false, reason: 'not_found', slug };
-      log(`Dossier not found for slug "${slug}". Run dossier:init first.`);
+      log(`Dossier not found for slug "${slug}" and no prd-${slug}.md to bootstrap it from. Run dossier:init first.`);
       return { ok: false };
     }
-    throw err;
+    bootstrapped = true;
+    result = await add();
   }
+  if (jsonOut) return { ok: true, slug, added: result.added, hash: result.hash, bootstrapped };
+  if (bootstrapped) log(`Dossier "${slug}" bootstrapped from its artifacts (it did not exist yet).`);
+  if (result.added) {
+    log(`Finding added to dossier "${slug}" (section: ${section}, agent: ${agent}).`);
+  } else {
+    log(`Finding already recorded (idempotent — no-op).`);
+  }
+  return { ok: true, slug, added: result.added, hash: result.hash, bootstrapped };
 }
 
 async function runDossierAddCodemap({ args = [], options = {}, logger } = {}) {
