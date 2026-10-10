@@ -13,17 +13,14 @@
  *   aioson feature:tidy . [--dry-run] [--json]
  */
 
-const path = require('node:path');
 const { resolveTargetDir } = require('../lib/project-root');
 const {
   KNOWN_STATUSES,
   SAFE_SLUG,
-  parseFeatureRegistry,
   tidyFeatureRegistry,
   today,
   writeFeatureRow
 } = require('../lib/feature-registry');
-const { readFileSafe } = require('../preflight-engine');
 
 const { runFeatureArchive } = require('./feature-archive');
 
@@ -76,22 +73,22 @@ async function runFeatureRegister({ args = [], options = {}, logger } = {}) {
   if (invalid) return fail(jsonOut, logger, invalid.reason, invalid.message);
 
   const date = today();
-  const content = await readFileSafe(path.join(targetDir, '.aioson', 'context', 'features.md'));
-  const existing = parseFeatureRegistry(content || '').rows.find((row) => row.slug === slug);
-  const started = resolveStarted(options.started, existing, date);
   const completed = status === 'abandoned' ? date : '—';
 
-  const result = await writeFeatureRow(targetDir, { slug, status, started, completed });
+  const result = await writeFeatureRow(targetDir, { slug, status, completed }, {
+    resolveStarted: (existing) => resolveStarted(options.started, existing, date)
+  });
   if (!result.written) {
     return fail(jsonOut, logger, 'unrecognized_format',
       'features.md is not a pipe table this command can read; fix it by hand or run `aioson feature:tidy . --dry-run` to see why.');
   }
 
+  const existing = result.previousRow;
   const output = {
     ok: true,
     slug,
     status,
-    started,
+    started: result.row.started,
     created: !existing,
     previousStatus: existing ? existing.status : null,
     remainingNotes: result.remainingNotes

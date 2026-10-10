@@ -39,7 +39,7 @@ const {
 const { analyzeFeatureCompleteness, findingsThroughStage } = require('../lib/feature-completeness');
 const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
 const { resolveTargetDir } = require('../lib/project-root');
-const { parseFeatureRegistry, writeFeatureRow, EMPTY_CELL } = require('../lib/feature-registry');
+const { writeFeatureRow, EMPTY_CELL } = require('../lib/feature-registry');
 const { visualEvidenceBlock, formatVisualEvidence } = require('../lib/visual-evidence');
 
 // P0 agent-loading-contract: a feature closing is the natural cadence to roll
@@ -183,12 +183,14 @@ async function updateFeaturesFile(featuresPath, slug, verdict, date, targetDir) 
   // archive step runs. Only a hand-made format it cannot read falls through
   // to the legacy in-place row edit below.
   if (targetDir) {
-    const existing = parseFeatureRegistry(content).rows.find((row) => row.slug === slug);
-    const started = existing && existing.started && existing.started !== EMPTY_CELL ? existing.started : date;
     const result = await writeFeatureRow(
       targetDir,
-      { slug, status, started, completed: date },
-      { relocateSlug: slug, now: () => new Date(`${date}T12:00:00Z`) }
+      { slug, status, completed: date },
+      {
+        relocateSlug: slug,
+        now: () => new Date(`${date}T12:00:00Z`),
+        resolveStarted: (existing) => existing && existing.started && existing.started !== EMPTY_CELL ? existing.started : date
+      }
     );
     if (result.written) return result;
   }

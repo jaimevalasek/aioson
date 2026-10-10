@@ -20,6 +20,8 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
+const { withRegistryLock, writeAtomically } = require('./feature-registry-storage');
 
 const FEATURES_FILE = 'features.md';
 const NOTES_FILE = 'registry-notes.md';
@@ -122,7 +124,7 @@ function noteSlug(text, knownSlugs) {
  */
 // Lines this module writes itself; they are regenerated, never kept as notes.
 const GENERATED_LINES = [
-  /^#\s+/, // the title
+  /^#\s+Features\s*$/, // only the title emitted by this module
   /^Rows only\b/, // the intro line
   /^Run `aioson feature:tidy/ // the legacy-notes hint
 ];
@@ -386,7 +388,8 @@ async function notesDestination(ctxDir, slug) {
 async function readOptional(file) {
   try {
     return await fs.readFile(file, 'utf8');
-  } catch {
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
     return '';
   }
 }
@@ -398,7 +401,7 @@ async function appendNotesFile(dest, slug, current, fresh, now) {
   const separator = current && !current.endsWith('\n') ? '\n' : '';
   const block = fresh.map((note) => note.text).join('\n\n');
   await fs.mkdir(path.dirname(dest), { recursive: true });
-  await fs.writeFile(dest, `${current}${separator}${header}\n## Moved on ${today(now)}\n\n${block}\n`, 'utf8');
+  await writeAtomically(dest, `${current}${separator}${header}\n## Moved on ${today(now)}\n\n${block}\n`);
 }
 
 async function relocateNotes(ctxDir, notes, { dryRun = false, now } = {}) {
@@ -431,7 +434,8 @@ async function readRegistry(ctxDir) {
   const file = path.join(ctxDir, FEATURES_FILE);
   try {
     return { file, content: await fs.readFile(file, 'utf8') };
-  } catch {
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
     return { file, content: null };
   }
 }
@@ -456,6 +460,13 @@ async function inspectFeatureRegistry(targetDir) {
  */
 async function tidyFeatureRegistry(targetDir, { dryRun = false, now } = {}) {
   const ctxDir = path.join(targetDir, '.aioson', 'context');
+  // Dry-run and a missing registry remain strictly read-only.
+  if (dryRun) return tidyRegistry(targetDir, ctxDir, { dryRun, now });
+  if ((await readRegistry(ctxDir)).content === null) return { ok: true, changed: false, reason: 'no_registry', moved: [] };
+  return withRegistryLock(ctxDir, () => tidyRegistry(targetDir, ctxDir, { dryRun, now }));
+}
+
+async function tidyRegistry(targetDir, ctxDir, { dryRun, now }) {
   const { file, content } = await readRegistry(ctxDir);
   if (content === null) return { ok: true, changed: false, reason: 'no_registry', moved: [] };
   const registry = parseFeatureRegistry(content);
@@ -467,11 +478,11 @@ async function tidyFeatureRegistry(targetDir, { dryRun = false, now } = {}) {
   let backup = null;
   if (changed && !dryRun) {
     const stamp = (now ? now() : new Date()).toISOString().replace(/[-:]/g, '').replace(/\..*$/, '').replace('T', '-');
-    const backupPath = path.join(targetDir, '.aioson', 'backups', 'features-registry', `features-${stamp}.md`);
+    const backupPath = path.join(targetDir, '.aioson', 'backups', 'features-registry', `features-${stamp}-${randomUUID()}.md`);
     await fs.mkdir(path.dirname(backupPath), { recursive: true });
     await fs.writeFile(backupPath, content, 'utf8');
     backup = path.relative(targetDir, backupPath).replace(/\\/g, '/');
-    await fs.writeFile(file, next, 'utf8');
+    await writeAtomically(file, next);
   }
   return {
     ok: true,
@@ -492,20 +503,26 @@ async function tidyFeatureRegistry(targetDir, { dryRun = false, now } = {}) {
  * (the feature being closed) move to its folder; every other note is kept
  * verbatim at the bottom until `feature:tidy` runs.
  *
- * @returns {Promise<{written: boolean, recognized: boolean, relocated: Array, remainingNotes: number}>}
+ * `resolveStarted`, when supplied, derives the date from the row inside the lock.
+ * The returned previousRow and row describe that same committed update.
  */
-async function writeFeatureRow(targetDir, row, { relocateSlug = null, now } = {}) {
+async function writeFeatureRow(targetDir, row, { relocateSlug = null, now, resolveStarted } = {}) {
   const ctxDir = path.join(targetDir, '.aioson', 'context');
+  return withRegistryLock(ctxDir, () => writeRow(ctxDir, row, { relocateSlug, now, resolveStarted }));
+}
+
+async function writeRow(ctxDir, row, { relocateSlug, now, resolveStarted }) {
   const { file, content } = await readRegistry(ctxDir);
   const registry = parseFeatureRegistry(content || '');
   if (!registry.recognized) return { written: false, recognized: false, relocated: [], remainingNotes: 0 };
-  upsertRow(registry, row);
+  const existing = registry.rows.find((entry) => entry.slug === row.slug);
+  const previousRow = existing ? { ...existing } : null;
+  const writtenRow = upsertRow(registry, resolveStarted ? { ...row, started: resolveStarted(previousRow) } : row);
   const relocate = relocateSlug ? registry.notes.filter((note) => note.slug === relocateSlug) : [];
   const keep = registry.notes.filter((note) => !relocate.includes(note));
   const relocated = relocate.length > 0 ? await relocateNotes(ctxDir, relocate, { now }) : [];
-  await fs.mkdir(ctxDir, { recursive: true });
-  await fs.writeFile(file, serializeFeatureRegistry(registry, { keepNotes: keep }), 'utf8');
-  return { written: true, recognized: true, relocated, remainingNotes: keep.length };
+  await writeAtomically(file, serializeFeatureRegistry(registry, { keepNotes: keep }));
+  return { written: true, recognized: true, relocated, remainingNotes: keep.length, previousRow, row: writtenRow };
 }
 
 module.exports = {

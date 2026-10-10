@@ -92,6 +92,14 @@ describe('feature registry — parse and measure', () => {
 });
 
 describe('feature registry — canonical serialization', () => {
+  it('preserves custom H1 headings through repeated register-style rewrites', () => {
+    let registry = parseFeatureRegistry(`${NOISY}\n# Migration decision\nKeep the old API.\n`);
+    for (let i = 0; i < 3; i += 1) {
+      registry = parseFeatureRegistry(serializeFeatureRegistry(registry, { keepNotes: registry.notes }));
+      assert.ok(registry.notes.some((note) => note.text === '# Migration decision\nKeep the old API.'));
+    }
+  });
+
   it('preserves every status the routing parser reads and the last in_progress row', () => {
     const out = serializeFeatureRegistry(parseFeatureRegistry(NOISY));
     assert.deepEqual(statuses(out), statuses(NOISY));
