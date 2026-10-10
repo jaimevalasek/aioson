@@ -786,6 +786,44 @@ async function runSystemPackage({ args, options, logger, t }) {
 
 // ── system:publish ──────────────────────────────────────────────────────────
 
+// app-access-plans (CAP-aap-publish-only): o publish só publica. Privado,
+// Grátis, Beta ou Pago é decidido no admin do aioson.com (Apps da loja).
+// Texto fixo aqui de propósito: `src/i18n` tem trabalho em andamento.
+const ACCESS_MANAGED_IN_ADMIN =
+  'O acesso do app (Privado, Grátis, Beta ou Pago) é definido no admin do aioson.com (Apps da loja).';
+
+function publishAccessFlagWarnings(options) {
+  const warnings = [];
+  if (options.paid) warnings.push(`--paid não tem efeito no publish. ${ACCESS_MANAGED_IN_ADMIN}`);
+  if (options.private) warnings.push(`--private não tem efeito no publish. ${ACCESS_MANAGED_IN_ADMIN}`);
+  return warnings;
+}
+
+// true = app novo, false = nova versão, null = o servidor não disse.
+function publishedNewApp(response) {
+  if (!response || typeof response !== 'object') return null;
+  if (typeof response.created === 'boolean') return response.created;
+  if (typeof response.isNew === 'boolean') return response.isNew;
+  if (typeof response.isUpdate === 'boolean') return !response.isUpdate;
+  return null;
+}
+
+// Aviso pós-publish. Servidor antigo (sem `accessManagedInAdmin` nem marcador
+// de app novo) não recebe aviso; nova versão só confirma a versão.
+function publishAccessNotice(response, version) {
+  const managed = Boolean(response && response.accessManagedInAdmin === true);
+  const newApp = publishedNewApp(response);
+  if (newApp === false) return `Nova versão ${version} publicada.`;
+  const privateVisibility = String((response && response.visibility) || '').toUpperCase() === 'PRIVATE';
+  if (newApp === true && (managed || privateVisibility)) {
+    return `App novo publicado como Privado. ${ACCESS_MANAGED_IN_ADMIN}`;
+  }
+  if (newApp === null && managed) {
+    return `App novo entra como Privado; uma nova versão mantém o acesso atual. ${ACCESS_MANAGED_IN_ADMIN}`;
+  }
+  return null;
+}
+
 async function runSystemPublish({ args, options, logger, t }) {
   const config = options['dry-run'] ? {} : await readConfig();
   const token = options['dry-run'] ? null : requireToken(config, t);
@@ -857,28 +895,12 @@ async function runSystemPublish({ args, options, logger, t }) {
   // Pacote --build sem entrada básica de start também derruba o publish.
   const startError = buildMode ? startEntryError(files, t) : null;
 
+  // Os campos continuam no corpo para servidores antigos; o servidor atual os
+  // ignora e decide o acesso no admin (app-access-plans, AC-aap-03).
   const visibility = options.private ? 'private' : 'public';
   const paid = Boolean(options.paid);
-
-  // app-licensing-revenue-share (Fase 5 / BR-01): app PAID exige preço na fonte
-  // única (system.json). Falha cedo aqui, antes do upload — o servidor também
-  // recusa na criação. Aceita priceInCents | price_in_cents | price (em unidades).
-  if (paid) {
-    const priceCents =
-      Number(manifest.priceInCents) ||
-      Number(manifest.price_in_cents) ||
-      (Number(manifest.price) > 0 ? Math.round(Number(manifest.price) * 100) : 0);
-    if (!priceCents || priceCents <= 0) {
-      throw new Error(
-        'App PAID exige preço: defina "priceInCents" (centavos) ou "price" no system.json antes de publicar com --paid.'
-      );
-    }
-    // SF-alrs-03: visibility=PAID e preço são geridos no banco do aioson.com (dashboard
-    // da loja) — NÃO via este flag. O --paid só valida o preço localmente; não publica
-    // o app como pago por si só.
-    logger.log(
-      'Nota: visibility=PAID e preço são definidos no aioson.com (dashboard da loja). O flag --paid valida o preço localmente, mas não publica o app como pago sozinho.'
-    );
+  for (const warning of publishAccessFlagWarnings(options)) {
+    logger.log(`  [WARN] ${warning}`);
   }
 
   const ws = await readWorkspace(dir);
@@ -950,6 +972,8 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (response && response.quarantined) {
     logger.log(t('system.publish_quarantined'));
   }
+  const accessNotice = publishAccessNotice(response, manifest.version);
+  if (accessNotice) logger.log(accessNotice);
   return {
     ok: true, manifest, fileCount, totalBytes, visibility, paid, response, protectedTs, rawSource,
     protectionLevel: protection.level, protectedJs, unprotectedJs
@@ -1074,6 +1098,7 @@ module.exports = {
   collectSystemFiles,
   runSystemPackage,
   runSystemPublish,
+  publishAccessNotice,
   runSystemList,
   runSystemInstall
 };

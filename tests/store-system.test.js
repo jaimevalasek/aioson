@@ -9,6 +9,7 @@ const {
   collectSystemFiles,
   createZipBuffer,
   runSystemPublish,
+  publishAccessNotice,
   obfuscateJs,
   protectRuntimeTypeScript,
   rawSourceError,
@@ -391,4 +392,128 @@ test('max obfuscation options keep runtime-safe switches off', () => {
   assert.equal(MAX_OBFUSCATION_OPTIONS.transformObjectKeys, false);
   assert.equal(MAX_OBFUSCATION_OPTIONS.sourceMap, false);
   assert.equal(Object.isFrozen(MAX_OBFUSCATION_OPTIONS), true);
+});
+
+// ── app-access-plans: o publish só publica (CAP-aap-publish-only) ───────────
+
+const PUBLISH_APP = {
+  'system.json': JSON.stringify({ slug: 'access-probe', version: '1.2.0', name: 'Access Probe' }),
+  'package.json': JSON.stringify({ name: 'access-probe', version: '1.2.0', scripts: { start: 'node index.js' } }),
+  'index.js': 'module.exports = 1;\n'
+};
+
+// Carrega uma instância nova do comando com um HOME temporário logado, e troca
+// o fetch por um servidor falso que devolve `responseBody`.
+async function loadPublishWithAccount(ctx, responseBody) {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-publish-home-'));
+  ctx.after(() => fs.rm(home, { recursive: true, force: true }));
+  await fs.mkdir(path.join(home, '.aioson'), { recursive: true });
+  await fs.writeFile(
+    path.join(home, '.aioson', 'config.json'),
+    JSON.stringify({ aiosonToken: 'test-token', aiosonBaseUrl: 'https://store.test' }),
+    'utf8'
+  );
+
+  const configPath = require.resolve('../src/commands/config');
+  const storePath = require.resolve('../src/commands/store-system');
+  const savedCache = { config: require.cache[configPath], store: require.cache[storePath] };
+  const savedEnv = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
+  delete require.cache[configPath];
+  delete require.cache[storePath];
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  let fresh;
+  try {
+    fresh = require('../src/commands/store-system');
+  } finally {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    require.cache[configPath] = savedCache.config;
+    require.cache[storePath] = savedCache.store;
+  }
+
+  const requests = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    requests.push({ url: String(url), body: JSON.parse(init.body) });
+    return { ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify(responseBody) };
+  };
+  ctx.after(() => { globalThis.fetch = originalFetch; });
+  return { runSystemPublish: fresh.runSystemPublish, requests };
+}
+
+test('AC-aap-03: publish --paid without a price in system.json completes and warns that access is set in the admin', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const { runSystemPublish: publish, requests } = await loadPublishWithAccount(ctx, {
+    ok: true, slug: 'access-probe', version: '1.2.0', quarantined: false,
+    accessManagedInAdmin: true, created: true
+  });
+  const lines = [];
+
+  const result = await publish({ args: [dir], options: { paid: true }, logger: { log: (line) => lines.push(line) }, t });
+
+  assert.equal(result.ok, true);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://store.test/api/store/systems/publish');
+  assert.equal(requests[0].body.slug, 'access-probe');
+  const warning = lines.find((line) => line.includes('--paid'));
+  assert.ok(warning, 'the --paid warning is printed');
+  assert.match(warning, /não tem efeito/);
+  assert.match(warning, /admin do aioson\.com \(Apps da loja\)/);
+  assert.ok(!lines.some((line) => /exige preço/.test(line)));
+  assert.ok(lines.some((line) => /App novo publicado como Privado/.test(line)));
+});
+
+test('AC-aap-03: publish --paid dry-run without a price no longer fails', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const lines = [];
+  const result = await runSystemPublish({
+    args: [dir], options: { paid: true, 'dry-run': true }, logger: { log: (line) => lines.push(line) }, t
+  });
+  assert.equal(result.ok, true);
+  assert.ok(lines.some((line) => line.includes('--paid') && line.includes('admin do aioson.com')));
+});
+
+test('AC-aap-03: publish --private warns, --invite still sends the emails, and an old server response does not crash', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const { runSystemPublish: publish, requests } = await loadPublishWithAccount(ctx, {
+    ok: true, slug: 'access-probe', version: '1.2.0', quarantined: false, inviteeCount: 1
+  });
+  const lines = [];
+
+  const result = await publish({
+    args: [dir],
+    options: { private: true, invite: 'Cliente@Empresa.com' },
+    logger: { log: (line) => lines.push(line) },
+    t
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(requests[0].body.authorizedEmails, ['cliente@empresa.com']);
+  const warning = lines.find((line) => line.includes('--private'));
+  assert.ok(warning, 'the --private warning is printed');
+  assert.match(warning, /admin do aioson\.com \(Apps da loja\)/);
+  assert.ok(!lines.some((line) => /App novo publicado como Privado/.test(line)));
+  assert.ok(!lines.some((line) => line.includes('--paid')));
+});
+
+test('AC-aap-03: a new-app response with accessManagedInAdmin prints the Privado notice; a new version only confirms the version', () => {
+  const created = publishAccessNotice({ ok: true, accessManagedInAdmin: true, created: true }, '1.0.0');
+  assert.match(created, /App novo publicado como Privado/);
+  assert.match(created, /admin do aioson\.com \(Apps da loja\)/);
+  assert.match(publishAccessNotice({ accessManagedInAdmin: true, isNew: true }, '1.0.0'), /Privado/);
+  assert.match(publishAccessNotice({ accessManagedInAdmin: true, isUpdate: false }, '1.0.0'), /Privado/);
+
+  const update = publishAccessNotice({ ok: true, accessManagedInAdmin: true, created: false }, '1.2.0');
+  assert.equal(update, 'Nova versão 1.2.0 publicada.');
+  assert.equal(publishAccessNotice({ accessManagedInAdmin: true, isUpdate: true }, '1.2.0'), 'Nova versão 1.2.0 publicada.');
+
+  // Servidor que não diz se o app é novo: aviso neutro, sem afirmar mudança de acesso.
+  assert.match(publishAccessNotice({ accessManagedInAdmin: true }, '1.0.0'), /App novo entra como Privado/);
+  // Servidor antigo: nenhum aviso, nenhum erro.
+  assert.equal(publishAccessNotice({ ok: true, quarantined: false }, '1.0.0'), null);
+  assert.equal(publishAccessNotice(null, '1.0.0'), null);
+  assert.equal(publishAccessNotice({ created: true, visibility: 'FREE' }, '1.0.0'), null);
 });

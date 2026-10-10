@@ -18,8 +18,8 @@ aioson system:publish [dir] [opções]
 
 | Flag | Efeito |
 |------|--------|
-| `--private` | Visibilidade privada (default é `public` → FREE no aioson-com) |
-| `--paid` | Marca como pago (requer plano Jedi) |
+| `--private` | Sem efeito: só imprime um aviso. App novo sempre entra como Privado; o acesso (Privado, Grátis, Beta ou Pago) é definido no admin do aioson.com (Apps da loja) |
+| `--paid` | Sem efeito: só imprime um aviso e não exige preço no `system.json`. O acesso é definido no admin do aioson.com (Apps da loja) |
 | `--invite="email1,email2,..."` | Emails autorizados a instalar quando privado |
 | `--build` | Roda o `build_command` e publica a saída compilada mais arquivos necessários em runtime (por exemplo `package.json`, `vite.config.*` e `.aioson/squads/`). Exclui `src/`, sourcemaps e testes; transforma JS/JSX e TypeScript de runtime/config antes de empacotar. Pastas de saída fora de `dist/build/out/.next` entram por `"build_output_dirs"` no `system.json`. Falha se código não puder ser protegido, um segredo reconhecido aparecer no pacote, algum arquivo elegível for omitido por erro, ou a entrada básica de `start` estiver ausente |
 | `--protection=standard\|max` | Com `--build`: `standard` (padrão) minifica todo JS com Terser, inclusive bundles de frontend; `max` também ofusca todo JS com `javascript-obfuscator`, carregado do `node_modules` do app com versão exata (`npm i -D -E --ignore-scripts javascript-obfuscator`). `max` pode aumentar o pacote e o custo em runtime |
@@ -69,11 +69,15 @@ A lista é normalizada (lowercase, trim, dedup, validação básica de `@`).
 ```
 
 Server-side (`storePublishSystem` em `aioson-com/lib/store.ts`):
-1. Cria/atualiza `System` (visibility mapeada para enum: `private`→PRIVATE,
-   `public`→FREE, `paid`→PAID)
+1. Cria/atualiza `System`. `visibility` e `paid` do corpo são ignorados: app
+   novo nasce `PRIVATE` e uma nova versão mantém o acesso, o nível e o status
+   anteriores. O acesso muda só no admin do aioson.com (Apps da loja)
 2. Cria nova `SystemVersion` com `manifestJson` + `filesJson` + `packageHash`
 3. Quando privado: sincroniza tabela `SystemInvitee` (delete-then-insert)
-4. Retorna `{ ok, slug, version, packageHash, inviteeCount, quarantined }`
+4. Retorna `{ ok, slug, version, packageHash, inviteeCount, quarantined, accessManagedInAdmin }`.
+   Quando o servidor também informa se o app é novo (`created`, `isNew` ou
+   `isUpdate`), o CLI imprime "App novo publicado como Privado" ou "Nova versão
+   X publicada"
 
 ---
 
