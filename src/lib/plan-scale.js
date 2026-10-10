@@ -66,6 +66,10 @@ const FRONTEND_DIRS = new Set(['public', 'client', 'ui', 'web', 'www', 'frontend
 const BACKEND_DIRS = new Set(['server', 'api', 'backend', 'domain', 'storage', 'db', 'database', 'services', 'service', 'handlers', 'controllers', 'models', 'repositories', 'repository', 'migrations', 'cmd', 'internal', 'pkg', 'http', 'routes', 'router', 'routers', 'infra', 'infrastructure', 'workers', 'jobs', 'queue', 'queues', 'data', 'sql']);
 const TEST_DIRS = new Set(['test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'cypress', 'playwright']);
 const TEST_FILE = /(?:\.test\.|\.spec\.|_test\.|_spec\.|^test_)|Test\.(?:java|kt|cs)$/i;
+// A `client/` directory is browser code, but a file named `client.*` is as
+// often an HTTP, SDK or process-manager client on the server side
+// (`pm2-wrapper/client.ts`), so the stem alone names no surface.
+const AMBIGUOUS_STEMS = new Set(['client']);
 
 function positiveInt(raw, fallback) {
   const value = parseInt(String(raw || ''), 10);
@@ -128,7 +132,7 @@ function classifySurface(file) {
   if (BACKEND_EXTENSIONS.test(name)) return { surface: 'backend', test, by: 'extension' };
   const hit = dirs.find((dir) => FRONTEND_DIRS.has(dir) || BACKEND_DIRS.has(dir));
   if (hit) return { surface: FRONTEND_DIRS.has(hit) ? 'frontend' : 'backend', test, by: 'directory' };
-  if (FRONTEND_DIRS.has(stem) || BACKEND_DIRS.has(stem)) return { surface: FRONTEND_DIRS.has(stem) ? 'frontend' : 'backend', test, by: 'stem' };
+  if (!AMBIGUOUS_STEMS.has(stem) && (FRONTEND_DIRS.has(stem) || BACKEND_DIRS.has(stem))) return { surface: FRONTEND_DIRS.has(stem) ? 'frontend' : 'backend', test, by: 'stem' };
   return { surface: 'shared', test, by: 'default' };
 }
 

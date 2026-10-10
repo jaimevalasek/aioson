@@ -168,6 +168,13 @@ test('plan-scale: Portuguese headings, Fase columns and phase headings measure t
   assert.equal(measurePlanScale(null).files, 0);
 });
 
+test('plan-scale: a client.* file names no surface by itself, a client/ directory still does', () => {
+  assert.equal(classifySurface('apps/core/src/pm2-wrapper/client.ts').surface, 'shared');
+  assert.equal(classifySurface('apps/core/src/api/client.ts').surface, 'backend', 'a backend directory still decides');
+  assert.equal(classifySurface('src/client/client.ts').surface, 'frontend', 'a client/ directory still decides');
+  assert.equal(classifySurface('src/server.js').surface, 'backend', 'unambiguous stems keep deciding');
+});
+
 test('plan-scale: the recorded execution choice — the lanes table means orchestrated, the frontmatter records single, anything else is unrecorded', () => {
   assert.deepEqual(resolveExecutionChoice(BIG), { choice: null, source: null });
   assert.deepEqual(resolveExecutionChoice(plan({ lanes: true, delta: [], delivery: [] })), { choice: 'orchestrated', source: 'lanes_table' });
