@@ -11,9 +11,12 @@ Choose the minimum owner whose contract matches the current evidence.
 
 ## Workflow stages
 
+For a bound feature, `aioson workflow:status . --json` has already computed this table: `state.next` is the route and `contractCheck.missing` is the reason. Use the table to explain a route or to reason about an unbound request, never to override the engine.
+
 | Evidence | Route |
 |---|---|
 | Missing or invalid project context | `@setup` |
+| New feature request: raw thinking, external sources, or a visual surface without an approved prototype | `@briefing` (then `@refiner`, approval) |
 | Concrete bounded outcome passes Simple Plan gate | `@dev` in Simple Plan mode |
 | New or materially unresolved product scope | `@product` |
 | Product-ready PRD without a current hash-bound Sheldon PASS | `@sheldon` |

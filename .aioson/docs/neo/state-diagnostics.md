@@ -11,14 +11,14 @@ Use this module on activation. All operations are read-only.
 
 ## Fast diagnostics
 
-When `aioson` is available, run these in parallel:
+When `aioson` is available, two reads cover activation; both are read-only and bounded:
 
-- `aioson memory:status .`
-- `aioson memory:summary . --last=5`
-- `aioson workflow:next . --status`
-- `aioson hygiene:scan . --json`
+- `aioson workflow:status . --json` — the engine's stage, the next official stage, `contractCheck.missing` and the suggestion with its reason (`aioson workflow:next . --status` prints the same preview as text)
+- `aioson hygiene:scan .` — text, non-zero buckets only (`--json` lists every item of every bucket; read it only when one bucket must be itemised)
 
-Failure of an optional diagnostic is not a project blocker. Continue from canonical files and disclose the unavailable signal only if it changes confidence.
+Only for history questions ("where did we stop", "what happened last"): `aioson memory:status .` and `aioson memory:summary . --last=5`.
+
+Failure of an optional diagnostic is not a project blocker. Continue from canonical files and disclose the unavailable signal only if it changes confidence. Measured on a real MEDIUM desktop project: the former four-command activation plus the default `context:brief`, `preflight` and `feature:trace` reads cost about 27,000 input tokens and ten tool calls before the first answer; the two reads above plus the pulse cost about 1,400 tokens of data (3,500 with the kernel), and a concrete request with `feature:current` and the rules-only brief about 4,600, in four CLI calls and 7 s.
 
 ## Scan order
 
@@ -37,13 +37,13 @@ Canonical bare artifact names resolve under `.aioson/context/`.
 
 Prefer, in order:
 
-1. Explicit current blocker or workflow state
+1. The engine: `workflow:status` (`state.next`, `contractCheck.missing`, explicit current blocker)
 2. Current gate artifact and approval/verdict
 3. `dev-state.md` with `status: in_progress`
 4. Project pulse
 5. Host-provided git snapshot
 
-If two authoritative signals conflict, recommend the owner that can repair the state rather than guessing. Objectively inferable stale context may be repaired only by the workflow owner, never by Neo.
+For a bound feature the engine's next stage is the route; a lower signal that disagrees changes the confidence and the reason, never the agent. The pulse is written by the last agent and goes stale the moment an authority changes (a PRD, a plan, `project.context.md`), while the engine re-reads the hash-bound reviews every time: on a real project the pulse said "Gate C approved, @dev" while the engine said "@sheldon: the Sheldon review is stale for the current PRD/authorities" because `project.context.md` had been edited after the review. `preflight`'s phase gates read frontmatter markers only and can say READY in that same state; they never override the engine. Objectively inferable stale context may be repaired only by the workflow owner, never by Neo.
 
 ## Neural Chain impact queue
 

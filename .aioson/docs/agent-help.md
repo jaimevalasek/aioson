@@ -57,7 +57,7 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 - **What:** the system router — shows the full picture (project state, workflow stage, pending work) and routes you to the right agent. Never implements, never produces artifacts; on request it cleans the feature lifecycle through `aioson feature:triage` (close what QA passed, pause or abandon what went quiet, archive what is closed) and frees the framework's own disk footprint through `aioson storage:triage` (old doc snapshots and rollback folders, oversized logs; heavy paths only when you name them).
 - **When:** you are lost, between features, or unsure which agent/lane fits the task.
-- **Options:** none.
+- **Options:** `--feature=<slug>` binds the question to one feature (hosts that start every work item at @neo pass it through `aioson agent:prompt neo . --feature=<slug>`); otherwise the pulse's active feature. For a bound feature the route is the engine's next stage from `aioson workflow:status . --json`; Neo's own reading only sets the confidence and names a divergence.
 - **Typical:** `/neo where are we?`, `/neo what should I run next?`, `/neo clean up stuck features`, `/neo free disk space`.
 - **Produces:** orientation + a concrete routing recommendation.
 - **Next:** the agent it names.
