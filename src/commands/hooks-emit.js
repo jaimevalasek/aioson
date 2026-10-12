@@ -7,7 +7,10 @@
  * Reads the hook payload from stdin (JSON), maps it to an AIOSON runtime event,
  * and writes it to the active live session in SQLite + events.ndjson.
  *
- * If no live session exists, auto-starts one (--no-launch mode) before emitting.
+ * The event goes to the live session that launched the tool (`live:start`
+ * exports AIOSON_LIVE_SESSION_KEY), or else to the single open live session of
+ * this project for this tool. Only without either does it fall back to the
+ * per-agent hooks session, auto-starting one (--no-launch mode) if needed.
  *
  * Designed to be fast (< 50ms hot path) and never block the agent.
  */
@@ -25,6 +28,7 @@ const {
   startRun,
   writeAgentSession
 } = require('../runtime-store');
+const { resolveLauncherLiveSession } = require('./live');
 
 const HOOKS_EMIT_VERSION = '1';
 
@@ -245,8 +249,12 @@ async function runHooksEmit({ args, options = {} }) {
 
     const now = nowIso();
 
-    // Ensure live session exists (fast path: session file read)
-    const runKey = await ensureOrCreateLiveSession(targetDir, agentName, source, runtimeDir);
+    // The live session that launched this tool wins; the per-agent hooks
+    // session (auto-started when missing) is only the fallback.
+    const liveRun = await resolveLauncherLiveSession(targetDir, runtimeDir, { source });
+    const runKey = liveRun
+      ? liveRun.runKey
+      : await ensureOrCreateLiveSession(targetDir, agentName, source, runtimeDir);
 
     // Write to SQLite
     const { db } = await openRuntimeDb(targetDir, { mustExist: true });
@@ -265,7 +273,7 @@ async function runHooksEmit({ args, options = {} }) {
     }
 
     // Append to events.ndjson for real-time dashboard view
-    await appendLiveEventFile(runtimeDir, runKey, {
+    const liveEvent = {
       ts: now,
       type: event.eventType,
       message: event.message,
@@ -273,7 +281,16 @@ async function runHooksEmit({ args, options = {} }) {
       file: event.filePath || undefined,
       source,
       agent: agentName
-    });
+    };
+    if (liveRun) {
+      // Append only. state.json of a launched session belongs to `live:*`;
+      // parallel tool uses fire concurrent hooks, and a read-modify-write here
+      // would race and corrupt it.
+      await fs.appendFile(path.join(liveRun.sessionDir, 'events.ndjson'), JSON.stringify(liveEvent) + '\n', 'utf8')
+        .catch(() => {});
+    } else {
+      await appendLiveEventFile(runtimeDir, runKey, liveEvent);
+    }
 
     return { ok: true, runKey, event: event.eventType, message: event.message };
   } catch {

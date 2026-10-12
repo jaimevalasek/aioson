@@ -343,11 +343,15 @@ async function resolveToolSpawn(binaryPath, args, platform = process.platform) {
   return { command: binaryPath, args, options: {} };
 }
 
-async function spawnTool(binaryPath, args, cwd) {
+// The session key travels in the tool's environment: the tool's hooks inherit
+// it, so `hooks:emit` records each tool use in THIS live session — the one
+// `live:status` and the Play's activity view follow — instead of guessing.
+async function spawnTool(binaryPath, args, cwd, sessionKey) {
   const target = await resolveToolSpawn(binaryPath, args);
+  const env = sessionKey ? { ...process.env, AIOSON_LIVE_SESSION_KEY: String(sessionKey) } : process.env;
   return spawn(target.command, target.args, {
     cwd,
-    env: process.env,
+    env,
     stdio: 'inherit',
     ...target.options
   });
@@ -679,6 +683,103 @@ async function resolveLiveContext(targetDir, db, runtimeDir, options = {}) {
     open,
     paths: sessionKey ? resolveLivePaths(runtimeDir, sessionKey) : null
   };
+}
+
+function isOpenLaunchedState(state) {
+  return Boolean(state && state.current_run_key && !state.closed_at && state.phase !== 'closed');
+}
+
+function isPidAlive(pid) {
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0) return false;
+  try {
+    process.kill(value, 0);
+    return true;
+  } catch (err) {
+    return err.code === 'EPERM';
+  }
+}
+
+function sameDir(a, b) {
+  if (!a || !b) return false;
+  const left = path.resolve(String(a));
+  const right = path.resolve(String(b));
+  return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+
+/**
+ * The open live session that launched the current tool, or null.
+ *
+ * With AIOSON_LIVE_SESSION_KEY (exported by `live:start`) the answer is exact:
+ * the session's running run, read from the database — a handoff swaps it for
+ * the next agent's. A key with no running run here (the tool moved to another
+ * project, or the session was closed) returns null — never a guess.
+ *
+ * Without the key (a session started before the launcher exported it), an open
+ * session of this project with a live process counts only when it is the only
+ * one (`source` narrows it to one tool): two tabs on one project would
+ * otherwise swap each other's activity.
+ */
+async function resolveLauncherLiveSession(targetDir, runtimeDir, { source } = {}) {
+  const envKey = String(process.env.AIOSON_LIVE_SESSION_KEY || '').trim();
+  if (envKey) {
+    const handle = await openRuntimeDb(targetDir, { mustExist: true });
+    if (!handle) return null;
+    try {
+      const row = handle.db.prepare(`
+        SELECT run_key FROM agent_runs
+        WHERE session_key = ? AND source = 'live' AND status = 'running'
+        ORDER BY started_at DESC, rowid DESC
+        LIMIT 1
+      `).get(envKey);
+      return row
+        ? { sessionKey: envKey, runKey: row.run_key, sessionDir: resolveLivePaths(runtimeDir, envKey).sessionDir }
+        : null;
+    } finally {
+      handle.db.close();
+    }
+  }
+
+  const liveRoot = path.join(runtimeDir, 'live');
+  const entries = await fs.readdir(liveRoot, { withFileTypes: true }).catch(() => []);
+  const candidates = await Promise.all(entries
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith('hooks-'))
+    .map(async (entry) => {
+      const sessionDir = path.join(liveRoot, entry.name);
+      const state = await fs.readFile(path.join(sessionDir, 'state.json'), 'utf8')
+        .then((raw) => JSON.parse(raw))
+        .catch(() => null);
+      if (!isOpenLaunchedState(state) || state.auto_started || !state.session_key) return null;
+      if (source && state.tool_session !== source) return null;
+      if (!sameDir(state.path, targetDir) || !isPidAlive(state.child_pid)) return null;
+      return { sessionKey: state.session_key, runKey: state.current_run_key, sessionDir };
+    }));
+  const open = candidates.filter(Boolean);
+  return open.length === 1 ? open[0] : null;
+}
+
+/**
+ * Live context of the session that launched the current tool. Agents report
+ * milestones with their own name (`--agent=dev`) while the Play opened the
+ * session under another; matching by name sent those events to a stale
+ * per-agent session or to a standalone run nobody follows.
+ */
+async function resolveLauncherLiveContext(targetDir, t, options = {}) {
+  const { db, dbPath, runtimeDir } = await withRuntimeDb(targetDir, t);
+  const launcher = await resolveLauncherLiveSession(targetDir, runtimeDir).catch(() => null);
+  if (!launcher) {
+    db.close();
+    return null;
+  }
+  const context = await resolveLiveContext(targetDir, db, runtimeDir, {
+    sessionKey: launcher.sessionKey,
+    limit: options.limit
+  });
+  if (!context.run || context.run.source !== 'live' || !context.task || context.phase !== 'active') {
+    db.close();
+    return null;
+  }
+  return { db, dbPath, runtimeDir, context };
 }
 
 async function requireActiveLiveContext(targetDir, agentName, t, options = {}) {
@@ -1443,7 +1544,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           let attachResult = null;
 
           if (attach && !noLaunch) {
-            attachChild = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir));
+            attachChild = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir, existing.sessionKey));
             state.child_pid = attachChild.pid || null;
             if (existing.task?.task_key) {
               const taskMeta = parseTaskMeta(existing.task);
@@ -1548,7 +1649,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir));
+          child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir, sessionKey));
           taskMeta.child_pid = child.pid || null;
           updateTask(db, {
             taskKey,
@@ -1556,7 +1657,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir));
+        child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir, sessionKey));
         taskMeta.child_pid = child.pid || null;
         updateTask(db, {
           taskKey,
@@ -1726,6 +1827,9 @@ async function runRuntimeEmit({ args, options = {}, logger, t }) {
 
   let liveHandle;
   if (await runtimeStoreExists(targetDir)) {
+    liveHandle = await resolveLauncherLiveContext(targetDir, t, { limit: options.limit });
+  }
+  if (!liveHandle && await runtimeStoreExists(targetDir)) {
     try {
       liveHandle = await requireActiveLiveContext(targetDir, agentName, t, {
         limit: options.limit
@@ -1762,6 +1866,11 @@ async function runRuntimeEmit({ args, options = {}, logger, t }) {
   }
 
   const { db, dbPath, runtimeDir, context } = liveHandle;
+  // The session may belong to another agent (the Play opens it as one, the
+  // agent reports as itself): keep who actually said it.
+  if (context.agentName && normalizeAgentHandle(context.agentName) !== agentName) {
+    payload.emitted_by = agentName;
+  }
 
   try {
     const state = context.state || createLiveState(targetDir, context.run, context.task, {
@@ -2363,7 +2472,8 @@ module.exports = {
   // Exported so callers (including tests) can resolve the on-disk directory
   // for a given session key without re-implementing the sanitization rules.
   sessionKeyToDirName,
-  resolveLivePaths
+  resolveLivePaths,
+  resolveLauncherLiveSession
 };
 
 // ── Context estimation helpers ──
