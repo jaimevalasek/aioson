@@ -9,6 +9,42 @@
       "expect": [{ "path": ".aioson/docs/quality/engineering.md", "in": "selected" }]
     },
     {
+      "name": "quality-performance-method-for-a-slow-endpoint",
+      "agent": "quality",
+      "mode": "planning",
+      "task": "Find why the orders list endpoint is slow and whether the system can run faster.",
+      "expect": [{ "path": ".aioson/docs/quality/performance.md", "in": "selected" }]
+    },
+    {
+      "name": "quality-performance-method-in-pt-br",
+      "agent": "quality",
+      "mode": "planning",
+      "task": "Analisar se o sistema pode ficar mais rápido e otimizar o desempenho da listagem de pedidos, que está lenta.",
+      "expect": [{ "path": ".aioson/docs/quality/performance.md", "in": "selected" }]
+    },
+    {
+      "name": "qa-routes-a-measured-slow-page-to-the-performance-method",
+      "agent": "qa",
+      "mode": "planning",
+      "task": "The orders page takes four seconds to load; check the latency before the delivery verdict.",
+      "expect": [{ "path": ".aioson/docs/quality/performance.md", "in": "selected" }]
+    },
+    {
+      "name": "performance-method-stays-quiet-for-a-security-review",
+      "agent": "pentester",
+      "mode": "executing",
+      "task": "Review the login endpoint for brute force and session fixation before release.",
+      "absent": [{ "path": ".aioson/docs/quality/performance.md", "in": "selected" }]
+    },
+    {
+      "name": "performance-method-stays-quiet-for-a-copy-fix",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix the wording of the empty-state message on the customers screen.",
+      "paths": ["src/ui/CustomersEmpty.tsx"],
+      "absent": [{ "path": ".aioson/docs/quality/performance.md", "in": "selected" }]
+    },
+    {
       "name": "quality-playbook-stays-quiet-for-readme-typo",
       "agent": "dev",
       "mode": "executing",

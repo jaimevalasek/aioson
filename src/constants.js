@@ -144,6 +144,7 @@ const MANAGED_FILES = [
   '.aioson/docs/dev/runtime-handoffs.md',
   '.aioson/docs/dev/site-delivery.md',
   '.aioson/docs/quality/code-health-analysis.md',
+  '.aioson/docs/quality/performance.md',
   '.aioson/docs/quality/code-size-limits.md',
   '.aioson/docs/quality/coupling-limits.md',
   '.aioson/docs/qa/browser-walkthrough.md',

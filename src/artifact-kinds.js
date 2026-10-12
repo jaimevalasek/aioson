@@ -70,6 +70,11 @@ const AGENT_ARTIFACT_KIND = {
   },
   briefing: { kind: 'briefing', needs: 'slug', featureSlugged: true },
   tester: { kind: 'test-report', needs: 'slug', featureSlugged: true },
+  // The findings JSON was validated only at QA's Gate D, after the Pentester
+  // had left: four of five real v2 runs reached QA failing it. The session end
+  // now replays that gate (plus the finding-level contract) while the agent
+  // that can repair the file is still here. The epilogue carries --feature.
+  pentester: { kind: 'security-findings', needs: 'slug', featureSlugged: true },
   // The pilot is the squad's one flagship deliverable. When it is a web
   // surface, the session end also proves its measured visual floor (craft,
   // generation tells, materials, cross-project fingerprint) — the same gate the

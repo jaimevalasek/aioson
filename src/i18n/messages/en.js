@@ -399,6 +399,7 @@ module.exports = {
       'aioson agent:audit [path] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=en]',
     help_quality_run: "quality:run [path] --profile=<product|framework> [--dry-run] [--json] — Run native quality checks (product/framework; --dry-run previews)",
     help_quality_evals: "quality:evals [path] [--validate-seeds | --executor=<JSON argv>] [--compare=<run.json> --baseline=<run.json>] — Run repair evaluations or compare immutable paired runs",
+    help_quality_bench: "quality:bench [path] --argv=<JSON argv> --label=<name> [--samples=10] [--warmup=2] [--metric=wall|reported] | --baseline=<result.json> [--compare=<result.json>] — Time a hotspot with repeated samples, or replay/compare it before and after a change",
     help_quality_audit:
       'aioson quality:audit [path] [--feature=<slug>] [--provider-output=<path>] [--baseline=<path>] [--changed=<path[,path]>] [--json] [--locale=en]',
     help_squad_dashboard:

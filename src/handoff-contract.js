@@ -762,6 +762,11 @@ async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
 
 module.exports = {
   validateSecurityForFeature,
+  // The Pentester's own session end (verify:artifact --kind=security-findings)
+  // replays these on the same file QA's Gate D reads — one judgment, two moments.
+  readSecurityFindings,
+  validateReviewContract,
+  validateV2SecurityEvidence,
   parseFrontmatterValue,
   readProjectClassification,
   resolveClassification,

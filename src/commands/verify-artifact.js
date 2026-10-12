@@ -243,7 +243,7 @@ const RULESETS = {
 
 // Kinds whose target file path is keyed by --slug; without it we cannot resolve
 // the artifact, so fail with a clear usage error instead of a `null/` path.
-const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy', 'review', 'sources', 'briefing', 'test-report', 'squad-pilot', 'squad-package', 'execution-plan']);
+const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy', 'review', 'sources', 'briefing', 'test-report', 'security-findings', 'squad-pilot', 'squad-package', 'execution-plan']);
 
 // Kinds whose artifact has a date-stamped / caller-known path — resolved via
 // --file=<path> rather than derived from a slug.
@@ -1115,6 +1115,37 @@ const ADAPTERS = {
     };
   },
 
+  // The Pentester's session end runs the gate QA's Gate D runs on the same
+  // file, plus the finding-level contract that gate never read. Before this
+  // kind the findings JSON was first validated at QA's handoff — after the
+  // Pentester had left — and a direct paths/routes/project run was never
+  // validated at all. Open high/critical findings are QA's to adjudicate:
+  // they are metrics here, never issues.
+  'security-findings': async (ctx) => {
+    // Same slug shape pentester:report accepts — a slug is a path segment here.
+    if (!/^[a-z0-9][a-z0-9-]{0,119}$/.test(ctx.slug)) {
+      return { ok: false, issues: [`invalid slug "${ctx.slug}" — lowercase letters, digits and hyphens only`], warnings: [], checks: [] };
+    }
+    const candidates = [
+      `.aioson/context/security-findings-${ctx.slug}.json`,
+      `.aioson/context/done/${ctx.slug}/security-findings-${ctx.slug}.json`
+    ];
+    const rel = candidates.find((candidate) => fs.existsSync(path.resolve(ctx.targetDir, candidate)));
+    if (!rel) {
+      return { ok: false, issues: [`security findings not found: ${candidates[0]}`], warnings: [], checks: [] };
+    }
+    const { analyzeSecurityFindings } = require('../lib/security/findings-contract');
+    const result = await analyzeSecurityFindings({ targetDir: ctx.targetDir, file: path.resolve(ctx.targetDir, rel) });
+    const ok = result.issues.length === 0;
+    return {
+      ok,
+      issues: result.issues,
+      warnings: result.warnings,
+      checks: [{ id: 'security-findings', ok, detail: result.issues.slice(0, 3).join('; ') || null }],
+      metrics: { ...result.metrics, file: rel }
+    };
+  },
+
   // The deterministic half of the @benchmark output contract: schema v1 shape,
   // status/validation enums, research/validation row shapes, path containment
   // and existence, forbidden provenance fields, and the "completed needs
@@ -1633,6 +1664,47 @@ async function evaluateKind(kind, ctx, logger) {
   return null; // unknown
 }
 
+// ─── human output ─────────────────────────────────────────────────────────────
+
+function visualCraftSegment(m) {
+  if (!m.craft || !m.craft.measured) return '';
+  const font = m.font_delivery && m.font_delivery.delivered ? 'delivered' : 'not delivered';
+  const mode = m.craft.mode && m.craft.mode !== 'unknown' ? ` (${m.craft.mode})` : '';
+  return ` | type max ${m.max_font_size_px || 0}px | font ${font} | craft ${m.craft.active_levers}/${m.craft.lever_count || 5}${mode} | materials ${m.craft.material_depth ?? 0}/7`;
+}
+
+function visualSummaryLine(m) {
+  const pct = m.token_adherence_pct === null || m.token_adherence_pct === undefined ? 'n/a' : `${m.token_adherence_pct}%`;
+  const tells = m.tells && m.tells.active > 0 ? ` | tells ${m.tells.active}` : '';
+  const palette = m.palette && m.palette.accent_hue != null && m.palette.ground
+    ? ` | accent ~${m.palette.accent_hue}° on ${m.palette.ground.pole}`
+    : '';
+  return `  tokens ${pct} | spacing off-grid ${m.spacing_off_grid ?? 'n/a'} | depth ${(m.depth_strategies || []).join('+') || 'none'} | fonts ${(m.font_families || []).length} | reduced-motion ${m.reduced_motion_handled ? 'yes' : 'no'}${visualCraftSegment(m)}${tells}${palette}`;
+}
+
+function logVisualMetrics(logger, m, runtimeCarried) {
+  logger.log(visualSummaryLine(m));
+  if (Array.isArray(m.states_missing) && m.states_missing.length) logger.log(`  states missing: ${m.states_missing.join(', ')}`);
+  const capture = m.runtime && m.runtime.available && m.runtime.screenshot_capture;
+  if (capture && capture.count > 0) {
+    const { formatBytes } = require('../lib/evidence-artifacts');
+    logger.log(`  screenshots: ${capture.count} ${capture.mode} capture(s), ${formatBytes(capture.bytes)} → ${capture.dir} — open only the capture a finding names; a narrowed run (--route) replaces only its own captures`);
+  }
+  if (runtimeCarried) logger.log(`  runtime: carried from the --runtime run of ${runtimeCarried} (inputs unchanged) — a static re-measure never erases it`);
+}
+
+// The visual line reads visual-only fields; every other measuring kind used to
+// print "tokens n/a | spacing off-grid n/a …" in place of its own numbers.
+function logHumanMetrics(logger, kind, m, runtimeCarried) {
+  if (kind === 'visual') return logVisualMetrics(logger, m, runtimeCarried);
+  if (kind === 'security-findings') {
+    const c = m.coverage || {};
+    const scanner = m.scanner_records ? ` (${m.scanner_records} written by security:audit/scan)` : '';
+    return logger.log(`  findings ${m.findings ?? 0}${scanner} | open high/critical ${m.open_high_critical ?? 0} (QA-blocking ${m.qa_blocking ?? 0}, QA adjudicates) | corrections pending QA ${m.corrections_pending_qa ?? 0} | deferred ${m.deferred ?? 0} | coverage ${c.rows ?? 0} row(s), ${c.not_tested ?? 0} not_tested, ${c.complete ? 'complete' : 'incomplete'}`);
+  }
+  return logger.log(`  metrics: ${JSON.stringify(m)}`);
+}
+
 // ─── main command ─────────────────────────────────────────────────────────────
 
 async function runVerifyArtifact({ args, options = {}, logger }) {
@@ -1887,25 +1959,7 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
 
   const verdict = report.verdict === 'unverified' ? 'UNVERIFIED' : (ok ? 'OK' : (advisory ? 'ADVISORY' : 'FAIL'));
   logger.log(`verify:artifact — kind=${kind}${slug ? ` slug=${slug}` : ''} — ${verdict}`);
-  if (report.metrics) {
-    const m = report.metrics;
-    const pct = m.token_adherence_pct === null || m.token_adherence_pct === undefined ? 'n/a' : `${m.token_adherence_pct}%`;
-    const craft = m.craft && m.craft.measured
-      ? ` | type max ${m.max_font_size_px || 0}px | font ${m.font_delivery && m.font_delivery.delivered ? 'delivered' : 'not delivered'} | craft ${m.craft.active_levers}/${m.craft.lever_count || 5}${m.craft.mode && m.craft.mode !== 'unknown' ? ` (${m.craft.mode})` : ''} | materials ${m.craft.material_depth ?? 0}/7`
-      : '';
-    const tells = m.tells && m.tells.active > 0 ? ` | tells ${m.tells.active}` : '';
-    const palette = m.palette && m.palette.accent_hue != null && m.palette.ground
-      ? ` | accent ~${m.palette.accent_hue}° on ${m.palette.ground.pole}`
-      : '';
-    logger.log(`  tokens ${pct} | spacing off-grid ${m.spacing_off_grid ?? 'n/a'} | depth ${(m.depth_strategies || []).join('+') || 'none'} | fonts ${(m.font_families || []).length} | reduced-motion ${m.reduced_motion_handled ? 'yes' : 'no'}${craft}${tells}${palette}`);
-    if (Array.isArray(m.states_missing) && m.states_missing.length) logger.log(`  states missing: ${m.states_missing.join(', ')}`);
-    const capture = m.runtime && m.runtime.available && m.runtime.screenshot_capture;
-    if (capture && capture.count > 0) {
-      const { formatBytes } = require('../lib/evidence-artifacts');
-      logger.log(`  screenshots: ${capture.count} ${capture.mode} capture(s), ${formatBytes(capture.bytes)} → ${capture.dir} — open only the capture a finding names; a narrowed run (--route) replaces only its own captures`);
-    }
-    if (runtimeCarried) logger.log(`  runtime: carried from the --runtime run of ${runtimeCarried} (inputs unchanged) — a static re-measure never erases it`);
-  }
+  if (report.metrics) logHumanMetrics(logger, kind, report.metrics, runtimeCarried);
   for (const issue of issues) logger.log(`  ✗ ${issue}`);
   for (const w of warnings) logger.log(`  ⚠ ${w}`);
   if (ok && warnings.length === 0) logger.log('  (no issues)');

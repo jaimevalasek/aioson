@@ -1,6 +1,6 @@
 ---
 description: "Artifact done-gates (verify:artifact) — build-free, model-agnostic completeness/integrity checks for the non-code artifacts the specialized agents produce before they register done."
-agents: [setup, genome, profiler-researcher, profiler-enricher, profiler-forge, discover, orache, design-hybrid-forge, site-forge, copywriter, committer, squad, briefing, refiner, product, sheldon, tester, dev, shakedown]
+agents: [setup, genome, profiler-researcher, profiler-enricher, profiler-forge, discover, orache, design-hybrid-forge, site-forge, copywriter, committer, squad, briefing, refiner, product, sheldon, tester, pentester, dev, shakedown]
 task_types: [verification, configuration]
 triggers: [verify:artifact, artifact gate, done gate, artifact done-gate, placeholder gate, kind=]
 ---
@@ -47,6 +47,7 @@ done-gate line, not a bespoke implementation.
 | `review` | `@refiner` | review-surface gate (canonical marker, stale `source_hash`, feedback schema) | advisory |
 | `visual` | `@dev` / design flows | visual-quality measurement over the delivered surface | advisory |
 | `test-report` | `@tester` | test-report lint (mandatory sections, hypothesis classes, correction packet) | blocking done gate |
+| `security-findings` | `@pentester` | QA's own Gate D validator on `security-findings-{slug}.json` (review contract, coverage roll-ups, surfaces, sanitized targets) + the finding contract (vocabularies matched exactly, retired owners, legacy version, remediation records); open high/critical findings are metrics for QA, never issues; records `security:audit`/`security:scan` wrote (`source`) keep the scanner's shape and are counted, not held to the authored contract | advisory at `agent:done`; Gate D blocks at QA |
 | `squad-pilot` | `@squad` | squad-pilot lint (pilot block, fingerprint, deliverable + builder drift) | blocking — `squad:pilot-approve` refuses while issues remain |
 | `squad-package` | `@squad` | `squad:validate --strict` + executor lint (stubs, placeholders, thin/bloated prompts, missing core sections, near-duplicates, argv-only workers) | advisory rider at `agent:done`; strict errors block `validate` itself |
 | `shakedown` | `@shakedown` | shakedown lint (frontmatter enums, coverage arithmetic, punch-list evidence, `## Not visited` ⇔ complete-run invariant), resolved via `--file` or `--slug` | advisory |
@@ -80,8 +81,8 @@ end (and rides on `agent:epilogue`, which wraps `agent:done`):
   carries); without it, `agent:done` surfaces a one-line hint naming the exact
   command, so the gate is visible rather than silently skipped. `agent:epilogue`
   forwards the same three locator flags to the `agent:done` it wraps.
-- **Feature-slugged kinds** (`tester`→`test-report`, `briefing`→`briefing`,
-  `refiner`→`review`) fall back to `--feature` as the slug when no
+- **Feature-slugged kinds** (`tester`→`test-report`, `pentester`→`security-findings`,
+  `briefing`→`briefing`, `refiner`→`review`) fall back to `--feature` as the slug when no
   explicit `--slug` was threaded — those artifacts are keyed by the feature slug,
   so a plain `agent:done --feature={slug}` already fires them.
 

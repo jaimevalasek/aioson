@@ -57,7 +57,7 @@ Named activation loads `.aioson/agents/{slug}.md` immediately. Main routes:
 | Product scope / PRD enrichment / plan | `product` / `sheldon` / `planner` |
 | Implement or resume / test / acceptance | `dev` / `tester` / `qa` |
 | Post-delivery completeness walkthrough ("pente fino") | `shakedown` |
-| Engineering quality / static analysis / test effectiveness / eval pipeline | `quality` (optional assessment; QA keeps acceptance) |
+| Engineering quality / static analysis / test effectiveness / performance and speed / eval pipeline | `quality` (optional assessment; QA keeps acceptance) |
 | Security | `pentester` |
 | Status/router / coordination | `neo` / `orchestrator` |
 | Squad / domain investigation / genome | `squad` / `orache` / `genome` |

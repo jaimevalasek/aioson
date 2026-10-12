@@ -605,6 +605,7 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'quality:audit',
   'quality:run',
   'quality:evals',
+  'quality:bench',
   'quality-audit',
   'brief:gen',
   'harness:init',
@@ -1119,7 +1120,7 @@ function getCommandHelpUsage(command, t) {
 }
 
 function printQualityHelp(t, logger) {
-  for (const key of ['cli.help_quality_audit', 'cli.help_quality_run', 'cli.help_quality_evals']) logHelpLine(t, logger, key);
+  for (const key of ['cli.help_quality_audit', 'cli.help_quality_run', 'cli.help_quality_evals', 'cli.help_quality_bench']) logHelpLine(t, logger, key);
 }
 
 function printHelp(t, logger) {

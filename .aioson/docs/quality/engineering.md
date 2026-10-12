@@ -54,6 +54,10 @@ The trusted grader lives outside candidate workspaces and checks final behavior 
 
 Compare with `quality:evals . --baseline=<before/run.json> --compare=<after/run.json> --output=<comparison.json> --json`. Both runs must have identical task/trial sets and corpus/grader hashes, and no infrastructure errors. It reports paired changes and a seeded bootstrap interval clustered by task, so repeated trials are not counted as independent tasks. Small, transparent corpora support regression triage; they do not establish model superiority. Differences in environment are reported. Never compare seed validation with executor runs.
 
+## Performance
+
+`aioson quality:bench` is the measuring instrument for a performance hotspot: repeated samples of one argv after warmup, raw samples and environment kept under `.aioson/runtime/quality/bench/<run>/`, and `--baseline=<result.json>` to replay the same benchmark after a change for a paired verdict (`faster`/`slower`/`inconclusive`/`not_comparable`). Ownership, workload rules and the work-count regression test live in `.aioson/docs/quality/performance.md`.
+
 ## Evidence and ownership
 
 For each check retain command, revision/dirty state, tool/config versions, outcome, logs and limitations. Prioritize confirmed correctness/security/data-integrity defects, then recurring regressions and test gaps, then measured performance/maintenance cost. Coverage alone cannot prove assertion quality; targeted mutation probes should kill a known defect. Benchmark with fixed workload, warmup, repeated samples and environment; preserve raw samples and avoid treating noisy timing deltas as a product gate.

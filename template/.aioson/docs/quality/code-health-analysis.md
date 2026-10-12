@@ -38,6 +38,9 @@ Prefer the smallest target that answers the question. Write down what "better" m
 - **Performance hotspots** — N+1 queries in lists, sync external calls in the request cycle,
   unbounded/unpaginated queries, repeated work in loops, missing indexes on WHERE/ORDER/JOIN,
   O(n²) over growing collections. Flag with the trigger condition, not a micro-benchmark guess.
+  Claiming a hotspot or a speed-up needs numbers — `.aioson/docs/quality/performance.md`
+  (`aioson quality:bench` with repeated samples, a replayed baseline for the after-fix verdict,
+  a regression test that counts work, never wall-clock time).
 - **Componentization / maintainability** — duplicated blocks (extract), oversized files/functions
   (split — see `.aioson/design-docs/file-size.md`), tight coupling / mixed concerns (separate),
   god-objects, primitive obsession. Only propose extraction when it lowers real maintenance cost,
@@ -65,17 +68,17 @@ Re-measure against the goal from step 1. If not improved, iterate or revert. Rec
 
 | Agent | Leans on | Output |
 |---|---|---|
-| @quality | reproducible measurement, assertion effectiveness, baseline/eval integrity | quality review with evidence and remediation backlog |
-| @tester | coverage, test sufficiency, regression | writes the missing tests (line/branch/property) |
-| @qa | risk-first triage; routes coverage→@tester, perf/structure→@planner | findings in the QA report |
-| @pentester | execution-chain, attack surface (perf/componentization light) | threat-surface + chain findings |
+| @quality | reproducible measurement, assertion effectiveness, baseline/eval integrity, performance (owner: `quality:bench` before/after) | quality review with evidence and remediation backlog |
+| @tester | coverage, test sufficiency, regression (a fixed hotspot gets a work-count regression test) | writes the missing tests (line/branch/property) |
+| @qa | risk-first triage; routes coverage→@tester, perf measurement→@quality, structural perf→@planner | findings in the QA report |
+| @pentester | execution-chain, attack surface; resource exhaustion only with an abuse path — plain slowness goes to @quality | threat-surface + chain findings |
 | @planner | componentization, maintainability, performance (structural) | bounded decisions in the implementation plan |
 | @sheldon | facets relevant to the unresolved PRD risk | in-place PRD enrichment |
 | @dev | quick lens on a slice during a below-lane fix or Simple Plan | inline suggestions; escalate if broad |
 
 ## Trigger (when to load this doc)
 Load when the task is: "is this well-tested / does it need more tests?", "should we add a regression
-test?", "trace how this runs / where it's slow", or "is this worth refactoring/extracting?".
+test?", "trace how this runs / where it's slow / can it run faster", or "is this worth refactoring/extracting?".
 Do **not** load for routine happy-path implementation or a bounded bug fix with a known reproducer.
 
 ## Output discipline

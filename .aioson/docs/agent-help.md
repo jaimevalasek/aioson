@@ -101,7 +101,7 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 ## @pentester
 
 - **What:** evidence-driven adversarial security review — maps the complete declared threat surface, records explicit standards/path/route coverage, and may apply every eligible deterministic hardening that fits one bounded packet.
-- **When:** sensitive surface (auth, money, uploads, secrets, external URLs) — via `@qa`'s trigger or on demand.
+- **When:** sensitive surface (auth, money, uploads, secrets, external URLs) — via `@qa`'s trigger or on demand. Slowness with no abuse path is `@quality`'s, not a security review.
 - **Options:** `--mode=app_target --feature=<slug> --scope=<target>` via `aioson agent:prompt pentester`; `--scope-mode=feature|simple-plan|paths|routes|project` with `--paths=`/`--routes=` chooses what is reviewed. `--report=full|none` (`--no-report`) selects HTML; `none` is the default, and `full` runs after corrections. Ask once only when scope remains ambiguous. A direct bounded correction over a disabled manifest entry uses `review-cycle:advance ... --manual`, then `review-cycle:resolve` verifies the diff before reporting.
 - **Typical:** `/aioson:agent:pentester review the auth endpoints of feature accounts`, `/aioson:agent:pentester --scope-mode=project --report=none`. With `--scope-mode=feature` and no slug it lists the project's features (`aioson feature:list`) and asks which one.
 - **Produces:** authoritative `security-findings-{slug}.json` always, plus localized `.aioson/pentester/{run_id}/relatorios/{index,vulnerabilidades,correcoes,cobertura}.html` when `--report=full`; economy mode summarizes in the response and the bundle can still be built later — `aioson pentester:report .` lists the persisted runs, `aioson pentester:report . --feature=<slug> --json` builds one. `@qa` owns closure.
@@ -154,10 +154,10 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 ## @quality
 
-- **What:** engineering quality assessment: static analysis, test effectiveness, regression coverage, benchmarks and agent/skill evaluations.
-- **When:** explicitly requested or triggered by concrete quality evidence; optional for products and the AIOSON framework. QA retains acceptance.
-- **Options:** specify target and `product` or `framework` profile. Inspect native checks with `aioson quality:run . --dry-run --json`.
-- **Typical:** `@quality assess test effectiveness in checkout`; `@quality evaluate the framework's agent contracts`.
+- **What:** engineering quality assessment: static analysis, test effectiveness, regression coverage, performance and speed (measured hotspots, before/after verdicts) and agent/skill evaluations.
+- **When:** explicitly requested or triggered by concrete quality evidence; optional for products and the AIOSON framework. QA retains acceptance. "Can the system run faster?" starts here — not in `@pentester` (security) or `@tester` (behavior).
+- **Options:** specify target and `product` or `framework` profile. Inspect native checks with `aioson quality:run . --dry-run --json`; time a hotspot with `aioson quality:bench` and replay it after a change with `--baseline=<result.json>`.
+- **Typical:** `@quality assess test effectiveness in checkout`; `@quality find why the orders list is slow`; `@quality evaluate the framework's agent contracts`.
 - **Produces:** `.aioson/context/quality-review-{target}.md` with commands, results, raw evidence and a ranked remediation backlog.
 - **Next:** the appropriate implementation/test owner for a confirmed gap, or QA for same-feature acceptance.
 

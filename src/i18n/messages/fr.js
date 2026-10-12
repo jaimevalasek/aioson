@@ -341,6 +341,7 @@ module.exports = {
       'aioson squad:learning [path] [--sub=list|stats|archive|promote|export] [--squad=<slug>] [--status=<status>] [--locale=fr]',
     help_quality_run: "quality:run [path] --profile=<product|framework> [--dry-run] [--json] — Exécute les contrôles qualité (product/framework ; --dry-run prévisualise)",
     help_quality_evals: "quality:evals [path] [--validate-seeds | --executor=<JSON argv>] [--compare=<run.json> --baseline=<run.json>] — Exécute des évaluations ou compare des exécutions appariées",
+    help_quality_bench: "quality:bench [path] --argv=<JSON argv> --label=<nom> [--samples=10] [--warmup=2] [--metric=wall|reported] | --baseline=<result.json> [--compare=<result.json>] — Mesure un point chaud par échantillons répétés, ou le rejoue/compare avant et après un changement",
     help_quality_audit:
       'aioson quality:audit [path] [--feature=<slug>] [--provider-output=<path>] [--baseline=<path>] [--changed=<path[,path]>] [--json] [--locale=fr]',
     help_squad_dashboard:

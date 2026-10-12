@@ -27,6 +27,9 @@ const BOOLEAN_FLAGS = new Set([
   // feature:export structure/output toggles — pure booleans; without these
   // a following positional (e.g. `--flatten .`) would be swallowed as the value.
   'flatten', 'no-index',
+  // jev:judge — `--check` is a switch (live key probe); `dossier:audit` keeps
+  // its documented `--check=<name>` form, which the `=` branch parses first.
+  'check',
   // harness:validate — pure boolean; `--no-diff .` must not swallow the path.
   'no-diff',
   // audit:code / harness:check / rules:check — pure booleans; `--changed .` /

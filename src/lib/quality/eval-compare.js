@@ -1,5 +1,7 @@
 'use strict';
 
+const { seededRandom, resample } = require('./random');
+
 function validateMetadata(run) {
   if (run.schema_version !== 1 || run.kind !== 'executor' || run.integrity !== 'pass' || !Array.isArray(run.records) || !run.records.length) throw new Error('Comparison requires intact executor runs.');
   for (const field of ['suite_sha256', 'grader_sha256']) {
@@ -36,14 +38,13 @@ function compareRuns(baseline, candidate) {
   }
   const deltas = [...tasks.values()].map(values => values.reduce((a, b) => a + b, 0) / values.length);
   // Cluster by task: repeated trials of one task are not independent samples.
-  let seed = 42;
+  // Resampled with replacement from a hashed seeded generator (`random.js`):
+  // `seed % tasks` from a plain LCG gave a permutation for 8 tasks, i.e. a
+  // zero-width interval.
+  const next = seededRandom(42);
   const samples = Array.from({ length: 2000 }, () => {
-    let sum = 0;
-    for (let i = 0; i < deltas.length; i++) {
-      seed = (Math.imul(1664525, seed) + 1013904223) >>> 0;
-      sum += deltas[seed % deltas.length];
-    }
-    return sum / deltas.length;
+    const drawn = resample(deltas, next);
+    return drawn.reduce((a, b) => a + b, 0) / deltas.length;
   }).sort((a, b) => a - b);
   return { schema_version: 1, baseline_run: baseline.run_id, candidate_run: candidate.run_id,
     tasks: tasks.size, paired_trials: before.size, regressions, improvements,

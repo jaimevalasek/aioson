@@ -58,6 +58,24 @@ test('comparison pairs tasks and rejects changed graders, missing or duplicate t
     { ...after, records: after.records.map(r => ({ ...r, status: 'error' })) }]) assert.throws(() => compareRuns(before, changed));
 });
 
+test('the comparison interval resamples tasks with replacement, so eight tasks never collapse to a point', () => {
+  // `seed % tasks` from a plain LCG cycled through all eight indices in order:
+  // every resample was a permutation, and the interval was [delta, delta].
+  const run = (statuses) => ({
+    schema_version: 1, kind: 'executor', integrity: 'pass', run_id: statuses.join(','),
+    suite_sha256: 'a'.repeat(64), grader_sha256: 'b'.repeat(64),
+    records: statuses.map((status, index) => ({ task_id: `t${index}`, trial: 1, status }))
+  });
+  const before = run(['fail', 'fail', 'fail', 'fail', 'pass', 'pass', 'pass', 'pass']);
+  const after = run(['pass', 'pass', 'fail', 'fail', 'pass', 'fail', 'pass', 'pass']);
+  const result = compareRuns(before, after);
+  assert.equal(result.pass_rate_delta, 0.125);
+  const [low, high] = result.interval_95;
+  assert.ok(high - low > 0, `eight mixed task deltas span an interval, not the point ${low}`);
+  assert.ok(low <= result.pass_rate_delta && result.pass_rate_delta <= high);
+  assert.deepEqual(result.interval_95, compareRuns(before, after).interval_95, 'seeded, so reproducible');
+});
+
 test('executor enforces timeout, output bound and executable availability', async t => {
   const root = await project(t);
   const timeout = await execute(['node', '-e', 'setInterval(()=>{},1000)'], { cwd: root, timeout: 100 });

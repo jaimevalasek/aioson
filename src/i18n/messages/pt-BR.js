@@ -397,6 +397,7 @@ module.exports = {
       'aioson agent:audit [caminho] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=pt-BR]',
     help_quality_run: "quality:run [path] --profile=<product|framework> [--dry-run] [--json] — Executa verificações de qualidade (product/framework; --dry-run mostra o plano)",
     help_quality_evals: "quality:evals [path] [--validate-seeds | --executor=<JSON argv>] [--compare=<run.json> --baseline=<run.json>] — Executa avaliações de reparo ou compara execuções pareadas",
+    help_quality_bench: "quality:bench [path] --argv=<JSON argv> --label=<nome> [--samples=10] [--warmup=2] [--metric=wall|reported] | --baseline=<result.json> [--compare=<result.json>] — Mede um ponto quente com amostras repetidas, ou repete/compara antes e depois de uma mudança",
     help_quality_audit:
       'aioson quality:audit [caminho] [--feature=<slug>] [--provider-output=<caminho>] [--baseline=<caminho>] [--changed=<arquivo[,arquivo]>] [--json] [--locale=pt-BR]',
     help_squad_dashboard:

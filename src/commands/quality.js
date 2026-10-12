@@ -4,7 +4,8 @@ const handlers = {
   'quality:audit': require('./quality-audit').runQualityAudit,
   'quality-audit': require('./quality-audit').runQualityAudit,
   'quality:run': require('./quality-run').runQualityChecks,
-  'quality:evals': require('./quality-evals').runQualityEvals
+  'quality:evals': require('./quality-evals').runQualityEvals,
+  'quality:bench': require('./quality-bench').runQualityBench
 };
 
 function isQualityCommand(command) { return Object.hasOwn(handlers, command); }
