@@ -8,6 +8,21 @@ source: feature-close-briefing-review-decision-room
 
 ## What the system already has
 
+- [motor-enxuto-briefing · 2026-10-10] `docs(briefing): record the lean-engine audit` — draft briefing motor-enxuto-sem-regressao (external audit 2026-10-06) with its evidence, options and framing self-review; approves no scope.
+- [orchestration-jev-tutorial · 2026-10-10] `docs(tutorials): orchestration with Jev` — pt-BR tutorial measured on a real plan (8h45 waves → 5h00 lanes + after_dev + Jev review order); the Jev routing example drops the retired ux_ui route.
+- [execution-dependencies · 2026-10-10] `feat(execution): Jev infers the plan's real edges` — `execution:dependencies` suggests minimal Depends on cells and waves from Jev pair judgments; compile and graph print the projected makespan.
+- [orchestrated-engine · 2026-10-10] `feat(execution): lanes, Jev decisions, safer runs` — lane scheduling with a write lock, opt-in Jev engine decisions, cross-unit repair via the integration supervisor, parked reviews + dashboard recovery, require_spawner policy, agent-reported verification, play-vivo run hardening.
+- [config-budget-targets · 2026-10-10] `docs(config): size targets are budgets, not limits` — the agent file size table no longer claims a ~4,000-char Claude Code truncation; it points to the host documentation.
+- [quality-workflow-gate · 2026-10-10] `feat(quality): run configured checks in the gate` — the DEV/QA gate runs .aioson/quality.json checks (stage, required), reports a measurement status apart from ok, and binds evidence to a source fingerprint.
+- [feature-registry-lock · 2026-10-10] `fix(features): lock features.md across processes` — withRegistryLock serializes every registry transaction, writes are atomic, the start date is resolved inside the lock, unreadable registries are never reset.
+- [signature-model-typo · 2026-10-10] `fix(signature): name the typo of a signed model id` — compile, profiles:validate and the roles check report did_you_mean for a separator/case typo of a model the host already accepted.
+- [jev-key-config · 2026-10-10] `feat(jev): find the key in .env, check it live` — api_key may name an env variable, the key may live in the git-ignored project .env (never leaked to workers), `jev:judge --check` proves it live, 401/403 is auth_failed.
+- [doctor-runtime-db-i18n · 2026-10-10] `fix(doctor): runtime_db_health text resolves again` — the three runtime_db_health keys sat inside doctor.learning_loop in en.js and printed as raw keys.
+- [walkthrough-css-filters · 2026-10-10] `fix(browser): css and xpath targets keep [attr]` — prefixed css=/xpath= selectors reach Playwright whole instead of losing their trailing attribute filter.
+- [walkthrough-late-boundary · 2026-10-10] `fix(browser): late boundaries survive a busy page` — each boundary step captures its own bounded request window, so a saturated network table no longer reads the action as not requested.
+- [dossier-bootstrap · 2026-10-10] `feat(dossier): bootstrap it on the first trail line` — dossier:add-finding creates a missing dossier when the slug has its own PRD; a typo slug stays not_found.
+- [plan-scale-client-stem · 2026-10-10] `fix(plan-scale): a client.* file names no surface` — the `client` stem alone no longer counts as frontend; directories still decide.
+- [live-tool-spawn · 2026-10-10] `fix(live): open the host CLI without a shell` — live:start resolves npm shims and spawns without `shell: true` on Windows (no DEP0190, arguments with spaces/`&`/`%` survive).
 - [squad-model-benchmark · 2026-09-25] Corpus de 18 casos rodado em 54 execuções Codex/gpt-6-sol/medium: 10/18 aceites em cada uma das três variantes; relatório e JSON por critério mostram 41/54 antes e 43/54 atuais, sem ganho geral comprovado. Duas regressões de desenvolvimento motivaram correções dirigidas.
 - [squad-benchmark-corrections · 2026-09-25] Instruções Squad exigem recibos de todos os consumidores antes do ack e controle positivo de sessão válida em validação de caminho; quatro retestes dirigidos passaram nos critérios antes ausentes.
 
@@ -76,6 +91,7 @@ source: feature-close-briefing-review-decision-room
 - [release-v1.30.0 · 2026-06-22] `chore(release): prepare v1.30.0` bumps package/context metadata to 1.30.0, documents context-intelligence and Gate D proof hardening, commits the fixed context-intelligence security findings artifact, and hardens empty archive-dir cleanup during `feature:archive --restore`.
 - [hygiene-scan-neo-orchestration · 2026-06-19] `aioson hygiene:scan . --json` is a read-only operational cleanup diagnostic that reports pending Neural Chain noises, done features pending archive, stale `dev-state.md`, on-demand review artifacts, and orphan slug artifacts with suggested actions; `@neo` now runs/surfaces that scan and asks before any cleanup decision instead of embedding archival intelligence in the prompt. Verification: `node --test tests/hygiene-scan.test.js`, `node scripts/check-js.js`, `npm test`.
 - [sdd-proof-gates · 2026-06-19] Gate D now has deterministic AC→test proof via `aioson ac:test-audit . --feature=<slug>`: declared `AC-*` IDs from PRD/requirements/conformance must appear in tests or executable harness criteria; `gate:check D` and QA handoff block missing evidence. `harness:check --strict`, `spec:analyze --strict`, schema-valid Sheldon harness docs, `sheldon-validation` artifact visibility, and `sdd:benchmark` provide reproducible SDD quality measurement.
+- [app-access-plans · 2026-10-10] `feat(store): access is set in the aioson.com admin` makes `system:publish` only publish: `--paid` no longer needs a price, `--paid`/`--private` warn that access is set in the aioson.com admin, and a new app reports it was published as Privado when the server answers `accessManagedInAdmin`. Verification: `node --test tests/store-system.test.js` 23/23.
 
 ## What the system does not have yet
 

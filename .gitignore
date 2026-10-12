@@ -85,3 +85,6 @@ integrations/*
 .aioson/context/done/*/briefings/browser/*/
 .aioson/briefings/*/browser/*/
 aios-qa-screenshots/
+
+# Saída de status despejada na raiz durante depuração
+/tmp-status*.json
