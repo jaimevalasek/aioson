@@ -349,6 +349,60 @@
       "absent": [
         { "path": ".aioson/docs/site-forge-qa.md", "in": "selected" }
       ]
+    },
+    {
+      "name": "deployer-app-readiness-first-dokploy-deploy",
+      "agent": "deployer",
+      "mode": "executing",
+      "task": "Check whether this app is ready for its first Dokploy deploy: Dockerfile, build-time arguments, listen address and the uploads volume.",
+      "expect": [
+        { "path": ".aioson/docs/deployer/app-readiness.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "dev-dockerfile-for-dokploy-reaches-readiness",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Write the Dockerfile so the app can be deployed to Dokploy, with the front-end values as build arguments.",
+      "expect": [
+        { "path": ".aioson/docs/deployer/app-readiness.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "deployer-playbook-panel-and-redis",
+      "agent": "deployer",
+      "mode": "executing",
+      "task": "Configurar o domínio do painel do Dokploy e o serviço Redis com senha e appendonly.",
+      "expect": [
+        { "path": ".aioson/docs/deployer/dokploy-playbook.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "deployer-playbook-cloudflare-access-origin-certificate",
+      "agent": "deployer",
+      "mode": "executing",
+      "task": "Turn on Cloudflare Access for the app domain without breaking the certificate renewal — should we use an origin certificate?",
+      "expect": [
+        { "path": ".aioson/docs/deployer/dokploy-playbook.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "deployer-troubleshooting-default-certificate",
+      "agent": "deployer",
+      "mode": "executing",
+      "task": "The browser says not secure and the certificate is still TRAEFIK DEFAULT CERT after adding the domain.",
+      "expect": [
+        { "path": ".aioson/docs/deployer/troubleshooting.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "deployer-diary-after-firewall-stage",
+      "agent": "deployer",
+      "mode": "executing",
+      "task": "Atualizar o diário do deploy com a etapa do firewall concluída.",
+      "expect": [
+        { "path": ".aioson/docs/deployer/deployment-diary.md", "in": "selected" }
+      ]
     }
   ]
 }

@@ -26,6 +26,9 @@ Optional test engineering (activate after @dev when coverage is insufficient):
 Optional completeness walkthrough (activate after @qa, on an archived feature, after a Simple Plan delivery, or on a direct target):
 - `@shakedown` — spec-independent tech-lead walkthrough: QA verifies the promise; shakedown audits the silence (incomplete CRUD, unvalidated forms, missing states, sibling inconsistencies, plus reproducible bugs). Produces a `shakedown-{slug}.md` punch list with suggested fix lanes; it finds and lists, never fixes, and is never a gate.
 
+Optional deployment (activate when an app goes to a self-hosted VPS with Dokploy):
+- `@deployer` — guides the operator stage by stage (app readiness, panel hardening, database/cache services, read-only deploy key, application, domain and TLS, provider firewall, access gate before real data), verifies every stage from outside, and keeps a deployment diary. It writes no application code (readiness gaps route to `@dev`) and is never a gate.
+
 ## Official classification
 Score (0-6):
 - User types: 1=0, 2=1, 3+=2

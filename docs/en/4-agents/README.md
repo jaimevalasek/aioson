@@ -49,6 +49,7 @@ Autopilot defaults to the DEV → QA handoff and can cover the full canonical ch
 | `@help` | Beginner-friendly guide to AIOSON concepts, workflows, commands, and next steps |
 | `@quality` | Optional engineering quality assessment, static analysis, and reproducible evaluations |
 | `@shakedown` | Opt-in spec-independent post-delivery completeness walkthrough and bug hunt |
+| `@deployer` | Opt-in self-hosted VPS deployment with Dokploy — readiness, panel hardening, services, domain/TLS, firewall, outside verification, deployment diary |
 | `@benchmark` | One measured AIOSON traversal with honest run artifacts |
 
 ### Specializations

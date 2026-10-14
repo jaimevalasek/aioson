@@ -37,6 +37,11 @@ const MANAGED_FILES = [
   '.aioson/agents/forge-run.md',
   '.aioson/agents/shakedown.md',
   '.aioson/docs/shakedown/completeness-checklist.md',
+  '.aioson/agents/deployer.md',
+  '.aioson/docs/deployer/app-readiness.md',
+  '.aioson/docs/deployer/dokploy-playbook.md',
+  '.aioson/docs/deployer/troubleshooting.md',
+  '.aioson/docs/deployer/deployment-diary.md',
   '.aioson/docs/dev/execution-lanes.md',
   '.aioson/docs/planner/orchestrated-execution.md',
   '.aioson/docs/delivery-followups.md',
@@ -395,6 +400,15 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/shakedown.md',
     dependsOn: ['.aioson/context/project.context.md'],
     output: '.aioson/context/shakedown-{slug}.md punch list (bug / incomplete / polish + coverage proof)'
+  },
+  {
+    id: 'deployer',
+    displayName: 'Deployer',
+    description: 'Self-hosted VPS deployment with Dokploy: app readiness, panel hardening, services, domains/TLS, firewall, outside verification',
+    command: '@deployer',
+    path: '.aioson/agents/deployer.md',
+    dependsOn: ['.aioson/context/project.context.md'],
+    output: '.aioson/context/deploy-{environment}.md deployment diary (or the project\'s existing one); readiness gaps routed to @dev'
   },
   {
     id: 'tester',

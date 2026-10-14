@@ -55,6 +55,7 @@ Estes agentes **não são etapas da esteira**. Você os chama para uma dúvida n
 | [@neo](./neo.md) | Roteador: diz qual agente é o próximo | Quando você está perdido | Orientação verbal |
 | [@committer](./committer.md) | Gera mensagem de commit profissional | Após implementar, antes de commitar | mensagem de commit |
 | [@discover](./discover.md) | Constrói cache semântico do projeto | Onboarding em codebase grande | `.aioson/context/bootstrap/` |
+| [@deployer](./deployer.md) | Deploy em VPS próprio com o Dokploy: prontidão do app, painel, serviços, domínio/HTTPS, firewall | Primeiro deploy, ambiente novo ou deploy travado | diário do deploy (`deploy-{ambiente}.md`) |
 
 ---
 

@@ -114,6 +114,7 @@ Simple Plan termina no Dev e não vira feature rastreada silenciosamente. Abaixo
 |---|---|---|
 | **`@committer`** | Gera mensagens de commit profissionais | Antes de commitar |
 | **`@discover`** | Constrói cache semântico do projeto: produz `bootstrap/` (estruturado por tipo de artefato, para agentes lerem) **e** `brains/` (Zettelkasten para cross-referência) | Onboarding rápido em codebase grande |
+| **`@deployer`** | Leva o app para um VPS próprio com o Dokploy, etapa por etapa, conferindo cada uma de fora e mantendo um diário do deploy | Primeiro deploy, ambiente novo ou deploy travado |
 
 ### 5. Especializações
 

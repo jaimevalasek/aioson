@@ -152,6 +152,15 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 - **Produces:** `.aioson/context/shakedown-{slug}.md` — coverage proof plus a punch list (`bug`/`incomplete`/`polish`) with suggested fix lanes. It finds and lists, never fixes.
 - **Next:** quick wins → `@dev` (Simple Plan); product-scope gaps → `@briefing`/`@product`; verification gaps → `@tester`.
 
+## @deployer
+
+- **What:** takes a containerized app to production on a self-hosted VPS with Dokploy — app readiness, panel hardening, database/cache services, git access by read-only deploy key, application settings, domain and Let's Encrypt, provider firewall, and the access gate before real data.
+- **When:** first deploy to a Dokploy server, a new environment, or a stuck deploy (clone/build/certificate/firewall). Opt-in; never a feature stage or gate.
+- **Options:** pass the environment, the stage, or the problem; it resumes from the project's deployment diary when one exists.
+- **Typical:** `/deployer production on Dokploy`, `/deployer the certificate stays TRAEFIK DEFAULT CERT`.
+- **Produces:** the deployment diary (`.aioson/context/deploy-{environment}.md` or the project's existing one) with status, non-secret inventory, timeline, problems and next steps. It guides and verifies; the operator clicks, and secrets never enter the chat.
+- **Next:** readiness gaps → `@dev` (Simple Plan); exposed-surface review → `@pentester`; release decisions stay with the user.
+
 ## @quality
 
 - **What:** engineering quality assessment: static analysis, test effectiveness, regression coverage, performance and speed (measured hotspots, before/after verdicts) and agent/skill evaluations.

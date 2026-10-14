@@ -59,6 +59,7 @@ Named activation loads `.aioson/agents/{slug}.md` immediately. Main routes:
 | Post-delivery completeness walkthrough ("pente fino") | `shakedown` |
 | Engineering quality / static analysis / test effectiveness / performance and speed / eval pipeline | `quality` (optional assessment; QA keeps acceptance) |
 | Security | `pentester` |
+| Deploy to a self-hosted VPS with Dokploy (readiness, panel, services, domain/TLS, firewall) | `deployer` |
 | Status/router / coordination | `neo` / `orchestrator` |
 | Squad / domain investigation / genome | `squad` / `orache` / `genome` |
 | Persona pipeline | `profiler-researcher` / `profiler-enricher` / `profiler-forge` |

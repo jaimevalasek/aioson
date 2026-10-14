@@ -42,6 +42,7 @@ Load only when the user asks about available agents or the routing matrix is ins
 - `@discover`: semantic codebase knowledge
 - `@copywriter`: conversion copy
 - `@committer`: semantic commits
+- `@deployer`: self-hosted VPS deployment with Dokploy — guides the operator stage by stage, verifies from outside, keeps a deployment diary
 - `@squad`: multi-track squad packages
 - `@genome`: domain knowledge genomes
 - `@forge-run`: compiled workflow harness execution

@@ -110,6 +110,20 @@
         "generic_secret_assignment"
       ],
       "reason": "The Jev setup steps print an aioson-models.json example whose api_key holds the environment variable name OPENROUTER_API_KEY, which the config resolves from the environment; no credential is present."
+    },
+    {
+      "path": ".aioson/docs/deployer/app-readiness.md",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Deployer guidance names the ?access_token= query parameter as a URL shape Traefik access logs would record; no credential value is present."
+    },
+    {
+      "path": "template/.aioson/docs/deployer/app-readiness.md",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Deployer guidance names the ?access_token= query parameter as a URL shape Traefik access logs would record; no credential value is present."
     }
   ],
   "blockPaths": [

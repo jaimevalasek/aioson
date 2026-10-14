@@ -370,6 +370,19 @@
         { "path": ".aioson/skills/process/design-hybrid-forge/SKILL.md", "in": "skills" },
         { "path": ".aioson/skills/process/reference-identity-extract/SKILL.md", "in": "skills" }
       ]
+    },
+    {
+      "name": "dev unit test and readme work stay quiet on the dokploy deployment docs",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "add a unit test covering the slugify helper edge cases and fix the README typo",
+      "paths": ["src/utils/slugify.js", "tests/slugify.test.js", "README.md"],
+      "absent": [
+        { "path": ".aioson/docs/deployer/app-readiness.md", "in": "selected" },
+        { "path": ".aioson/docs/deployer/dokploy-playbook.md", "in": "selected" },
+        { "path": ".aioson/docs/deployer/troubleshooting.md", "in": "selected" },
+        { "path": ".aioson/docs/deployer/deployment-diary.md", "in": "selected" }
+      ]
     }
   ]
 }
