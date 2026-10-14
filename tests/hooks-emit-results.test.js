@@ -79,6 +79,15 @@ test('comando de teste guarda passou/falhou e só a linha de resumo', async () =
     event = await lastEvent(dir);
     assert.equal(event.payload.result, 'Exit code 2');
 
+    emit(dir, {
+      hook_event_name: 'PostToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'node --test tests/' },
+      tool_response: { stdout: 'ℹ tests 40\nℹ pass 40\nℹ fail 0\nℹ duration_ms 10927' }
+    });
+    event = await lastEvent(dir);
+    assert.equal(event.payload.result, 'ℹ pass 40 · ℹ fail 0');
+
     const long = `echo ${'x'.repeat(400)}`;
     emit(dir, { hook_event_name: 'PostToolUse', tool_name: 'Bash', tool_input: { command: long }, tool_response: { stdout: 'ok' } });
     event = await lastEvent(dir);

@@ -59,7 +59,7 @@ const MAX_REPLY_CHARS = 600;
 // Summary lines test runners print (cargo, vitest/jest, pytest, node --test,
 // go, rspec…). Only these lines are kept — never the rest of the output, which
 // can hold anything.
-const RESULT_LINE = /(test result:|^\s*tests?:?\s+\d|test files\s+\d|\b\d+\s+(passed|failed|passing|failing|pending|skipped)\b|^#\s*(pass|fail|tests)\s+\d|^(ok|fail|FAIL|PASS)\s+\S|\b\d+\s+examples?,\s+\d+\s+failures?)/i;
+const RESULT_LINE = /(test result:|^\s*tests?:?\s+\d|test files\s+\d|\b\d+\s+(passed|failed|passing|failing|pending|skipped)\b|^[#ℹ]\s*(pass|fail|tests)\s+\d|^(ok|fail|FAIL|PASS)\s+\S|\b\d+\s+examples?,\s+\d+\s+failures?)/i;
 
 function oneLine(text, max) {
   const flat = String(text || '').replace(/\s+/g, ' ').trim();
