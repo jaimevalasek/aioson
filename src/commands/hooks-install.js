@@ -134,9 +134,19 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
         hooks: [{ type: 'command', command: emitCmd }]
       }
     ],
+    // A failing command (non-zero exit) fires this instead of PostToolUse:
+    // hooks:emit records it as a failed test step.
+    PostToolUseFailure: [
+      {
+        matcher: 'Bash',
+        hooks: [{ type: 'command', command: emitCmd }]
+      }
+    ],
+    // The agent's final message is recorded first, then the turn is closed;
+    // one command so the order holds.
     Stop: [
       {
-        hooks: [{ type: 'command', command: doneCmd }]
+        hooks: [{ type: 'command', command: `${emitCmd}; ${doneCmd}` }]
       }
     ]
   };
@@ -197,7 +207,8 @@ async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true
       logger.log(`    PreToolUse (Write|Edit|MultiEdit|NotebookEdit) → context:guard`);
     }
     logger.log(`    PostToolUse (Write|Edit|MultiEdit|Bash|Task|TodoWrite) → hooks:emit`);
-    logger.log(`    Stop → agent:done`);
+    logger.log(`    PostToolUseFailure (Bash) → hooks:emit`);
+    logger.log(`    Stop → hooks:emit (final message) + agent:done`);
   }
 
   return { tool: 'claude', configPath, hooks: newHooks };

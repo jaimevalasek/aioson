@@ -51,6 +51,46 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const MAX_COMMAND_CHARS = 200;
+const MAX_RESULT_CHARS = 200;
+const MAX_TASK_LIST_CHARS = 300;
+const MAX_REPLY_CHARS = 600;
+
+// Summary lines test runners print (cargo, vitest/jest, pytest, node --test,
+// go, rspec…). Only these lines are kept — never the rest of the output, which
+// can hold anything.
+const RESULT_LINE = /(test result:|^\s*tests?:?\s+\d|test files\s+\d|\b\d+\s+(passed|failed|passing|failing|pending|skipped)\b|^#\s*(pass|fail|tests)\s+\d|^(ok|fail|FAIL|PASS)\s+\S|\b\d+\s+examples?,\s+\d+\s+failures?)/i;
+
+function oneLine(text, max) {
+  const flat = String(text || '').replace(/\s+/g, ' ').trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/** Last summary lines of a runner's output, or null when it printed none. */
+function resultLine(...outputs) {
+  const lines = outputs
+    .filter(Boolean)
+    .join('\n')
+    // eslint-disable-next-line no-control-regex
+    .replace(/\u001b\[[0-9;]*[A-Za-z]/g, '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && RESULT_LINE.test(line));
+  return lines.length ? oneLine(lines.slice(-2).join(' · '), MAX_RESULT_CHARS) : null;
+}
+
+/** "Tarefas: 2 de 4 feitas · em andamento: … · próximas: …" from TodoWrite. */
+function taskListMessage(todos) {
+  if (!Array.isArray(todos) || todos.length === 0) return null;
+  const done = todos.filter((todo) => todo && todo.status === 'completed').length;
+  const doing = todos.filter((todo) => todo && todo.status === 'in_progress').map((todo) => oneLine(todo.content, 80));
+  const next = todos.filter((todo) => todo && todo.status === 'pending').map((todo) => oneLine(todo.content, 60));
+  const parts = [`Tarefas: ${done} de ${todos.length} feitas`];
+  if (doing.length) parts.push(`em andamento: ${doing.join('; ')}`);
+  if (next.length) parts.push(`próximas: ${next.slice(0, 3).join('; ')}${next.length > 3 ? '…' : ''}`);
+  return oneLine(parts.join(' · '), MAX_TASK_LIST_CHARS);
+}
+
 function readStdin() {
   return new Promise((resolve) => {
     let data = '';
@@ -90,6 +130,15 @@ function readStdin() {
 function buildEventFromPayload(payload, source) {
   if (!payload) return null;
 
+  const hookEvent = payload.hook_event_name || payload.hookEventName || null;
+  // End of a turn: the agent's own final message is the best account of what
+  // it did — kept as its claim, never as verified fact.
+  if (hookEvent === 'Stop') {
+    const reply = oneLine(payload.last_assistant_message, MAX_REPLY_CHARS);
+    if (!reply) return null;
+    return { eventType: 'agent_reply', message: reply, filePath: null, toolName: null, extra: {}, sessionId: payload.session_id || null };
+  }
+
   const toolName = payload.tool_name || payload.toolName || null;
   if (!toolName) return null;
 
@@ -103,25 +152,45 @@ function buildEventFromPayload(payload, source) {
 
   let message = `[${source}] ${toolName}`;
   let filePath = null;
+  let eventTypeOverride = null;
+  const extra = {};
 
   if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit') {
     filePath = input.file_path || input.path || null;
     message = filePath ? `${toolName}: ${path.basename(filePath)}` : `${toolName}`;
   } else if (toolName === 'Bash') {
-    const cmd = String(input.command || input.cmd || '').trim().slice(0, 80);
+    const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
     message = cmd ? `$ ${cmd}` : 'Bash';
+    // PostToolUse fires only on success; a non-zero exit fires
+    // PostToolUseFailure with `error` ("Exit code N\n…").
+    const response = payload.tool_response || {};
+    if (hookEvent === 'PostToolUseFailure') {
+      if (!payload.is_interrupt) {
+        extra.outcome = 'failed';
+        const exit = /^Exit code \d+/.exec(String(payload.error || ''));
+        extra.result = resultLine(payload.error) || (exit ? exit[0] : null);
+      }
+    } else if (typeof response === 'object' && response && !response.interrupted) {
+      extra.outcome = 'passed';
+      const line = resultLine(response.stdout, response.stderr);
+      if (line) extra.result = line;
+    }
+    if (!extra.result) delete extra.result;
   } else if (toolName === 'Task') {
     const desc = String(input.description || input.prompt || '').slice(0, 80);
     message = desc || 'Task launched';
   } else if (toolName === 'TodoWrite') {
-    message = 'Task list updated';
+    const summary = taskListMessage(input.todos);
+    message = summary || 'Task list updated';
+    if (summary) eventTypeOverride = 'plan_updated';
   }
 
   return {
-    eventType,
+    eventType: eventTypeOverride || eventType,
     message,
     filePath,
     toolName,
+    extra,
     sessionId: payload.session_id || payload.sessionId || null
   };
 }
@@ -265,7 +334,11 @@ async function runHooksEmit({ args, options = {} }) {
         phase: 'live',
         status: 'running',
         message: event.message,
-        payload: event.filePath ? { file: event.filePath, tool: event.toolName } : { tool: event.toolName },
+        payload: {
+          ...(event.filePath ? { file: event.filePath } : {}),
+          ...(event.toolName ? { tool: event.toolName } : {}),
+          ...event.extra
+        },
         createdAt: now
       });
     } finally {
@@ -299,4 +372,4 @@ async function runHooksEmit({ args, options = {} }) {
   }
 }
 
-module.exports = { runHooksEmit };
+module.exports = { runHooksEmit, buildEventFromPayload, resultLine, taskListMessage };
