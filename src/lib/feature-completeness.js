@@ -54,6 +54,11 @@ const { readBrowserEvidence } = require('./browser-evidence');
 const { validatePlanContract } = require('./plan-contract');
 const { evaluateFollowups, VERDICT: FOLLOWUP_VERDICT } = require('./delivery-followups');
 
+// A QA "Commands executed" section must name a real runner. Stack-agnostic:
+// JS, Python, Go, .NET, Rust, PHP/Laravel, Ruby, JVM, mobile, Elixir, Deno and
+// containerised runs, so a non-Node project is never read as "no command".
+const QA_COMMAND_RUNNER_RE = /\b(?:npm|node|npx|pnpm|yarn|bun|deno|jest|vitest|playwright|cypress|cargo|pytest|python|python3|uv|poetry|tox|go|dotnet|make|php|artisan|composer|phpunit|pest|sail|ruby|rails|rake|bundle|rspec|mvn|gradle|gradlew|java|kotlin|swift|xcodebuild|flutter|dart|mix|docker)\b/i;
+
 function validateProductCapabilityMap(content, artifact) {
   const findings = [];
   const section = extractSection(content, ['Feature Capability Map', 'Mapa de Capacidades da Feature']);
@@ -646,7 +651,7 @@ async function validateExecutionEvidence(
     'Comandos executados e resultados'
   ]);
   if (!commandsSection
-    || !/\b(?:npm|node|npx|pnpm|yarn|bun|cargo|pytest|python|go|dotnet|make)\b/i.test(commandsSection)
+    || !QA_COMMAND_RUNNER_RE.test(commandsSection)
     || !/\b(?:PASS|PASSED|exit(?: code)?\s*[:=]?\s*0|success|sucesso)\b/i.test(commandsSection)) {
     findings.push(finding(
       'execution',

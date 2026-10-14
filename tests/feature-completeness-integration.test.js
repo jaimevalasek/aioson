@@ -65,6 +65,39 @@ test('Gate D rejects AC-name-only tests and accepts asserting evidence', async (
   assert.equal(result.ok, true, result.missing.join('\n'));
 });
 
+test('Gate D reads a Laravel delivery: php artisan QA commands and PHPUnit assertions', async () => {
+  const root = await tmp();
+  await seed(root);
+  await write(root, 'src/demo.js', 'module.exports = true;\n');
+  await write(root, 'tests/demo.test.js', "const test=require('node:test'); test('placeholder',()=>{});\n");
+  await write(root, 'tests/Feature/DemoTest.php', `<?php
+
+class DemoTest extends TestCase
+{
+    /**
+     * AC-demo-01: o resultado salvo aparece.
+     */
+    public function test_saved_result_appears(): void
+    {
+        $this->get('/demo')->assertOk();
+        $this->assertSame(1, Demo::count());
+    }
+}
+`);
+  await write(root, '.aioson/context/qa-report-demo.md', qaExecutionReport({
+    command: 'php artisan test --filter=DemoTest',
+    entry: 'GET /demo'
+  }));
+  let result = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'D' }, logger });
+  assert.equal(result.ok, true, result.missing.join('\n'));
+
+  // A section that names no runner at all still fails, whatever the stack.
+  await write(root, '.aioson/context/qa-report-demo.md', qaExecutionReport({ command: 'aioson ac:test-audit' }));
+  result = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'D' }, logger });
+  assert.equal(result.ok, false);
+  assert.ok(result.missing.some((item) => item.includes('qa_executed_command_evidence_missing')));
+});
+
 test('Gate D requires planned production files but no ledger or harness', async () => {
   const root = await tmp();
   await seed(root);

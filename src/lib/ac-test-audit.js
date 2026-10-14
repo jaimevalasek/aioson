@@ -289,6 +289,11 @@ function assertionNearMatches(text, code, matcher, acId) {
       || /\b(?:assert(?:_eq|_ne|_matches)?|debug_assert(?:_eq|_ne)?|matches|panic)!\s*\(/.test(window)
       || /\b(?:assert|assertEqual|assertTrue|assertFalse|assertRaises)\b(?:\s|\()/i.test(window)
       || /\b(?:assertEquals|assertThat|assertThrows|Assertions\.[A-Za-z]+)\s*\(/.test(window)
+      // xUnit-style assertion methods: PHPUnit `$this->assertSame(` / `self::assertCount(`,
+      // Laravel `$response->assertOk(` / `->assertSessionHas(`, JUnit static `assertNull(`.
+      || /\bassert[A-Z][A-Za-z0-9]*\s*\(/.test(window)
+      // PHPUnit/Laravel expectations: `$this->expectException(`, `->expectsOutput(`.
+      || /->expects?[A-Z][A-Za-z0-9]*\s*\(/.test(window)
       || /\b(?:Assert\.[A-Za-z]+|Should\(\)|Expect\()/.test(window)
       || /\b(?:t\.(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow)|require\.[A-Za-z]+|assert\.[A-Za-z]+)\s*\(/.test(window)) return true;
   }

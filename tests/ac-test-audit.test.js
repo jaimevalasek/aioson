@@ -146,6 +146,70 @@ test('ac:test-audit strict mode accepts an AC-linked test with an assertion sign
   assert.equal(result.items[0].status, 'covered');
 });
 
+test('ac:test-audit reads PHPUnit and Laravel assertion methods', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-report.md', 'AC-report-01: same numbers. AC-report-02: export route. AC-report-03: command output.');
+  await writeFile(dir, 'tests/Feature/ReportTest.php', `<?php
+
+class ReportTest extends TestCase
+{
+    /**
+     * AC-report-01: mesmos números.
+     */
+    public function test_same_numbers(): void
+    {
+        $this->assertSame($before, $after);
+    }
+
+    // AC-report-02: rota de exportação.
+    public function test_export_route(): void
+    {
+        $this->get('/export')->assertOk()->assertHeader('content-type', 'text/csv');
+    }
+
+    /**
+     * AC-report-03: saída do comando.
+     */
+    public function test_command_output(): void
+    {
+        $this->artisan('report:build')->expectsOutput('done');
+    }
+}
+`);
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'report', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, true, JSON.stringify(result.items.map((item) => [item.ac, item.status])));
+  assert.equal(result.summary.covered, 3);
+});
+
+test('ac:test-audit does not read an assertion name in a PHP comment as an assertion', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-report.md', 'AC-report-01: same numbers.');
+  await writeFile(dir, 'tests/Feature/ReportTest.php', `<?php
+
+class ReportTest extends TestCase
+{
+    // AC-report-01: TODO assertSame($before, $after)
+    public function test_same_numbers(): void
+    {
+        $report = build();
+    }
+}
+`);
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'report', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.items[0].status, 'weak');
+});
+
 test('ac:test-audit discovers Rust tests and assertion macros', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, '.aioson/context/prd-renderer.md', '# PRD\n\nAC-renderer-01\n');

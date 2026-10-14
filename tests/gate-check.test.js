@@ -207,6 +207,10 @@ test('Gate C recovers a missing legacy checkpoint from post-plan path evidence a
     false
   );
 
+  // A revision after execution started (plan:bind after a PRD change, an
+  // evidence-only edit) keeps the recorded approval as the baseline: paths the
+  // execution wrote after it still prove the start, so Gate C is re-approvable
+  // instead of deadlocked on create paths that the approved plan itself created.
   await write(
     root,
     '.aioson/context/implementation-plan-demo.md',
@@ -217,9 +221,63 @@ test('Gate C recovers a missing legacy checkpoint from post-plan path evidence a
     options: { json: true, feature: 'demo', gate: 'C' },
     logger
   });
+  assert.equal(result.result, 'PASS', result.missing.join('\n'));
+  let baseline = result.evidence.find((item) => item.type === 'gate_c_baseline');
+  assert.equal(baseline.mode, 'recovered_execution');
+  assert.equal(baseline.cause, 'gate_c_plan_revised_after_execution');
+  assert.equal(baseline.plan_mtime, oldTime.toISOString());
+  const reapproved = await runGateApprove({
+    args: [root],
+    options: { json: true, feature: 'demo', gate: 'C', agent: 'planner' },
+    logger
+  });
+  assert.equal(reapproved.ok, true);
+
+  // Every later revision still dates from the original approval.
+  await write(
+    root,
+    '.aioson/context/implementation-plan-demo.md',
+    `${plan('approved')}\n<!-- revised again after re-approval -->\n`
+  );
+  result = await runGateCheck({
+    args: [root],
+    options: { json: true, feature: 'demo', gate: 'C' },
+    logger
+  });
+  assert.equal(result.result, 'PASS', result.missing.join('\n'));
+  baseline = result.evidence.find((item) => item.type === 'gate_c_baseline');
+  assert.equal(baseline.plan_mtime, oldTime.toISOString());
+
+  // A create path that already existed before the approved baseline is a
+  // planning error, never execution evidence: the revised plan stays blocked.
+  const beforeApproval = new Date('2026-07-27T09:59:00.000Z');
+  await fs.utimes(sourcePath, beforeApproval, beforeApproval);
+  result = await runGateCheck({
+    args: [root],
+    options: { json: true, feature: 'demo', gate: 'C' },
+    logger
+  });
   assert.equal(result.result, 'BLOCKED');
   assert.ok(result.missing.some((item) => item.includes('gate_c_recovery_plan_newer_than_execution')));
   assert.match(result.recommendation, /revalidate implementation-plan-demo\.md/);
+});
+
+test('Gate C without a recorded approval still blocks a plan newer than its create paths', async () => {
+  const root = await tmp();
+  await seed(root, { status: 'approved' });
+  await write(root, 'src/demo.js', 'module.exports = () => true;\n');
+  const planPath = path.join(root, '.aioson/context/implementation-plan-demo.md');
+  const sourcePath = path.join(root, 'src/demo.js');
+  await fs.utimes(sourcePath, new Date('2026-07-27T10:00:00.000Z'), new Date('2026-07-27T10:00:00.000Z'));
+  await fs.utimes(planPath, new Date('2026-07-27T10:01:00.000Z'), new Date('2026-07-27T10:01:00.000Z'));
+
+  const result = await runGateCheck({
+    args: [root],
+    options: { json: true, feature: 'demo', gate: 'C' },
+    logger
+  });
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(result.missing.some((item) => item.includes('gate_c_recovery_plan_newer_than_execution')));
 });
 
 test('Gate D requires plan approval, QA PASS, real files, and AC-linked assertions', async () => {
