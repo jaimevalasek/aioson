@@ -357,9 +357,15 @@ async function resolveToolSpawn(binaryPath, args, platform = process.platform) {
 // The session key travels in the tool's environment: the tool's hooks inherit
 // it, so `hooks:emit` records each tool use in THIS live session — the one
 // `live:status` and the Play's activity view follow — instead of guessing.
+// It goes under two names: codex strips variables whose name holds KEY,
+// SECRET or TOKEN from the commands it runs (its default
+// shell_environment_policy), so `AIOSON_LIVE_SESSION` is the one a command
+// run by the agent still sees there.
 async function spawnTool(binaryPath, args, cwd, sessionKey) {
   const target = await resolveToolSpawn(binaryPath, args);
-  const env = sessionKey ? { ...process.env, AIOSON_LIVE_SESSION_KEY: String(sessionKey) } : process.env;
+  const env = sessionKey
+    ? { ...process.env, AIOSON_LIVE_SESSION_KEY: String(sessionKey), AIOSON_LIVE_SESSION: String(sessionKey) }
+    : process.env;
   return spawn(target.command, target.args, {
     cwd,
     env,
@@ -721,7 +727,8 @@ function sameDir(a, b) {
 /**
  * The open live session that launched the current tool, or null.
  *
- * With AIOSON_LIVE_SESSION_KEY (exported by `live:start`) the answer is exact:
+ * With AIOSON_LIVE_SESSION_KEY or AIOSON_LIVE_SESSION (both exported by
+ * `live:start`) the answer is exact:
  * the session's running run, read from the database — a handoff swaps it for
  * the next agent's. A key with no running run here (the tool moved to another
  * project, or the session was closed) returns null — never a guess.
@@ -732,7 +739,7 @@ function sameDir(a, b) {
  * otherwise swap each other's activity.
  */
 async function resolveLauncherLiveSession(targetDir, runtimeDir, { source } = {}) {
-  const envKey = String(process.env.AIOSON_LIVE_SESSION_KEY || '').trim();
+  const envKey = String(process.env.AIOSON_LIVE_SESSION_KEY || process.env.AIOSON_LIVE_SESSION || '').trim();
   if (envKey) {
     const handle = await openRuntimeDb(targetDir, { mustExist: true });
     if (!handle) return null;

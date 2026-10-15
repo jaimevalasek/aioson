@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.72.1] - 2026-10-15
+
+### Fixed
+
+- **The activated agent is recorded in every harness, not only Claude Code.** 1.72.0 learned the agent from Claude Code's `UserPromptSubmit` hook, which codex and opencode do not have. `context:brief` and `context:select` with an explicit `--agent` — the call every agent kernel makes before acting — now record `agent_activated` (`payload.via: "context"`) on the live session that launched the tool, through the same path as the prompt hook (`src/lib/agent-activation.js`), so one agent is recorded once whichever channel sees it first. `live:start` also exports the session as `AIOSON_LIVE_SESSION`, besides `AIOSON_LIVE_SESSION_KEY`, for codex configurations that strip variables named `*KEY*` from the commands they run. Verified with codex-cli 0.162.1 and opencode 1.18.33: the commands the agent runs see the session. `@tester` now names itself in its `context:brief` call.
+
 ## [1.72.0] - 2026-10-15
 
 ### Added

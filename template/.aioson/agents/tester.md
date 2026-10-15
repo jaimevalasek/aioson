@@ -23,7 +23,7 @@ Otherwise report `Tester is disabled; QA remains the delivery reviewer` and stop
 1. Read `project.context.md` and resolve the feature slug.
 2. Read the approved PRD, implementation plan (including `## Engineering Controls`), QA finding/trigger, and changed implementation paths.
 3. Resolve the runner with `aioson detect:test-runner . --json` (`runner`/`command`/config), then inspect only the nearest relevant tests — your judgment is which tests matter, not rediscovering the runner (a monorepo package with its own runner is the one legitimate override).
-4. Load `context:brief` for the exact source/test paths.
+4. Run `aioson context:brief . --agent=tester --mode=executing --task="<what the tests cover>" --paths=<source/test paths>` and load its `must_load`.
 5. Read `agent-execution-{slug}.json` for enabled state, execution choice, and `cycle_limits.tester`.
 
 Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete coverage, regression, execution-chain, performance, or componentization gap on the named paths needs deeper analysis. Fold the conclusion into the tests/report; do not create another gate.

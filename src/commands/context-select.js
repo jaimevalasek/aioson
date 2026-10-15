@@ -22,8 +22,17 @@ async function recordSelectEvent(targetDir, result) {
   }
 }
 
-async function withSelectTrace(targetDir, result) {
+// Same activation trace as context:brief (the kernels' fallback channel).
+async function recordActivation(targetDir, options) {
+  const agent = options.agent || options.a;
+  if (!agent || String(agent).trim() === 'auto') return;
+  const { recordAgentActivation } = require('../lib/agent-activation');
+  await recordAgentActivation(targetDir, agent, { via: 'context' });
+}
+
+async function withSelectTrace(targetDir, result, options = {}) {
   await recordSelectEvent(targetDir, result);
+  await recordActivation(targetDir, options);
   return result;
 }
 
@@ -41,7 +50,7 @@ async function runContextSelect({ args, options = {}, logger }) {
     // (agent/mode filter, score vs threshold) — the debugging channel
     // context:evals uses for its failure diagnosis.
     explain: typeof options.explain === 'string' ? options.explain : ''
-  }));
+  }), options);
 
   if (options.json) return result;
 

@@ -23,6 +23,16 @@ async function recordBriefEvent(targetDir, result, featureSlug) {
   }
 }
 
+// An agent consults the brief before acting, from any harness — so a brief
+// with an explicit `--agent` inside a live session says who took it over.
+// The default agent (`dev` when the flag is absent) proves nothing.
+async function recordActivation(targetDir, options) {
+  const agent = options.agent || options.a;
+  if (!agent || String(agent).trim() === 'auto') return;
+  const { recordAgentActivation } = require('../lib/agent-activation');
+  await recordAgentActivation(targetDir, agent, { via: 'context' });
+}
+
 const pathsOf = (items, limit) => (items || []).map((item) => item.path).slice(0, limit);
 
 function briefPayload(result, featureSlug) {
@@ -76,6 +86,7 @@ async function runContextBrief({ args, options = {}, logger }) {
     jevFilter: options['no-jev'] || options.jev === false ? null : { env: process.env }
   });
   await recordBriefEvent(targetDir, result, options.feature || options.slug || '');
+  await recordActivation(targetDir, options);
 
   if (options.json) return result;
 
