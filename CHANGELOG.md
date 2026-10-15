@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.72.0] - 2026-10-15
+
 ### Added
 
 - **A live session opens without an agent, and the agent the user activates inside it is recorded.** Opening a session never loaded an agent — the user activates one inside the tool — yet `live:start` without `--agent` tagged the session `@product`, so the Play's Activity tab read "claude · @product" for work that was entirely `@dev`'s. `live:start` without `--agent` now opens a neutral `@aioson` session ("Live session started with claude"). A new Claude Code `UserPromptSubmit` hook runs `hooks:emit`, which recognizes `/aioson:agent:<name>` (also the expanded `<command-name>` form), `/<name>` and `@<name>` for known agents and records `agent_activated` (`payload.agent`) on the session that launched the tool — once per change of agent, never opening a hooks session. Run `aioson hooks:install` to add the hook.
