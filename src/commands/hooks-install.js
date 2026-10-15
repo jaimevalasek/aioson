@@ -142,6 +142,13 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
         hooks: [{ type: 'command', command: emitCmd }]
       }
     ],
+    // `/aioson:agent:dev` typed inside the session: records which agent the
+    // user activated (the session itself opens without one).
+    UserPromptSubmit: [
+      {
+        hooks: [{ type: 'command', command: emitCmd }]
+      }
+    ],
     // The agent's final message is recorded first, then the turn is closed;
     // one command so the order holds.
     Stop: [
@@ -208,6 +215,7 @@ async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true
     }
     logger.log(`    PostToolUse (Write|Edit|MultiEdit|Bash|Task|TodoWrite) → hooks:emit`);
     logger.log(`    PostToolUseFailure (Bash) → hooks:emit`);
+    logger.log(`    UserPromptSubmit → hooks:emit (agent activated in the session)`);
     logger.log(`    Stop → hooks:emit (final message) + agent:done`);
   }
 
@@ -451,6 +459,7 @@ async function runHooksInstall({ args, options = {}, logger }) {
     }
     logger.log('  • Every file write/edit → logged as artifact event');
     logger.log('  • Every bash command → logged as step_done event');
+    logger.log('  • /aioson:agent:<name> typed in a session → logged as agent_activated');
     logger.log('  • Session end → logged as agent:done');
     logger.log('');
     logger.log('To verify: aioson live:status . --agent=' + agentName);

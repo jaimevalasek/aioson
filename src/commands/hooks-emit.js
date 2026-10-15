@@ -29,6 +29,7 @@ const {
   writeAgentSession
 } = require('../runtime-store');
 const { resolveLauncherLiveSession } = require('./live');
+const { getAgentDefinition } = require('../agents');
 
 const HOOKS_EMIT_VERSION = '1';
 
@@ -127,10 +128,44 @@ function readStdin() {
   });
 }
 
+// The commands that activate an agent inside the tool: `/aioson:agent:dev`
+// (Claude Code), `/dev`, `@dev`. Only a known agent counts — anything else the
+// user types is not an activation.
+const AGENT_COMMAND = /^(\/aioson:agent:|\/|@)([a-z][a-z0-9-]*)(?=\s|$)/i;
+
+// Claude Code may hand over a slash command already expanded.
+const EXPANDED_COMMAND = /<command-name>\s*(\/aioson:agent:)([a-z][a-z0-9-]*)\s*<\/command-name>/i;
+
+/** `@dev` when the prompt activates a known agent, otherwise null. */
+function agentFromPrompt(prompt) {
+  const text = String(prompt || '').trim();
+  const match = AGENT_COMMAND.exec(text) || EXPANDED_COMMAND.exec(text);
+  if (!match) return null;
+  const definition = getAgentDefinition(match[2]);
+  if (!definition) return null;
+  // A bare `/help` is the tool's own help, not the AIOSON agent.
+  if (match[1] === '/' && definition.id === 'help') return null;
+  return `@${definition.id}`;
+}
+
 function buildEventFromPayload(payload, source) {
   if (!payload) return null;
 
   const hookEvent = payload.hook_event_name || payload.hookEventName || null;
+  // The user activated an agent inside the session. The session was opened
+  // under the launcher's label; this is who actually works from here on.
+  if (hookEvent === 'UserPromptSubmit') {
+    const agent = agentFromPrompt(payload.prompt);
+    if (!agent) return null;
+    return {
+      eventType: 'agent_activated',
+      message: agent,
+      filePath: null,
+      toolName: null,
+      extra: { agent, source },
+      sessionId: payload.session_id || null
+    };
+  }
   // End of a turn: the agent's own final message is the best account of what
   // it did — kept as its claim, never as verified fact.
   if (hookEvent === 'Stop') {
@@ -288,6 +323,20 @@ async function appendLiveEventFile(runtimeDir, runKey, event) {
   } catch { /* non-fatal */ }
 }
 
+async function lastActivatedAgent(targetDir, runKey) {
+  const { db } = await openRuntimeDb(targetDir, { mustExist: true });
+  try {
+    const row = db.prepare(
+      "SELECT payload_json FROM agent_events WHERE run_key = ? AND event_type = 'agent_activated' ORDER BY id DESC LIMIT 1"
+    ).get(runKey);
+    return row ? JSON.parse(row.payload_json || '{}').agent || null : null;
+  } catch {
+    return null;
+  } finally {
+    db.close();
+  }
+}
+
 async function runHooksEmit({ args, options = {} }) {
   // The hook fires with the SHELL's cwd, which any `cd` during the session
   // moves — it is a starting point for discovery, never the project root
@@ -321,6 +370,14 @@ async function runHooksEmit({ args, options = {} }) {
     // The live session that launched this tool wins; the per-agent hooks
     // session (auto-started when missing) is only the fallback.
     const liveRun = await resolveLauncherLiveSession(targetDir, runtimeDir, { source });
+    // An activation only means something for the session the user is in: it
+    // never opens a hooks session, and repeating the same agent is not news.
+    if (event.eventType === 'agent_activated') {
+      if (!liveRun) return { ok: true, skipped: true, reason: 'no-live-session' };
+      if (await lastActivatedAgent(targetDir, liveRun.runKey) === event.extra.agent) {
+        return { ok: true, skipped: true, reason: 'same-agent' };
+      }
+    }
     const runKey = liveRun
       ? liveRun.runKey
       : await ensureOrCreateLiveSession(targetDir, agentName, source, runtimeDir);
@@ -372,4 +429,4 @@ async function runHooksEmit({ args, options = {} }) {
   }
 }
 
-module.exports = { runHooksEmit, buildEventFromPayload, resultLine, taskListMessage };
+module.exports = { runHooksEmit, buildEventFromPayload, agentFromPrompt, resultLine, taskListMessage };

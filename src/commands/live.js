@@ -40,6 +40,17 @@ function normalizeAgentHandle(value) {
   return text.startsWith('@') ? text : `@${text}`;
 }
 
+// What a session is opened under when the launcher names no agent. Opening a
+// session never loads an agent — the user activates one inside the tool
+// (`/aioson:agent:dev`), and `hooks:emit` records that as `agent_activated`.
+// A named default here (it was `@product`) read as "this session is the
+// product agent's" for work that was entirely another agent's.
+const NEUTRAL_LIVE_AGENT = '@aioson';
+
+function isNeutralLiveAgent(value) {
+  return normalizeAgentHandle(value) === NEUTRAL_LIVE_AGENT;
+}
+
 function makeDirectSessionKey(agentName) {
   return `direct-session:${Date.now()}:${String(agentName || '').replace(/^@/, '')}`;
 }
@@ -1382,10 +1393,10 @@ async function runLiveStart({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
   // --agent é OPCIONAL: serve só pra tagueamento/tracking da sessão (session
   // key, run, runtime emit). live:start NÃO invoca/injeta o agente — isso é
-  // feito DENTRO do harness (o usuário roda /product etc. na própria CLI). Por
-  // isso o caller (ex.: o Play) não precisa forçar um agente. Default 'product'
-  // quando omitido, mantendo o tracking consistente sem exigir a flag.
-  const agentName = normalizeAgentHandle(options.agent || 'product');
+  // feito DENTRO do harness (o usuário roda /aioson:agent:dev etc. na própria
+  // CLI). Sem a flag a sessão abre neutra (`@aioson`); o agente que o usuário
+  // ativar depois entra como `agent_activated`.
+  const agentName = normalizeAgentHandle(options.agent || NEUTRAL_LIVE_AGENT);
   const tool = normalizeLiveTool(requireOption(options, 'tool', t), t);
   const noLaunch = Boolean(options['no-launch']);
 
@@ -1591,7 +1602,12 @@ async function runLiveStart({ args, options = {}, logger, t }) {
     const goal = options.goal ? String(options.goal).trim() : null;
     const planRef = options.plan ? String(options.plan).trim() : null;
     const plan = await loadPlanReference(targetDir, planRef);
-    const startMessage = truncateMessage(options.message, `Live session started for ${agentName} with ${tool}`);
+    const startMessage = truncateMessage(
+      options.message,
+      isNeutralLiveAgent(agentName)
+        ? `Live session started with ${tool}`
+        : `Live session started for ${agentName} with ${tool}`
+    );
     const taskMeta = {
       tool_session: tool,
       plan_ref: plan.planRef,
@@ -2473,7 +2489,8 @@ module.exports = {
   // for a given session key without re-implementing the sanitization rules.
   sessionKeyToDirName,
   resolveLivePaths,
-  resolveLauncherLiveSession
+  resolveLauncherLiveSession,
+  NEUTRAL_LIVE_AGENT
 };
 
 // ── Context estimation helpers ──
