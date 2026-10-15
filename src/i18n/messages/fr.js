@@ -1578,6 +1578,7 @@ module.exports = {
   },
 
   auth: {
+    login_side_site: 'Connexion à {url} enregistrée pour ce site uniquement ; le site par défaut reste {default}. Passez --base-url={url} aux commandes.',
     login_no_token: 'Aucun token fourni. Obtenez le v\u00f4tre sur : {url}',
     login_hint: 'Lancez : aioson auth:login --token=<votre-token>',
     login_verifying: 'V\u00e9rification du token...',
@@ -1605,6 +1606,7 @@ module.exports = {
 
   store: {
     error_not_authenticated: 'Non authentifi\u00e9. Lancez : aioson auth:login --token=<votre-token>',
+    error_not_authenticated_site: 'Non connecté à {url}. Lancez : aioson auth:login --base-url={url}',
     error_missing_slug: '--slug manquant.',
     error_missing_code_or_slug: 'Fournissez un slug (--slug=X) ou un code d\'installation.',
     error_invalid_response: 'R\u00e9ponse invalide de aioson.com.',
@@ -1707,6 +1709,7 @@ module.exports = {
     package_saved: 'Paquet sauvegarde dans : {path}',
 
     publish_reading_manifest: 'Lecture de system.json...',
+    publish_target: 'Publication vers {url} (site choisi par --base-url / AIOSON_BASE_URL).',
     publish_dry_run: '[dry-run] Publierait le systeme "{slug}" v{version} (visibilite : {visibility}).',
     publish_sending: 'Envoi vers aioson.com...',
     publish_done: 'Publie : aioson.com/store/systems/{slug}\n  Installer dans aioson-play avec le slug : {slug}',

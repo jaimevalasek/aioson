@@ -1838,6 +1838,7 @@ module.exports = {
   },
 
   auth: {
+    login_side_site: 'Login for {url} saved for that site only; the default stays {default}. Pass --base-url={url} to commands.',
     login_no_token: 'No token provided. Get yours at: {url}',
     login_hint: 'Run: aioson auth:login',
     login_hint_token: 'Or get a token manually at: {url}',
@@ -1879,6 +1880,7 @@ module.exports = {
 
   store: {
     error_not_authenticated: 'Not authenticated. Run: aioson auth:login',
+    error_not_authenticated_site: 'Not logged in to {url}. Run: aioson auth:login --base-url={url}',
     error_missing_slug: 'Missing --slug.',
     error_missing_code_or_slug: 'Provide a slug (--slug=X) or an install code.',
     error_invalid_response: 'Invalid response from aioson.com.',
@@ -1993,6 +1995,7 @@ module.exports = {
     package_saved: 'Package saved at: {path}',
 
     publish_reading_manifest: 'Reading system.json...',
+    publish_target: 'Publishing to {url} (site chosen by --base-url / AIOSON_BASE_URL).',
     publish_dry_run: '[dry-run] Would publish system "{slug}" v{version} (visibility: {visibility}).',
     publish_sending: 'Sending to aioson.com...',
     publish_done: 'Published: aioson.com/store/systems/{slug}\n  Install in aioson-play using slug: {slug}',

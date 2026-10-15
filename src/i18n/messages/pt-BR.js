@@ -1859,6 +1859,7 @@ module.exports = {
   },
 
   auth: {
+    login_side_site: 'Login em {url} salvo só para esse site; o padrão continua {default}. Use --base-url={url} nos comandos.',
     login_no_token: 'Nenhum token informado. Obtenha o seu em: {url}',
     login_hint: 'Execute: aioson auth:login',
     login_hint_token: 'Ou obtenha um token manualmente em: {url}',
@@ -1900,6 +1901,7 @@ module.exports = {
 
   store: {
     error_not_authenticated: 'Nao autenticado. Execute: aioson auth:login',
+    error_not_authenticated_site: 'Sem login em {url}. Execute: aioson auth:login --base-url={url}',
     error_missing_slug: 'Informe --slug.',
     error_missing_code_or_slug: 'Informe um slug (--slug=X) ou um codigo de instalacao.',
     error_invalid_response: 'Resposta invalida do aioson.com.',
@@ -2011,6 +2013,7 @@ module.exports = {
     package_saved: 'Pacote salvo em: {path}',
 
     publish_reading_manifest: 'Lendo system.json...',
+    publish_target: 'Publicando em {url} (site escolhido por --base-url / AIOSON_BASE_URL).',
     publish_dry_run: '[dry-run] Publicaria sistema "{slug}" v{version} (visibilidade: {visibility}).',
     publish_sending: 'Enviando para aioson.com...',
     publish_done: 'Publicado: aioson.com/store/systems/{slug}\n  Instalar no aioson-play usando o slug: {slug}',

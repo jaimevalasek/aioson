@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const ignore = require('ignore');
 const { exists, ensureDir } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, resolveSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { resolveTargetDir } = require('../lib/project-root');
 const { collectStagedSecretFindings } = require('../lib/security/staged-secret-detector');
@@ -222,7 +222,6 @@ async function createZipBuffer(files) {
   });
 }
 
-const DEFAULT_BASE_URL = 'https://aioson.com';
 const SYSTEM_PACKAGES_DIR = '.aioson/system-packages';
 const BACKUPS_DIR = '.aioson/.backups';
 
@@ -421,14 +420,16 @@ function parseInviteEmails(cliInvite, manifestEmails) {
   ));
 }
 
-function resolveBaseUrl(config) {
-  return String(config.aiosonBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
-}
-
-function requireToken(config, t) {
-  const token = config.aiosonToken;
-  if (!token) throw new Error(t('store.error_not_authenticated'));
-  return token;
+// Site + token do comando (ver resolveSite em config.js). Sem login no site
+// escolhido, a mensagem diz o login exato que falta.
+function requireSite(config, options, t) {
+  const site = resolveSite(config, options);
+  if (!site.token) {
+    throw new Error(site.isDefault
+      ? t('store.error_not_authenticated')
+      : t('store.error_not_authenticated_site', { url: site.baseUrl }));
+  }
+  return site;
 }
 
 async function storePost(url, payload, token) {
@@ -826,8 +827,10 @@ function publishAccessNotice(response, version) {
 
 async function runSystemPublish({ args, options, logger, t }) {
   const config = options['dry-run'] ? {} : await readConfig();
-  const token = options['dry-run'] ? null : requireToken(config, t);
+  const site = options['dry-run'] ? null : requireSite(config, options, t);
+  const token = site ? site.token : null;
   const dir = resolveTargetDir(args);
+  if (site && !site.isDefault) logger.log(t('system.publish_target', { url: site.baseUrl }));
   const buildMode = Boolean(options.build);
 
   logger.log(t('system.publish_reading_manifest'));
@@ -951,7 +954,7 @@ async function runSystemPublish({ args, options, logger, t }) {
   logger.log(`ZIP: ${zipKb} KB (${fileCount} files)`);
 
   logger.log(t('system.publish_sending'));
-  const baseUrl = resolveBaseUrl(config);
+  const baseUrl = site.baseUrl;
   const response = await storePost(`${baseUrl}/api/store/systems/publish`, {
     kind: 'aioson.store.system',
     slug: manifest.slug,
@@ -985,8 +988,7 @@ async function runSystemPublish({ args, options, logger, t }) {
 async function runSystemList({ args, options, logger, t }) {
   if (options.remote) {
     const config = await readConfig();
-    const token = requireToken(config, t);
-    const baseUrl = resolveBaseUrl(config);
+    const { token, baseUrl } = requireSite(config, options, t);
     logger.log(t('list_remote_fetching', { type: 'systems' }));
     const response = await storeGet(`${baseUrl}/api/store/systems`, token);
     const systems = response.systems || [];
@@ -1031,9 +1033,8 @@ async function runSystemList({ args, options, logger, t }) {
 
 async function runSystemInstall({ args, options, logger, t }) {
   const config = await readConfig();
-  const token = requireToken(config, t);
+  const { token, baseUrl } = requireSite(config, options, t);
   const projectDir = await findProjectRoot(resolveTargetDir(args));
-  const baseUrl = resolveBaseUrl(config);
 
   const ref = String(options.slug || options.code || args[1] || '').trim();
   if (!ref) throw new Error(t('store.error_missing_code_or_slug'));

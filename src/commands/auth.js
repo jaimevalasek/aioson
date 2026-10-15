@@ -4,12 +4,10 @@ const http = require('http');
 const crypto = require('crypto');
 const readline = require('readline');
 const { spawn } = require('child_process');
-const { readConfig, writeConfig, CONFIG_DIR } = require('./config');
-
-const DEFAULT_BASE_URL = 'https://aioson.com';
+const { readConfig, writeConfig, resolveSite, isLoopbackSite, DEFAULT_SITE_URL, CONFIG_DIR } = require('./config');
 
 function resolveBaseUrl(config, options = {}) {
-  return String(options['base-url'] || config.aiosonBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
+  return resolveSite(config, options).baseUrl;
 }
 
 async function fetchAuthMe(baseUrl, token) {
@@ -238,10 +236,20 @@ async function runAuthLogin({ args, options, logger, t }) {
   logger.log(t('auth.login_verifying'));
   const user = await fetchAuthMe(baseUrl, token);
 
-  config.aiosonToken = token;
-  if (baseUrl !== DEFAULT_BASE_URL) config.aiosonBaseUrl = baseUrl;
-  if (user?.username) config.aiosonUsername = user.username;
+  // Cada site guarda o próprio token. Login num site local (localhost) não vira
+  // o padrão quando já existe login em outro site — senão o próximo publish
+  // "normal" iria para o site de desenvolvimento.
+  config.aiosonTokens = { ...(config.aiosonTokens || {}), [baseUrl]: token };
+  const { defaultBaseUrl } = resolveSite(config);
+  const sideSite = isLoopbackSite(baseUrl) && Boolean(config.aiosonToken) && baseUrl !== defaultBaseUrl;
+  if (!sideSite) {
+    config.aiosonToken = token;
+    if (baseUrl !== DEFAULT_SITE_URL) config.aiosonBaseUrl = baseUrl;
+    else delete config.aiosonBaseUrl;
+    if (user?.username) config.aiosonUsername = user.username;
+  }
   await writeConfig(config);
+  if (sideSite) logger.log(t('auth.login_side_site', { url: baseUrl, default: defaultBaseUrl }));
 
   if (user?.username) {
     logger.log(t('auth.login_ok', { username: user.username, path: CONFIG_DIR }));
@@ -254,8 +262,15 @@ async function runAuthLogin({ args, options, logger, t }) {
 
 async function runAuthLogout({ args, options, logger, t }) {
   const config = await readConfig();
-  delete config.aiosonToken;
-  delete config.aiosonUsername;
+  const site = resolveSite(config, options);
+  if (config.aiosonTokens) {
+    delete config.aiosonTokens[site.baseUrl];
+    if (Object.keys(config.aiosonTokens).length === 0) delete config.aiosonTokens;
+  }
+  if (site.isDefault) {
+    delete config.aiosonToken;
+    delete config.aiosonUsername;
+  }
   await writeConfig(config);
   logger.log(t('auth.logout_ok'));
   return { ok: true };
@@ -263,7 +278,7 @@ async function runAuthLogout({ args, options, logger, t }) {
 
 async function runAuthStatus({ args, options, logger, t }) {
   const config = await readConfig();
-  const token = config.aiosonToken;
+  const { token } = resolveSite(config, options);
 
   if (!token) {
     logger.log(t('auth.status_not_authenticated'));

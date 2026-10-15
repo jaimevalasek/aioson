@@ -239,6 +239,34 @@ Sem o pacote, ou com versão em faixa (`^5.8.0`), o `--build --protection=max` f
 
 ---
 
+## Testar no site local antes de publicar de verdade
+
+Para publicar no aioson-com rodando na sua máquina (porta 3000) e instalar pelo
+Play em modo dev (`npm run tauri dev`, que já aponta para `localhost:3000`):
+
+```bash
+# 1. Login no site local — fica guardado só para esse site; o login de
+#    aioson.com continua sendo o padrão
+aioson auth:login --base-url=http://localhost:3000
+
+# 2. Publicar no site local
+aioson system:publish --base-url=http://localhost:3000
+# ou, para a sessão inteira do terminal:
+AIOSON_BASE_URL=http://localhost:3000 aioson system:publish
+```
+
+Sem `--base-url` (e sem `AIOSON_BASE_URL`) o publish continua indo para o site
+padrão. Cada site tem o próprio login (`aiosonTokens` em `~/.aioson/config.json`):
+publicar num site sem login nele recusa e diz o `auth:login` exato que falta, em
+vez de mandar o token do outro site. `system:list --remote` e `system:install`
+aceitam o mesmo `--base-url`.
+
+> Cuidado: o site local grava o ZIP no disco dele (`private/systems/`). Se o banco
+> do site local for o de produção, a versão fica registrada lá sem o arquivo — e a
+> versão não pode ser republicada. Use um banco local para esses testes.
+
+---
+
 ## Solução de problemas
 
 | Problema | Solução |

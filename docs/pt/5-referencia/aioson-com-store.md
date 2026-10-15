@@ -27,6 +27,11 @@ aioson auth status
 
 Depois do login, o token fica salvo localmente. Todos os comandos de store usam automaticamente.
 
+Outro site (ex.: o aioson-com local na porta 3000): `aioson auth login --base-url=http://localhost:3000`
+guarda um token só para ele, e os comandos `system:publish`, `system:list --remote` e
+`system:install` vão para lá com `--base-url=...` ou a variável `AIOSON_BASE_URL`. Sem isso,
+continuam no site padrão.
+
 ## Empacotar
 
 ```bash

@@ -404,13 +404,13 @@ const PUBLISH_APP = {
 
 // Carrega uma instância nova do comando com um HOME temporário logado, e troca
 // o fetch por um servidor falso que devolve `responseBody`.
-async function loadPublishWithAccount(ctx, responseBody) {
+async function loadPublishWithAccount(ctx, responseBody, account = { aiosonToken: 'test-token', aiosonBaseUrl: 'https://store.test' }) {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-publish-home-'));
   ctx.after(() => fs.rm(home, { recursive: true, force: true }));
   await fs.mkdir(path.join(home, '.aioson'), { recursive: true });
   await fs.writeFile(
     path.join(home, '.aioson', 'config.json'),
-    JSON.stringify({ aiosonToken: 'test-token', aiosonBaseUrl: 'https://store.test' }),
+    JSON.stringify(account),
     'utf8'
   );
 
@@ -437,11 +437,11 @@ async function loadPublishWithAccount(ctx, responseBody) {
   const requests = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
-    requests.push({ url: String(url), body: JSON.parse(init.body) });
+    requests.push({ url: String(url), body: JSON.parse(init.body), authorization: init.headers.authorization });
     return { ok: true, status: 200, statusText: 'OK', text: async () => JSON.stringify(responseBody) };
   };
   ctx.after(() => { globalThis.fetch = originalFetch; });
-  return { runSystemPublish: fresh.runSystemPublish, requests };
+  return { runSystemPublish: fresh.runSystemPublish, requests, home };
 }
 
 test('AC-aap-03: publish --paid without a price in system.json completes and warns that access is set in the admin', async (ctx) => {
@@ -516,4 +516,64 @@ test('AC-aap-03: a new-app response with accessManagedInAdmin prints the Privado
   assert.equal(publishAccessNotice({ ok: true, quarantined: false }, '1.0.0'), null);
   assert.equal(publishAccessNotice(null, '1.0.0'), null);
   assert.equal(publishAccessNotice({ created: true, visibility: 'FREE' }, '1.0.0'), null);
+});
+
+// ── publish num site escolhido (--base-url / AIOSON_BASE_URL) ───────────────
+
+const PUBLISH_OK = { ok: true, slug: 'access-probe', version: '1.2.0', quarantined: false, accessManagedInAdmin: true, created: false };
+
+test('publish --base-url sends to that site with that site token, leaving the default alone', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const { runSystemPublish: publish, requests } = await loadPublishWithAccount(ctx, PUBLISH_OK, {
+    aiosonToken: 'prod-token',
+    aiosonTokens: { 'http://localhost:3000': 'local-token' }
+  });
+  const lines = [];
+
+  const result = await publish({ args: [dir], options: { 'base-url': 'http://localhost:3000/' }, logger: { log: (line) => lines.push(line) }, t });
+
+  assert.equal(result.ok, true);
+  assert.equal(requests[0].url, 'http://localhost:3000/api/store/systems/publish');
+  assert.equal(requests[0].authorization, 'Bearer local-token');
+  assert.ok(lines.some((line) => line.startsWith("system.publish_target") && line.includes("http://localhost:3000")));
+});
+
+test('AIOSON_BASE_URL picks the site when no flag is given', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const { runSystemPublish: publish, requests } = await loadPublishWithAccount(ctx, PUBLISH_OK, {
+    aiosonToken: 'prod-token',
+    aiosonTokens: { 'http://localhost:3000': 'local-token' }
+  });
+  const saved = process.env.AIOSON_BASE_URL;
+  process.env.AIOSON_BASE_URL = 'http://localhost:3000';
+  ctx.after(() => { if (saved === undefined) delete process.env.AIOSON_BASE_URL; else process.env.AIOSON_BASE_URL = saved; });
+
+  await publish({ args: [dir], options: {}, logger: { log: () => {} }, t });
+
+  assert.equal(requests[0].url, 'http://localhost:3000/api/store/systems/publish');
+  assert.equal(requests[0].authorization, 'Bearer local-token');
+});
+
+test('publish to a site without its own login refuses instead of reusing the default token', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const { runSystemPublish: publish, requests } = await loadPublishWithAccount(ctx, PUBLISH_OK, { aiosonToken: 'prod-token' });
+
+  await assert.rejects(
+    publish({ args: [dir], options: { 'base-url': 'http://localhost:3000' }, logger: { log: () => {} }, t }),
+    /store\.error_not_authenticated_site \{"url":"http:\/\/localhost:3000"\}/
+  );
+  assert.equal(requests.length, 0);
+});
+
+test('publish without --base-url keeps going to the default site', async (ctx) => {
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  const { runSystemPublish: publish, requests } = await loadPublishWithAccount(ctx, PUBLISH_OK, {
+    aiosonToken: 'prod-token',
+    aiosonTokens: { 'http://localhost:3000': 'local-token' }
+  });
+
+  await publish({ args: [dir], options: {}, logger: { log: () => {} }, t });
+
+  assert.equal(requests[0].url, 'https://aioson.com/api/store/systems/publish');
+  assert.equal(requests[0].authorization, 'Bearer prod-token');
 });
