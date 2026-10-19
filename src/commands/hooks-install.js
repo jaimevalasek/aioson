@@ -64,6 +64,12 @@ function makeDoneCommand(agentName) {
   return `aioson agent:done "$PWD" --agent=${shellQuote(agentName)} --summary=${shellQuote(`Session ended via ${agentName} hook`)} 2>/dev/null || true`;
 }
 
+// SessionStart after a compaction: re-inject the checkpoint rebuilt from the
+// events recorded before it. Other session starts answer `{}`.
+function makeRecapCommand(agentName, source) {
+  return `aioson hooks:recap "$PWD" --agent=${shellQuote(agentName)} --source=${shellQuote(source)} --json 2>/dev/null || true`;
+}
+
 function makeGuardCommand(agentName) {
   // PreToolUse: the harness pipes the pending edit event (JSON on stdin); the
   // guard derives a query from the artifact itself, runs context:brief, and
@@ -78,6 +84,7 @@ function makeGuardCommand(agentName) {
 // without disturbing user-authored hooks.
 const AIOSON_HOOK_SIGNATURES = [
   'aioson hooks:emit',
+  'aioson hooks:recap',
   'aioson agent:done',
   'aioson context:guard',
   'aioson live:start'
@@ -155,6 +162,20 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
       {
         hooks: [{ type: 'command', command: `${emitCmd}; ${doneCmd}` }]
       }
+    ],
+    // Compaction keeps a model-written summary; the hooks keep the facts. The
+    // marker bounds the stretch, and the next SessionStart (source `compact`)
+    // gets the checkpoint rebuilt from it — no agent has to remember to write.
+    PreCompact: [
+      {
+        hooks: [{ type: 'command', command: emitCmd }]
+      }
+    ],
+    SessionStart: [
+      {
+        matcher: 'compact',
+        hooks: [{ type: 'command', command: makeRecapCommand(safeAgentName, 'claude') }]
+      }
     ]
   };
 
@@ -217,6 +238,8 @@ async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true
     logger.log(`    PostToolUseFailure (Bash) → hooks:emit`);
     logger.log(`    UserPromptSubmit → hooks:emit (agent activated in the session)`);
     logger.log(`    Stop → hooks:emit (final message) + agent:done`);
+    logger.log(`    PreCompact → hooks:emit (compaction marker)`);
+    logger.log(`    SessionStart (compact) → hooks:recap (session checkpoint)`);
   }
 
   return { tool: 'claude', configPath, hooks: newHooks };

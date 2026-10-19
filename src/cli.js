@@ -188,6 +188,7 @@ const { runEvidencePrune } = require('./commands/evidence-prune');
 const { runStorageTriage } = require('./commands/storage-triage');
 const { runContextTrim } = require('./commands/context-trim');
 const { runHooksEmit } = require('./commands/hooks-emit');
+const { runHooksRecap } = require('./commands/hooks-recap');
 const { runHooksInstall, runHooksUninstall } = require('./commands/hooks-install');
 const { runSessionGuard } = require('./commands/session-guard');
 const { runDevlogProcess } = require('./commands/devlog-process');
@@ -784,6 +785,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'cloud-publish-genome',
   'hooks:emit',
   'hooks-emit',
+  'hooks:recap',
+  'hooks-recap',
   'hooks:install',
   'hooks-install',
   'hooks:uninstall',
@@ -1999,6 +2002,8 @@ async function main() {
       result = await runDevlogSync({ args, options, logger: commandLogger, t });
     } else if (command === 'hooks:emit' || command === 'hooks-emit') {
       result = await runHooksEmit({ args, options, logger: commandLogger });
+    } else if (command === 'hooks:recap' || command === 'hooks-recap') {
+      result = await runHooksRecap({ args, options, logger: commandLogger });
     } else if (command === 'hooks:install' || command === 'hooks-install') {
       result = await runHooksInstall({ args, options, logger: commandLogger });
     } else if (command === 'hooks:uninstall' || command === 'hooks-uninstall') {

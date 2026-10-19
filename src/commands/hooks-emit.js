@@ -149,31 +149,36 @@ function agentFromPrompt(prompt) {
   return `@${definition.id}`;
 }
 
-function buildEventFromPayload(payload, source) {
-  if (!payload) return null;
-
-  const hookEvent = payload.hook_event_name || payload.hookEventName || null;
+/** Events that are not tool uses; `undefined` when `hookEvent` is a tool event. */
+function lifecycleEvent(hookEvent, payload, source) {
+  const base = { filePath: null, toolName: null, sessionId: payload.session_id || null };
   // The user activated an agent inside the session. The session was opened
   // under the launcher's label; this is who actually works from here on.
   if (hookEvent === 'UserPromptSubmit') {
     const agent = agentFromPrompt(payload.prompt);
-    if (!agent) return null;
-    return {
-      eventType: 'agent_activated',
-      message: agent,
-      filePath: null,
-      toolName: null,
-      extra: { agent, source },
-      sessionId: payload.session_id || null
-    };
+    return agent ? { ...base, eventType: 'agent_activated', message: agent, extra: { agent, source } } : null;
+  }
+  // The conversation is about to be compacted: the marker bounds the stretch
+  // `hooks:recap` restores after it (src/lib/compaction-recap.js).
+  if (hookEvent === 'PreCompact') {
+    const trigger = payload.trigger === 'manual' || payload.trigger === 'auto' ? payload.trigger : 'unknown';
+    return { ...base, eventType: 'compaction', message: `Context compaction (${trigger})`, extra: { trigger } };
   }
   // End of a turn: the agent's own final message is the best account of what
   // it did — kept as its claim, never as verified fact.
   if (hookEvent === 'Stop') {
     const reply = oneLine(payload.last_assistant_message, MAX_REPLY_CHARS);
-    if (!reply) return null;
-    return { eventType: 'agent_reply', message: reply, filePath: null, toolName: null, extra: {}, sessionId: payload.session_id || null };
+    return reply ? { ...base, eventType: 'agent_reply', message: reply, extra: {} } : null;
   }
+  return undefined;
+}
+
+function buildEventFromPayload(payload, source) {
+  if (!payload) return null;
+
+  const hookEvent = payload.hook_event_name || payload.hookEventName || null;
+  const lifecycle = lifecycleEvent(hookEvent, payload, source);
+  if (lifecycle !== undefined) return lifecycle;
 
   const toolName = payload.tool_name || payload.toolName || null;
   if (!toolName) return null;
@@ -417,4 +422,4 @@ async function runHooksEmit({ args, options = {} }) {
   }
 }
 
-module.exports = { runHooksEmit, buildEventFromPayload, agentFromPrompt, resultLine, taskListMessage };
+module.exports = { runHooksEmit, buildEventFromPayload, agentFromPrompt, resultLine, taskListMessage, readStdin };

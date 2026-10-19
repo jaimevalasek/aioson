@@ -74,9 +74,25 @@ Claude Code / Antigravity / Codex
   └─ sessão termina  (Stop / SessionEnd)
        └─ hook dispara → aioson agent:done
             └─ fecha a run, registra completion
+
+  └─ conversa vai ser compactada  (PreCompact, só Claude Code)
+       └─ hook dispara → aioson hooks:emit
+            └─ grava o marcador "compaction" na sessão
+
+  └─ conversa recomeça compactada  (SessionStart com source "compact")
+       └─ hook dispara → aioson hooks:recap
+            └─ remonta o checkpoint a partir dos eventos gravados antes
+            └─ injeta: agente, feature e próximo passo registrados, arquivos
+               alterados, comandos que continuam falhando, último resultado de
+               teste, plano (TodoWrite), notas de continuidade, última fala do agente
+            └─ em qualquer outro início de sessão responde {} (nada injetado)
 ```
 
 O `session:guard` é opcional — o `hooks:emit` já inicia a sessão automaticamente na primeira chamada se não houver uma ativa.
+
+### Compactação: o checkpoint volta sozinho
+
+A compactação troca a conversa por um resumo que o próprio modelo escreve, e são justamente os detalhes para continuar (arquivos tocados, teste que ainda falha, onde o plano parou) que um resumo perde. Pedir ao agente que anote isso antes é uma instrução em prosa, que perde para a vontade de seguir trabalhando. Os hooks já gravam esses fatos enquanto acontecem; por isso o checkpoint é remontado dos eventos, nunca do modelo. O texto injetado tem no máximo 2.000 caracteres, só linhas inteiras, e vem rotulado como dado gravado (verifique antes de confiar). Um comando que falhou e depois passou não aparece como falhando. Para ver o que seria injetado: `echo '{"source":"compact"}' | aioson hooks:recap .`.
 
 ---
 
@@ -254,6 +270,23 @@ Reinstalar é seguro: o instalador remove as entradas antigas do AIOSON antes de
         "hooks": [{
           "type": "command",
           "command": "aioson agent:done \"$PWD\" --agent=dev --summary=\"Session ended via dev hook\" 2>/dev/null || true"
+        }]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "aioson hooks:emit \"$PWD\" --agent=dev --source=claude 2>/dev/null || true"
+        }]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [{
+          "type": "command",
+          "command": "aioson hooks:recap \"$PWD\" --agent='dev' --source='claude' --json 2>/dev/null || true"
         }]
       }
     ]
