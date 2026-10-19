@@ -26,6 +26,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ensureStorageTree, getStorageRoot } = require('./storage');
 const { fingerprintProposal, isValidDecisionSlug } = require('./slug');
+const { addProject, parseList } = require('./project-scope');
 
 const MAX_QUOTES = 5;
 const VALID_SIGNAL_TYPES = ['authorization', 'exclusion', 'correction', 'confirmation'];
@@ -63,6 +64,11 @@ function serializeProposal(data) {
   ];
   if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
   if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
+  const projects = parseList(data.projects);
+  if (projects.length > 0) {
+    lines.push(`projects: ${escapeYamlString(projects.join(','))}`);
+    lines.push(`project_names: ${escapeYamlString(parseList(data.project_names).join(','))}`);
+  }
   lines.push('---', '');
   return lines.join('\n');
 }
@@ -135,7 +141,11 @@ function deleteProposal(identity, slug) {
   return false;
 }
 
-function captureSignal({ identity, slug, signal_type, quote, proposal, source_agent, feature_slug, session_id }) {
+/**
+ * `project` ({key, name}, from project-scope.js) records where the signal was
+ * detected; the distinct projects decide the scope the decision is promoted with.
+ */
+function captureSignal({ identity, slug, signal_type, quote, proposal, source_agent, feature_slug, session_id, project = null }) {
   if (!VALID_SIGNAL_TYPES.includes(signal_type)) {
     throw new Error(`Invalid signal_type '${signal_type}'. Must be one of: ${VALID_SIGNAL_TYPES.join(', ')}`);
   }
@@ -152,10 +162,14 @@ function captureSignal({ identity, slug, signal_type, quote, proposal, source_ag
         existing.quotes = existing.quotes.slice(-MAX_QUOTES);
       }
     }
+    const seen = addProject(existing.projects, existing.project_names, project);
+    existing.projects = seen.keys;
+    existing.project_names = seen.names;
     writeProposal(identity, existing);
     return { proposal: existing, isNew: false };
   }
 
+  const seen = addProject([], [], project);
   const fresh = {
     slug,
     signal_type,
@@ -167,7 +181,9 @@ function captureSignal({ identity, slug, signal_type, quote, proposal, source_ag
     source_agent: source_agent || 'unknown',
     proposal_fingerprint: fingerprintProposal(proposal),
     feature_slug: feature_slug || null,
-    session_id: session_id || null
+    session_id: session_id || null,
+    projects: seen.keys,
+    project_names: seen.names
   };
   writeProposal(identity, fresh);
   return { proposal: fresh, isNew: true };

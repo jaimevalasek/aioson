@@ -9,6 +9,7 @@ const { resolveIdentity } = require('../operator-memory/identity');
 const { ensureStorageTree } = require('../operator-memory/storage');
 const { readProposal } = require('../operator-memory/proposal');
 const { promoteProposal } = require('../operator-memory/decision');
+const { VALID_SCOPES } = require('../operator-memory/project-scope');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 async function runOpPromote({ args = [], options = {}, logger }) {
@@ -17,7 +18,7 @@ async function runOpPromote({ args = [], options = {}, logger }) {
   const slug = positional[0];
 
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
-    if (logger) logger.log('op:promote <slug> — manually promote a pending proposal to a decision.');
+    if (logger) logger.log('op:promote <slug> [--scope=operator|project] — manually promote a pending proposal to a decision.');
     return { ok: true };
   }
 
@@ -38,9 +39,17 @@ async function runOpPromote({ args = [], options = {}, logger }) {
     return { ok: false, exitCode: 1, error: err };
   }
 
+  const requestedScope = options.scope == null ? null : String(options.scope);
+  if (requestedScope !== null && !VALID_SCOPES.includes(requestedScope)) {
+    const err = `op:promote — invalid --scope='${requestedScope}'. Must be one of: ${VALID_SCOPES.join(', ')}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger && logger.error) logger.error(err);
+    return { ok: false, exitCode: 1, error: err };
+  }
+
   let decision;
   try {
-    decision = promoteProposal({ identity: resolved.identity, proposal });
+    decision = promoteProposal({ identity: resolved.identity, proposal, scope: requestedScope });
   } catch (err) {
     const errMsg = `op:promote failed: ${err.message}`;
     if (options.json) return { ok: false, error: errMsg };
@@ -57,7 +66,7 @@ async function runOpPromote({ args = [], options = {}, logger }) {
 
   const auditLine = `✔ Memory: '${proposal.proposal}'. aioson op:forget ${slug} p/ desfazer.`;
   if (options.json) {
-    return { ok: true, slug, identity: resolved.identity, category: decision.category };
+    return { ok: true, slug, identity: resolved.identity, category: decision.category, scope: decision.scope || 'operator' };
   }
   if (logger) logger.log(auditLine);
   return { ok: true, slug };

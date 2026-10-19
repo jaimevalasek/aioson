@@ -35,6 +35,15 @@ const path = require('node:path');
 const { getStorageRoot, openIndexDb } = require('./storage');
 const { deleteProposal, proposalPath } = require('./proposal');
 const { isValidDecisionSlug } = require('./slug');
+const {
+  addProject,
+  decideScope,
+  namesCrossProjectScope,
+  parseList,
+  SCOPE_OPERATOR,
+  SCOPE_PROJECT,
+  VALID_SCOPES
+} = require('./project-scope');
 
 const SCHEMA_VERSION = '1.0';
 const MAX_BODY_CHARS = 500;
@@ -87,6 +96,14 @@ function deriveTitle(proposal) {
   return text.charAt(0).toUpperCase() + text.slice(1, 100);
 }
 
+function scopeLines({ scope, projects, project_names: projectNames }) {
+  return [
+    `scope: ${scope}`,
+    `projects: ${escapeYamlString(parseList(projects).join(','))}`,
+    `project_names: ${escapeYamlString(parseList(projectNames).join(','))}`
+  ];
+}
+
 function serializeDecision(data) {
   const body = String(data.body || data.proposal || '').slice(0, MAX_BODY_CHARS);
   const title = deriveTitle(data.title || data.proposal);
@@ -106,6 +123,7 @@ function serializeDecision(data) {
   ];
   if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
   if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
+  if (data.scope) lines.push(...scopeLines(data));
   lines.push('---');
   return [
     ...lines,
@@ -176,10 +194,16 @@ function readDecision(identity, slug) {
  *
  * Returns the decision data on success. Throws on transaction failure.
  */
-function promoteProposal({ identity, proposal: proposalData }) {
+function promoteProposal({ identity, proposal: proposalData, scope: requestedScope = null }) {
   const now = new Date().toISOString();
   const body = String(proposalData.proposal || '').slice(0, MAX_BODY_CHARS);
   const category = inferCategory(proposalData.signal_type, body);
+  const projects = parseList(proposalData.projects);
+  const scope = decideScope({
+    projectKeys: projects,
+    explicit: namesCrossProjectScope(proposalData.quotes || [], proposalData.proposal),
+    requested: requestedScope
+  });
   const decision = {
     slug: proposalData.slug,
     signal_type: proposalData.signal_type,
@@ -194,7 +218,10 @@ function promoteProposal({ identity, proposal: proposalData }) {
     title: proposalData.proposal,
     deprecated_by: null,
     feature_slug: proposalData.feature_slug || null,
-    session_id: proposalData.session_id || null
+    session_id: proposalData.session_id || null,
+    scope: projects.length > 0 || requestedScope ? scope : null,
+    projects,
+    project_names: parseList(proposalData.project_names)
   };
 
   const decFilePath = decisionPath(identity, decision.slug);
@@ -276,6 +303,64 @@ function reinforceDecision(identity, slug) {
 }
 
 /**
+ * Re-detection of a promoted decision in `project`: a project-scoped decision
+ * records the project and widens to operator-wide once it has been seen in
+ * `WIDEN_AT_PROJECTS` distinct projects or its quote names a cross-project
+ * scope. `requested` ('operator' | 'project') is the user's explicit choice and
+ * wins. A decision with no scope field predates scoping and stays operator-wide
+ * unless the user narrows it. Surgical frontmatter edit, body untouched.
+ * Returns { scope, projects, changed } or null when the decision is absent.
+ */
+function applyProjectScope(identity, slug, { project = null, quote = null, requested = null } = {}) {
+  const filePath = decisionPath(identity, slug);
+  if (!fs.existsSync(filePath)) return null;
+  const content = fs.readFileSync(filePath, 'utf8');
+  const parsed = parseDecisionFile(content) || {};
+  const currentScope = parsed.scope || SCOPE_OPERATOR;
+  if (!parsed.scope && !VALID_SCOPES.includes(requested)) {
+    return { scope: currentScope, projects: [], changed: false };
+  }
+
+  const seen = addProject(parsed.projects, parsed.project_names, project);
+  const nextScope = VALID_SCOPES.includes(requested)
+    ? requested
+    : (currentScope === SCOPE_OPERATOR
+      ? SCOPE_OPERATOR
+      : decideScope({ projectKeys: seen.keys, explicit: namesCrossProjectScope(quote, parsed.quotes || []) }));
+  // A project scope with no known project would hide the decision everywhere.
+  if (nextScope === SCOPE_PROJECT && seen.keys.length === 0) {
+    return { scope: currentScope, projects: [], changed: false };
+  }
+  const changed = nextScope !== parsed.scope
+    || seen.keys.join(',') !== parseList(parsed.projects).join(',');
+  if (!changed) return { scope: nextScope, projects: seen.keys, changed: false };
+
+  const updated = setFrontmatterFields(content, scopeLines({ scope: nextScope, projects: seen.keys, project_names: seen.names }));
+  const tmpPath = `${filePath}.tmp`;
+  fs.writeFileSync(tmpPath, updated, 'utf8');
+  fs.renameSync(tmpPath, filePath);
+  try {
+    const { regenerateIndex } = require('./index-md');
+    regenerateIndex(identity);
+  } catch { /* index regen failure is non-fatal */ }
+  return { scope: nextScope, projects: seen.keys, changed: true };
+}
+
+/** Replace `key: value` lines inside the frontmatter, inserting missing ones before its close. */
+function setFrontmatterFields(content, lines) {
+  const close = content.indexOf('\n---', 3);
+  if (!content.startsWith('---\n') || close === -1) return content;
+  let head = content.slice(0, close);
+  const tail = content.slice(close);
+  for (const line of lines) {
+    const key = line.slice(0, line.indexOf(':'));
+    const re = new RegExp(`^${key}:.*$`, 'm');
+    head = re.test(head) ? head.replace(re, () => line) : `${head}\n${line}`;
+  }
+  return head + tail;
+}
+
+/**
  * Soft-delete a decision or proposal to history/.
  * Returns { mode: 'decision'|'proposal'|'noop', archivedPath: string|null }.
  */
@@ -317,6 +402,7 @@ function forgetEntry(identity, slug) {
 module.exports = {
   promoteProposal,
   reinforceDecision,
+  applyProjectScope,
   forgetEntry,
   readDecision,
   decisionPath,

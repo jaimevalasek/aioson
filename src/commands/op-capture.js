@@ -24,7 +24,8 @@ const { resolveIdentity } = require('../operator-memory/identity');
 const { ensureStorageTree, recordIdentityActivity, openIndexDb, getStorageRoot } = require('../operator-memory/storage');
 const { deriveSlug, fingerprintProposal } = require('../operator-memory/slug');
 const { captureSignal, readProposal, deleteProposal, VALID_SIGNAL_TYPES } = require('../operator-memory/proposal');
-const { promoteProposal, readDecision, reinforceDecision } = require('../operator-memory/decision');
+const { promoteProposal, readDecision, reinforceDecision, applyProjectScope } = require('../operator-memory/decision');
+const { resolveProjectScope, VALID_SCOPES, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
@@ -58,9 +59,10 @@ async function runOpCapture({ args = [], options = {}, logger }) {
   if (helpRequested) {
     const msg = `op:capture — capture a standing-decision signal into the proposals queue.
 Usage:
-  aioson op:capture --signal=<type> --quote=<verbatim> --proposal=<paraphrase> --source-agent=<agent>
+  aioson op:capture --signal=<type> --quote=<verbatim> --proposal=<paraphrase> --source-agent=<agent> [--scope=operator|project]
 Signal types: ${VALID_SIGNAL_TYPES.join(', ')}
-Authorization, exclusion, and correction promote immediately. Confirmation promotes on its second detection.`;
+Authorization, exclusion, and correction promote immediately. Confirmation promotes on its second detection.
+A decision applies only in the project it was said in until it is detected in a second project or its quote says it covers every project; --scope sets it explicitly.`;
     if (options.json) return { ok: true, help: true };
     if (logger) logger.log(msg);
     return { ok: true };
@@ -85,6 +87,15 @@ Authorization, exclusion, and correction promote immediately. Confirmation promo
     if (logger && logger.error) logger.error(err);
     return { ok: false, exitCode: 1, error: err };
   }
+  const requestedScope = options.scope == null ? null : String(options.scope);
+  if (requestedScope !== null && !VALID_SCOPES.includes(requestedScope)) {
+    const err = `op:capture — invalid --scope='${requestedScope}'. Must be one of: ${VALID_SCOPES.join(', ')}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger && logger.error) logger.error(err);
+    return { ok: false, exitCode: 1, error: err };
+  }
+  let project = null;
+  try { project = resolveProjectScope(targetDir); } catch { project = null; }
 
   const resolved = resolveIdentity();
   ensureStorageTree(resolved.identity);
@@ -114,7 +125,8 @@ Authorization, exclusion, and correction promote immediately. Confirmation promo
       proposal,
       source_agent: sourceAgent,
       feature_slug: featureSlug,
-      session_id: sessionId
+      session_id: sessionId,
+      project
     });
   } catch (err) {
     const errMsg = `op:capture failed: ${err.message}`;
@@ -169,9 +181,20 @@ Authorization, exclusion, and correction promote immediately. Confirmation promo
     try { reinforced = reinforceDecision(resolved.identity, slug); } catch { /* best-effort */ }
     // captureSignal re-created a stray proposal (the decision had none) — drop it.
     try { deleteProposal(resolved.identity, slug); } catch { /* best-effort */ }
-    const auditLine = `✔ Memory reforçada: '${proposal}'. aioson op:forget ${slug} p/ desfazer.`;
+    let scoped = null;
+    try { scoped = applyProjectScope(resolved.identity, slug, { project, quote, requested: requestedScope }); } catch { /* best-effort */ }
+    const widened = Boolean(scoped && scoped.changed && scoped.scope !== SCOPE_PROJECT);
+    const auditLine = `✔ Memory reforçada: '${proposal}'${widened ? ' — agora vale em todos os projetos' : ''}. aioson op:forget ${slug} p/ desfazer.`;
     if (options.json) {
-      return { ok: true, promoted: false, reinforced: true, slug, identity: resolved.identity, reinforcement_count: reinforced ? reinforced.reinforcement_count : undefined };
+      return {
+        ok: true,
+        promoted: false,
+        reinforced: true,
+        slug,
+        identity: resolved.identity,
+        reinforcement_count: reinforced ? reinforced.reinforcement_count : undefined,
+        scope: scoped ? scoped.scope : undefined
+      };
     }
     if (logger) logger.log(auditLine);
     return { ok: true, promoted: false, reinforced: true, slug };
@@ -181,7 +204,7 @@ Authorization, exclusion, and correction promote immediately. Confirmation promo
     // Promote to decision
     let decision;
     try {
-      decision = promoteProposal({ identity: resolved.identity, proposal: result.proposal });
+      decision = promoteProposal({ identity: resolved.identity, proposal: result.proposal, scope: requestedScope });
     } catch (err) {
       const errMsg = `op:capture promotion failed: ${err.message}`;
       if (options.json) return { ok: false, error: errMsg };
@@ -196,9 +219,10 @@ Authorization, exclusion, and correction promote immediately. Confirmation promo
       meta: { identity_prefix: resolved.identity.slice(0, 8), slug, signal_type: signal, category: decision.category }
     });
 
-    const auditLine = `✔ Memory: '${proposal}'. aioson op:forget ${slug} p/ desfazer.`;
+    const onlyHere = decision.scope === SCOPE_PROJECT && project ? ` (só no projeto ${project.name})` : '';
+    const auditLine = `✔ Memory: '${proposal}'${onlyHere}. aioson op:forget ${slug} p/ desfazer.`;
     if (options.json) {
-      return { ok: true, promoted: true, slug, identity: resolved.identity, category: decision.category };
+      return { ok: true, promoted: true, slug, identity: resolved.identity, category: decision.category, scope: decision.scope || 'operator' };
     }
     if (logger) logger.log(auditLine);
     return { ok: true, promoted: true, slug };

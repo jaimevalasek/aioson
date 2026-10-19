@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **A standing decision binds the project it was said in until a second project repeats it.** Operator memory follows the person into every repository, and authorization/exclusion/correction promoted on first detection with no record of where they came from, so "don't use Tailwind here" said in one frontend became a rule in every project. A promoted decision now carries `scope: project` with the project it was detected in (identified by its normalized git remote, so two checkouts or a worktree of one repository are one project; by its root path when there is no remote). It widens to `scope: operator` when the same signal is detected in a second distinct project — repetitions inside one project never count as breadth — or when its quote names every project ("em todos os meus projetos", "in every project", "en todos mis proyectos"; a bare "sempre"/"always" is not a scope). Confirmations heard once in each of two projects promote operator-wide. `op:list` (the session-start recall) lists only the decisions that apply in the current project, `--all` lists every project's, and `MEMORY.md` marks project-bound lines `— only in project <name>` for readers without the CLI. `op:capture` and `op:promote` accept `--scope=operator|project` for an explicit choice. Decisions written before this release carry no scope and stay operator-wide.
+
 ### Fixed
 
 - **`memory:search` finds hyphenated terms.** The query sanitizer deleted every FTS5 operator character, so `context-search` became the glued `"contextsearch"`, which matches nothing — the index tokenizes the stored text into `context` + `search`. An operator character inside a term now becomes a space, giving the phrase `"context search"`; tokens that reduce to nothing are still dropped, so operator-only queries keep their structured `query_unparseable` error.

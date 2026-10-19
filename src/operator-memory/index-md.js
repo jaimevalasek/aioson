@@ -48,7 +48,10 @@ function deriveLineForDecision(decision) {
     ? decision.body.slice(0, 80).split('\n')[0].replace(/[#`*\[\]()]/g, '').trim()
     : decision.slug;
   const dateOnly = String(decision.last_reinforced || '').slice(0, 10);
-  return `- [${title || decision.slug}](decisions/${decision.slug}.md) — ${decision.signal_type}, reinforced ${dateOnly}`;
+  // A reader without the CLI sees which decisions bind only one project.
+  const names = String(decision.project_names || '').split(',').map((n) => n.trim()).filter(Boolean);
+  const only = decision.scope === 'project' ? ` — only in project ${names.join(', ') || '(unnamed)'}` : '';
+  return `- [${title || decision.slug}](decisions/${decision.slug}.md) — ${decision.signal_type}, reinforced ${dateOnly}${only}`;
 }
 
 function serializeIndex({ identity, decisionsCount, archivedCount, lastPromoted, lines, tier = 'active' }) {

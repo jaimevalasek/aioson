@@ -21,10 +21,11 @@ const { resolveIdentity } = require('../operator-memory/identity');
 const { ensureStorageTree, getStorageRoot } = require('../operator-memory/storage');
 const { loadMemoryIndex } = require('../operator-memory/index-md');
 const { readDecision } = require('../operator-memory/decision');
+const { resolveProjectScope, appliesInProject, parseList, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 
 async function runOpList({ args = [], options = {}, logger }) {
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
-    if (logger) logger.log('op:list [--proposals] [--include-archived] [--feature=<slug>] [--agent=<name>] [--titles-only] [--format=table|json] — list active decisions.');
+    if (logger) logger.log('op:list [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--titles-only] [--format=table|json] — list active decisions that apply in this project (--all: every project).');
     return { ok: true };
   }
 
@@ -70,6 +71,15 @@ async function runOpList({ args = [], options = {}, logger }) {
     }
   }
 
+  // A decision said in one project applies there only (project-scope.js): the
+  // session-start recall lists what applies in this project; --all shows every
+  // project's. Unscoped (pre-scope) decisions stay operator-wide.
+  let currentProject = null;
+  if (!showProposals && !options.all && items.some((item) => item.scope === SCOPE_PROJECT)) {
+    try { currentProject = resolveProjectScope(process.cwd()); } catch { currentProject = null; }
+    items = items.filter((item) => appliesInProject(item, currentProject ? currentProject.key : null));
+  }
+
   // M3: apply --feature and --agent filters (BR-AO-07: AND-composable)
   if (filterFeature) {
     items = items.filter((item) => item.feature_slug === filterFeature);
@@ -91,6 +101,7 @@ async function runOpList({ args = [], options = {}, logger }) {
       source_agent: item.source_agent || null,
       last_detected: item.last_detected || null,
       last_reinforced: item.last_reinforced || null,
+      ...(item.scope ? { scope: item.scope } : {}),
       ...(item.tier ? { tier: item.tier } : {})
     }));
   }
@@ -148,7 +159,8 @@ async function runOpList({ args = [], options = {}, logger }) {
       const dateOnly = String(item.last_reinforced || item.last_detected || '').slice(0, 10);
       const category = item.category || (showProposals ? 'proposal' : 'default');
       const tier = item.tier === 'archive' ? '[archive] ' : '';
-      logger.log(`  ${tier}${item.slug.padEnd(40)}  ${item.signal_type.padEnd(14)}  ${category.padEnd(10)}  ${dateOnly}`);
+      const only = item.scope === SCOPE_PROJECT ? `  only in: ${parseList(item.project_names).join(', ') || 'one project'}` : '';
+      logger.log(`  ${tier}${item.slug.padEnd(40)}  ${item.signal_type.padEnd(14)}  ${category.padEnd(10)}  ${dateOnly}${only}`);
     }
   }
   return { ok: true, count: items.length };
