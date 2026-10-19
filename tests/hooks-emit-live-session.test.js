@@ -28,9 +28,12 @@ function makeProject() {
   return dir;
 }
 
+// A suite run from inside a launched session inherits both names `live:start`
+// exports; either one would route these events to that outer session.
 function cleanEnv(extra = {}) {
   const env = { ...process.env, ...extra };
   if (!('AIOSON_LIVE_SESSION_KEY' in extra)) delete env.AIOSON_LIVE_SESSION_KEY;
+  if (!('AIOSON_LIVE_SESSION' in extra)) delete env.AIOSON_LIVE_SESSION;
   return env;
 }
 

@@ -26,6 +26,7 @@ function makeProject() {
 function emit(dir, payload) {
   const env = { ...process.env };
   delete env.AIOSON_LIVE_SESSION_KEY;
+  delete env.AIOSON_LIVE_SESSION;
   const result = spawnSync(process.execPath, [CLI, 'hooks:emit', dir, '--agent=dev', '--source=claude'], {
     input: JSON.stringify(payload),
     env,
