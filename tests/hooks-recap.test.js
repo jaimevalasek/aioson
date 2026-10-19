@@ -87,6 +87,20 @@ test('recap: files newest first, a later pass clears a failure, plan and claim l
   assert.match(recap, /Agent's last message \(its own claim\): Corrigi o checkout/);
 });
 
+test('recap: files outside the project are counted, never listed', () => {
+  const dir = path.join(os.tmpdir(), 'proj');
+  const recap = buildCompactionRecap({
+    targetDir: dir,
+    events: [
+      ev('artifact', 'Write', { file: path.join(dir, 'src', 'a.js') }),
+      ev('artifact', 'Write', { file: path.join(os.tmpdir(), 'scratch', 'probe.js') }),
+      ev('artifact', 'Write', { file: path.join(os.tmpdir(), 'scratch', 'other.js') })
+    ]
+  });
+  assert.match(recap, /Files changed, newest first: src\/a\.js; 2 outside the project/);
+  assert.doesNotMatch(recap, /probe\.js/);
+});
+
 test('recap: nothing worth restoring answers null', () => {
   assert.equal(buildCompactionRecap({ events: [] }), null);
   assert.equal(buildCompactionRecap({ events: [ev('agent_activated', '@qa', { agent: '@qa' })] }), null);

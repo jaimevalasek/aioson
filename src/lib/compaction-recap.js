@@ -53,16 +53,19 @@ function compactionWindow(events) {
   return list.slice(start, end).slice(-MAX_WINDOW_EVENTS);
 }
 
+/** Project-relative path, `''` for a file outside the project, null for none. */
 function relativePath(file, targetDir) {
   const raw = String(file || '').trim();
   if (!raw) return null;
-  const relative = targetDir && path.isAbsolute(raw) ? path.relative(targetDir, raw) : raw;
-  const shown = relative && !relative.startsWith('..') ? relative : raw;
-  return shown.replace(/\\/g, '/');
+  if (!targetDir || !path.isAbsolute(raw)) return raw.replace(/\\/g, '/');
+  const relative = path.relative(targetDir, raw);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return '';
+  return relative.replace(/\\/g, '/');
 }
 
 function summarizeWindow(window, targetDir) {
   const files = [];
+  const outside = new Set();
   const lastOutcome = new Map();
   let lastResult = null;
   let plan = null;
@@ -74,6 +77,8 @@ function summarizeWindow(window, targetDir) {
     switch (event.event_type) {
       case 'artifact': {
         const file = relativePath(payload.file, targetDir);
+        // Scratch files outside the project are not project state; count them only.
+        if (file === '') outside.add(String(payload.file));
         if (file) {
           const at = files.indexOf(file);
           if (at !== -1) files.splice(at, 1);
@@ -109,7 +114,7 @@ function summarizeWindow(window, targetDir) {
   // The last result already listed as still failing would only repeat it.
   if (lastResult && failing.some(([command]) => command === lastResult.command)) lastResult = null;
 
-  return { files: files.reverse(), failures, lastResult, plan, reply, agent };
+  return { files: files.reverse(), outsideFiles: outside.size, failures, lastResult, plan, reply, agent };
 }
 
 /**
@@ -135,7 +140,8 @@ function buildCompactionRecap({ events = [], resume = null, continuityPath = nul
   if (summary.files.length > 0) {
     const shown = summary.files.slice(0, MAX_FILES);
     const more = summary.files.length > shown.length ? ` (+${summary.files.length - shown.length} more)` : '';
-    lines.push(oneLine(`Files changed, newest first: ${shown.join(', ')}${more}`, 600));
+    const outside = summary.outsideFiles > 0 ? `; ${summary.outsideFiles} outside the project` : '';
+    lines.push(oneLine(`Files changed, newest first: ${shown.join(', ')}${more}${outside}`, 600));
   }
   for (const failure of summary.failures) lines.push(oneLine(`Still failing (latest run): ${failure}`));
   if (summary.lastResult) {
