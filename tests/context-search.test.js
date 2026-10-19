@@ -6,7 +6,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 
-const { IndexManager, withIndex, sanitizeFtsQuery } = require('../src/context-search');
+const { IndexManager, withIndex, sanitizeFtsQuery, buildFtsQuery } = require('../src/context-search');
 const { runContextSearch, resolveSearchTarget } = require('../src/commands/context-search');
 const { selectContext } = require('../src/context-selector');
 
@@ -645,6 +645,26 @@ test('sanitizeFtsQuery — removes FTS5 special chars', () => {
   assert.ok(!result.includes(')'), 'should remove parens');
   assert.ok(!result.includes('*'), 'should remove asterisk');
   assert.ok(result.includes('hello'), 'should preserve normal words');
+});
+
+test('buildFtsQuery — drops function words of a natural-language query (en / pt-BR)', () => {
+  assert.equal(
+    buildFtsQuery('Preciso implementar o fluxo de reembolso para o checkout'),
+    '"preciso" OR "implementar" OR "fluxo" OR "reembolso" OR "checkout"'
+  );
+  assert.equal(buildFtsQuery('where is the refund handler for the webhook'), '"refund" OR "handler" OR "webhook"');
+  assert.equal(buildFtsQuery('src/billing/refund.js e o todo antes'), '"src/billing/refund" OR "js" OR "todo" OR "antes"', 'paths and domain words stay');
+});
+
+test('buildFtsQuery — a query made only of function words is searched literally', () => {
+  assert.equal(buildFtsQuery('para o que'), '"para" OR "que"');
+});
+
+test('buildFtsQuery — function words never spend the 32-term budget', () => {
+  const words = Array.from({ length: 32 }, (_, i) => `term${i}`);
+  const query = words.map((word) => `de ${word} para o`).join(' ');
+  assert.equal(buildFtsQuery(query).split(' OR ').length, 32);
+  assert.ok(buildFtsQuery(query).includes('"term31"'));
 });
 
 test('IndexManager — skips already-indexed files (no force)', async () => {

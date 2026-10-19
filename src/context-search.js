@@ -30,6 +30,32 @@ const SKIP_DIR_NAMES = new Set([
   '.nuxt'
 ]);
 
+// Function words of a natural-language query (en / pt-BR / es, already folded
+// to ASCII like the tokens). OR-joined, each one matches nearly every document
+// and spends the 32-term budget; only grammar words belong here — never a word
+// that names a domain (`todo`, `antes`, `test`, `new`). A query made only of
+// them is still searched literally.
+const FTS_STOP_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'if', 'of', 'to', 'in', 'on', 'at', 'by',
+  'for', 'from', 'with', 'without', 'into', 'onto', 'as', 'is', 'are', 'was', 'were',
+  'be', 'been', 'being', 'am', 'do', 'does', 'did', 'it', 'its', 'this', 'that',
+  'these', 'those', 'there', 'here', 'then', 'than', 'so', 'such', 'not', 'can',
+  'could', 'should', 'would', 'will', 'shall', 'may', 'might', 'must', 'have', 'has',
+  'had', 'i', 'me', 'my', 'we', 'our', 'us', 'you', 'your', 'he', 'she', 'they',
+  'them', 'their', 'what', 'which', 'who', 'whom', 'whose', 'when', 'where', 'why',
+  'how', 'also', 'just', 'only', 'very', 'too', 'some', 'any', 'each',
+  'o', 'os', 'as', 'um', 'uma', 'uns', 'umas', 'de', 'do', 'da', 'dos', 'das', 'em',
+  'no', 'na', 'nos', 'nas', 'por', 'pelo', 'pela', 'pelos', 'pelas', 'para', 'pra',
+  'com', 'sem', 'e', 'ou', 'mas', 'que', 'se', 'nao', 'eu', 'voce', 'ele', 'ela',
+  'eles', 'elas', 'meu', 'minha', 'seu', 'sua', 'isso', 'isto', 'esse', 'essa',
+  'este', 'esta', 'aquele', 'aquela', 'ja', 'muito', 'como', 'quando', 'onde',
+  'porque', 'qual', 'quais', 'entao', 'tambem', 'ao', 'aos', 'num', 'numa', 'lhe',
+  'ate', 'foi', 'ser', 'estao', 'tem', 'ter', 'ha',
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'del', 'al', 'y', 'pero',
+  'en', 'con', 'sin', 'es', 'son', 'lo', 'le', 'les', 'su', 'sus', 'mi', 'mis',
+  'tu', 'ese', 'eso', 'esto', 'muy', 'ya'
+]);
+
 const SKIP_REL_DIRS = [
   '.aioson/agents',
   '.aioson/backups',
@@ -934,9 +960,11 @@ function sanitizeFtsQuery(query) {
 }
 
 function buildFtsQuery(query) {
-  const tokens = tokenizeQuery(query).slice(0, 32);
+  const tokens = [...new Set(tokenizeQuery(query))];
   if (tokens.length === 0) return '';
-  return [...new Set(tokens)]
+  const content = tokens.filter((token) => !FTS_STOP_WORDS.has(token));
+  return (content.length > 0 ? content : tokens)
+    .slice(0, 32)
     .map((token) => `"${token.replace(/"/g, '')}"`)
     .join(' OR ');
 }
