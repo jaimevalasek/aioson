@@ -124,6 +124,13 @@
         "generic_secret_assignment"
       ],
       "reason": "Deployer guidance names the ?access_token= query parameter as a URL shape Traefik access logs would record; no credential value is present."
+    },
+    {
+      "path": "tests/memory-search.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "memory:search tests list single-word search terms under a `token` key (reuse, session, idempotency); they are query words, never credentials."
     }
   ],
   "blockPaths": [

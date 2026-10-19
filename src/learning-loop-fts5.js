@@ -28,9 +28,12 @@ function sanitizeFtsQuery(raw) {
   // surviving token is quoted. The literal phrase-only default in the architect's
   // guardrail was too tight (≤7/10 precision in the canonical fixture); this token-AND
   // form preserves the same security envelope and unblocks AC-ALL-205.
+  // An operator char inside a token becomes a space, never a deletion: the tokenizer
+  // splits `context-search` into adjacent `context` + `search`, so the phrase
+  // "context search" finds it while the glued "contextsearch" matched nothing.
   return text
     .split(/\s+/)
-    .map((tok) => tok.replace(/["*()^:+\-]/g, ''))
+    .map((tok) => tok.replace(/"/g, '').replace(/[*()^:+\-]/g, ' ').replace(/\s+/g, ' ').trim())
     .filter((tok) => tok.length > 0)
     .map((tok) => `"${tok}"`)
     .join(' ');

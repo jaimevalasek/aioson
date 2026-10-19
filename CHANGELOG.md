@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`memory:search` finds hyphenated terms.** The query sanitizer deleted every FTS5 operator character, so `context-search` became the glued `"contextsearch"`, which matches nothing — the index tokenizes the stored text into `context` + `search`. An operator character inside a term now becomes a space, giving the phrase `"context search"`; tokens that reduce to nothing are still dropped, so operator-only queries keep their structured `query_unparseable` error.
+- **Untrusted web content can no longer close its own fence.** `wrapAsExternalContent` (web news, worker research) wrapped third-party text in `<external_research trust="untrusted"><verbatim>` without escaping it, so a page containing `</verbatim></external_research>` ended the boundary early and everything after it read as trusted text. Every boundary tag inside the content or the `source` attribute (open or close, any case or inner spacing) now has its `<` escaped, and a `"` in `source` can no longer forge a second `trust` attribute. A seeded property test feeds 300 hostile strings and asserts the wrapper's four tags are the only ones left.
+
 ## [1.72.1] - 2026-10-15
 
 ### Fixed

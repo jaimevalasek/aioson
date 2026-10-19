@@ -326,6 +326,23 @@ test('sanitizeFtsQuery tokenizes on whitespace and wraps each term as a phrase (
   assert.equal(sanitizeFtsQuery('hello (world)'), '"hello" "world"');
 });
 
+test('sanitizeFtsQuery splits an operator char inside a term instead of gluing its halves', () => {
+  assert.equal(sanitizeFtsQuery('context-search'), '"context search"');
+  assert.equal(sanitizeFtsQuery('auth:uid +x'), '"auth uid" "x"');
+});
+
+test('memory:search finds a hyphenated term (the glued form matched nothing)', async () => {
+  const dir = await makeProjectWithSeed();
+  const result = await runMemorySearch({
+    args: ['Idempotency-Key', dir],
+    options: { json: true },
+    logger: silentLogger(),
+    t: tFn
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.results.map((r) => r.target_id), ['pl-stripe-idempotency']);
+});
+
 test('validateQuery rejects empty + oversized; accepts normal', () => {
   assert.equal(validateQuery('').ok, false);
   assert.equal(validateQuery('').reason, 'query_empty');
