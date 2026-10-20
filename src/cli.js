@@ -1143,227 +1143,72 @@ function printQualityHelp(t, logger) {
   for (const key of ['cli.help_quality_audit', 'cli.help_quality_run', 'cli.help_quality_evals', 'cli.help_quality_bench']) logHelpLine(t, logger, key);
 }
 
+// The global --help, in print order; `null` is where the quality block goes.
+const HELP_KEYS = [
+  'cli.help_init', 'cli.help_install', 'cli.help_setup', 'cli.help_update',
+  'cli.help_info', 'cli.help_doctor', 'cli.help_hygiene_scan', 'cli.help_evidence_prune',
+  'cli.help_storage_triage', 'cli.help_i18n_add', 'cli.help_agents', 'cli.help_agent_prompt',
+  'cli.help_agent_help', 'cli.help_agent_invoke', 'cli.help_agent_epilogue', 'cli.help_rule_new',
+  'cli.help_doc_new', 'cli.help_decide', 'cli.help_observe', 'cli.help_observation_list',
+  'cli.help_observation_resolve', 'cli.help_op_list', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
+  'cli.help_briefing_approve', 'cli.help_briefing_unapprove', 'cli.help_briefing_review', 'cli.help_briefing_apply_feedback',
+  'cli.help_briefing_feedback', 'cli.help_briefing_migrate_lineage', 'cli.help_exploration', 'cli.help_context_validate',
+  'cli.help_context_pack', 'cli.help_context_search', 'cli.help_context_select', 'cli.help_context_brief',
+  'cli.help_context_guard', 'cli.help_context_evals', 'cli.help_context_usage', 'cli.help_context_load',
+  'cli.help_chain_audit', 'cli.help_chain_list', 'cli.help_chain_claim', 'cli.help_chain_resolve',
+  'cli.help_chain_release', 'cli.help_chain_reconcile', 'cli.help_memory_status', 'cli.help_memory_summary',
+  'cli.help_memory_search', 'cli.help_memory_archive', 'cli.help_memory_restore', 'cli.help_brain_query',
+  'cli.help_setup_context', 'cli.help_locale_apply', 'cli.help_locale_diff', 'cli.help_test_agents',
+  'cli.help_test_smoke', 'cli.help_test_package', 'cli.help_workflow_plan', 'cli.help_workflow_next',
+  'cli.help_workflow_status', 'cli.help_workflow_mode', 'cli.help_workflow_execute', 'cli.help_review_cycle',
+  'cli.help_review_feature', 'cli.help_review_prepare', 'cli.help_review_check', 'cli.help_review_status',
+  'cli.help_parallel_init', 'cli.help_parallel_doctor', 'cli.help_parallel_assign', 'cli.help_parallel_status',
+  'cli.help_parallel_merge', 'cli.help_parallel_guard', 'cli.help_mcp_init', 'cli.help_mcp_doctor',
+  'cli.help_qa_doctor', 'cli.help_qa_init', 'cli.help_qa_run', 'cli.help_qa_scan',
+  'cli.help_browser_run', 'cli.help_browser_snapshot', 'cli.help_qa_report', 'cli.help_pentester_report',
+  'cli.help_pentester_coverage', 'cli.help_feature_list', 'cli.help_feature_register', 'cli.help_feature_tidy',
+  'cli.help_feature_triage', 'cli.help_feature_current', 'cli.help_feature_trace', 'cli.help_feature_diff',
+  'cli.help_setup_detect', 'cli.help_genome_apply', 'cli.help_profiler_coverage', 'cli.help_feature_closure',
+  'cli.help_feature_close', 'cli.help_feature_archive', 'cli.help_gate_check', 'cli.help_gate_approve',
+  'cli.help_prototype_check', 'cli.help_ac_test_audit', 'cli.help_preflight', 'cli.help_pulse_update',
+  'cli.help_agent_done', 'cli.help_dossier_add_finding', 'cli.help_detect_test_runner', 'cli.help_dev_resume_data',
+  'cli.help_harness_init', 'cli.help_harness_validate', 'cli.help_harness_apply_validation', 'cli.help_harness_approve',
+  'cli.help_harness_reject', 'cli.help_harness_status', 'cli.help_harness_check', 'cli.help_harness_retro',
+  'cli.help_harness_preview', 'cli.help_verification_plan', 'cli.help_delegation_plan', 'cli.help_delegation_run',
+  'cli.help_web_map', 'cli.help_web_scrape', 'cli.help_web_save', 'cli.help_web_extract',
+  'cli.help_web_discover', 'cli.help_web_collect', 'cli.help_jev_judge', 'cli.help_jev_review',
+  'cli.help_jev_agent_review', 'cli.help_scan_project', 'cli.help_config', 'cli.help_genome_doctor',
+  'cli.help_genome_approve', 'cli.help_genome_migrate', 'cli.help_squad_status', 'cli.help_squad_doctor',
+  'cli.help_squad_repair_genomes', 'cli.help_squad_validate', 'cli.help_squad_eval', 'cli.help_squad_preflight',
+  'cli.help_squad_pilot_approve', 'cli.help_squad_export', 'cli.help_squad_pipeline', 'cli.help_squad_agent_create',
+  'cli.help_squad_investigate', 'cli.help_squad_dashboard', 'cli.help_squad_worker', 'cli.help_squad_daemon',
+  'cli.help_squad_mcp', 'cli.help_squad_roi', 'cli.help_squad_score', 'cli.help_squad_learning',
+  'cli.help_agent_audit', null, 'cli.help_learning', 'cli.help_runtime_init',
+  'cli.help_runtime_ingest', 'cli.help_runtime_task_start', 'cli.help_runtime_start', 'cli.help_runtime_update',
+  'cli.help_runtime_task_finish', 'cli.help_runtime_finish', 'cli.help_runtime_task_fail', 'cli.help_runtime_fail',
+  'cli.help_runtime_status', 'cli.help_runtime_storage', 'cli.help_runtime_prune', 'cli.help_runtime_compact',
+  'cli.help_agent_recover', 'cli.help_runtime_session_start', 'cli.help_runtime_session_log', 'cli.help_runtime_session_finish',
+  'cli.help_runtime_session_status', 'cli.help_runtime_emit', 'cli.help_host_signature', 'cli.help_execution_offer',
+  'cli.help_execution_seed', 'cli.help_execution_profiles_validate', 'cli.help_execution_compile', 'cli.help_execution_run',
+  'cli.help_execution_decide', 'cli.help_execution_status', 'cli.help_execution_dashboard', 'cli.help_execution_prices',
+  'cli.help_execution_graph', 'cli.help_execution_dependencies', 'cli.help_live_start', 'cli.help_live_status',
+  'cli.help_live_handoff', 'cli.help_live_close', 'cli.help_scaffold_complete', 'cli.help_runtime_backup',
+  'cli.help_runtime_restore', 'cli.help_skill_install', 'cli.help_skill_list', 'cli.help_skill_remove',
+  'cli.help_skill_audit', 'cli.help_design_hybrid_options', 'cli.help_cloud_import_squad', 'cli.help_cloud_import_genome',
+  'cli.help_cloud_publish_squad', 'cli.help_cloud_publish_genome', 'cli.help_auth_login', 'cli.help_auth_logout',
+  'cli.help_auth_status', 'cli.help_workspace_init', 'cli.help_workspace_status', 'cli.help_workspace_open',
+  'cli.help_genome_publish', 'cli.help_genome_install', 'cli.help_genome_list', 'cli.help_genome_remove',
+  'cli.help_genome_install_store', 'cli.help_skill_publish', 'cli.help_squad_list', 'cli.help_squad_publish',
+  'cli.help_squad_install', 'cli.help_squad_grant'
+];
+
 function printHelp(t, logger) {
   logger.log(t('cli.title_line', { title: t('cli.title') }));
   logger.log(t('cli.usage'));
-  logHelpLine(t, logger, 'cli.help_init');
-  logHelpLine(t, logger, 'cli.help_install');
-  logHelpLine(t, logger, 'cli.help_setup');
-  logHelpLine(t, logger, 'cli.help_update');
-  logHelpLine(t, logger, 'cli.help_info');
-  logHelpLine(t, logger, 'cli.help_doctor');
-  logHelpLine(t, logger, 'cli.help_hygiene_scan');
-  logHelpLine(t, logger, 'cli.help_evidence_prune');
-  logHelpLine(t, logger, 'cli.help_storage_triage');
-  logHelpLine(t, logger, 'cli.help_i18n_add');
-  logHelpLine(t, logger, 'cli.help_agents');
-  logHelpLine(t, logger, 'cli.help_agent_prompt');
-  logHelpLine(t, logger, 'cli.help_agent_help');
-  logHelpLine(t, logger, 'cli.help_agent_invoke');
-  logHelpLine(t, logger, 'cli.help_agent_epilogue');
-  logHelpLine(t, logger, 'cli.help_rule_new');
-  logHelpLine(t, logger, 'cli.help_doc_new');
-  logHelpLine(t, logger, 'cli.help_decide');
-  logHelpLine(t, logger, 'cli.help_observe');
-  logHelpLine(t, logger, 'cli.help_observation_list');
-  logHelpLine(t, logger, 'cli.help_observation_resolve');
-  logHelpLine(t, logger, 'cli.help_op_list');
-  logHelpLine(t, logger, 'cli.help_hooks_recap');
-  logHelpLine(t, logger, 'cli.help_briefing_sources');
-  logHelpLine(t, logger, 'cli.help_briefing_approve');
-  logHelpLine(t, logger, 'cli.help_briefing_unapprove');
-  logHelpLine(t, logger, 'cli.help_briefing_review');
-  logHelpLine(t, logger, 'cli.help_briefing_apply_feedback');
-  logHelpLine(t, logger, 'cli.help_briefing_feedback');
-  logHelpLine(t, logger, 'cli.help_briefing_migrate_lineage');
-  logHelpLine(t, logger, 'cli.help_exploration');
-  logHelpLine(t, logger, 'cli.help_context_validate');
-  logHelpLine(t, logger, 'cli.help_context_pack');
-  logHelpLine(t, logger, 'cli.help_context_search');
-  logHelpLine(t, logger, 'cli.help_context_select');
-  logHelpLine(t, logger, 'cli.help_context_brief');
-  logHelpLine(t, logger, 'cli.help_context_guard');
-  logHelpLine(t, logger, 'cli.help_context_evals');
-  logHelpLine(t, logger, 'cli.help_context_usage');
-  logHelpLine(t, logger, 'cli.help_context_load');
-  logHelpLine(t, logger, 'cli.help_chain_audit');
-  logHelpLine(t, logger, 'cli.help_chain_list');
-  logHelpLine(t, logger, 'cli.help_chain_claim');
-  logHelpLine(t, logger, 'cli.help_chain_resolve');
-  logHelpLine(t, logger, 'cli.help_chain_release');
-  logHelpLine(t, logger, 'cli.help_chain_reconcile');
-  logHelpLine(t, logger, 'cli.help_memory_status');
-  logHelpLine(t, logger, 'cli.help_memory_summary');
-  logHelpLine(t, logger, 'cli.help_memory_search');
-  logHelpLine(t, logger, 'cli.help_memory_archive');
-  logHelpLine(t, logger, 'cli.help_memory_restore');
-  logHelpLine(t, logger, 'cli.help_brain_query');
-  logHelpLine(t, logger, 'cli.help_setup_context');
-  logHelpLine(t, logger, 'cli.help_locale_apply');
-  logHelpLine(t, logger, 'cli.help_locale_diff');
-  logHelpLine(t, logger, 'cli.help_test_agents');
-  logHelpLine(t, logger, 'cli.help_test_smoke');
-  logHelpLine(t, logger, 'cli.help_test_package');
-  logHelpLine(t, logger, 'cli.help_workflow_plan');
-  logHelpLine(t, logger, 'cli.help_workflow_next');
-  logHelpLine(t, logger, 'cli.help_workflow_status');
-  logHelpLine(t, logger, 'cli.help_workflow_mode');
-  logHelpLine(t, logger, 'cli.help_workflow_execute');
-  logHelpLine(t, logger, 'cli.help_review_cycle');
-  logHelpLine(t, logger, 'cli.help_review_feature');
-  logHelpLine(t, logger, 'cli.help_review_prepare');
-  logHelpLine(t, logger, 'cli.help_review_check');
-  logHelpLine(t, logger, 'cli.help_review_status');
-  logHelpLine(t, logger, 'cli.help_parallel_init');
-  logHelpLine(t, logger, 'cli.help_parallel_doctor');
-  logHelpLine(t, logger, 'cli.help_parallel_assign');
-  logHelpLine(t, logger, 'cli.help_parallel_status');
-  logHelpLine(t, logger, 'cli.help_parallel_merge');
-  logHelpLine(t, logger, 'cli.help_parallel_guard');
-  logHelpLine(t, logger, 'cli.help_mcp_init');
-  logHelpLine(t, logger, 'cli.help_mcp_doctor');
-  logHelpLine(t, logger, 'cli.help_qa_doctor');
-  logHelpLine(t, logger, 'cli.help_qa_init');
-  logHelpLine(t, logger, 'cli.help_qa_run');
-  logHelpLine(t, logger, 'cli.help_qa_scan');
-  logHelpLine(t, logger, 'cli.help_browser_run');
-  logHelpLine(t, logger, 'cli.help_browser_snapshot');
-  logHelpLine(t, logger, 'cli.help_qa_report');
-  logHelpLine(t, logger, 'cli.help_pentester_report');
-  logHelpLine(t, logger, 'cli.help_pentester_coverage');
-  logHelpLine(t, logger, 'cli.help_feature_list');
-  logHelpLine(t, logger, 'cli.help_feature_register');
-  logHelpLine(t, logger, 'cli.help_feature_tidy');
-  logHelpLine(t, logger, 'cli.help_feature_triage');
-  logHelpLine(t, logger, 'cli.help_feature_current');
-  logHelpLine(t, logger, 'cli.help_feature_trace');
-  logHelpLine(t, logger, 'cli.help_feature_diff');
-  logHelpLine(t, logger, 'cli.help_setup_detect');
-  logHelpLine(t, logger, 'cli.help_genome_apply');
-  logHelpLine(t, logger, 'cli.help_profiler_coverage');
-  logHelpLine(t, logger, 'cli.help_feature_closure');
-  logHelpLine(t, logger, 'cli.help_feature_close');
-  logHelpLine(t, logger, 'cli.help_feature_archive');
-  logHelpLine(t, logger, 'cli.help_gate_check');
-  logHelpLine(t, logger, 'cli.help_gate_approve');
-  logHelpLine(t, logger, 'cli.help_prototype_check');
-  logHelpLine(t, logger, 'cli.help_ac_test_audit');
-  logHelpLine(t, logger, 'cli.help_preflight');
-  logHelpLine(t, logger, 'cli.help_pulse_update');
-  logHelpLine(t, logger, 'cli.help_agent_done');
-  logHelpLine(t, logger, 'cli.help_dossier_add_finding');
-  logHelpLine(t, logger, 'cli.help_detect_test_runner');
-  logHelpLine(t, logger, 'cli.help_dev_resume_data');
-  logHelpLine(t, logger, 'cli.help_harness_init');
-  logHelpLine(t, logger, 'cli.help_harness_validate');
-  logHelpLine(t, logger, 'cli.help_harness_apply_validation');
-  logHelpLine(t, logger, 'cli.help_harness_approve');
-  logHelpLine(t, logger, 'cli.help_harness_reject');
-  logHelpLine(t, logger, 'cli.help_harness_status');
-  logHelpLine(t, logger, 'cli.help_harness_check');
-  logHelpLine(t, logger, 'cli.help_harness_retro');
-  logHelpLine(t, logger, 'cli.help_harness_preview');
-  logHelpLine(t, logger, 'cli.help_verification_plan');
-  logHelpLine(t, logger, 'cli.help_delegation_plan');
-  logHelpLine(t, logger, 'cli.help_delegation_run');
-  logHelpLine(t, logger, 'cli.help_web_map');
-  logHelpLine(t, logger, 'cli.help_web_scrape');
-  logHelpLine(t, logger, 'cli.help_web_save');
-  logHelpLine(t, logger, 'cli.help_web_extract');
-  logHelpLine(t, logger, 'cli.help_web_discover');
-  logHelpLine(t, logger, 'cli.help_web_collect');
-  logHelpLine(t, logger, 'cli.help_jev_judge');
-  logHelpLine(t, logger, 'cli.help_jev_review');
-  logHelpLine(t, logger, 'cli.help_jev_agent_review');
-  logHelpLine(t, logger, 'cli.help_scan_project');
-  logHelpLine(t, logger, 'cli.help_config');
-  logHelpLine(t, logger, 'cli.help_genome_doctor');
-  logHelpLine(t, logger, 'cli.help_genome_approve');
-  logHelpLine(t, logger, 'cli.help_genome_migrate');
-  logHelpLine(t, logger, 'cli.help_squad_status');
-  logHelpLine(t, logger, 'cli.help_squad_doctor');
-  logHelpLine(t, logger, 'cli.help_squad_repair_genomes');
-  logHelpLine(t, logger, 'cli.help_squad_validate');
-  logHelpLine(t, logger, 'cli.help_squad_eval');
-  logHelpLine(t, logger, 'cli.help_squad_preflight');
-  logHelpLine(t, logger, 'cli.help_squad_pilot_approve');
-  logHelpLine(t, logger, 'cli.help_squad_export');
-  logHelpLine(t, logger, 'cli.help_squad_pipeline');
-  logHelpLine(t, logger, 'cli.help_squad_agent_create');
-  logHelpLine(t, logger, 'cli.help_squad_investigate');
-  logHelpLine(t, logger, 'cli.help_squad_dashboard');
-  logHelpLine(t, logger, 'cli.help_squad_worker');
-  logHelpLine(t, logger, 'cli.help_squad_daemon');
-  logHelpLine(t, logger, 'cli.help_squad_mcp');
-  logHelpLine(t, logger, 'cli.help_squad_roi');
-  logHelpLine(t, logger, 'cli.help_squad_score');
-  logHelpLine(t, logger, 'cli.help_squad_learning');
-  logHelpLine(t, logger, 'cli.help_agent_audit');
-  printQualityHelp(t, logger);
-  logHelpLine(t, logger, 'cli.help_learning');
-  logHelpLine(t, logger, 'cli.help_runtime_init');
-  logHelpLine(t, logger, 'cli.help_runtime_ingest');
-  logHelpLine(t, logger, 'cli.help_runtime_task_start');
-  logHelpLine(t, logger, 'cli.help_runtime_start');
-  logHelpLine(t, logger, 'cli.help_runtime_update');
-  logHelpLine(t, logger, 'cli.help_runtime_task_finish');
-  logHelpLine(t, logger, 'cli.help_runtime_finish');
-  logHelpLine(t, logger, 'cli.help_runtime_task_fail');
-  logHelpLine(t, logger, 'cli.help_runtime_fail');
-  logHelpLine(t, logger, 'cli.help_runtime_status');
-  logHelpLine(t, logger, 'cli.help_runtime_storage');
-  logHelpLine(t, logger, 'cli.help_runtime_prune');
-  logHelpLine(t, logger, 'cli.help_runtime_compact');
-  logHelpLine(t, logger, 'cli.help_agent_recover');
-  logHelpLine(t, logger, 'cli.help_runtime_session_start');
-  logHelpLine(t, logger, 'cli.help_runtime_session_log');
-  logHelpLine(t, logger, 'cli.help_runtime_session_finish');
-  logHelpLine(t, logger, 'cli.help_runtime_session_status');
-  logHelpLine(t, logger, 'cli.help_runtime_emit');
-  logHelpLine(t, logger, 'cli.help_host_signature');
-  logHelpLine(t, logger, 'cli.help_execution_offer');
-  logHelpLine(t, logger, 'cli.help_execution_seed');
-  logHelpLine(t, logger, 'cli.help_execution_profiles_validate');
-  logHelpLine(t, logger, 'cli.help_execution_compile');
-  logHelpLine(t, logger, 'cli.help_execution_run');
-  logHelpLine(t, logger, 'cli.help_execution_decide');
-  logHelpLine(t, logger, 'cli.help_execution_status');
-  logHelpLine(t, logger, 'cli.help_execution_dashboard');
-  logHelpLine(t, logger, 'cli.help_execution_prices');
-  logHelpLine(t, logger, 'cli.help_execution_graph');
-  logHelpLine(t, logger, 'cli.help_execution_dependencies');
-  logHelpLine(t, logger, 'cli.help_live_start');
-  logHelpLine(t, logger, 'cli.help_live_status');
-  logHelpLine(t, logger, 'cli.help_live_handoff');
-  logHelpLine(t, logger, 'cli.help_live_close');
-  logHelpLine(t, logger, 'cli.help_scaffold_complete');
-  logHelpLine(t, logger, 'cli.help_runtime_backup');
-  logHelpLine(t, logger, 'cli.help_runtime_restore');
-  logHelpLine(t, logger, 'cli.help_skill_install');
-  logHelpLine(t, logger, 'cli.help_skill_list');
-  logHelpLine(t, logger, 'cli.help_skill_remove');
-  logHelpLine(t, logger, 'cli.help_skill_audit');
-  logHelpLine(t, logger, 'cli.help_design_hybrid_options');
-  logHelpLine(t, logger, 'cli.help_cloud_import_squad');
-  logHelpLine(t, logger, 'cli.help_cloud_import_genome');
-  logHelpLine(t, logger, 'cli.help_cloud_publish_squad');
-  logHelpLine(t, logger, 'cli.help_cloud_publish_genome');
-  logHelpLine(t, logger, 'cli.help_auth_login');
-  logHelpLine(t, logger, 'cli.help_auth_logout');
-  logHelpLine(t, logger, 'cli.help_auth_status');
-  logHelpLine(t, logger, 'cli.help_workspace_init');
-  logHelpLine(t, logger, 'cli.help_workspace_status');
-  logHelpLine(t, logger, 'cli.help_workspace_open');
-  logHelpLine(t, logger, 'cli.help_genome_publish');
-  logHelpLine(t, logger, 'cli.help_genome_install');
-  logHelpLine(t, logger, 'cli.help_genome_list');
-  logHelpLine(t, logger, 'cli.help_genome_remove');
-  logHelpLine(t, logger, 'cli.help_genome_install_store');
-  logHelpLine(t, logger, 'cli.help_skill_publish');
-  logHelpLine(t, logger, 'cli.help_squad_list');
-  logHelpLine(t, logger, 'cli.help_squad_publish');
-  logHelpLine(t, logger, 'cli.help_squad_install');
-  logHelpLine(t, logger, 'cli.help_squad_grant');
+  for (const key of HELP_KEYS) {
+    if (key === null) printQualityHelp(t, logger);
+    else logHelpLine(t, logger, key);
+  }
 }
 
 function printAgentHelp(agentName, jsonMode, logger, t) {
