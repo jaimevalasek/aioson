@@ -757,9 +757,13 @@ async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
   if (!normalizedAgent) return null;
   const contract = CONTRACTS[normalizedAgent];
   // A known agent outside the stage contracts (@quality, @neo, …) produces no
-  // canonical artifact: nothing to auto-advance, nothing to warn about. Only a
-  // name no agent answers to stays null.
-  if (!contract) return require('./agents').getAgentDefinition(normalizedAgent) ? [] : null;
+  // canonical artifact: nothing to auto-advance, nothing to warn about. A name
+  // no agent answers to — or a retired id, which resolves to the agent that
+  // absorbed it — stays null: it owns no contract of its own.
+  if (!contract) {
+    const definition = require('./agents').getAgentDefinition(normalizedAgent);
+    return definition && definition.id === normalizedAgent ? [] : null;
+  }
   return await resolveArtifacts(contract, targetDir, state || {});
 }
 

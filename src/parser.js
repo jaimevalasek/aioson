@@ -79,6 +79,9 @@ const BOOLEAN_FLAGS = new Set([
   'record',
   // observation:list — `--resolved ../proj` listed the cwd's store.
   'resolved',
+  // op:list — `--proposals ../proj` (the [path] op:* commands take now) must
+  // not swallow the path positional.
+  'proposals',
   // update downgrade-guard escape hatch — pure boolean; `--allow-downgrade .`
   // must not swallow the path positional.
   'allow-downgrade',
