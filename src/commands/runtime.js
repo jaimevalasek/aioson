@@ -1235,9 +1235,10 @@ async function resolveBriefConsultation({ db, targetDir, agent, session }) {
     required = false;
   }
   if (!required) return { required: false, state: 'not_required', briefs: 0, since: null };
-  const since = session && session.startedAt
-    ? String(session.startedAt)
-    : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // The session's window, capped at a day: Claude never closes a hooks session
+  // (no SessionEnd hook), so one opened days ago counted any old brief as this one's.
+  const started = Date.parse(session && session.startedAt);
+  const since = new Date(Math.max(Number.isFinite(started) ? started : 0, Date.now() - 24 * 60 * 60 * 1000)).toISOString();
   try {
     const rows = db.prepare(
       "SELECT payload_json FROM execution_events WHERE event_type = 'brief_built' AND agent_name IN (?, ?) AND created_at >= ?"

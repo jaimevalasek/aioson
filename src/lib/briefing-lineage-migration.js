@@ -22,6 +22,9 @@ const {
   repinApproval
 } = require('./refiner/briefing-registry');
 const { resolveBriefingPath } = require('./refiner/briefing-paths');
+// "Already canonical" is what the validator reads: a briefing that verifies
+// (the tables exploration-and-artifacts.md prints) is never re-migrated.
+const { inventoryColumns, promiseMapColumns } = require('./feature-source-lineage');
 const {
   isInsideRoot,
   relativeFromRoot,
@@ -118,13 +121,7 @@ function parseLegacyPromises(briefing) {
   const section = extractSection(briefing, ['Source Promise Map', 'Mapa de Promessas das Fontes']);
   if (!section) throw migrationError('source_promise_map_missing', 'Source Promise Map is missing.');
   const table = requireTable(section, 'source_promise_map_invalid', 'Source Promise Map');
-  const canonical = mapColumns(table, {
-    promise: ['Promise'],
-    source: ['Source'],
-    intent: ['Approved intent'],
-    state: ['State']
-  });
-  if (canonical.missing.length === 0) return { canonical: true, rows: [] };
+  if (promiseMapColumns(table).missing.length === 0) return { canonical: true, rows: [] };
 
   const legacy = mapColumns(table, {
     promise: ['ID', 'Promise ID', 'ID da promessa'],
@@ -201,13 +198,7 @@ async function parseLegacyInventory({ projectDir, slug, briefing, absorbed }) {
   const section = extractSection(briefing, ['Source Inventory', 'Inventario de Fontes']);
   if (!section) throw migrationError('source_inventory_missing', 'Source Inventory is missing.');
   const table = requireTable(section, 'source_inventory_invalid', 'Source Inventory');
-  const canonical = mapColumns(table, {
-    source: ['Source'],
-    path: ['Path'],
-    fingerprint: ['Fingerprint'],
-    purpose: ['Purpose']
-  });
-  if (canonical.missing.length === 0) return { canonical: true, sources: [], evidence: [], sourceMap: new Map() };
+  if (inventoryColumns(table).missing.length === 0) return { canonical: true, sources: [], evidence: [], sourceMap: new Map() };
 
   const legacy = mapColumns(table, {
     source: ['ID', 'Source ID', 'ID da fonte'],

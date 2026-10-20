@@ -211,6 +211,33 @@ test('installTemplate writes Forge metadata and gitignore entry', async () => {
   assert.equal(gitignore.includes('.aioson/briefings/*/browser/*/'), true);
   assert.equal(gitignore.includes('.aioson/context/**/browser/*/'), false);
   assert.equal(gitignore.includes('aios-qa-screenshots/'), true);
+  // Single-writer store locks, their temp files and the Store's install backups
+  // stay out of the repository; the stores themselves stay tracked.
+  for (const line of ['.aioson/context/.*.lock/', '.aioson/context/.*-lock-*/', '.aioson/context/*.json.*.tmp', '.aioson/context/*.md.*.tmp', '.aioson/.backups/']) {
+    assert.equal(gitignore.includes(line), true, `gitignore must carry ${line}`);
+  }
+});
+
+test('a fresh install ignores the store lock folders and temp files but keeps the stores tracked', async () => {
+  const { spawnSync } = require('node:child_process');
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+  const init = spawnSync('git', ['init', '-q'], { cwd: dir, encoding: 'utf8' });
+  if (init.error || init.status !== 0) return; // no git on this machine: the content assertion above covers the policy
+  const ignored = (relPath) => spawnSync('git', ['check-ignore', '-q', relPath], { cwd: dir, encoding: 'utf8' }).status === 0;
+  for (const relPath of [
+    '.aioson/context/.observations.lock/1234-abcd.owner',
+    '.aioson/context/.features.lock/1234-abcd.owner',
+    '.aioson/context/.observations-lock-9f3a/1234-abcd.owner',
+    '.aioson/context/observations.json.3f9c7a1e.tmp',
+    '.aioson/context/features.md.3f9c7a1e.tmp',
+    '.aioson/.backups/2026-10-20/squad.json'
+  ]) {
+    assert.equal(ignored(relPath), true, `${relPath} must be ignored`);
+  }
+  for (const relPath of ['.aioson/context/observations.json', '.aioson/context/features.md', '.aioson/context/project.context.md']) {
+    assert.equal(ignored(relPath), false, `${relPath} must stay tracked`);
+  }
 });
 
 test('project constitution amendments require explicit approval and survive update', async () => {

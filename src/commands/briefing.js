@@ -348,8 +348,49 @@ async function openApprovalRegistry(args, options, logger) {
   }
 }
 
+// `briefing:approve --slug=<approved slug>` is the owner accepting an edit made
+// after approval: the pinned hash follows the current text and nothing else
+// moves. It ends the command through the early `failure` result the callers of
+// openApprovalRegistry already return as is.
+async function repinApprovedSlug(opened, logger) {
+  const entry = opened.data && opened.slugOpt ? opened.data.briefings.find((b) => b.slug === opened.slugOpt && b.status === 'approved') : null;
+  if (!entry) return opened;
+  const text = await fsp.readFile(resolveBriefingPath(opened.projectDir, entry.slug, 'briefings.md'), 'utf8').catch(() => '');
+  entry.approved_sha256 = text ? approvalHash(text) : null;
+  opened.data.updated_at = new Date().toISOString().slice(0, 10);
+  await writeBriefingRegistry(opened.projectDir, opened.data);
+  logger.log(opened.t('briefing_approval.repinned', { slug: entry.slug }));
+  return { ...opened, failure: { ok: true, approved: entry.slug, repinned: true } };
+}
+
+// Only approved briefings with no PRD yet can return to draft: prd_generated has
+// no automatic writer, so prd-{slug}.md on disk decides too. --force overrides
+// the file check, and every refusal says so.
+function hasPrdFile(projectDir, slug, force) {
+  return !force && fsp.access(path.join(projectDir, '.aioson', 'context', `prd-${slug}.md`)).then(() => true, () => false);
+}
+
+// `--slug` naming such a briefing is refused through the early `failure`
+// result runBriefingUnapprove already returns as is.
+async function refuseUnapproveWithPrd(opened, options, logger) {
+  const entry = opened.data && opened.slugOpt ? opened.data.briefings.find((b) => b.slug === opened.slugOpt && b.status === 'approved' && !b.prd_generated) : null;
+  if (!entry || !(await hasPrdFile(opened.projectDir, entry.slug, Boolean(options.force)))) return opened;
+  logger.error(opened.t('briefing_approval.unapprove_prd_exists', { slug: entry.slug }));
+  return { ...opened, failure: { ok: false, error: 'prd_exists', slug: entry.slug } };
+}
+
+// The interactive list leaves such briefings out the same way, and says why.
+async function unapprovableBriefings(projectDir, data, { slugOpt, force, t, logger }) {
+  const kept = [];
+  for (const b of data.briefings.filter((item) => item.status === 'approved' && !item.prd_generated)) {
+    if (!(await hasPrdFile(projectDir, b.slug, force))) kept.push(b);
+    else if (!slugOpt) logger.error(t('briefing_approval.unapprove_prd_exists', { slug: b.slug }));
+  }
+  return kept;
+}
+
 async function runBriefingApprove({ args, options = {}, logger }) {
-  const { projectDir, t, slugOpt, data, failure } = await openApprovalRegistry(args, options, logger);
+  const { projectDir, t, slugOpt, data, failure } = await openApprovalRegistry(args, options, logger).then((opened) => repinApprovedSlug(opened, logger));
   if (failure) return failure;
 
   const drafts = data.briefings.filter((b) => b.status === 'draft');
@@ -422,14 +463,14 @@ async function runBriefingApprove({ args, options = {}, logger }) {
 // ─── briefing:unapprove ───────────────────────────────────────────────────────
 
 async function runBriefingUnapprove({ args, options = {}, logger }) {
-  const { projectDir, t, slugOpt, data, failure } = await openApprovalRegistry(args, options, logger);
+  const { projectDir, t, slugOpt, data, failure } = await openApprovalRegistry(args, options, logger).then((opened) => refuseUnapproveWithPrd(opened, options, logger));
   if (failure) return failure;
 
-  // Only approved briefings that have NOT yet generated a PRD can be unapproved.
-  // Reverting a prd_generated briefing would desync it from its downstream PRD,
-  // so it is excluded here (mirrors the registry-level guard in
-  // returnApprovedBriefingToDraft).
-  const approveds = data.briefings.filter((b) => b.status === 'approved' && !b.prd_generated);
+  // Only approved briefings with no PRD yet (registry marker or prd-{slug}.md on
+  // disk) can be unapproved: reverting one would desync it from its PRD.
+  // --force overrides the file check (the registry-level guard in
+  // returnApprovedBriefingToDraft still covers prd_generated).
+  const approveds = await unapprovableBriefings(projectDir, data, { slugOpt, force: Boolean(options.force), t, logger });
 
   if (approveds.length === 0) {
     logger.log(t('briefing_approval.none_approved'));

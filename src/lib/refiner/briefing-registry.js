@@ -200,13 +200,18 @@ function approvalHash(markdown) {
   return crypto.createHash('sha256').update(String(markdown || '').replace(/\r\n/g, '\n'), 'utf8').digest('hex');
 }
 
-/** `{ approved_sha256, current_sha256, drifted }` for an approved briefing with a pinned hash; null otherwise. */
+/**
+ * `{ approved_sha256, current_sha256, drifted }` for an approved briefing with a
+ * pinned hash; `{ pinned: false }` for one approved before approvals were
+ * pinned; null otherwise.
+ */
 async function approvalDrift(projectDir, slug) {
   let entry;
   let text;
   try {
     entry = findBriefing(await readBriefingRegistry(projectDir), slug);
-    if (!entry || entry.status !== 'approved' || !entry.approved_sha256) return null;
+    if (!entry || entry.status !== 'approved') return null;
+    if (!entry.approved_sha256) return { pinned: false };
     text = await fs.readFile(resolveBriefingPath(projectDir, slug, 'briefings.md'), 'utf8');
   } catch {
     return null;

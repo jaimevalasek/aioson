@@ -23,6 +23,7 @@ const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const { buildChainActivationContext } = require('../neural-chain-activation');
 const { buildAgentContextActivation } = require('../agent-context-activation');
 const { resolveTargetDir } = require('../lib/project-root');
+const { defaultProjectTool } = require('../lib/project-tool');
 const { sessionFan, fanLines } = require('../lib/observations');
 const { defaultFeature } = require('./observe');
 
@@ -180,7 +181,7 @@ async function runAgentPrompt({ args, options, logger, t }) {
 
   const targetDir = resolveTargetDir(args[1]);
   const locale = await resolveLocaleForTarget(targetDir, options);
-  const tool = options.tool || 'codex';
+  const tool = options.tool || defaultProjectTool(targetDir);
   const isHeadless = Boolean(options.headless);
 
   let routed = false;

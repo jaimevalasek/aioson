@@ -86,7 +86,7 @@ async function project({ briefingText = briefing(), prd = null, sourceText = SOU
     await fs.mkdir(path.dirname(path.join(dir, rel)), { recursive: true });
     await fs.writeFile(path.join(dir, rel), content, 'utf8');
   };
-  await write(`plans/${SLUG}/idea.md`, sourceText);
+  if (sourceText !== null) await write(`plans/${SLUG}/idea.md`, sourceText);
   await write(`.aioson/briefings/${SLUG}/briefings.md`, briefingText);
   if (prd) await write(`.aioson/context/prd-${SLUG}.md`, prd);
   return { dir, write };
@@ -119,7 +119,8 @@ test('before any PRD, a coherent pinned briefing verifies clean and Source Cover
 });
 
 test('a present briefing that pins nothing is never reported as missing', async () => {
-  const { dir } = await project({ briefingText: `---\nslug: ${SLUG}\nsource_plans: [conversational]\n---\n\n# Briefing\n\n## Sources\n\nConversational.\n` });
+  // No plans/{slug}/ pack either: a pack on disk is a pinned source.
+  const { dir } = await project({ sourceText: null, briefingText: `---\nslug: ${SLUG}\nsource_plans: [conversational]\n---\n\n# Briefing\n\n## Sources\n\nConversational.\n` });
   const report = await verify(dir, 'sources');
   assert.equal(report.ok, true);
   assert.match(report.warnings.join('\n'), /not applicable: the briefing pins no sources/);

@@ -236,6 +236,16 @@ async function readPacketFile(rootDir, featureSlug, agent, packetId) {
   }
 }
 
+// A record's short name, unless only its pre-1.74 full-digest name is stored: a
+// draft written before the upgrade stays the draft its agent edits, and the
+// same report (same digest, same bytes) is reused, never written twice.
+async function storedName(rootDir, builder, ...args) {
+  const exists = (relativePath) => resolveSecureFile(rootDir, relativePath, { maxBytes: MAX_REPORT_BYTES }).then(() => true, (error) => !isMissingFile(error));
+  const short = builder(...args);
+  const legacy = builder(...args, { legacy: true });
+  return !(await exists(short)) && await exists(legacy) ? legacy : short;
+}
+
 async function loadPacket(rootDir, featureSlug, agent, packetId) {
   const { loaded, path: packetPath } = await readPacketFile(rootDir, featureSlug, agent, packetId);
   assertPacketContract(loaded.value, packetPath);
@@ -285,7 +295,7 @@ async function prepareReview({ rootDir, featureSlug, agent, artifactPath, now = 
     }
   }
 
-  const draftPath = draftRelativePath(input.feature_slug, input.agent, packet.packet_id);
+  const draftPath = await storedName(rootDir, draftRelativePath, input.feature_slug, input.agent, packet.packet_id);
   const latestReport = await latestPromotedReportForPacket(rootDir, packet);
   const terminal = latestReport?.report?.review_status === 'pass';
   return {
@@ -355,7 +365,7 @@ async function checkReview({ rootDir, featureSlug, agent, reportPath }) {
   await validateEvidencePaths(rootDir, report);
 
   const reportHash = reportHashFor(report);
-  const canonicalPath = reportRelativePath(input.feature_slug, input.agent, report.packet_id, reportHash);
+  const canonicalPath = await storedName(rootDir, reportRelativePath, input.feature_slug, input.agent, report.packet_id, reportHash);
   const write = await atomicWriteImmutable(rootDir, canonicalPath, canonicalJson(report), { maxBytes: MAX_REPORT_BYTES });
   const requiresAction = report.review_status !== 'pass';
   return {

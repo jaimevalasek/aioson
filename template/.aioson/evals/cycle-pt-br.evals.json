@@ -45,6 +45,24 @@
         { "path": ".aioson/rules/form-fields-masks-and-validation.md", "in": "must_load" },
         { "path": ".aioson/rules/status-flow-drag-and-drop.md", "in": "must_load" }
       ]
+    },
+    {
+      "name": "pt-BR: validating a contact form wakes no prototype contract (validar lends validate, never validation)",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "validar o formulário de contato",
+      "absent": [
+        { "path": ".aioson/docs/prototype-contract.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "pt-BR: accepting the terms at sign-up wakes no browser walkthrough (aceite is the imperative, not acceptance)",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "aceite os termos de uso no cadastro",
+      "absent": [
+        { "path": ".aioson/docs/qa/browser-walkthrough.md", "in": "selected" }
+      ]
     }
   ]
 }

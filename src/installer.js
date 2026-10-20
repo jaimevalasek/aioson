@@ -5,7 +5,7 @@ const path = require('node:path');
 const { getCliVersion, getGitBuildInfoSync } = require('./version');
 const { exists, ensureDir, copyFileWithDir, nowStamp, toRelativeSafe } = require('./utils');
 const { ensureProjectRuntime } = require('./execution-gateway');
-const { shouldIncludeForProfile } = require('./install-profile');
+const { shouldIncludeForProfile, TOOL_FILES } = require('./install-profile');
 const { generatePermissions } = require('./permissions-generator');
 const { isConfigMergePath, mergeConfigFile } = require('./installer-config-merge');
 const { isGatewayPointerPath, mergeGatewayPointer } = require('./gateway-pointer-merge');
@@ -96,8 +96,14 @@ const GITIGNORE_POLICY_LINES = [
   'aioson-logs/',
   'aioson-models.json',
   '.aioson/backups/',
+  '.aioson/.backups/',
   '.aioson/cloud-imports/',
   '.aioson/runtime/',
+  '# AIOSON — single-writer store locks and their temp files (local-only)',
+  '.aioson/context/.*.lock/',
+  '.aioson/context/.*-lock-*/',
+  '.aioson/context/*.json.*.tmp',
+  '.aioson/context/*.md.*.tmp',
   '.aioson/mcp/presets/',
   '.aioson/install.json',
   '.aioson/mcp/servers.local.json',
@@ -380,7 +386,21 @@ function shouldSkipTemplatePath(rel, profile = null) {
   return false;
 }
 
-async function writeInstallMetadata(targetDir, action, frameworkDetection, installProfile) {
+// The `--tool` a profile-less install was given (non-interactive, no wizard,
+// no --all) is recorded as install_profile.tools, so a command run without
+// --tool speaks to that tool. Such a record names the tool and nothing else:
+// readInstallProfile never hands it to update, install or setup, which keep
+// copying everything exactly as a profile-less install did. A real profile
+// (the wizard's choice, --all's three tools) is recorded as given.
+const TOOL_ONLY_PROFILE = 'tool_flag';
+
+function recordedInstallProfile(installProfile, existingProfile, tool) {
+  const wanted = String(tool || '').trim().toLowerCase();
+  if (installProfile || !Object.prototype.hasOwnProperty.call(TOOL_FILES, wanted)) return installProfile || existingProfile || null;
+  return { tools: [wanted], source: TOOL_ONLY_PROFILE };
+}
+
+async function writeInstallMetadata(targetDir, action, frameworkDetection, installProfile, tool = null) {
   const metaPath = path.join(targetDir, '.aioson/install.json');
   await ensureDir(path.dirname(metaPath));
   let existing = {};
@@ -407,7 +427,7 @@ async function writeInstallMetadata(targetDir, action, frameworkDetection, insta
     last_action: action,
     last_action_at: new Date().toISOString(),
     framework_detected: frameworkDetection || existing.framework_detected || null,
-    install_profile: installProfile || existing.install_profile || null
+    install_profile: recordedInstallProfile(installProfile, existing.install_profile, tool)
   };
 
   await fs.writeFile(metaPath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
@@ -417,8 +437,9 @@ async function readInstallProfile(targetDir) {
   const metaPath = path.join(targetDir, '.aioson/install.json');
   if (!(await exists(metaPath))) return null;
   try {
-    const data = JSON.parse(await fs.readFile(metaPath, 'utf8'));
-    return data.install_profile || null;
+    const profile = JSON.parse(await fs.readFile(metaPath, 'utf8')).install_profile || null;
+    // A tool-only record filters nothing: callers see the profile-less install it was.
+    return profile && profile.source === TOOL_ONLY_PROFILE ? null : profile;
   } catch {
     return null;
   }
@@ -643,7 +664,7 @@ async function installTemplate(targetDir, options = {}) {
     // Squad research cache — created on install so @orache can write without mkdir
     await ensureDir(path.join(targetDir, 'squad-searches', 'standalone'));
 
-    await writeInstallMetadata(targetDir, mode, frameworkDetection, installProfile);
+    await writeInstallMetadata(targetDir, mode, frameworkDetection, installProfile, options.tool);
 
     await ensureProjectGitignorePolicy(targetDir);
     await ensureGitGuardBaseline(targetDir);

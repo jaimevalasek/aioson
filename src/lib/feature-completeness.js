@@ -841,7 +841,7 @@ function validatePrdAcceptanceCriteria(content, artifact, productMap) {
 async function initialSourceLineage({ applicable, targetDir, slug, inputs, artifacts, registryEntry }) {
   const empty = { applicable: false, findings: [], inventory: [], promises: [], coverage: [] };
   if (applicable) return empty;
-  if (!pinsSources(inputs.briefing)) return { ...empty, reason: inputs.briefing ? 'no_pinned_sources' : 'no_briefing' };
+  if (!(await pinsSources(inputs.briefing, targetDir, slug))) return { ...empty, reason: inputs.briefing ? 'no_pinned_sources' : 'no_briefing' };
   const lineage = await validateSourceLineage({
     targetDir,
     slug,

@@ -7,7 +7,7 @@ const readline = require('node:readline');
 const store = require('../dossier/store');
 const codemapStore = require('../dossier/codemap-store');
 const { compact, shouldCompact } = require('../dossier/dossier-compact');
-const { initFromExisting } = require('../dossier/dossier-bootstrap');
+const { initFromExisting, placeholderTranslator } = require('../dossier/dossier-bootstrap');
 const { ALLOWED_CLASSIFICATIONS, isValidSlug, isCanonicalAgent } = require('../dossier/schema');
 const { resolveTargetDir } = require('../lib/project-root');
 
@@ -58,7 +58,8 @@ async function bootstrapForWrite(targetDir, ctxDir, slug) {
 
 // Before a PRD the feature's first artifact is its briefing: @briefing's trail
 // line (its kernel calls dossier:add-finding) lands instead of dying behind
-// `|| true`. Why/What come from the briefing's Problem and Proposed solution.
+// `|| true`. Why/What come from the briefing's Problem and Proposed solution;
+// a section it lacks gets the placeholder in the project's language.
 async function bootstrapFromBriefing(targetDir, ctxDir, slug) {
   let briefing;
   try {
@@ -67,14 +68,15 @@ async function bootstrapFromBriefing(targetDir, ctxDir, slug) {
     return false;
   }
   const sections = store.parseSections(briefing);
+  const t = placeholderTranslator(await fs.readFile(path.join(ctxDir, 'project.context.md'), 'utf8').catch(() => null));
   try {
     await store.init({
       slug,
       contextDir: ctxDir,
       classification: (await readProjectClassification(ctxDir)) || 'MEDIUM',
       author: 'dossier-init',
-      whyText: sections.Problem || '',
-      whatText: sections['Proposed solution'] || ''
+      whyText: sections.Problem || t('dossier_bootstrap.not_found'),
+      whatText: sections['Proposed solution'] || t('dossier_bootstrap.not_found')
     });
     return true;
   } catch (err) {

@@ -723,31 +723,51 @@ function emptyVisualSources() {
 /** Why there is no lineage to verify — a present briefing is never reported missing. */
 function lineageNotApplicable(lineage) {
   return lineage.reason === 'no_pinned_sources'
-    ? 'source lineage not applicable: the briefing pins no sources (no ### Source Inventory, no plans/ or researchs/ entry in source_plans)'
+    ? 'source lineage not applicable: the briefing pins no sources (no ### Source Inventory, no plans/ or researchs/ entry in source_plans, no plans/{slug}/ pack)'
     : 'source lineage not applicable: no briefing found for this feature';
 }
 
-// Lineage at birth is new, so it never newly blocks a briefing the owner already
-// approved: with its sources unchanged, a table-shape finding is advisory with
-// the fix named. A changed, missing or unsafe source blocks; so does any
+// Lineage at birth never newly blocks a briefing the owner already approved
+// over its table SHAPE: a column/ID-shape finding — what briefing:migrate-lineage
+// rewrites — and what an unparsed table implies are advisory. A content defect
+// keeps its tier; a changed, missing or unsafe source blocks; so does any
 // finding on a briefing still in draft.
-const SOURCE_DRIFT_CHECKS = new Set(['source_fingerprint_stale', 'source_file_missing', 'source_path_unsafe']);
+const SHAPE_CHECKS = new Set(['source_inventory_columns', 'source_promise_map_columns', 'source_id_invalid', 'source_promise_id_invalid']);
+const SHAPE_CONSEQUENCES = new Map([['source_inventory_columns', 'source_plan_not_in_inventory'], ['source_promise_map_columns', 'source_required_promise_missing']]);
 
-function lineageVerdict(lineage, slug) {
+function shapeChecksOf(findings) {
+  const checks = new Set(findings.map((f) => f.check).filter((check) => SHAPE_CHECKS.has(check)));
+  for (const [cause, consequence] of SHAPE_CONSEQUENCES) if (checks.has(cause)) checks.add(consequence);
+  return checks;
+}
+
+// The migration is named only when its dry run would rewrite the briefing.
+async function migrationAdvice(ctx) {
+  try {
+    const { analyzeBriefingLineageMigration } = require('../lib/briefing-lineage-migration');
+    const plan = await analyzeBriefingLineageMigration({ projectDir: ctx.targetDir, slug: ctx.slug });
+    if (plan.status === 'migration_planned') return `source tables of the approved briefing predate the canonical shape — fix with aioson briefing:migrate-lineage . --slug=${ctx.slug} --write`;
+  } catch { /* a migration that cannot run is no fix to name */ }
+  return 'source tables of the approved briefing need a repair in place (briefing:migrate-lineage has nothing to rewrite) — use the headers .aioson/docs/briefing/exploration-and-artifacts.md prints';
+}
+
+async function lineageVerdict(lineage, ctx) {
   const findings = (lineage.findings || []).map((f) => ({ check: f.check, line: `[${f.check}] ${f.message}` }));
   const approved = lineage.at_birth && ['approved', 'implemented'].includes(lineage.lifecycle && lineage.lifecycle.registry_status);
-  const shape = approved ? findings.filter((f) => !SOURCE_DRIFT_CHECKS.has(f.check)) : [];
-  const warnings = shape.map((f) => `${f.line} (advisory: approved briefing, sources unchanged)`);
-  if (shape.length > 0) warnings.push(`source tables of the approved briefing predate the canonical shape — fix with aioson briefing:migrate-lineage . --slug=${slug} --write`);
-  return { issues: findings.filter((f) => !shape.includes(f)).map((f) => f.line), warnings };
+  const shapeChecks = approved ? shapeChecksOf(findings) : new Set();
+  const shape = findings.filter((f) => shapeChecks.has(f.check));
+  const warnings = [...(lineage.warnings || []), ...shape.map((f) => `${f.line} (advisory: approved briefing, sources unchanged)`)];
+  if (shape.length > 0) warnings.push(await migrationAdvice(ctx));
+  return { issues: findings.filter((f) => !shapeChecks.has(f.check)).map((f) => f.line), warnings };
 }
 
 /** An approved briefing edited after briefing:approve is authority nobody approved. */
 async function approvalDriftWarnings(targetDir, slug) {
   try {
     const drift = await require('../lib/refiner/briefing-registry').approvalDrift(targetDir, slug);
+    if (drift && drift.pinned === false) return [`approval_pin_absent: ${slug} was approved before briefing:approve pinned the approved text (info, never a block) — run aioson briefing:approve . --slug=${slug} to pin the current text`];
     if (!drift || !drift.drifted) return [];
-    return [`briefing_changed_after_approval: .aioson/briefings/${slug}/briefings.md no longer matches the text briefing:approve pinned (sha256 ${drift.approved_sha256.slice(0, 12)}… → ${drift.current_sha256.slice(0, 12)}…) — route the change through @product and @sheldon, or return it to draft (briefing:unapprove) and approve it again`];
+    return [`briefing_changed_after_approval: .aioson/briefings/${slug}/briefings.md no longer matches the text briefing:approve pinned (sha256 ${drift.approved_sha256.slice(0, 12)}… → ${drift.current_sha256.slice(0, 12)}…) — route the change through @product and @sheldon; to accept the edited text as the approved one, run aioson briefing:approve . --slug=${slug} (re-pins it)`];
   } catch {
     return [];
   }
@@ -762,7 +782,7 @@ async function addBriefingLineage(ctx, { issues, warnings, metrics }) {
     const analysis = await analyzeFeatureCompleteness(ctx.targetDir, ctx.slug, {});
     const lineage = analysis.source_lineage || { applicable: false, findings: [] };
     if (lineage.applicable) {
-      const verdict = lineageVerdict(lineage, ctx.slug);
+      const verdict = await lineageVerdict(lineage, ctx);
       issues.push(...verdict.issues);
       warnings.push(...verdict.warnings);
       metrics.lineage = {
@@ -1050,7 +1070,7 @@ const ADAPTERS = {
         metrics: { applicable: false }
       };
     }
-    const verdict = lineageVerdict(lineage, ctx.slug);
+    const verdict = await lineageVerdict(lineage, ctx);
     const issues = verdict.issues;
     const present = lineage.inventory.filter((item) => item.file_status === 'present').length;
     const ok = issues.length === 0;
@@ -1076,7 +1096,7 @@ const ADAPTERS = {
         coverage_checked: lineage.coverage_checked !== false,
         lifecycle_stage: lineage.lifecycle ? lineage.lifecycle.stage : null,
         absorbed: lineage.lifecycle ? lineage.lifecycle.absorbed : null,
-        approval_drift: drift.length > 0
+        approval_drift: drift.some((line) => line.startsWith('briefing_changed_after_approval'))
       }
     };
   },

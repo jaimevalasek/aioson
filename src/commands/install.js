@@ -111,6 +111,7 @@ async function runInstall({ args, options, logger, t }) {
     mode: 'install',
     frameworkDetection: detection.framework,
     installProfile,
+    tool: options.tool,
     onProgress: isTTY && !dryRun ? renderProgress : null
   });
 

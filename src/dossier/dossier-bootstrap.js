@@ -234,4 +234,4 @@ function buildAgentTrail(artifacts, fallbackTimestamp) {
   return trail;
 }
 
-module.exports = { initFromExisting };
+module.exports = { initFromExisting, placeholderTranslator };

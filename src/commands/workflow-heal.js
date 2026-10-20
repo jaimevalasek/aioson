@@ -29,6 +29,7 @@ const {
 } = require('../self-healing');
 const { CHECKPOINTS_DIR } = require('./gate-approve');
 const { resolveTargetDir } = require('../lib/project-root');
+const { defaultProjectTool } = require('../lib/project-tool');
 
 const GATE_ORDER = ['D', 'C', 'B', 'A'];
 
@@ -53,7 +54,7 @@ async function readLatestCheckpoint(targetDir, slug) {
 
 async function runWorkflowHeal({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
-  const tool = options.tool || 'codex';
+  const tool = options.tool || defaultProjectTool(targetDir);
   const stage = options.stage ? String(options.stage).replace(/^@/, '') : null;
   const locale = await resolveLocaleForTarget(targetDir, options);
 

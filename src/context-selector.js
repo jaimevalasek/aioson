@@ -125,7 +125,9 @@ const PT_CYCLE_TERMS = new Map([
   ['escrever', ['write']],
   ['corrigir', ['fix']],
   ['correcao', ['fix']],
-  ['validar', ['validate', 'validation']],
+  // The verb lends the verb: `validation` woke prototype-contract.md for
+  // "validar o formulário", where "validate the form" stays quiet.
+  ['validar', ['validate']],
   ['validacao', ['validation']],
   ['aprovar', ['approve', 'approval']],
   ['aprovacao', ['approval']],
@@ -152,7 +154,8 @@ const PT_CYCLE_TERMS = new Map([
   ['arquivo', ['file', 'files']],
   ['acoplamento', ['coupling']],
   ['criterio', ['criteria']],
-  ['aceite', ['acceptance']],
+  // No `aceite`: it is also the imperative "accept" ("aceite os termos"), and
+  // as `acceptance` it woke the browser-walkthrough doc on a sign-up form.
   ['aceitacao', ['acceptance']],
   ['resposta', ['answer', 'answers']],
   ['pergunta', ['question']],

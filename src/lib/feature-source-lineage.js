@@ -1,5 +1,6 @@
 'use strict';
 
+const { spawnSync } = require('node:child_process');
 const {
   resolveExistingInsideRoot,
   resolveInsideRoot
@@ -61,10 +62,40 @@ async function collectFeatureSourceFiles(targetDir, slug) {
   return collected.files.map((file) => file.path);
 }
 
-/** A briefing that pins sources (an inventory or physical source_plans) has a lineage to check, PRD or not. */
-function pinsSources(briefing) {
+/**
+ * A briefing that pins sources — an inventory, physical source_plans, or a
+ * plans/{slug}/ pack on disk the validator itself counts — has a lineage to
+ * check, PRD or not: a pack without its inventory is caught where it is born.
+ */
+async function pinsSources(briefing, targetDir, slug) {
+  if (!String(briefing || '').trim()) return false;
   return Boolean(extractSection(briefing, ['Source Inventory', 'Inventario de Fontes']))
-    || extractPhysicalSourcePlans(briefing).length > 0;
+    || extractPhysicalSourcePlans(briefing).length > 0
+    || (targetDir ? (await collectFeatureSourceFiles(targetDir, slug)).length > 0 : false);
+}
+
+// A pinned source this checkout cannot hold — git ignores it (the installer
+// ignores researchs/), so a clone, CI or a teammate never has it. Without git
+// (or outside a repository) researchs/ is the known ignored root.
+function ignoredByGit(targetDir, sourcePath) {
+  const probe = spawnSync('git', ['check-ignore', '-q', '--', sourcePath], { cwd: targetDir, windowsHide: true, timeout: 5000 });
+  if (probe.status === 0) return true;
+  if (probe.status === 1) return false;
+  return sourcePath.startsWith('researchs/');
+}
+
+// A missing source git would track still blocks (`source_file_missing`); an
+// ignored one is a warning naming how to bring it back.
+function missingSourceFindings(targetDir, missing, findings, artifact) {
+  const warnings = [];
+  for (const item of missing) {
+    if (!ignoredByGit(targetDir, item.sourcePath)) {
+      findings.push(finding('product', 'source_file_missing', `${item.source} source file is missing: ${item.sourcePath}`, artifact));
+    } else {
+      warnings.push(`source_file_unavailable: ${item.source} (${item.sourcePath}) is git-ignored, so this checkout does not hold it — re-run the capture (aioson web:save / web:extract) or commit the extract, then re-run verify:artifact`);
+    }
+  }
+  return warnings;
 }
 
 // The id column is the one whose cells hold the stable ids, whatever it is
@@ -83,6 +114,16 @@ function withIdColumn(table, columns, name, aliases, idRe) {
   columns.indexes[name] = index;
   if (index === -1) columns.missing.unshift(name);
   return columns;
+}
+
+// The Source Inventory columns the validator reads — the migration's test of
+// "already canonical" too, so a table that verifies is never re-migrated.
+function inventoryColumns(table) {
+  return withIdColumn(table, mapColumns(table, {
+    path: ['Path', 'File', 'Caminho', 'Arquivo'],
+    fingerprint: ['Fingerprint', 'SHA-256', 'SHA256', 'Hash'],
+    purpose: ['Purpose', 'Use', 'Proposito', 'Finalidade', 'Uso']
+  }), 'source', ['SRC', 'Source', 'Source ID', 'Fonte', 'ID da fonte', 'ID'], SOURCE_ID_EXACT_RE);
 }
 
 // A `Promise` column that is not the id column carries the promise text.
@@ -141,11 +182,7 @@ async function validateSourceLineage({
     if (!table) {
       findings.push(finding('product', 'source_inventory_invalid', 'Source Inventory must contain a Markdown table', briefingArtifact));
     } else {
-      const columns = withIdColumn(table, mapColumns(table, {
-        path: ['Path', 'File', 'Caminho', 'Arquivo'],
-        fingerprint: ['Fingerprint', 'SHA-256', 'SHA256', 'Hash'],
-        purpose: ['Purpose', 'Use', 'Proposito', 'Finalidade', 'Uso']
-      }), 'source', ['SRC', 'Source', 'Source ID', 'Fonte', 'ID da fonte', 'ID'], SOURCE_ID_EXACT_RE);
+      const columns = inventoryColumns(table);
       if (columns.missing.length > 0) {
         findings.push(finding('product', 'source_inventory_columns', `Source Inventory missing column(s): ${columns.missing.join(', ')}`, briefingArtifact));
       } else {
@@ -374,11 +411,7 @@ async function validateSourceLineage({
       briefingArtifact
     ));
   }
-  if (!absorbed) {
-    for (const item of missingInventorySources) {
-      findings.push(finding('product', 'source_file_missing', `${item.source} source file is missing: ${item.sourcePath}`, briefingArtifact));
-    }
-  }
+  const warnings = absorbed ? [] : missingSourceFindings(targetDir, missingInventorySources, findings, briefingArtifact);
   for (const sourcePath of physicalPlans) {
     if (inventoryPaths.has(sourcePath.toLowerCase())) continue;
     const present = await resolveExistingInsideRoot(targetDir, sourcePath);
@@ -389,6 +422,7 @@ async function validateSourceLineage({
   return {
     applicable: true,
     findings,
+    warnings,
     inventory,
     promises,
     coverage,
@@ -403,6 +437,8 @@ async function validateSourceLineage({
 }
 
 module.exports = {
+  inventoryColumns,
   pinsSources,
+  promiseMapColumns,
   validateSourceLineage
 };

@@ -2187,16 +2187,35 @@ async function logAgentEvent(db, runtimeDir, options) {
   return { runKey, taskKey };
 }
 
+// 1.73 hooks kept their session under the bare name (`dev.json`); hooks and
+// agent:done now share `@dev.json`, so nothing reads the old file and its run
+// stayed "running" for good. The first trailing event that finds one open
+// closes it — run and task completed, file finished — instead of joining it.
+async function finishLegacyHooksSession(db, runtimeDir, bare) {
+  const legacy = await readAgentSession(runtimeDir, bare);
+  if (!legacy || legacy.finished || legacy.source !== 'live' || !String(legacy.sessionKey || '').startsWith('hooks-')) return;
+  const message = 'Closed: a pre-1.74 hooks session the @-named session superseded';
+  try {
+    if (legacy.runKey) updateRun(db, { runKey: legacy.runKey, status: 'completed', summary: message, eventType: 'session_ended', phase: 'live', message });
+    if (legacy.taskKey) updateTask(db, { taskKey: legacy.taskKey, status: 'completed' });
+  } catch { /* a run the store no longer holds needs no closing */ }
+  await writeAgentSession(runtimeDir, bare, { ...legacy, finished: true, finishedAt: nowIso() });
+}
+
 // A trailing event of an official agent (memory reflection after agent:done
 // closed the run) joins its live run or else its latest one: unlike
-// logAgentEvent it never opens a run nobody finishes.
+// logAgentEvent it never opens a run nobody finishes. agent:done records the
+// run and the session as `@name` and hands reflection the bare name: one agent,
+// matched under both spellings.
 async function logTrailingAgentEvent(db, runtimeDir, options) {
-  const agentName = String(options.agentName || 'unknown').trim();
-  const session = await readAgentSession(runtimeDir, agentName);
-  if (session && !session.finished && session.runKey) return logAgentEvent(db, runtimeDir, options);
+  const bare = String(options.agentName || 'unknown').trim().replace(/^@/, '');
+  const handle = `@${bare}`;
+  await finishLegacyHooksSession(db, runtimeDir, bare);
+  const session = await readAgentSession(runtimeDir, handle);
+  if (session && !session.finished && session.runKey) return logAgentEvent(db, runtimeDir, { ...options, agentName: handle });
   const latest = db.prepare(
-    `SELECT run_key, task_key FROM agent_runs WHERE agent_name = ? AND squad_slug IS NULL ORDER BY started_at DESC LIMIT 1`
-  ).get(agentName);
+    `SELECT run_key, task_key FROM agent_runs WHERE agent_name IN (?, ?) AND squad_slug IS NULL ORDER BY started_at DESC LIMIT 1`
+  ).get(bare, handle);
   if (!latest) return { runKey: null, taskKey: null };
   appendRunEvent(db, {
     runKey: latest.run_key,
