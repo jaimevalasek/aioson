@@ -7,6 +7,7 @@ const { exists, ensureDir } = require('../utils');
 const { readConfig, resolveSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { resolveTargetDir } = require('../lib/project-root');
+const { readListingImages, sendListingImages, LISTING_GALLERY_MAX } = require('./store-listing-images');
 const { collectStagedSecretFindings } = require('../lib/security/staged-secret-detector');
 
 let _terser = null;
@@ -697,6 +698,21 @@ function validateListingFields(m) {
     }
   }
 
+  // store-showcase: capa/galeria são arquivos dentro da pasta do app (o
+  // conteúdo é conferido em readListingImages); novidades são texto simples.
+  const isFilePath = (value) => typeof value === 'string' && value.trim() !== '' && !isHttpUrl(value);
+  if (m.cover != null && !isFilePath(m.cover)) fail('"cover" deve ser o caminho de um arquivo de imagem dentro da pasta do app.');
+  if (m.gallery != null) {
+    if (!Array.isArray(m.gallery) || !m.gallery.every(isFilePath)) {
+      fail('"gallery" deve ser uma lista de caminhos de arquivos de imagem dentro da pasta do app.');
+    }
+    if (m.gallery.length > LISTING_GALLERY_MAX) fail(`"gallery" aceita no máximo ${LISTING_GALLERY_MAX} imagens (tem ${m.gallery.length}).`);
+  }
+  if (m.release_notes != null) {
+    if (typeof m.release_notes !== 'string') fail('"release_notes" deve ser texto.');
+    if (m.release_notes.length > 5000) fail(`"release_notes" deve ter no máximo 5000 caracteres (tem ${m.release_notes.length}).`);
+  }
+
   for (const key of ['homepage_url', 'support_url', 'privacy_url']) {
     if (m[key] != null && !isHttpUrl(m[key])) fail(`"${key}" deve ser uma URL http(s).`);
   }
@@ -837,6 +853,14 @@ async function runSystemPublish({ args, options, logger, t }) {
   const manifest = await readSystemJson(dir, t);
   logger.log(t('system.package_manifest_ok', { slug: manifest.slug, version: manifest.version, name: manifest.name }));
 
+  // Capa/galeria são conferidas antes de tudo: arquivo recusado não cria versão.
+  const listingImages = await readListingImages(dir, manifest, t);
+  for (const warning of listingImages.warnings) logger.log(`  [WARN] ${warning}`);
+
+  if (options['images-only']) {
+    return runImagesOnly({ dir, site, manifest, images: listingImages.images, options, logger, t });
+  }
+
   // Alinha os package.json à versão do system.json antes de buildar/coletar.
   if (!options['dry-run']) {
     await syncPackageVersions(dir, manifest.version, logger);
@@ -915,6 +939,7 @@ async function runSystemPublish({ args, options, logger, t }) {
 
   if (options['dry-run']) {
     logger.log(t('system.publish_dry_run', { slug: manifest.slug, version: manifest.version, visibility }));
+    for (const image of listingImages.images) logger.log(`  ${t('system.publish_dry_run_image', { file: image.file })}`);
     // O dry-run é a única forma de auditar o pacote antes do upload — lista tudo.
     logger.log(t('system.publish_dry_run_files', { count: fileCount }));
     for (const f of Object.keys(files).sort()) logger.log(`  ${f}`);
@@ -977,10 +1002,29 @@ async function runSystemPublish({ args, options, logger, t }) {
   }
   const accessNotice = publishAccessNotice(response, manifest.version);
   if (accessNotice) logger.log(accessNotice);
+  // Sem capa/galeria declaradas nada é enviado e o site mantém as imagens atuais.
+  const images = listingImages.images.length
+    ? await sendListingImages({ dir, site, slug: manifest.slug, images: listingImages.images, logger, t })
+    : null;
   return {
     ok: true, manifest, fileCount, totalBytes, visibility, paid, response, protectedTs, rawSource,
-    protectionLevel: protection.level, protectedJs, unprotectedJs
+    protectionLevel: protection.level, protectedJs, unprotectedJs,
+    images, imagesFailed: Boolean(images && !images.ok)
   };
+}
+
+// `--images-only`: reenvia capa + galeria do system.json sem pacote e sem
+// versão nova (versões são imutáveis — é o caminho depois de um envio que falhou).
+async function runImagesOnly({ dir, site, manifest, images, options, logger, t }) {
+  if (images.length === 0) throw new Error(t('system.error_images_only_nothing'));
+  if (options['dry-run']) {
+    logger.log(t('system.images_only_dry_run', { count: images.length }));
+    for (const image of images) logger.log(`  ${image.file}`);
+    return { ok: true, dryRun: true, imagesOnly: true, manifest };
+  }
+  logger.log(t('system.images_only_sending', { count: images.length, slug: manifest.slug }));
+  const result = await sendListingImages({ dir, site, slug: manifest.slug, images, logger, t });
+  return { ok: result.ok, imagesOnly: true, manifest, images: result, imagesFailed: !result.ok };
 }
 
 // ── system:list ─────────────────────────────────────────────────────────────

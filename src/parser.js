@@ -67,7 +67,7 @@ const BOOLEAN_FLAGS = new Set([
   'prototype', 'continue', 'no-persist',
   // system:publish — pure booleans; `--build ./meu-app` must not swallow the
   // app directory as the flag's value (it silently published the CWD instead).
-  'build', 'allow-raw-source',
+  'build', 'allow-raw-source', 'images-only',
   // init/install/update hooks default and hooks:install guard opt-outs —
   // pure booleans; `--no-hooks .` / `--no-guard .` must not swallow the path.
   'no-hooks', 'no-guard',

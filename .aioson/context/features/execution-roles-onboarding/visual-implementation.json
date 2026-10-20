@@ -17,7 +17,7 @@
     "5 distinct font families (inter, jetbrains mono, sf mono, system-ui) — a coherent system rarely needs more than two",
     "kanban/pipeline surface with no drag-and-drop markers — recurrent status flows move by drag-and-drop with an accessible fallback (status-flow-drag-and-drop rule)",
     "21 emoji glyph(s) in the UI corpus (⚙ ⚠ 🔒 ⚡ ⚖ ✅ …) — emoji standing in for icons is a slop marker; use the icon set. Emoji inside seeded mock content is fine — judge in context",
-    "641 spaced em dash(es) across UI copy and mock content (\"<title>FlowBoard — protótipo (mock)</titl\", \"s=\"proto-badge\">● MOCK — refresh reseta · sem b\", \"<title>Squad Dashboard — AIOSON</title>\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
+    "663 spaced em dash(es) across UI copy and mock content (\"<title>FlowBoard — protótipo (mock)</titl\", \"s=\"proto-badge\">● MOCK — refresh reseta · sem b\", \"<title>Squad Dashboard — AIOSON</title>\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
     "declared finish never applied: --primary-glow — effects that exist only in the stylesheet decorate the code while the user sees flat; wire each one to a real surface or delete it. Dead declarations are not craft, and they read as leftovers in review",
     "generation tell: 6 gradient-text declaration(s) (background-clip: text) — emphasis comes from weight, size, or the accent, not from painting the letters; keep gradients in the material layer",
     "generation tell: 3 rule(s) ride a thick colored side border — the most recognizable generated-UI signature; carry the state in a background wash, an icon, or the tokened border system instead (status/tab/blockquote contexts are already exempt)",
@@ -25,7 +25,7 @@
     "generation tell: 7 zero-offset chromatic glow shadow(s) — a halo with no offset is decoration, not depth; shadows take offset and soft blur from the shadow vocabulary, and glow is reserved for live/focus states that mean something",
     "generation tell: 48 font-size declaration(s) under 11px (10.56px, 9.6px, 10.88px, 9.92px) — functional text floors at 11px; if it matters enough to render, it matters enough to read",
     "copy tell: 2 marketing buzzword(s) in visible copy (revolucionária, streamlined) — replace each with the concrete claim it is hiding: a number, a named capability, or delete the sentence",
-    "corpus truncated: 345 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
+    "corpus truncated: 355 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
     "visual conformance NOT measured: no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to — this surface was not held to any prototype floor; record the outcome instead of assuming it",
     "cross-project palette repetition / visual fingerprint: accent hue ~80° on a dark ground resembles recent project \"aioson-com\" (Δ2°, same accent family with the ground polarity flipped) — palette, type, composition, material and motion fingerprints are compared; this source similarity is a review hint, not proof of identical rendered layouts. Draw a diversified start with `aioson design:seed` (or extract the owner's identity), or record the product reason for continuity"
   ],
@@ -2989,7 +2989,7 @@
       "📁",
       "🎙"
     ],
-    "em_dash_prose": 641,
+    "em_dash_prose": 663,
     "prototype_anchors": false,
     "primary_marker": false,
     "tour_marker": false,
@@ -3301,7 +3301,7 @@
       "stylesheets": 17,
       "components": 363,
       "files_total": 400,
-      "truncated": 345
+      "truncated": 355
     },
     "conformance": {
       "prototype": null,
@@ -3337,5 +3337,5 @@
     }
   },
   "exitCode": 0,
-  "measured_at": "2026-10-12T18:49:32.334Z"
+  "measured_at": "2026-10-20T06:29:35.988Z"
 }

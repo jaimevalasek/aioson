@@ -25,6 +25,22 @@ aioson system:publish [dir] [opções]
 | `--protection=standard\|max` | Com `--build`: `standard` (padrão) minifica todo JS com Terser, inclusive bundles de frontend; `max` também ofusca todo JS com `javascript-obfuscator`, carregado do `node_modules` do app com versão exata (`npm i -D -E --ignore-scripts javascript-obfuscator`). `max` pode aumentar o pacote e o custo em runtime |
 | `--allow-raw-source` | Com `--build`: permite publicar código TS/JS/JSX que não pôde ser protegido. Reduz deliberadamente a proteção; não desativa o bloqueio de segredos reconhecidos nem de arquivos omitidos por erro |
 | `--dry-run` | Roda o build, lista todos os arquivos coletados e retorna erro se houver falha de proteção, coleta ou `start`. Não precisa de login e não envia o ZIP |
+| `--images-only` | Reenvia só a capa e a galeria declaradas no `system.json` (`cover`, `gallery`), sem pacote e sem versão nova. É o comando que a CLI indica quando uma imagem falha depois de a versão ser aceita |
+
+### Capa, galeria e novidades da Loja
+
+```json
+{
+  "cover": "store/capa.png",
+  "gallery": ["store/tela-1.png", "store/tela-2.jpg"],
+  "release_notes": "Novo painel.
+Corrige a exportação."
+}
+```
+
+- `cover`/`gallery`: arquivos dentro da pasta do app (jpg, png ou webp, até 2 MB cada, galeria até 10). Arquivo fora da pasta, inexistente, de outro formato ou grande demais é recusado antes de publicar. Capa fora de 16:9 ou menor que 1280×720 e galeria acima de 1920 px de largura só geram aviso.
+- As imagens vão depois que a versão é aceita: cada uma em `POST /api/store/systems/{slug}/images` (bytes crus) e o conjunto em `POST /api/store/systems/{slug}/images/commit`. O site troca capa + galeria do app inteiro; publish sem `cover`/`gallery` mantém as imagens atuais. Falha de envio deixa a versão publicada e o conjunto anterior no lugar.
+- `release_notes`: texto simples até 5.000 caracteres, gravado na versão publicada e mostrado na página do app no Play.
 
 ### Emails autorizados (privates)
 

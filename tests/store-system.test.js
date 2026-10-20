@@ -577,3 +577,242 @@ test('publish without --base-url keeps going to the default site', async (ctx) =
   assert.equal(requests[0].url, 'https://aioson.com/api/store/systems/publish');
   assert.equal(requests[0].authorization, 'Bearer prod-token');
 });
+
+// ── store-showcase: capa, galeria e novidades pelo system:publish ───────────
+
+const { readImageSize } = require('../src/commands/store-listing-images');
+
+function pngOfSize(width, height, totalBytes = 64) {
+  const bytes = Buffer.alloc(Math.max(totalBytes, 33));
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes, 0);
+  bytes.writeUInt32BE(13, 8);
+  bytes.write('IHDR', 12, 'ascii');
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  return bytes;
+}
+
+function jpegOfSize(width, height) {
+  return Buffer.from([
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03,
+    ...Buffer.alloc(16),
+  ]);
+}
+
+async function makeListingApp(ctx, manifestExtra, images = {}) {
+  const dir = await makeApp(ctx, {
+    ...PUBLISH_APP,
+    'system.json': JSON.stringify({ slug: 'access-probe', version: '1.2.0', name: 'Access Probe', ...manifestExtra }),
+  });
+  for (const [rel, bytes] of Object.entries(images)) {
+    await fs.mkdir(path.dirname(path.join(dir, rel)), { recursive: true });
+    await fs.writeFile(path.join(dir, rel), bytes);
+  }
+  return dir;
+}
+
+// Servidor falso que entende o publish (JSON), o envio de imagem (bytes crus)
+// e o commit. `failImageAt` faz o N-ésimo envio de imagem responder 413.
+function useStoreServer(ctx, { failImageAt = null } = {}) {
+  const requests = [];
+  let imageCount = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const target = String(url);
+    const isImage = /\/images$/.test(target);
+    requests.push({
+      url: target,
+      contentType: init.headers['content-type'],
+      authorization: init.headers.authorization,
+      body: isImage ? Buffer.from(init.body) : JSON.parse(init.body),
+    });
+    const reply = (status, body) => ({ ok: status < 400, status, statusText: String(status), text: async () => JSON.stringify(body) });
+    if (isImage) {
+      imageCount += 1;
+      if (imageCount === failImageAt) return reply(413, { error: 'Request Entity Too Large' });
+      return reply(200, { ok: true, id: `0000000${imageCount}-0000-4000-8000-000000000000.png` });
+    }
+    if (/\/images\/commit$/.test(target)) return reply(200, { ok: true });
+    return reply(200, PUBLISH_OK);
+  };
+  ctx.after(() => { globalThis.fetch = originalFetch; });
+  return requests;
+}
+
+test('AC-store-showcase-01: cover and gallery files are sent after the version is accepted and committed in the declared order', async (ctx) => {
+  const dir = await makeListingApp(ctx, { cover: 'media/cover.png', gallery: ['media/b.png', 'media/a.jpg'] }, {
+    'media/cover.png': pngOfSize(1920, 1080),
+    'media/b.png': pngOfSize(1600, 900),
+    'media/a.jpg': jpegOfSize(1280, 720),
+  });
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+  const lines = [];
+
+  const result = await publish({ args: [dir], options: {}, logger: { log: (line) => lines.push(line) }, t });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.imagesFailed, false);
+  assert.deepEqual(requests.map((r) => r.url.replace('https://store.test', '')), [
+    '/api/store/systems/publish',
+    '/api/store/systems/access-probe/images',
+    '/api/store/systems/access-probe/images',
+    '/api/store/systems/access-probe/images',
+    '/api/store/systems/access-probe/images/commit',
+  ]);
+  assert.equal(requests[1].contentType, 'image/png');
+  assert.equal(requests[3].contentType, 'image/jpeg');
+  assert.equal(requests[1].authorization, 'Bearer test-token');
+  assert.deepEqual(requests[1].body, pngOfSize(1920, 1080));
+  assert.deepEqual(requests[4].body, {
+    cover: '00000001-0000-4000-8000-000000000000.png',
+    gallery: ['00000002-0000-4000-8000-000000000000.png', '00000003-0000-4000-8000-000000000000.png'],
+  });
+  assert.ok(lines.some((line) => line.startsWith('system.images_sent') && line.includes('"count":3')));
+  assert.ok(lines.some((line) => line.includes('system.images_sent_gallery') && line.includes('media/a.jpg')));
+  // Imagens nunca viajam dentro do pacote.
+  assert.equal(requests[0].body.files['media/cover.png'], undefined);
+  assert.ok(!lines.some((line) => line.includes('[WARN]')));
+});
+
+test('AC-store-showcase-01: a full gallery of 10 images of 2 MB does not grow the package', async (ctx) => {
+  const gallery = Array.from({ length: 10 }, (_, index) => `shots/${index}.png`);
+  const images = Object.fromEntries(gallery.map((file) => [file, pngOfSize(1600, 900, 2 * 1024 * 1024)]));
+  const dir = await makeListingApp(ctx, { gallery }, images);
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+
+  const result = await publish({ args: [dir], options: {}, logger: { log: () => {} }, t });
+
+  assert.equal(result.ok, true);
+  assert.ok(requests[0].body.zipBase64.length < 64 * 1024, 'the ZIP stays small: images are not packaged');
+  assert.equal(requests.filter((r) => r.url.endsWith('/images')).length, 10);
+});
+
+test('AC-store-showcase-02: files outside the app, missing, wrong format, above 2 MB or more than 10 are refused before publishing', async (ctx) => {
+  const cases = [
+    [{ cover: '../segredo.png' }, {}, /system\.error_listing_image_outside.*segredo\.png/],
+    [{ cover: 'media/nao-existe.png' }, {}, /system\.error_listing_image_missing.*nao-existe\.png/],
+    [{ gallery: ['media/anim.gif'] }, { 'media/anim.gif': Buffer.from('GIF89a') }, /system\.error_listing_image_format.*anim\.gif/],
+    [{ gallery: ['media/fake.png'] }, { 'media/fake.png': Buffer.from('<html>not an image</html>') }, /system\.error_listing_image_format.*fake\.png/],
+    [{ cover: 'media/big.png' }, { 'media/big.png': pngOfSize(1920, 1080, 2 * 1024 * 1024 + 1) }, /system\.error_listing_image_too_large.*big\.png/],
+    [{ gallery: Array.from({ length: 11 }, (_, i) => `g${i}.png`) }, {}, /"gallery" aceita no máximo 10/],
+  ];
+  for (const [manifestExtra, images, expected] of cases) {
+    const dir = await makeListingApp(ctx, manifestExtra, images);
+    const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+    const requests = useStoreServer(ctx);
+
+    await assert.rejects(publish({ args: [dir], options: {}, logger: { log: () => {} }, t }), expected);
+    assert.equal(requests.length, 0, `no version is created for ${JSON.stringify(manifestExtra)}`);
+  }
+});
+
+test('AC-store-showcase-03: a cover off 16:9 or below 1280x720 and a gallery wider than 1920 px warn and still publish', async (ctx) => {
+  const dir = await makeListingApp(ctx, { cover: 'cover.png', gallery: ['wide.jpg'] }, {
+    'cover.png': pngOfSize(1000, 1000),
+    'wide.jpg': jpegOfSize(2400, 1350),
+  });
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+  const lines = [];
+
+  const result = await publish({ args: [dir], options: {}, logger: { log: (line) => lines.push(line) }, t });
+
+  assert.equal(result.ok, true);
+  assert.ok(lines.some((line) => line.includes('[WARN] system.warn_listing_cover_ratio') && line.includes('cover.png')));
+  assert.ok(lines.some((line) => line.includes('[WARN] system.warn_listing_cover_small')));
+  assert.ok(lines.some((line) => line.includes('[WARN] system.warn_listing_gallery_wide') && line.includes('2400')));
+  assert.equal(requests.at(-1).url, 'https://store.test/api/store/systems/access-probe/images/commit');
+});
+
+test('image sizes are read from png, jpeg and webp headers', () => {
+  assert.deepEqual(readImageSize(pngOfSize(1280, 720), 'image/png'), { width: 1280, height: 720 });
+  assert.deepEqual(readImageSize(jpegOfSize(1920, 1080), 'image/jpeg'), { width: 1920, height: 1080 });
+  const webp = Buffer.alloc(40);
+  webp.write('RIFF', 0, 'ascii');
+  webp.write('WEBP', 8, 'ascii');
+  webp.write('VP8X', 12, 'ascii');
+  webp.writeUIntLE(1599, 24, 3);
+  webp.writeUIntLE(899, 27, 3);
+  assert.deepEqual(readImageSize(webp, 'image/webp'), { width: 1600, height: 900 });
+});
+
+test('AC-store-showcase-05: icon and screenshots as external URLs keep publishing as before, with no image upload', async (ctx) => {
+  const dir = await makeListingApp(ctx, {
+    icon: 'https://cdn.test/icon.png',
+    screenshots: ['https://cdn.test/1.png', 'https://cdn.test/2.png'],
+  });
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+
+  const result = await publish({ args: [dir], options: {}, logger: { log: () => {} }, t });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.images, null);
+  // Sem capa/galeria nada além do publish sai — o site mantém as imagens atuais.
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].body.manifest.icon, 'https://cdn.test/icon.png');
+  assert.deepEqual(requests[0].body.manifest.screenshots, ['https://cdn.test/1.png', 'https://cdn.test/2.png']);
+});
+
+test('AC-store-showcase-06: release_notes goes in the manifest; above 5000 characters is refused naming the limit', async (ctx) => {
+  const notes = 'Novo painel\n<script>alert(1)</script>';
+  const dir = await makeListingApp(ctx, { release_notes: notes });
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+
+  await publish({ args: [dir], options: {}, logger: { log: () => {} }, t });
+  assert.equal(requests[0].body.manifest.release_notes, notes);
+
+  const longDir = await makeListingApp(ctx, { release_notes: 'x'.repeat(5001) });
+  await assert.rejects(
+    publish({ args: [longDir], options: {}, logger: { log: () => {} }, t }),
+    /"release_notes" deve ter no máximo 5000 caracteres \(tem 5001\)/
+  );
+  assert.equal(requests.length, 1);
+});
+
+test('AC-store-showcase-20: an image failing after the version is accepted names it, skips the commit and --images-only resends without a new version', async (ctx) => {
+  const dir = await makeListingApp(ctx, { cover: 'cover.png', gallery: ['shot.png'] }, {
+    'cover.png': pngOfSize(1920, 1080),
+    'shot.png': pngOfSize(1600, 900),
+  });
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx, { failImageAt: 2 });
+  const lines = [];
+
+  const result = await publish({ args: [dir], options: {}, logger: { log: (line) => lines.push(line) }, t });
+
+  assert.equal(result.ok, true, 'the version stays published');
+  assert.equal(result.imagesFailed, true);
+  assert.ok(!requests.some((r) => r.url.endsWith('/commit')), 'no commit: the site keeps the previous set');
+  const warning = lines.find((line) => line.includes('system.images_failed'));
+  assert.ok(warning);
+  assert.match(warning, /shot\.png/);
+  assert.match(warning, /HTTP 413/);
+  assert.match(warning, /aioson system:publish .* --images-only/);
+
+  requests.length = 0;
+  const resend = await publish({ args: [dir], options: { 'images-only': true }, logger: { log: () => {} }, t });
+
+  assert.equal(resend.ok, true);
+  assert.equal(resend.imagesOnly, true);
+  assert.ok(!requests.some((r) => r.url.endsWith('/publish')), 'no package and no new version');
+  assert.deepEqual(requests.map((r) => r.url.split('/').slice(-2).join('/')), [
+    'access-probe/images', 'access-probe/images', 'images/commit',
+  ]);
+});
+
+test('--images-only without cover or gallery in system.json refuses', async (ctx) => {
+  const dir = await makeListingApp(ctx, {});
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+
+  await assert.rejects(
+    publish({ args: [dir], options: { 'images-only': true }, logger: { log: () => {} }, t }),
+    /system\.error_images_only_nothing/
+  );
+  assert.equal(requests.length, 0);
+});
