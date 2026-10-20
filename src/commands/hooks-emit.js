@@ -73,6 +73,15 @@ function patchText(input) {
     .find((value) => typeof value === 'string' && value.includes('*** Begin Patch')) || '';
 }
 
+function addOnce(list, item) {
+  if (!list.includes(item)) list.push(item);
+}
+
+function removeItem(list, item) {
+  const at = item === null ? -1 : list.lastIndexOf(item);
+  if (at !== -1) list.splice(at, 1);
+}
+
 /** Files an apply_patch call changes (a moved file under the path it went to) and the files it deletes. */
 function patchFiles(input) {
   const files = [];
@@ -80,15 +89,13 @@ function patchFiles(input) {
   let last = null;
   for (const [, kind, file] of patchText(input).matchAll(PATCH_HEADER_RE)) {
     if (kind === 'Delete File') {
-      if (!deleted.includes(file)) deleted.push(file);
+      addOnce(deleted, file);
       last = null;
       continue;
     }
-    if (kind === 'Move to') {
-      const at = last === null ? -1 : files.lastIndexOf(last);
-      if (at !== -1) files.splice(at, 1);
-    }
-    if (!files.includes(file)) files.push(file);
+    // A `*** Move to:` renames the file the header just before it named.
+    if (kind === 'Move to') removeItem(files, last);
+    addOnce(files, file);
     last = file;
   }
   return { files, deleted };
@@ -127,34 +134,32 @@ function outputVerdict(output) {
   return { outcome: FAILED_SUMMARY.test(text) ? 'failed' : 'passed', result: line };
 }
 
+/** Claude Code: a non-zero exit fires PostToolUseFailure with `error` ("Exit code N\n…"). */
+function failureOutcome(payload) {
+  if (payload.is_interrupt) return {};
+  const exit = /^Exit code \d+/.exec(String(payload.error || ''));
+  return { outcome: 'failed', result: resultLine(payload.error) || (exit ? exit[0] : null) };
+}
+
+/** A harness that reports the exit code in an object; its output may sit under `output`, not `stdout`. */
+function objectOutcome(response) {
+  if (response.interrupted) return {};
+  const exitCode = responseExitCode(response);
+  const line = resultLine(response.stdout != null ? response.stdout : response.output, response.stderr);
+  return Number.isInteger(exitCode) && exitCode !== 0
+    ? { outcome: 'failed', result: line || `Exit code ${exitCode}` }
+    : { outcome: 'passed', result: line };
+}
+
 /** Outcome and summary line of a shell command, from the hook that reported it. */
 function bashOutcome(hookEvent, payload) {
-  let extra = {};
   const response = payload.tool_response || {};
-  if (hookEvent === 'PostToolUseFailure') {
-    // Claude Code: a non-zero exit fires PostToolUseFailure with `error` ("Exit code N\n…").
-    if (!payload.is_interrupt) {
-      extra.outcome = 'failed';
-      const exit = /^Exit code \d+/.exec(String(payload.error || ''));
-      extra.result = resultLine(payload.error) || (exit ? exit[0] : null);
-    }
-  } else if (typeof response === 'string') {
-    // Codex has no PostToolUseFailure and sends the command's model-facing
-    // output as one string, without the exit code: the text has to say.
-    extra = outputVerdict(response);
-  } else if (typeof response === 'object' && response && !response.interrupted) {
-    // A harness that reports the exit code in an object; its output may sit
-    // under `output`, not `stdout`.
-    const exitCode = responseExitCode(response);
-    const line = resultLine(response.stdout != null ? response.stdout : response.output, response.stderr);
-    if (Number.isInteger(exitCode) && exitCode !== 0) {
-      extra.outcome = 'failed';
-      extra.result = line || `Exit code ${exitCode}`;
-    } else {
-      extra.outcome = 'passed';
-      extra.result = line;
-    }
-  }
+  let extra = {};
+  if (hookEvent === 'PostToolUseFailure') extra = failureOutcome(payload);
+  // Codex has no PostToolUseFailure and sends the command's model-facing
+  // output as one string, without the exit code: the text has to say.
+  else if (typeof response === 'string') extra = outputVerdict(response);
+  else if (response && typeof response === 'object') extra = objectOutcome(response);
   if (!extra.result) delete extra.result;
   if (!extra.outcome) delete extra.outcome;
   return extra;
@@ -354,7 +359,6 @@ function buildEventFromPayload(payload, source) {
     return null;
   }
 
-  const eventType = TOOL_EVENT_MAP[toolName] || 'note';
   const input = payload.tool_input || payload.toolInput || {};
   const sessionId = payload.session_id || payload.sessionId || null;
 
@@ -363,58 +367,65 @@ function buildEventFromPayload(payload, source) {
     return agent ? { eventType: 'agent_activated', message: agent, filePath: null, toolName: null, extra: { agent, source }, sessionId } : null;
   }
 
-  let message = `[${source}] ${toolName}`;
-  let filePath = null;
-  let eventTypeOverride = null;
-  let extra = {};
-
-  if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit') {
-    filePath = input.file_path || input.path || null;
-    message = filePath ? `${toolName}: ${path.basename(filePath)}` : `${toolName}`;
-  } else if (toolName === 'Bash') {
-    const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
-    message = cmd ? `$ ${cmd}` : 'Bash';
-    extra = bashOutcome(hookEvent, payload);
-  } else if (toolName === 'apply_patch') {
-    ({ filePath, message, extra } = patchArtifact(input));
-  } else if (toolName === 'update_plan') {
-    ({ message, eventTypeOverride } = planUpdate(input));
-  } else if (toolName === 'Task') {
-    const desc = String(input.description || input.prompt || '').slice(0, 80);
-    message = desc || 'Task launched';
-  } else if (toolName === 'TodoWrite') {
-    const summary = taskListMessage(input.todos);
-    message = summary || 'Task list updated';
-    if (summary) eventTypeOverride = 'plan_updated';
-  }
-
+  const details = toolEventDetails(toolName, input, hookEvent, payload, source);
   return {
-    eventType: eventTypeOverride || eventType,
-    message,
-    filePath,
+    eventType: details.eventTypeOverride || TOOL_EVENT_MAP[toolName] || 'note',
+    message: details.message,
+    filePath: details.filePath || null,
     toolName,
-    extra,
+    extra: details.extra || {},
     sessionId
   };
+}
+
+function fileEditDetails(toolName, input) {
+  const filePath = input.file_path || input.path || null;
+  return { filePath, message: filePath ? `${toolName}: ${path.basename(filePath)}` : `${toolName}` };
+}
+
+function commandDetails(toolName, input, hookEvent, payload) {
+  const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
+  return { message: cmd ? `$ ${cmd}` : 'Bash', extra: bashOutcome(hookEvent, payload) };
+}
+
+function todoDetails(toolName, input) {
+  const summary = taskListMessage(input.todos);
+  return { message: summary || 'Task list updated', eventTypeOverride: summary ? 'plan_updated' : null };
+}
+
+// What each recorded tool's event says: its message, file, extra fields and event type.
+const TOOL_DETAILS = new Map([
+  ['Write', fileEditDetails],
+  ['Edit', fileEditDetails],
+  ['MultiEdit', fileEditDetails],
+  ['Bash', commandDetails],
+  ['apply_patch', (toolName, input) => patchArtifact(input)],
+  ['update_plan', (toolName, input) => planUpdate(input)],
+  ['Task', (toolName, input) => ({ message: String(input.description || input.prompt || '').slice(0, 80) || 'Task launched' })],
+  ['TodoWrite', todoDetails]
+]);
+
+/** The message, file, extra fields and event type one recorded tool use gets. */
+function toolEventDetails(toolName, input, hookEvent, payload, source) {
+  const details = TOOL_DETAILS.get(toolName);
+  return details ? details(toolName, input, hookEvent, payload) : { message: `[${source}] ${toolName}` };
 }
 
 function openHooksSession(session) {
   return Boolean(session && !session.finished && session.source === 'live' && session.runKey);
 }
 
-/** The per-agent hooks session: the open one, else a new one started here (--no-launch mode). */
-async function ensureHooksSession(targetDir, agentName, handle, source, runtimeDir) {
-  // Fast path: check existing session file
-  const session = await readAgentSession(runtimeDir, handle);
-  if (openHooksSession(session)) {
-    return { runKey: session.runKey, sessionDir: session.sessionKey ? resolveLivePaths(runtimeDir, session.sessionKey).sessionDir : null, launched: false };
-  }
-
-  // No session — auto-start one inline (no-launch mode)
+/**
+ * Starts the per-agent hooks session (--no-launch mode): its task and run in
+ * SQLite, the session file agent:done and the next hook read, and state.json
+ * for the dashboard's live view.
+ */
+async function startHooksSession(targetDir, agentName, handle, source, runtimeDir) {
   const now = nowIso();
   const sessionKey = `hooks-${agentName}-${Date.now()}`;
   const title = `[hooks] ${agentName} via ${source}`;
-
+  const started = `Auto-started by hooks:emit (${source})`;
+  let record;
   const { db } = await openRuntimeDb(targetDir);
   try {
     const taskKey = startTask(db, {
@@ -425,7 +436,6 @@ async function ensureHooksSession(targetDir, agentName, handle, source, runtimeD
       taskKind: 'live_session',
       metaJson: { tool_session: source, path: targetDir, auto_started: true }
     });
-
     const runKey = startRun(db, {
       taskKey,
       agentName: handle,
@@ -435,39 +445,30 @@ async function ensureHooksSession(targetDir, agentName, handle, source, runtimeD
       title,
       eventType: 'session_started',
       phase: 'live',
-      message: `Auto-started by hooks:emit (${source})`,
+      message: started,
       payload: { tool_session: source, path: targetDir, hooks_version: HOOKS_EMIT_VERSION }
     });
-
-    await writeAgentSession(runtimeDir, handle, {
-      runKey,
-      taskKey,
-      sessionKey,
-      startedAt: now,
-      finished: false,
-      source: 'live'
-    });
-
-    // Write state.json for dashboard live view
-    const stateDir = path.join(runtimeDir, 'live', sessionKey);
-    await fs.mkdir(stateDir, { recursive: true });
-    await fs.writeFile(path.join(stateDir, 'state.json'), JSON.stringify({
-      session_key: sessionKey,
-      run_key: runKey,
-      task_key: taskKey,
-      agent_name: handle,
-      tool_session: source,
-      status: 'running',
-      started_at: now,
-      updated_at: now,
-      auto_started: true,
-      last_events: [{ ts: now, type: 'session_started', summary: `Auto-started by hooks:emit (${source})` }]
-    }, null, 2), 'utf8');
-
-    return { runKey, sessionDir: stateDir, launched: false };
+    record = { runKey, taskKey, sessionKey, startedAt: now, finished: false, source: 'live' };
   } finally {
     db.close();
   }
+  await writeAgentSession(runtimeDir, handle, record);
+  const sessionDir = path.join(runtimeDir, 'live', sessionKey);
+  const state = {
+    session_key: sessionKey, run_key: record.runKey, task_key: record.taskKey, agent_name: handle, tool_session: source,
+    status: 'running', started_at: now, updated_at: now, auto_started: true,
+    last_events: [{ ts: now, type: 'session_started', summary: started }]
+  };
+  await fs.mkdir(sessionDir, { recursive: true });
+  await fs.writeFile(path.join(sessionDir, 'state.json'), JSON.stringify(state, null, 2), 'utf8');
+  return { runKey: record.runKey, sessionDir, launched: false };
+}
+
+/** The per-agent hooks session: the open one, else a new one started here. */
+async function ensureHooksSession(targetDir, agentName, handle, source, runtimeDir) {
+  const session = await readAgentSession(runtimeDir, handle);
+  if (!openHooksSession(session)) return startHooksSession(targetDir, agentName, handle, source, runtimeDir);
+  return { runKey: session.runKey, sessionDir: session.sessionKey ? resolveLivePaths(runtimeDir, session.sessionKey).sessionDir : null, launched: false };
 }
 
 async function appendLiveEventFile(runtimeDir, runKey, event) {
@@ -503,54 +504,52 @@ async function appendLiveEventFile(runtimeDir, runKey, event) {
  * session starts its own; a launched session only gets the record — live:*
  * owns its lifecycle. A session end never opens a session to close it.
  */
+/** events.ndjson for the real-time view of the session the event went to. */
+async function appendLiveRecord(runtimeDir, run, liveEvent) {
+  if (!run.launched) {
+    await appendLiveEventFile(runtimeDir, run.runKey, liveEvent);
+    return;
+  }
+  // Append only. state.json of a launched session belongs to `live:*`;
+  // parallel tool uses fire concurrent hooks, and a read-modify-write here
+  // would race and corrupt it.
+  await fs.appendFile(path.join(run.sessionDir, 'events.ndjson'), JSON.stringify(liveEvent) + '\n', 'utf8')
+    .catch(() => {});
+}
+
+/** The hooks session this command opened, still open — never a launched one, which belongs to live:*. */
+async function openedHooksSession(runtimeDir, handle) {
+  const session = await readAgentSession(runtimeDir, handle);
+  return openHooksSession(session) && String(session.sessionKey || '').startsWith('hooks-') ? session : null;
+}
+
+/** Closes a hooks session's run and task (completed); the session file is marked finished by the caller. */
+function closeHooksRun(db, session, message, payload) {
+  updateRun(db, { runKey: session.runKey, status: 'completed', summary: message, eventType: 'session_ended', phase: 'live', message, payload });
+  if (session.taskKey) updateTask(db, { taskKey: session.taskKey, status: 'completed' });
+}
+
 async function endSession(targetDir, runtimeDir, event, message, { handle, liveRun, now }) {
-  const session = liveRun ? null : await readAgentSession(runtimeDir, handle);
-  const hooksSession = openHooksSession(session) && String(session.sessionKey || '').startsWith('hooks-') ? session : null;
+  const hooksSession = liveRun ? null : await openedHooksSession(runtimeDir, handle);
   const runKey = liveRun ? liveRun.runKey : (hooksSession && hooksSession.runKey);
   if (!runKey) return { ok: true, skipped: true, reason: 'no-session' };
   const opened = await openRuntimeDb(targetDir, { mustExist: true });
   if (!opened) return { ok: true, skipped: true, reason: 'no-runtime' };
   const payload = { ...event.extra, ...(event.sessionId ? { session_id: event.sessionId } : {}) };
   try {
-    if (hooksSession) {
-      updateRun(opened.db, { runKey, status: 'completed', summary: message, eventType: 'session_ended', phase: 'live', message, payload });
-      if (hooksSession.taskKey) updateTask(opened.db, { taskKey: hooksSession.taskKey, status: 'completed' });
-    } else {
-      appendRunEvent(opened.db, { runKey, eventType: 'session_ended', phase: 'live', status: 'running', message, payload, createdAt: now });
-    }
+    if (hooksSession) closeHooksRun(opened.db, hooksSession, message, payload);
+    else appendRunEvent(opened.db, { runKey, eventType: 'session_ended', phase: 'live', status: 'running', message, payload, createdAt: now });
   } finally {
     opened.db.close();
   }
   if (hooksSession) await writeAgentSession(runtimeDir, handle, { ...hooksSession, finished: true, finishedAt: now });
-  const liveEvent = { ts: now, type: 'session_ended', message, source: event.extra.source };
-  if (liveRun) await fs.appendFile(path.join(liveRun.sessionDir, 'events.ndjson'), JSON.stringify(liveEvent) + '\n', 'utf8').catch(() => {});
-  else await appendLiveEventFile(runtimeDir, runKey, liveEvent);
+  const run = liveRun ? { sessionDir: liveRun.sessionDir, launched: true } : { runKey, launched: false };
+  await appendLiveRecord(runtimeDir, run, { ts: now, type: 'session_ended', message, source: event.extra.source });
   return { ok: true, runKey, event: 'session_ended', closed: Boolean(hooksSession) };
 }
 
-async function recordEvent(targetDir, runtimeDir, event, { agentName, handle, source }) {
-  const now = nowIso();
-  // The same text reaches SQLite and events.ndjson, which the SQLite redaction never saw.
-  const message = redactCommandSecrets(redactTelemetryText(event.message));
-
-  // The live session that launched this tool wins; the per-agent hooks
-  // session (auto-started when missing) is only the fallback.
-  const liveRun = await resolveLauncherLiveSession(targetDir, runtimeDir, { source });
-  if (event.eventType === 'session_ended') return endSession(targetDir, runtimeDir, event, message, { handle, liveRun, now });
-
-  const run = liveRun
-    ? { runKey: liveRun.runKey, sessionDir: liveRun.sessionDir, launched: true }
-    : await ensureHooksSession(targetDir, agentName, handle, source, runtimeDir);
-
-  // An activation is recorded once per change, for the harness session it happened in.
-  if (event.eventType === 'agent_activated') {
-    const activation = await recordAgentActivation(targetDir, event.extra.agent, { via: 'prompt', source, sessionId: event.sessionId, run });
-    return activation.recorded
-      ? { ok: true, runKey: activation.runKey, event: event.eventType, message: event.message }
-      : { ok: true, skipped: true, reason: activation.reason };
-  }
-
-  // Write to SQLite
+/** Writes one event: SQLite, the source of truth, then events.ndjson for the real-time view. */
+async function appendHookEvent(targetDir, runtimeDir, run, event, message, { agentName, source, now }) {
   const { db } = await openRuntimeDb(targetDir, { mustExist: true });
   try {
     appendRunEvent(db, {
@@ -570,28 +569,30 @@ async function recordEvent(targetDir, runtimeDir, event, { agentName, handle, so
   } finally {
     db.close();
   }
-
-  // Append to events.ndjson for real-time dashboard view
-  const liveEvent = {
-    ts: now,
-    type: event.eventType,
-    message,
-    tool: event.toolName,
-    file: event.filePath || undefined,
-    source,
-    agent: agentName
-  };
-  if (run.launched) {
-    // Append only. state.json of a launched session belongs to `live:*`;
-    // parallel tool uses fire concurrent hooks, and a read-modify-write here
-    // would race and corrupt it.
-    await fs.appendFile(path.join(run.sessionDir, 'events.ndjson'), JSON.stringify(liveEvent) + '\n', 'utf8')
-      .catch(() => {});
-  } else {
-    await appendLiveEventFile(runtimeDir, run.runKey, liveEvent);
-  }
-
+  await appendLiveRecord(runtimeDir, run, { ts: now, type: event.eventType, message, tool: event.toolName, file: event.filePath || undefined, source, agent: agentName });
   return { ok: true, runKey: run.runKey, event: event.eventType, message };
+}
+
+async function recordEvent(targetDir, runtimeDir, event, { agentName, handle, source }) {
+  const now = nowIso();
+  // The same text reaches SQLite and events.ndjson, which the SQLite redaction never saw.
+  const message = redactCommandSecrets(redactTelemetryText(event.message));
+
+  // The live session that launched this tool wins; the per-agent hooks
+  // session (auto-started when missing) is only the fallback.
+  const liveRun = await resolveLauncherLiveSession(targetDir, runtimeDir, { source });
+  if (event.eventType === 'session_ended') return endSession(targetDir, runtimeDir, event, message, { handle, liveRun, now });
+
+  const run = liveRun
+    ? { runKey: liveRun.runKey, sessionDir: liveRun.sessionDir, launched: true }
+    : await ensureHooksSession(targetDir, agentName, handle, source, runtimeDir);
+  if (event.eventType !== 'agent_activated') return appendHookEvent(targetDir, runtimeDir, run, event, message, { agentName, source, now });
+
+  // An activation is recorded once per change, for the harness session it happened in.
+  const activation = await recordAgentActivation(targetDir, event.extra.agent, { via: 'prompt', source, sessionId: event.sessionId, run });
+  return activation.recorded
+    ? { ok: true, runKey: activation.runKey, event: event.eventType, message: event.message }
+    : { ok: true, skipped: true, reason: activation.reason };
 }
 
 // Claude Code's Stop closes the turn (`--then=agent:done`): agent:done runs

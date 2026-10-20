@@ -14,7 +14,8 @@ const { spawnSync } = require('node:child_process');
 const { createTranslator } = require('../src/i18n');
 const { runLiveStart } = require('../src/commands/live');
 const { buildEventFromPayload } = require('../src/commands/hooks-emit');
-const { buildClaudeHooks, isAiosonHookEntry } = require('../src/commands/hooks-install');
+const { buildClaudeHooks } = require('../src/commands/hooks-install');
+const { isAiosonHookEntry } = require('../src/lib/hook-settings-files');
 const { buildRecapResponse } = require('../src/commands/hooks-recap');
 const { buildCompactionRecap, compactionWindow, HEADER } = require('../src/lib/compaction-recap');
 const {

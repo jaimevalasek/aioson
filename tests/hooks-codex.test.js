@@ -16,11 +16,10 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const {
   buildCodexHooks,
-  configPaths,
-  isAiosonHookEntry,
   runHooksInstall,
   runHooksUninstall
 } = require('../src/commands/hooks-install');
+const { configPaths, isAiosonHookEntry } = require('../src/lib/hook-settings-files');
 const { buildEventFromPayload } = require('../src/commands/hooks-emit');
 const { formatForTool } = require('../src/commands/hooks-recap');
 const { buildCompactionRecap } = require('../src/lib/compaction-recap');

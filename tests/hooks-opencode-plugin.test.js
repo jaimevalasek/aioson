@@ -14,11 +14,11 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const {
   buildOpencodePlugin,
-  configPaths,
   runHooksInstall,
-  runHooksUninstall,
-  OPENCODE_PLUGIN_SIGNATURE
+  runHooksUninstall
 } = require('../src/commands/hooks-install');
+const { configPaths } = require('../src/lib/hook-settings-files');
+const { OPENCODE_PLUGIN_SIGNATURE } = require('../src/lib/opencode-plugin');
 const { HEADER } = require('../src/lib/compaction-recap');
 
 const CLI = path.join(__dirname, '..', 'bin', 'aioson.js');

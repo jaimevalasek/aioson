@@ -98,4 +98,4 @@ async function recordAgentActivation(targetDir, agent, { via, source, sessionId 
   }
 }
 
-module.exports = { recordAgentActivation, activationHandle };
+module.exports = { recordAgentActivation };

@@ -8,15 +8,17 @@ const path = require('node:path');
 const {
   buildAntigravityHooks,
   buildClaudeHooks,
-  configPaths,
-  isAiosonHandler,
-  isAiosonHookEntry,
   normalizeHookAgentName,
   runHooksInstall,
   runHooksUninstall,
-  scrubAntigravityHookFile,
-  readJsonForMerge
+  scrubAntigravityHookFile
 } = require('../src/commands/hooks-install');
+const {
+  configPaths,
+  isAiosonHandler,
+  isAiosonHookEntry,
+  readJsonForMerge
+} = require('../src/lib/hook-settings-files');
 
 // A temporary home with the harnesses' own overrides cleared, so nothing here
 // ever reads or writes the real ~/.claude, ~/.codex or ~/.config/opencode.

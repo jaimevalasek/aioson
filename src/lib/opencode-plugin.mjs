@@ -121,30 +121,35 @@ function patchTextOf(args, output) {
   return files.length ? `*** Begin Patch\n${files.map((file) => `*** Update File: ${file}`).join("\n")}\n*** End Patch` : "";
 }
 
+// A bash call as Claude Code reports it: a non-zero `metadata.exit` is a PostToolUseFailure.
+function bashPayload(payload, args, output) {
+  const exit = Number(output.metadata && output.metadata.exit);
+  payload.tool_input = { command: args.command || "" };
+  if (Number.isFinite(exit) && exit !== 0) {
+    payload.hook_event_name = "PostToolUseFailure";
+    payload.error = `Exit code ${exit}\n${tail2k(output.output)}`;
+  } else {
+    payload.tool_response = { stdout: tail2k(output.output) };
+  }
+  return payload;
+}
+
+// The tool_input of every other recorded tool, in Claude Code's field names.
+function toolInputOf(toolName, args, output) {
+  if (toolName === "apply_patch") return { command: patchTextOf(args, output) };
+  if (toolName === "TodoWrite") return { todos: Array.isArray(args.todos) ? args.todos : [] };
+  if (toolName === "Task") return { description: args.description || "", prompt: args.prompt || "" };
+  return { file_path: args.filePath || args.file_path || args.path || null };
+}
+
 // Shapes an OpenCode tool call like Claude Code's PostToolUse payload, or null for tools that are not recorded.
 function toolPayload(input, output) {
   const toolName = TOOLS[String(input.tool || "").toLowerCase()];
   if (!toolName) return null;
   const args = input.args || {};
   const payload = { hook_event_name: "PostToolUse", tool_name: toolName, tool_input: {}, session_id: input.sessionID };
-  if (toolName === "Bash") {
-    const exit = Number(output.metadata && output.metadata.exit);
-    payload.tool_input = { command: args.command || "" };
-    if (Number.isFinite(exit) && exit !== 0) {
-      payload.hook_event_name = "PostToolUseFailure";
-      payload.error = `Exit code ${exit}\n${tail2k(output.output)}`;
-    } else {
-      payload.tool_response = { stdout: tail2k(output.output) };
-    }
-  } else if (toolName === "apply_patch") {
-    payload.tool_input = { command: patchTextOf(args, output) };
-  } else if (toolName === "TodoWrite") {
-    payload.tool_input = { todos: Array.isArray(args.todos) ? args.todos : [] };
-  } else if (toolName === "Task") {
-    payload.tool_input = { description: args.description || "", prompt: args.prompt || "" };
-  } else {
-    payload.tool_input = { file_path: args.filePath || args.file_path || args.path || null };
-  }
+  if (toolName === "Bash") return bashPayload(payload, args, output);
+  payload.tool_input = toolInputOf(toolName, args, output);
   return payload;
 }
 

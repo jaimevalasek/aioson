@@ -114,30 +114,29 @@ function relativePath(file, targetDir) {
   return relative.replace(/\\/g, '/');
 }
 
+/** Moves the files one artifact event touched to the end of `files`, or counts them as outside the project. */
+function addTouchedFiles(files, outside, payload, targetDir) {
+  // One event may carry several files (a patch tool); `file` is the first of them.
+  const touched = Array.isArray(payload.files) && payload.files.length > 0 ? payload.files : [payload.file];
+  for (const raw of touched) {
+    const file = relativePath(raw, targetDir);
+    // Scratch files outside the project are not project state; count them only.
+    if (file === '') outside.add(String(raw));
+    if (!file) continue;
+    const at = files.indexOf(file);
+    if (at !== -1) files.splice(at, 1);
+    files.push(file);
+  }
+}
+
 /** What the stretch changed: files (newest first) and the agent's last message. */
 function summarizeStretch(window, targetDir) {
   const files = [];
   const outside = new Set();
   let reply = null;
   for (const event of window) {
-    if (event.event_type === 'agent_reply') {
-      reply = event.message;
-      continue;
-    }
-    if (event.event_type !== 'artifact') continue;
-    const payload = parsePayload(event);
-    // One event may carry several files (a patch tool); `file` is the first of them.
-    const touched = Array.isArray(payload.files) && payload.files.length > 0 ? payload.files : [payload.file];
-    for (const raw of touched) {
-      const file = relativePath(raw, targetDir);
-      // Scratch files outside the project are not project state; count them only.
-      if (file === '') outside.add(String(raw));
-      if (file) {
-        const at = files.indexOf(file);
-        if (at !== -1) files.splice(at, 1);
-        files.push(file);
-      }
-    }
+    if (event.event_type === 'agent_reply') reply = event.message;
+    else if (event.event_type === 'artifact') addTouchedFiles(files, outside, parsePayload(event), targetDir);
   }
   return { files: files.reverse(), outsideFiles: outside.size, reply };
 }
@@ -182,11 +181,6 @@ function summarizeState(events) {
   return { failures, lastResult, plan, agent };
 }
 
-/** Both halves over one list. */
-function summarizeWindow(window, targetDir) {
-  return { ...summarizeStretch(window, targetDir), ...summarizeState(window) };
-}
-
 function agentHandle(agent) {
   if (!agent) return null;
   const text = String(agent).trim();
@@ -197,6 +191,78 @@ function agentHandle(agent) {
 function sessionAgent(events, sessionScoped = false) {
   const list = Array.isArray(events) ? events : [];
   return agentHandle(summarizeState(sessionScoped ? list : compactionWindow(list)).agent);
+}
+
+/**
+ * Who owes what. dev-state.md and the plan manifest are @dev's own: a reviewer
+ * reading "implement X" after a compaction would start implementing, so other
+ * agents get the stage the workflow is in and the artifact they owe.
+ */
+function roleLines(who, { resume, workflow, artifacts }, tally) {
+  const devOrUnknown = !who || who === '@dev';
+  const lines = resume && resume.feature_slug ? featureLines(who, devOrUnknown, resume, tally) : [];
+  if (workflow && workflow.stage) {
+    const feature = workflow.feature && (!resume || workflow.feature !== resume.feature_slug) ? ` (feature ${workflow.feature})` : '';
+    pushClean(lines, 'Workflow stage on record: ', `${agentHandle(workflow.stage)}${feature}`, tally);
+  }
+  if (!devOrUnknown && Array.isArray(artifacts) && artifacts.length > 0) pushClean(lines, 'Your artifact on record: ', artifacts.join(', '), tally);
+  return lines;
+}
+
+/** The feature on record — with @dev's phase and next step only for @dev, or labelled when the agent is unknown. */
+function featureLines(who, devOrUnknown, resume, tally) {
+  const lines = [];
+  const phase = devOrUnknown && resume.current_phase && resume.current_phase !== 'unknown' ? ` · phase: ${resume.current_phase}` : '';
+  pushClean(lines, 'Feature: ', `${resume.feature_slug}${phase}`, tally);
+  if (resume.next_step && devOrUnknown) pushClean(lines, who ? 'Next step on record: ' : 'Next step on record (@dev): ', resume.next_step, tally);
+  return lines;
+}
+
+/** The files the stretch changed, what still fails, the last test result and the plan. */
+function workLines(stretch, state, tally) {
+  const lines = [];
+  const files = stretch.files.map((file) => cleanItem(file, tally)).filter((file) => file !== null);
+  if (files.length > 0) {
+    const shown = files.slice(0, MAX_FILES);
+    const more = files.length > shown.length ? ` (+${files.length - shown.length} more)` : '';
+    const outside = stretch.outsideFiles > 0 ? `; ${stretch.outsideFiles} outside the project` : '';
+    lines.push(oneLine(`Files changed, newest first: ${shown.join(', ')}${more}${outside}`, 600));
+  }
+  for (const failure of state.failures) pushClean(lines, 'Still failing (latest run): ', failure, tally);
+  if (state.lastResult) {
+    const outcome = state.lastResult.outcome ? ` (${state.lastResult.outcome})` : '';
+    pushClean(lines, `Last test result${outcome}: `, `${state.lastResult.result} — from ${state.lastResult.command}`, tally);
+  }
+  if (state.plan) pushClean(lines, 'Plan: ', state.plan, tally, 320);
+  return lines;
+}
+
+/** The continuity notes, the observations on record and the agent's last message. */
+function noteLines({ continuityPath, observations, reply }, tally) {
+  const lines = [];
+  if (continuityPath) lines.push(`Continuity notes the agent kept: ${continuityPath}`);
+  // What was noticed beside the work and put on record (observe): after the
+  // compaction the agent must know it already reported the cracked tile, so
+  // it neither re-reports it nor "fixes it in passing" from a half memory.
+  if (Array.isArray(observations) && observations.length > 0) {
+    const noted = observations
+      .map((item) => cleanItem(`${item.id} (${item.kind}${item.status === 'resolved' ? ', settled' : ''}) ${item.summary}`, tally))
+      .filter((item) => item !== null);
+    if (noted.length > 0) lines.push(oneLine(`Observations on record (last 24h, aioson observation:list .): ${noted.join('; ')}`, 480));
+  }
+  if (reply) pushClean(lines, 'Agent\'s last message (its own claim): ', reply, tally, MAX_REPLY_CHARS);
+  return lines;
+}
+
+/** Whole lines only, in priority order: the budget drops the tail, never cuts a fact. */
+function fitToBudget(lines, maxChars) {
+  const budget = Math.max(400, Number(maxChars) || DEFAULT_MAX_CHARS);
+  let text = HEADER;
+  for (const line of lines) {
+    if (text.length + 1 + line.length > budget) break;
+    text += `\n${line}`;
+  }
+  return text;
 }
 
 /**
@@ -218,71 +284,23 @@ function buildCompactionRecap({ events = [], sessionScoped = false, resume = nul
   const stretch = summarizeStretch(window, targetDir);
   const state = summarizeState(sessionScoped ? list : window);
   const tally = { withheld: 0 };
-  const lines = [];
   const who = agentHandle(state.agent || agent);
-  if (who) lines.push(`Agent: ${who}`);
-  // dev-state.md and the plan manifest are @dev's own: a reviewer reading
-  // "implement X" after a compaction would start implementing. Other agents get
-  // the stage the workflow is in and the artifact they owe.
-  const devOrUnknown = !who || who === '@dev';
-  if (resume && resume.feature_slug) {
-    const phase = devOrUnknown && resume.current_phase && resume.current_phase !== 'unknown' ? ` · phase: ${resume.current_phase}` : '';
-    pushClean(lines, 'Feature: ', `${resume.feature_slug}${phase}`, tally);
-    if (resume.next_step && devOrUnknown) pushClean(lines, who ? 'Next step on record: ' : 'Next step on record (@dev): ', resume.next_step, tally);
-  }
-  if (workflow && workflow.stage) {
-    const feature = workflow.feature && (!resume || workflow.feature !== resume.feature_slug) ? ` (feature ${workflow.feature})` : '';
-    pushClean(lines, 'Workflow stage on record: ', `${agentHandle(workflow.stage)}${feature}`, tally);
-  }
-  if (!devOrUnknown && Array.isArray(artifacts) && artifacts.length > 0) pushClean(lines, 'Your artifact on record: ', artifacts.join(', '), tally);
-  const files = stretch.files.map((file) => cleanItem(file, tally)).filter((file) => file !== null);
-  if (files.length > 0) {
-    const shown = files.slice(0, MAX_FILES);
-    const more = files.length > shown.length ? ` (+${files.length - shown.length} more)` : '';
-    const outside = stretch.outsideFiles > 0 ? `; ${stretch.outsideFiles} outside the project` : '';
-    lines.push(oneLine(`Files changed, newest first: ${shown.join(', ')}${more}${outside}`, 600));
-  }
-  for (const failure of state.failures) pushClean(lines, 'Still failing (latest run): ', failure, tally);
-  if (state.lastResult) {
-    const outcome = state.lastResult.outcome ? ` (${state.lastResult.outcome})` : '';
-    pushClean(lines, `Last test result${outcome}: `, `${state.lastResult.result} — from ${state.lastResult.command}`, tally);
-  }
-  if (state.plan) pushClean(lines, 'Plan: ', state.plan, tally, 320);
-  if (continuityPath) lines.push(`Continuity notes the agent kept: ${continuityPath}`);
-  // What was noticed beside the work and put on record (observe): after the
-  // compaction the agent must know it already reported the cracked tile, so
-  // it neither re-reports it nor "fixes it in passing" from a half memory.
-  if (Array.isArray(observations) && observations.length > 0) {
-    const noted = observations
-      .map((item) => cleanItem(`${item.id} (${item.kind}${item.status === 'resolved' ? ', settled' : ''}) ${item.summary}`, tally))
-      .filter((item) => item !== null);
-    if (noted.length > 0) lines.push(oneLine(`Observations on record (last 24h, aioson observation:list .): ${noted.join('; ')}`, 480));
-  }
-  if (stretch.reply) pushClean(lines, 'Agent\'s last message (its own claim): ', stretch.reply, tally, MAX_REPLY_CHARS);
-  // Said first, so the budget keeps it: what was left out and why.
-  if (tally.withheld > 0) lines.splice(who ? 1 : 0, 0, `Withheld ${tally.withheld} recorded item(s) that read as instructions to an AI: data, not shown.`);
-
-  const substantive = lines.some((line) => !line.startsWith('Agent: '));
-  if (!substantive) return null;
-
-  // Whole lines only, in priority order: the budget drops the tail, never cuts a fact.
-  const budget = Math.max(400, Number(maxChars) || DEFAULT_MAX_CHARS);
-  let text = HEADER;
-  for (const line of lines) {
-    if (text.length + 1 + line.length > budget) break;
-    text += `\n${line}`;
-  }
-  return text;
+  const lines = [
+    ...roleLines(who, { resume, workflow, artifacts }, tally),
+    ...workLines(stretch, state, tally),
+    ...noteLines({ continuityPath, observations, reply: stretch.reply }, tally)
+  ];
+  if (lines.length === 0 && tally.withheld === 0) return null;
+  // Said first, so the budget keeps them: who works, and what was left out and why.
+  if (tally.withheld > 0) lines.unshift(`Withheld ${tally.withheld} recorded item(s) that read as instructions to an AI: data, not shown.`);
+  if (who) lines.unshift(`Agent: ${who}`);
+  return fitToBudget(lines, maxChars);
 }
 
 module.exports = {
   buildCompactionRecap,
   compactionWindow,
-  summarizeWindow,
-  summarizeStretch,
-  summarizeState,
   sessionAgent,
   redactCommandSecrets,
-  DEFAULT_MAX_CHARS,
   HEADER
 };

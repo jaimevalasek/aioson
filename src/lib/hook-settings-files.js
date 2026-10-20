@@ -188,6 +188,17 @@ function aiosonDefinition(config) {
   return JSON.stringify(out);
 }
 
+/** Writes a scrubbed hooks file back — or, on a dry run, says what it would remove. */
+async function writeScrubbed(tool, filePath, data, dryRun, logger, label) {
+  if (!dryRun) {
+    await writeFileAtomic(filePath, JSON.stringify(data, null, 2));
+    logger.log(`  ✓ ${label} hooks removed — ${filePath}`);
+  } else {
+    logger.log(`  [dry-run] Would remove AIOSON hooks from: ${filePath}`);
+  }
+  return { tool, path: filePath, removed: true };
+}
+
 // Remove AIOSON handlers from a Claude-shaped hooks file, leaving user hooks alone.
 async function scrubHookFile(tool, filePath, dryRun, logger, label) {
   const read = await readJsonForMerge(filePath);
@@ -206,25 +217,18 @@ async function scrubHookFile(tool, filePath, dryRun, logger, label) {
     if (hooks[event].length === 0) delete hooks[event];
   }
   if (existing.hooks && Object.keys(existing.hooks).length === 0) delete existing.hooks;
-  if (!dryRun) {
-    await writeFileAtomic(filePath, JSON.stringify(existing, null, 2));
-    logger.log(`  ✓ ${label} hooks removed — ${filePath}`);
-  } else {
-    logger.log(`  [dry-run] Would remove AIOSON hooks from: ${filePath}`);
-  }
-  return { tool, path: filePath, removed: true };
+  return writeScrubbed(tool, filePath, existing, dryRun, logger, label);
 }
 
 module.exports = {
   configPaths,
   isAiosonHandler,
   isAiosonHookEntry,
-  handlersOf,
   allHandlers,
-  hooksObjectOf,
   readJsonForMerge,
   unusableConfig,
   writeFileAtomic,
+  writeScrubbed,
   mergeHookEvents,
   aiosonDefinition,
   scrubHookFile

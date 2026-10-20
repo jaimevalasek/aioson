@@ -179,6 +179,20 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
   return recap ? formatForTool(source, recap) : {};
 }
 
+/** The response for one call inside a project: the hook payload only feeds the compaction gate; on demand nothing is read. */
+async function recapFor(targetDir, when, options) {
+  const payload = when === 'always'
+    ? null
+    : (options.payload !== undefined ? options.payload : await readStdin());
+  return buildRecapResponse(targetDir, payload, {
+    source: options.source ? String(options.source).trim() : 'claude',
+    agent: options.agent,
+    session: options.session,
+    maxChars: options['max-chars'] ? Number(options['max-chars']) : undefined,
+    when
+  });
+}
+
 async function runHooksRecap({ args, options = {}, logger }) {
   const when = options.when == null ? 'compact' : String(options.when).trim();
   if (!WHEN_VALUES.includes(when)) {
@@ -188,24 +202,7 @@ async function runHooksRecap({ args, options = {}, logger }) {
     return { ok: false, exitCode: 1, error };
   }
   const targetDir = resolveProjectRoot(resolveTargetDir(args));
-  let response = {};
-  if (targetDir) {
-    try {
-      // The hook payload only feeds the compaction gate; on demand nothing is read.
-      const payload = when === 'always'
-        ? null
-        : (options.payload !== undefined ? options.payload : await readStdin());
-      response = await buildRecapResponse(targetDir, payload, {
-        source: options.source ? String(options.source).trim() : 'claude',
-        agent: options.agent,
-        session: options.session,
-        maxChars: options['max-chars'] ? Number(options['max-chars']) : undefined,
-        when
-      });
-    } catch {
-      response = {};
-    }
-  }
+  const response = targetDir ? await recapFor(targetDir, when, options).catch(() => ({})) : {};
   if (options.json) return response;
   const context = contextOf(response);
   if (logger) logger.log(context || 'hooks:recap: nothing to restore (not a compaction, or no recorded session)');

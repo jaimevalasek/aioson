@@ -26,11 +26,11 @@ const { renderOpencodePlugin, OPENCODE_PLUGIN_SIGNATURE } = require('../lib/open
 const {
   configPaths,
   isAiosonHandler,
-  isAiosonHookEntry,
   allHandlers,
   readJsonForMerge,
   unusableConfig,
   writeFileAtomic,
+  writeScrubbed,
   mergeHookEvents,
   aiosonDefinition,
   scrubHookFile
@@ -110,6 +110,12 @@ function guardAgentFor(options, agentName) {
 
 // ─── Claude Code ─────────────────────────────────────────────────────────────
 
+// One matcher group with one command handler — the shape every Claude Code hook here takes.
+function commandGroup(matcher, command) {
+  const hooks = [{ type: 'command', command }];
+  return matcher ? { matcher, hooks } : { hooks };
+}
+
 function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName) {
   const safeAgentName = normalizeHookAgentName(agentName);
   const safeGuardAgent = normalizeHookAgentName(guardAgent);
@@ -117,66 +123,30 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
 
   const hooks = {
     PostToolUse: [
-      {
-        matcher: 'Write|Edit|MultiEdit',
-        hooks: [{ type: 'command', command: emitCmd }]
-      },
-      {
-        matcher: 'Bash',
-        hooks: [{ type: 'command', command: emitCmd }]
-      },
-      {
-        // `Skill`: an AIOSON agent the model activates itself (`aioson:agent:<id>`,
-        // an autopilot handoff) is recorded as the agent now working.
-        matcher: 'Task|TodoWrite|Skill',
-        hooks: [{ type: 'command', command: emitCmd }]
-      }
+      commandGroup('Write|Edit|MultiEdit', emitCmd),
+      commandGroup('Bash', emitCmd),
+      // `Skill`: an AIOSON agent the model activates itself (`aioson:agent:<id>`,
+      // an autopilot handoff) is recorded as the agent now working.
+      commandGroup('Task|TodoWrite|Skill', emitCmd)
     ],
     // A failing command (non-zero exit) fires this instead of PostToolUse:
     // hooks:emit records it as a failed test step.
-    PostToolUseFailure: [
-      {
-        matcher: 'Bash',
-        hooks: [{ type: 'command', command: emitCmd }]
-      }
-    ],
+    PostToolUseFailure: [commandGroup('Bash', emitCmd)],
     // `/aioson:agent:dev` typed inside the session: records which agent the
     // user activated (the session itself opens without one).
-    UserPromptSubmit: [
-      {
-        hooks: [{ type: 'command', command: emitCmd }]
-      }
-    ],
+    UserPromptSubmit: [commandGroup(null, emitCmd)],
     // The agent's final message is recorded first, then the turn is closed —
     // agent:done in the same process, and only inside an AIOSON project.
-    Stop: [
-      {
-        hooks: [{ type: 'command', command: makeEmitCommand(safeAgentName, 'claude', { then: 'agent:done' }) }]
-      }
-    ],
+    Stop: [commandGroup(null, makeEmitCommand(safeAgentName, 'claude', { then: 'agent:done' }))],
     // Compaction keeps a model-written summary; the hooks keep the facts. The
     // marker bounds the stretch, and the next SessionStart (source `compact`)
     // gets the checkpoint rebuilt from it — no agent has to remember to write.
-    PreCompact: [
-      {
-        hooks: [{ type: 'command', command: emitCmd }]
-      }
-    ],
-    SessionStart: [
-      {
-        matcher: 'compact',
-        hooks: [{ type: 'command', command: makeRecapCommand(safeAgentName, 'claude') }]
-      }
-    ]
+    PreCompact: [commandGroup(null, emitCmd)],
+    SessionStart: [commandGroup('compact', makeRecapCommand(safeAgentName, 'claude'))]
   };
 
   if (includeGuard) {
-    hooks.PreToolUse = [
-      {
-        matcher: 'Write|Edit|MultiEdit|NotebookEdit',
-        hooks: [{ type: 'command', command: makeGuardCommand(safeGuardAgent) }]
-      }
-    ];
+    hooks.PreToolUse = [commandGroup('Write|Edit|MultiEdit|NotebookEdit', makeGuardCommand(safeGuardAgent))];
   }
 
   return hooks;
@@ -314,13 +284,7 @@ async function scrubAntigravityHookFile(filePath, dryRun, logger, label) {
     }
     if (Object.keys(existing.hooks).length === 0) delete existing.hooks;
   }
-  if (!dryRun) {
-    await writeFileAtomic(filePath, JSON.stringify(existing, null, 2));
-    logger.log(`  ✓ ${label} hooks removed — ${filePath}`);
-  } else {
-    logger.log(`  [dry-run] Would remove AIOSON hooks from: ${filePath}`);
-  }
-  return { tool: 'antigravity', path: filePath, removed: true };
+  return writeScrubbed('antigravity', filePath, existing, dryRun, logger, label);
 }
 
 // ─── Codex (OpenAI) ───────────────────────────────────────────────────────────
@@ -640,30 +604,41 @@ async function runHooksUninstall({ args, options = {}, logger }) {
 
 // ─── Default install for init/install/update ─────────────────────────────────
 
+/** The agents AIOSON's handlers in one hooks file name: `{ agent, guard }`, each when present. */
+function hookFileAgents(data) {
+  const found = {};
+  for (const handler of allHandlers(data).filter(isAiosonHandler)) {
+    const match = /--agent='?([a-z][a-z0-9-]*)'?/.exec(handler.command);
+    const key = /^aioson context:guard /.test(handler.command) ? 'guard' : 'agent';
+    if (match && !found[key]) found[key] = match[1];
+  }
+  return found;
+}
+
+/** The agent the installed OpenCode plugin bakes in, or null. */
+async function pluginAgent(pluginPath) {
+  try {
+    const plugin = await fs.readFile(pluginPath, 'utf8');
+    const match = plugin.startsWith(OPENCODE_PLUGIN_SIGNATURE) && /const AGENT = "([a-z][a-z0-9-]*)";/.exec(plugin);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 // The agent a previous install baked into the hooks (and the guard agent of the
 // Claude hooks), so a default reinstall keeps what the user chose instead of
 // resetting it to `dev` — which, for Codex, would also void the trust given in
-// /hooks. Best-effort: nothing found answers {}.
+// /hooks. Best-effort: nothing found answers no agent.
 async function installedHookAgents() {
   const paths = configPaths();
   const found = {};
   for (const file of [paths.claude, paths.codex]) {
-    const { data } = await readJsonForMerge(file);
-    for (const handler of allHandlers(data)) {
-      if (!isAiosonHandler(handler)) continue;
-      const match = /--agent='?([a-z][a-z0-9-]*)'?/.exec(handler.command);
-      if (!match) continue;
-      if (/^aioson context:guard /.test(handler.command)) found.guard = found.guard || match[1];
-      else found.agent = found.agent || match[1];
-    }
+    const agents = hookFileAgents((await readJsonForMerge(file)).data);
+    found.agent = found.agent || agents.agent;
+    found.guard = found.guard || agents.guard;
   }
-  if (!found.agent) {
-    try {
-      const plugin = await fs.readFile(paths.opencode, 'utf8');
-      const match = plugin.startsWith(OPENCODE_PLUGIN_SIGNATURE) && /const AGENT = "([a-z][a-z0-9-]*)";/.exec(plugin);
-      if (match) found.agent = match[1];
-    } catch { /* no plugin */ }
-  }
+  if (!found.agent) found.agent = await pluginAgent(paths.opencode);
   return found;
 }
 
@@ -700,23 +675,19 @@ async function installDefaultHooks({ targetDir, options = {}, logger, t }) {
   }
 }
 
+// The settings-file layer (configPaths, isAiosonHandler, isAiosonHookEntry,
+// readJsonForMerge, mergeHookEvents, writeFileAtomic) is exported by
+// src/lib/hook-settings-files.js, and OPENCODE_PLUGIN_SIGNATURE by
+// src/lib/opencode-plugin.js — one owner each.
 module.exports = {
   runHooksInstall,
   runHooksUninstall,
   installDefaultHooks,
-  installedHookAgents,
   buildClaudeHooks,
   buildCodexHooks,
   buildOpencodePlugin,
   guardAgentFor,
   buildAntigravityHooks,
   scrubAntigravityHookFile,
-  mergeHookEvents,
-  normalizeHookAgentName,
-  isAiosonHookEntry,
-  isAiosonHandler,
-  readJsonForMerge,
-  writeFileAtomic,
-  configPaths,
-  OPENCODE_PLUGIN_SIGNATURE
+  normalizeHookAgentName
 };
