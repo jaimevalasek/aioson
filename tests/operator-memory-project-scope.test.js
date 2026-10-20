@@ -30,6 +30,7 @@ const { regenerateIndex } = require('../src/operator-memory/index-md');
 const { runOpCapture } = require('../src/commands/op-capture');
 const { runOpList } = require('../src/commands/op-list');
 const { runOpPromote } = require('../src/commands/op-promote');
+const { preflightLoad } = require('../src/operator-memory/loader');
 
 const IDENTITY = 'scope-test-bot';
 ensureStorageTree(IDENTITY);
@@ -212,6 +213,20 @@ test('a decision written before scoping (no scope field) stays visible in every 
   const elsewhere = makeCheckout('elsewhere', 'https://github.com/acme/elsewhere.git');
   assert.ok((await listSlugs(elsewhere)).includes(slug));
   assert.equal(readDecision(IDENTITY, slug).scope, undefined);
+});
+
+test('preflightLoad for a project root leaves out decisions scoped to another project', async () => {
+  const api = makeCheckout('api5', 'https://github.com/acme/api5.git');
+  const web = makeCheckout('web5', 'https://github.com/acme/web5.git');
+  const local = await capture(api, { signal: 'correction', quote: 'aqui nada de styled-components', proposal: 'nao usar styled-components neste frontend' });
+  assert.equal(local.scope, 'project');
+  const task = 'migrar o frontend para fora de styled-components';
+  const inApi = preflightLoad(IDENTITY, task, { projectRoot: api, detectConflicts: false });
+  assert.ok(inApi.matches.some((m) => m.slug === local.slug), 'matched where it was said');
+  const inWeb = preflightLoad(IDENTITY, task, { projectRoot: web, detectConflicts: false });
+  assert.ok(!inWeb.matches.some((m) => m.slug === local.slug), 'left out in another project');
+  const anywhere = preflightLoad(IDENTITY, task, { detectConflicts: false });
+  assert.ok(anywhere.matches.some((m) => m.slug === local.slug), 'no project given: every decision, as before');
 });
 
 test('op:promote --scope=project binds a proposal captured before projects were recorded to the current project', async () => {

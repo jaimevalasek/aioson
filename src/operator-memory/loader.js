@@ -13,6 +13,8 @@
  */
 
 const { loadMemoryIndex } = require('./index-md');
+const { readDecision } = require('./decision');
+const { appliesInProject, resolveProjectScope } = require('./project-scope');
 
 const DEFAULT_MAX_MATCHES = 5;
 const STOPWORDS = new Set([
@@ -60,18 +62,43 @@ function matchDecisions(memoryIndex, taskDescription, options = {}) {
     .slice(0, max);
 }
 
+/** The project a preflight runs for: an explicit key, else the root's identity. */
+function projectKeyFor(options) {
+  if (options.projectKey) return String(options.projectKey);
+  if (!options.projectRoot) return null;
+  try { return resolveProjectScope(options.projectRoot).key; } catch { return null; }
+}
+
+/**
+ * Keep the entries that apply in `projectKey`: a project-scoped decision only
+ * where it was said, an unscoped one everywhere. The index line does not carry
+ * the scope, so each entry's decision file is read — the same rule `op:list`
+ * applies at session start.
+ */
+function scopeIndexToProject(identity, index, projectKey) {
+  if (!index || !Array.isArray(index.entries) || !projectKey) return index;
+  const entries = index.entries.filter((entry) => {
+    let decision;
+    try { decision = readDecision(identity, entry.slug); } catch { decision = null; }
+    return appliesInProject(decision, projectKey);
+  });
+  return { ...index, entries };
+}
+
 /**
  * Convenience wrapper combining load + match + conflict detection for preflight use.
  *
  * @param {string} identity — operator identity hash or override
  * @param {string} taskDescription — current task / user goal
- * @param {object} options — { maxMatches, minOverlap, projectRoot, detectConflicts }
+ * @param {object} options — { maxMatches, minOverlap, projectRoot, projectKey, detectConflicts }
  * @returns {{index, matches, conflicts}} — conflicts is [] when projectRoot absent
- *   OR when Phase 4 conflict detection is not requested.
+ *   OR when Phase 4 conflict detection is not requested. With projectRoot or
+ *   projectKey, decisions scoped to another project are left out.
  */
 function preflightLoad(identity, taskDescription, options = {}) {
-  const index = loadMemoryIndex(identity, 'active');
-  if (!index) return { index: null, matches: [], conflicts: [] };
+  const loaded = loadMemoryIndex(identity, 'active');
+  if (!loaded) return { index: null, matches: [], conflicts: [] };
+  const index = scopeIndexToProject(identity, loaded, projectKeyFor(options));
   const matches = matchDecisions(index, taskDescription, options);
 
   let conflicts = [];
@@ -100,6 +127,7 @@ function preflightLoad(identity, taskDescription, options = {}) {
 module.exports = {
   preflightLoad,
   matchDecisions,
+  scopeIndexToProject,
   tokenize,
   DEFAULT_MAX_MATCHES,
   STOPWORDS
