@@ -15,7 +15,11 @@ const { createTranslator } = require('../src/i18n');
 const { runLiveStart } = require('../src/commands/live');
 const { buildEventFromPayload } = require('../src/commands/hooks-emit');
 const { buildClaudeHooks, isAiosonHookEntry } = require('../src/commands/hooks-install');
+const { buildRecapResponse } = require('../src/commands/hooks-recap');
 const { buildCompactionRecap, compactionWindow, HEADER } = require('../src/lib/compaction-recap');
+const {
+  resolveRuntimePaths, openRuntimeDb, startTask, startRun, appendRunEvent, writeAgentSession
+} = require('../src/runtime-store');
 
 const CLI = path.join(__dirname, '..', 'bin', 'aioson.js');
 const silent = { log() {}, error() {} };
@@ -30,18 +34,28 @@ function makeProject() {
   return dir;
 }
 
-function cli(dir, sessionKey, command, payload) {
+function run(dir, sessionKey, argv, input = '') {
   const env = { ...process.env };
   delete env.AIOSON_LIVE_SESSION;
   env.AIOSON_LIVE_SESSION_KEY = sessionKey;
+  return spawnSync(process.execPath, [CLI, argv[0], dir, ...argv.slice(1)], { input, env, encoding: 'utf8' });
+}
+
+function cli(dir, sessionKey, command, payload) {
   const extra = command === 'hooks:recap' ? ['--json'] : [];
-  const result = spawnSync(process.execPath, [CLI, command, dir, '--agent=dev', '--source=claude', ...extra], {
-    input: JSON.stringify(payload),
-    env,
-    encoding: 'utf8'
-  });
+  const result = run(dir, sessionKey, [command, '--agent=dev', '--source=claude', ...extra], JSON.stringify(payload));
   assert.equal(result.status, 0, result.stderr);
   return result.stdout;
+}
+
+function withoutLiveSessionEnv(fn) {
+  const saved = { key: process.env.AIOSON_LIVE_SESSION_KEY, session: process.env.AIOSON_LIVE_SESSION };
+  delete process.env.AIOSON_LIVE_SESSION_KEY;
+  delete process.env.AIOSON_LIVE_SESSION;
+  return Promise.resolve().then(fn).finally(() => {
+    if (saved.key !== undefined) process.env.AIOSON_LIVE_SESSION_KEY = saved.key;
+    if (saved.session !== undefined) process.env.AIOSON_LIVE_SESSION = saved.session;
+  });
 }
 
 test('PreCompact becomes a compaction marker with its trigger', () => {
@@ -99,6 +113,47 @@ test('recap: files outside the project are counted, never listed', () => {
   });
   assert.match(recap, /Files changed, newest first: src\/a\.js; 2 outside the project/);
   assert.doesNotMatch(recap, /probe\.js/);
+});
+
+test('recap: when more than three commands fail, the newest failures are the ones kept', () => {
+  const fail = (name) => ev('step_done', `$ ${name}`, { outcome: 'failed' });
+  const recap = buildCompactionRecap({ events: [fail('a'), fail('b'), fail('c'), fail('d'), fail('a')] });
+  assert.ok(recap.includes('Still failing (latest run): $ a'), 'a failed again last and must be listed');
+  assert.ok(recap.includes('Still failing (latest run): $ d'));
+  assert.ok(!recap.includes('Still failing (latest run): $ b'), 'the oldest failure is the one dropped');
+});
+
+test('hooks:recap reads only the session the hooks write to, never an agent\'s own official run', async () => {
+  const dir = makeProject();
+  try {
+    await withoutLiveSessionEnv(async () => {
+      const { runtimeDir } = resolveRuntimePaths(dir);
+      const { db } = await openRuntimeDb(dir);
+      let runKey;
+      let taskKey;
+      try {
+        taskKey = startTask(db, { title: '@dev', status: 'running', createdBy: 'dev' });
+        runKey = startRun(db, { taskKey, agentName: 'dev', agentKind: 'official', title: '@dev', message: 'Iniciando' });
+        appendRunEvent(db, {
+          runKey, eventType: 'artifact', phase: 'live', status: 'running', message: 'Write: a.js',
+          payload: { file: path.join(dir, 'src', 'a.js') }
+        });
+      } finally {
+        db.close();
+      }
+      // The session file runtime:emit writes for an official agent carries no `source`.
+      const session = { runKey, taskKey, startedAt: new Date().toISOString(), finished: false };
+      await writeAgentSession(runtimeDir, 'dev', session);
+      assert.deepEqual(await buildRecapResponse(dir, { source: 'compact' }, { agent: 'dev' }), {},
+        'hooks:emit would not write there, so there is nothing to rebuild from');
+
+      await writeAgentSession(runtimeDir, 'dev', { ...session, source: 'live' });
+      const out = await buildRecapResponse(dir, { source: 'compact' }, { agent: 'dev' });
+      assert.match(out.hookSpecificOutput.additionalContext, /Files changed, newest first: src\/a\.js/);
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('recap: nothing worth restoring answers null', () => {
@@ -165,6 +220,20 @@ test('end to end: events recorded by the hooks come back after a compaction, and
     assert.match(context, /Files changed, newest first: src\/refund\.js/);
     assert.match(context, /Still failing \(latest run\): \$ npm test → FAIL src\/refund\.test\.js · Tests 1 failed \| 12 passed \(13\)/);
     assert.doesNotMatch(context, /Last test result/, 'the failing run is not repeated as the last result');
+
+    // Harnesses without a post-compaction hook ask for the same checkpoint on
+    // demand, with no hook payload: text for the kernel, bare JSON on request.
+    const text = run(dir, key, ['hooks:recap', '--agent=dev', '--source=codex', '--when=always']);
+    assert.equal(text.status, 0, text.stderr);
+    assert.ok(text.stdout.includes(HEADER), text.stdout);
+    assert.match(text.stdout, /Files changed, newest first: src\/refund\.js/);
+    const neutral = run(dir, key, ['hooks:recap', '--agent=dev', '--source=opencode', '--when=always', '--json']);
+    assert.equal(neutral.status, 0, neutral.stderr);
+    const parsed = JSON.parse(neutral.stdout);
+    assert.equal(parsed.hookSpecificOutput, undefined, 'no Claude envelope for a harness without the hook');
+    assert.match(parsed.additionalContext, /Still failing \(latest run\): \$ npm test/);
+    const refused = run(dir, key, ['hooks:recap', '--agent=dev', '--when=never']);
+    assert.notEqual(refused.status, 0, 'an unknown --when is refused, not treated as a compaction');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

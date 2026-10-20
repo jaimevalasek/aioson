@@ -9,7 +9,7 @@ const { resolveIdentity } = require('../operator-memory/identity');
 const { ensureStorageTree } = require('../operator-memory/storage');
 const { readProposal } = require('../operator-memory/proposal');
 const { promoteProposal } = require('../operator-memory/decision');
-const { VALID_SCOPES } = require('../operator-memory/project-scope');
+const { resolveProjectScope, addProject, VALID_SCOPES, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 async function runOpPromote({ args = [], options = {}, logger }) {
@@ -47,6 +47,24 @@ async function runOpPromote({ args = [], options = {}, logger }) {
     return { ok: false, exitCode: 1, error: err };
   }
 
+  // `--scope=project` means the project this command runs in. A proposal
+  // captured before projects were recorded carries none, and promoting it
+  // project-scoped without one would quietly fall back to operator-wide — the
+  // opposite of what was asked.
+  let project = null;
+  if (requestedScope === SCOPE_PROJECT) {
+    try { project = resolveProjectScope(targetDir); } catch { project = null; }
+    if (!project) {
+      const err = `op:promote — --scope=project needs a project, and none could be identified from ${targetDir}.`;
+      if (options.json) return { ok: false, error: err };
+      if (logger && logger.error) logger.error(err);
+      return { ok: false, exitCode: 1, error: err };
+    }
+    const seen = addProject(proposal.projects, proposal.project_names, project);
+    proposal.projects = seen.keys;
+    proposal.project_names = seen.names;
+  }
+
   let decision;
   try {
     decision = promoteProposal({ identity: resolved.identity, proposal, scope: requestedScope });
@@ -64,7 +82,8 @@ async function runOpPromote({ args = [], options = {}, logger }) {
     meta: { identity_prefix: resolved.identity.slice(0, 8), slug, signal_type: decision.signal_type, category: decision.category, mode: 'manual' }
   });
 
-  const auditLine = `✔ Memory: '${proposal.proposal}'. aioson op:forget ${slug} p/ desfazer.`;
+  const onlyHere = decision.scope === SCOPE_PROJECT && project ? ` (só no projeto ${project.name})` : '';
+  const auditLine = `✔ Memory: '${proposal.proposal}'${onlyHere}. aioson op:forget ${slug} p/ desfazer.`;
   if (options.json) {
     return { ok: true, slug, identity: resolved.identity, category: decision.category, scope: decision.scope || 'operator' };
   }

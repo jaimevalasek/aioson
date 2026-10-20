@@ -94,6 +94,8 @@ O `session:guard` é opcional — o `hooks:emit` já inicia a sessão automatica
 
 A compactação troca a conversa por um resumo que o próprio modelo escreve, e são justamente os detalhes para continuar (arquivos tocados, teste que ainda falha, onde o plano parou) que um resumo perde. Pedir ao agente que anote isso antes é uma instrução em prosa, que perde para a vontade de seguir trabalhando. Os hooks já gravam esses fatos enquanto acontecem; por isso o checkpoint é remontado dos eventos, nunca do modelo. O texto injetado tem no máximo 2.000 caracteres, só linhas inteiras, e vem rotulado como dado gravado (verifique antes de confiar). Um comando que falhou e depois passou não aparece como falhando. Para ver o que seria injetado: `echo '{"source":"compact"}' | aioson hooks:recap .`.
 
+Codex e OpenCode não têm hook pós-compactação, então os kernels deles (`AGENTS.md`, `OPENCODE.md`) mandam o agente rodar `aioson hooks:recap . --when=always` logo depois do `/compact`: a mesma remontagem, impressa em texto (com `--source=codex|opencode --json` vem como `{"additionalContext": …}`). O que entra nesse checkpoint é o que o projeto gravou sem hooks: feature, fase e próximo passo do registro, `continuity.md` e os eventos que os agentes reportam por `runtime:emit`. No Claude Code sem hooks instalados o mesmo comando vale. O `hooks:recap` lê só a sessão em que os hooks escrevem (a do `live:start` ou a que o `hooks:emit` abre sozinho); a run própria de um agente oficial não é lida.
+
 ---
 
 ## context:guard — regras aplicadas na hora da escrita
@@ -427,7 +429,7 @@ codex-bin "implemente o cart"                                   # roda Codex
 aioson agent:done "$PWD" --agent=dev --summary="..."           # fecha sessão
 ```
 
-**Limitação:** sem hooks nativos, não há eventos intermediários (só abertura e fechamento de sessão). Para eventos durante a sessão com Codex, use `devlog:watch` em paralelo.
+**Limitação:** sem hooks nativos, não há eventos intermediários (só abertura e fechamento de sessão). Para eventos durante a sessão com Codex, use `devlog:watch` em paralelo. Depois de um `/compact`, o checkpoint volta por `aioson hooks:recap . --when=always` — o kernel `AGENTS.md` já instrui o agente a rodar isso.
 
 ---
 

@@ -20,13 +20,16 @@ const {
   namesCrossProjectScope,
   normalizeRemoteUrl,
   resolveProjectScope,
-  decideScope
+  decideScope,
+  parseList
 } = require('../src/operator-memory/project-scope');
 const { readDecision, serializeDecision, decisionPath } = require('../src/operator-memory/decision');
+const { captureSignal, readProposal } = require('../src/operator-memory/proposal');
 const { ensureStorageTree, getStorageRoot } = require('../src/operator-memory/storage');
 const { regenerateIndex } = require('../src/operator-memory/index-md');
 const { runOpCapture } = require('../src/commands/op-capture');
 const { runOpList } = require('../src/commands/op-list');
+const { runOpPromote } = require('../src/commands/op-promote');
 
 const IDENTITY = 'scope-test-bot';
 ensureStorageTree(IDENTITY);
@@ -62,7 +65,7 @@ test('namesCrossProjectScope: explicit every-project phrasing in pt-BR, en and e
     'em todos os meus projetos use pnpm',
     'vale para qualquer projeto',
     'Em todos os projetos, nunca commite direto na main',
-    'faça isso em cada projeto',
+    'faça isso em qualquer projeto',
     'independente do projeto',
     'in all my projects prefer vitest',
     'every project should use conventional commits',
@@ -82,6 +85,21 @@ test('namesCrossProjectScope: bare "sempre"/"always" and whole-project phrasing 
     'rode todos os testes do projeto',
     'update all the project files',
     'always run the linter'
+  ]) {
+    assert.equal(namesCrossProjectScope(text), false, text);
+  }
+});
+
+test('namesCrossProjectScope: mentioning other projects by contrast or distribution does not widen', () => {
+  // These say the opposite of "everywhere": widening on them would leak a local
+  // rule into every project. Staying local is the recoverable side.
+  for (const text of [
+    'diferente dos outros projetos, aqui usamos tabs',
+    'unlike other projects, this one uses tabs',
+    'each project has its own config, here we keep it in .env',
+    'cada projeto tem sua config; aqui fica no .env',
+    'en otros proyectos uso npm, aquí pnpm',
+    'cada proyecto tiene su propio lint'
   ]) {
     assert.equal(namesCrossProjectScope(text), false, text);
   }
@@ -194,4 +212,19 @@ test('a decision written before scoping (no scope field) stays visible in every 
   const elsewhere = makeCheckout('elsewhere', 'https://github.com/acme/elsewhere.git');
   assert.ok((await listSlugs(elsewhere)).includes(slug));
   assert.equal(readDecision(IDENTITY, slug).scope, undefined);
+});
+
+test('op:promote --scope=project binds a proposal captured before projects were recorded to the current project', async () => {
+  const api = makeCheckout('api4', 'https://github.com/acme/api4.git');
+  const web = makeCheckout('web4', 'https://github.com/acme/web4.git');
+  const slug = 'legacy-proposal-without-projects';
+  captureSignal({ identity: IDENTITY, slug, signal_type: 'exclusion', quote: 'sem yarn', proposal: 'nunca usar yarn aqui', source_agent: 'dev' });
+  assert.equal(parseList(readProposal(IDENTITY, slug).projects).length, 0, 'the proposal names no project');
+
+  const promoted = await inDir(api, () => runOpPromote({ args: [slug], options: { json: true, scope: 'project' }, logger: silent() }));
+  assert.equal(promoted.ok, true, promoted.error);
+  assert.equal(promoted.scope, 'project', 'never downgraded to operator in silence');
+  assert.equal(readDecision(IDENTITY, slug).projects, resolveProjectScope(api).key);
+  assert.ok((await listSlugs(api)).includes(slug), 'visible where it was promoted');
+  assert.ok(!(await listSlugs(web)).includes(slug), 'hidden elsewhere');
 });

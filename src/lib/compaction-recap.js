@@ -88,7 +88,11 @@ function summarizeWindow(window, targetDir) {
       }
       case 'step_done': {
         const command = oneLine(event.message, 160);
-        if (payload.outcome) lastOutcome.set(command, { outcome: payload.outcome, result: payload.result || null });
+        if (payload.outcome) {
+          // Re-insert so the map follows run order: the cap below keeps the newest failures.
+          lastOutcome.delete(command);
+          lastOutcome.set(command, { outcome: payload.outcome, result: payload.result || null });
+        }
         if (payload.result) lastResult = { command, outcome: payload.outcome || null, result: payload.result };
         break;
       }

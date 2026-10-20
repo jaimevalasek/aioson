@@ -94,8 +94,16 @@ A decision applies only in the project it was said in until it is detected in a 
     if (logger && logger.error) logger.error(err);
     return { ok: false, exitCode: 1, error: err };
   }
-  let project = null;
+  let project;
   try { project = resolveProjectScope(targetDir); } catch { project = null; }
+  // A project scope needs a project to bind to; falling back to operator-wide
+  // would widen exactly the memory the caller asked to keep local.
+  if (requestedScope === SCOPE_PROJECT && !project) {
+    const err = `op:capture — --scope=project needs a project, and none could be identified from ${targetDir}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger && logger.error) logger.error(err);
+    return { ok: false, exitCode: 1, error: err };
+  }
 
   const resolved = resolveIdentity();
   ensureStorageTree(resolved.identity);

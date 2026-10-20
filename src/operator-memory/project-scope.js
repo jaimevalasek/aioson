@@ -33,21 +33,23 @@ const WIDEN_AT_PROJECTS = 2;
 const MAX_PROJECTS = 16;
 const MAX_GIT_WALK = 32;
 
-// Matched on folded text (lowercase, no diacritics). Each pattern names more
-// than one project; "todo o projeto" / "the whole project" stay local.
+// Matched on folded text (lowercase, no diacritics). Each pattern names every
+// project inclusively. "todo o projeto" / "the whole project" stay local, and
+// so do phrasings that mention other projects by contrast or distribution
+// ("unlike other projects, here…", "each project has its own…"): they describe
+// a local rule, and widening on them is the leak this scope exists to stop.
+// Erring toward the project is recoverable (a repeat in a second project
+// widens); erring toward the operator is not.
 const CROSS_PROJECT_MARKERS = [
   /\ball\s+(?:of\s+)?(?:my|our|the)?\s*(?:projects|repos|repositories|codebases)\b/,
-  /\b(?:every|each|any)\s+(?:single\s+)?(?:project|repo|repository|codebase)\b/,
+  /\b(?:every|any)\s+(?:single\s+)?(?:project|repo|repository|codebase)\b/,
   /\bacross\s+(?:all\s+)?(?:my\s+|our\s+)?(?:projects|repos|repositories|codebases)\b/,
-  /\bother\s+projects\b/,
   /\bregardless\s+of\s+(?:the\s+)?project\b/,
   /\b(?:todos|todas)\s+(?:os\s+|as\s+)?(?:meus\s+|minhas\s+|nossos\s+|nossas\s+)?(?:projetos|repositorios|repos)\b/,
-  /\b(?:todo|qualquer|cada)\s+(?:projeto|repositorio|repo)\b/,
-  /\boutros\s+projetos\b/,
+  /\b(?:todo|qualquer)\s+(?:projeto|repositorio|repo)\b/,
   /\b(?:independente(?:mente)?\s+do|seja\s+qual\s+for\s+o)\s+projeto\b/,
   /\btodos\s+(?:los\s+)?(?:mis\s+|nuestros\s+)?(?:proyectos|repositorios)\b/,
-  /\b(?:cualquier|cada)\s+(?:proyecto|repositorio)\b/,
-  /\botros\s+proyectos\b/,
+  /\bcualquier\s+(?:proyecto|repositorio)\b/,
   /\bsin\s+importar\s+el\s+proyecto\b/
 ];
 
@@ -90,7 +92,7 @@ function findGitConfig(startDir) {
   let dir = path.resolve(startDir);
   for (let depth = 0; depth < MAX_GIT_WALK; depth += 1) {
     const dotGit = path.join(dir, '.git');
-    let stat = null;
+    let stat;
     try { stat = fs.statSync(dotGit); } catch { stat = null; }
     if (stat && stat.isDirectory()) return path.join(dotGit, 'config');
     if (stat && stat.isFile()) {
@@ -116,7 +118,7 @@ function findGitConfig(startDir) {
 }
 
 function readRemoteUrls(configPath) {
-  let text = '';
+  let text;
   try { text = fs.readFileSync(configPath, 'utf8'); } catch { return {}; }
   const remotes = {};
   let current = null;
