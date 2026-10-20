@@ -4,20 +4,24 @@
 //
 // OpenCode has no shell hooks: it loads this file from ~/.config/opencode/plugins/
 // at startup and calls the hooks below. They mirror the Claude Code hooks —
-// each write/edit/command and each reply becomes a runtime event (hooks:emit),
-// the prompt that activates an agent is recorded, and a compaction gets the
-// session checkpoint back twice: appended to the compaction prompt and injected
-// into the system prompt of the first turn after it (hooks:recap). Every call
-// is bounded and best-effort; nothing here can throw into OpenCode.
+// each write/edit/patch/command and each reply becomes a runtime event
+// (hooks:emit), the prompt that activates an agent is recorded, and a compaction
+// gets the session checkpoint back twice: appended to the compaction prompt and
+// injected into the system prompt of the first turn after it (hooks:recap).
+// OpenCode awaits every hook, so the telemetry is queued and never awaited — one
+// aioson process at a time, a bounded queue — while a compaction first waits
+// for the queue, so its marker lands after everything recorded before it.
+// Every call is bounded and best-effort; nothing here can throw into OpenCode.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 
 const AGENT = "__AIOSON_AGENT__";
 const SOURCE = "opencode";
 const TIMEOUT_MS = 15000;
 const TAIL_CHARS = 2000;
-const TOOLS = { write: "Write", edit: "Edit", multiedit: "MultiEdit", patch: "MultiEdit", bash: "Bash", task: "Task", todowrite: "TodoWrite" };
+const MAX_QUEUED = 16;
+const TOOLS = { write: "Write", edit: "Edit", multiedit: "MultiEdit", apply_patch: "apply_patch", patch: "apply_patch", bash: "Bash", task: "Task", todowrite: "TodoWrite" };
 
 // An installed project has `.aioson/` with one of these inside; the operator's own
 // `~/.aioson/` (decisions, caches) never does, so a folder under the home directory
@@ -36,6 +40,19 @@ function aiosonProject(start) {
   return null;
 }
 
+// cmd.exe metacharacters, escaped the way src/commands/live.js does for a
+// `.cmd` launch (the cross-spawn algorithm): every argument quoted, every
+// metacharacter carets-escaped — a project folder named "R&D" or "100%" stays
+// one argument instead of splitting the line into a second command.
+const CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
+const escapeCmdCommand = (file) => normalize(file).replace(CMD_META_CHARS, "^$1");
+function escapeCmdArgument(arg) {
+  let text = `${arg}`;
+  text = text.replace(/(?=(\\+?)?)\1"/g, "$1$1\\\"");
+  text = text.replace(/(?=(\\+?)?)\1$/, "$1$1");
+  return `"${text}"`.replace(CMD_META_CHARS, "^$1");
+}
+
 // Run one aioson command with a JSON payload on stdin; resolves to its stdout, "" on any failure or after TIMEOUT_MS.
 function aioson(args, payload, cwd) {
   return new Promise((resolve) => {
@@ -44,10 +61,10 @@ function aioson(args, payload, cwd) {
     const stdio = ["pipe", "pipe", "ignore"];
     let child;
     try {
-      // `aioson` is a .cmd shim on Windows, which only the shell can start: it gets
-      // one command line with the paths quoted. Elsewhere no shell is involved.
+      // `aioson` is a .cmd shim on Windows, which only cmd.exe can start: it gets
+      // one escaped command line. Elsewhere no shell is involved.
       child = process.platform === "win32"
-        ? spawn([bin, ...argv.map((arg) => (/\s/.test(arg) ? `"${arg}"` : arg))].join(" "), { cwd, shell: true, windowsHide: true, stdio })
+        ? spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `"${[escapeCmdCommand(bin), ...argv.map(escapeCmdArgument)].join(" ")}"`], { cwd, windowsHide: true, windowsVerbatimArguments: true, stdio })
         : spawn(bin, argv, { cwd, stdio });
     } catch {
       resolve("");
@@ -70,10 +87,21 @@ function aioson(args, payload, cwd) {
   });
 }
 
-const emit = (project, payload) => aioson(["hooks:emit", project, `--agent=${AGENT}`, `--source=${SOURCE}`], payload, project);
+const emit = (project, payload, extra = []) => aioson(["hooks:emit", project, `--agent=${AGENT}`, `--source=${SOURCE}`, ...extra], payload, project);
 
-async function recap(project) {
-  const out = await aioson(["hooks:recap", project, `--agent=${AGENT}`, `--source=${SOURCE}`, "--when=always", "--json"], null, project);
+// Telemetry never holds OpenCode: one aioson at a time, at most MAX_QUEUED waiting
+// (a stalled aioson drops events instead of piling up processes).
+let tail = Promise.resolve();
+let queued = 0;
+function enqueue(task) {
+  if (queued >= MAX_QUEUED) return;
+  queued += 1;
+  tail = tail.then(task).catch(() => {}).then(() => { queued -= 1; });
+}
+
+async function recap(project, sessionID) {
+  const session = sessionID ? [`--session=${sessionID}`] : [];
+  const out = await aioson(["hooks:recap", project, `--agent=${AGENT}`, `--source=${SOURCE}`, "--when=always", ...session, "--json"], null, project);
   try {
     return String(JSON.parse(out).additionalContext || "");
   } catch {
@@ -82,7 +110,16 @@ async function recap(project) {
 }
 
 const textOf = (parts) => (Array.isArray(parts) ? parts : []).filter((part) => part && part.type === "text" && part.text).map((part) => part.text).join("\n");
-const tail = (text) => String(text || "").slice(-TAIL_CHARS);
+const tail2k = (text) => String(text || "").slice(-TAIL_CHARS);
+
+// The patch text of an apply_patch call, or one rebuilt from the files OpenCode reports changing.
+function patchTextOf(args, output) {
+  if (typeof args.patchText === "string" && args.patchText) return args.patchText;
+  const files = (output.metadata && Array.isArray(output.metadata.files) ? output.metadata.files : [])
+    .map((file) => file && (file.relativePath || file.filePath))
+    .filter(Boolean);
+  return files.length ? `*** Begin Patch\n${files.map((file) => `*** Update File: ${file}`).join("\n")}\n*** End Patch` : "";
+}
 
 // Shapes an OpenCode tool call like Claude Code's PostToolUse payload, or null for tools that are not recorded.
 function toolPayload(input, output) {
@@ -95,10 +132,12 @@ function toolPayload(input, output) {
     payload.tool_input = { command: args.command || "" };
     if (Number.isFinite(exit) && exit !== 0) {
       payload.hook_event_name = "PostToolUseFailure";
-      payload.error = `Exit code ${exit}\n${tail(output.output)}`;
+      payload.error = `Exit code ${exit}\n${tail2k(output.output)}`;
     } else {
-      payload.tool_response = { stdout: tail(output.output) };
+      payload.tool_response = { stdout: tail2k(output.output) };
     }
+  } else if (toolName === "apply_patch") {
+    payload.tool_input = { command: patchTextOf(args, output) };
   } else if (toolName === "TodoWrite") {
     payload.tool_input = { todos: Array.isArray(args.todos) ? args.todos : [] };
   } else if (toolName === "Task") {
@@ -120,21 +159,22 @@ export const AiosonPlugin = async ({ directory, worktree }) => {
     // The prompt that activates an agent (/dev, @dev) is recorded on the session.
     "chat.message": safe(async (input, output) => {
       const prompt = textOf(output.parts);
-      if (prompt) await emit(project, { hook_event_name: "UserPromptSubmit", prompt, session_id: input.sessionID });
+      if (prompt) enqueue(() => emit(project, { hook_event_name: "UserPromptSubmit", prompt, session_id: input.sessionID }));
     }),
-    // Writes, edits, commands, task lists and sub-tasks.
+    // Writes, edits, patches, commands, task lists and sub-tasks.
     "tool.execute.after": safe(async (input, output) => {
       const payload = toolPayload(input, output);
-      if (payload) await emit(project, payload);
+      if (payload) enqueue(() => emit(project, payload));
     }),
     // The agent's reply, kept as its own claim.
     "experimental.text.complete": safe(async (input, output) => {
-      if (String(output.text || "").trim()) await emit(project, { hook_event_name: "Stop", last_assistant_message: output.text, session_id: input.sessionID });
+      if (String(output.text || "").trim()) enqueue(() => emit(project, { hook_event_name: "Stop", last_assistant_message: output.text, session_id: input.sessionID }));
     }),
-    // Compaction: mark the boundary, then hand the checkpoint to the summarizer.
+    // Compaction: everything queued lands first, then the boundary, then the checkpoint for the summarizer.
     "experimental.session.compacting": safe(async (input, output) => {
+      await tail;
       await emit(project, { hook_event_name: "PreCompact", session_id: input.sessionID });
-      const text = await recap(project);
+      const text = await recap(project, input.sessionID);
       if (text && Array.isArray(output.context)) output.context.push(text);
       compacted.add(input.sessionID);
     }),
@@ -145,7 +185,7 @@ export const AiosonPlugin = async ({ directory, worktree }) => {
     "experimental.chat.system.transform": safe(async (input, output) => {
       if (!compacted.has(input.sessionID)) return;
       compacted.delete(input.sessionID);
-      const text = await recap(project);
+      const text = await recap(project, input.sessionID);
       if (text && Array.isArray(output.system)) output.system.push(text);
     })
   };

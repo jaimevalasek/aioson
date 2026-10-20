@@ -8,10 +8,10 @@
  * automatically emits a runtime event to SQLite — no manual aioson calls needed.
  *
  * Supported tools:
- *   --tool=claude      → ~/.claude/settings.json
+ *   --tool=claude      → ~/.claude/settings.json  ($CLAUDE_CONFIG_DIR when set)
  *   --tool=antigravity → ~/.gemini/antigravity/hooks.json  (+ .agents/hooks.json in project)
- *   --tool=codex       → ~/.codex/hooks.json  (native hooks; Codex asks you to trust them once via /hooks)
- *   --tool=opencode    → ~/.config/opencode/plugins/aioson.js  (a plugin on OpenCode's hook API)
+ *   --tool=codex       → ~/.codex/hooks.json  ($CODEX_HOME when set; Codex asks you to trust them once via /hooks)
+ *   --tool=opencode    → ~/.config/opencode/plugins/aioson.js  ($XDG_CONFIG_HOME when set; a plugin on OpenCode's hook API)
  *   --tool=all         → installs for all detected tools
  */
 
@@ -21,27 +21,30 @@ const os = require('node:os');
 const { getAgentDefinition, normalizeAgentName } = require('../agents');
 const { resolveTargetDir } = require('../lib/project-root');
 const { renderOpencodePlugin, OPENCODE_PLUGIN_SIGNATURE } = require('../lib/opencode-plugin');
+// Where each harness keeps its hooks, which handler is AIOSON's, and the safe
+// read/merge/write of those files (src/lib/hook-settings-files.js).
+const {
+  configPaths,
+  isAiosonHandler,
+  isAiosonHookEntry,
+  allHandlers,
+  readJsonForMerge,
+  unusableConfig,
+  writeFileAtomic,
+  mergeHookEvents,
+  aiosonDefinition,
+  scrubHookFile
+} = require('../lib/hook-settings-files');
 
 const HOOK_AGENT_NAME_RE = /^[a-z][a-z0-9-]*$/;
 const HOOK_TIMEOUT_SECONDS = 30;
-
-// ─── Config file paths ────────────────────────────────────────────────────────
+// Codex caps a SessionEnd hook at 3 s (it clamps a longer timeout and warns at
+// every start), so the end of a session is recorded by the lean hooks:emit.
+const SESSION_END_TIMEOUT_SECONDS = 3;
 
 // Resolved per call, never at load: tests point the home at a temporary directory.
 function homeDir() {
   return os.homedir();
-}
-
-function configPaths() {
-  const home = homeDir();
-  return {
-    claude: path.join(home, '.claude', 'settings.json'),
-    antigravity: path.join(home, '.gemini', 'antigravity', 'hooks.json'),
-    antigravity_workspace: '.agents/hooks.json', // relative to project
-    codex: path.join(home, '.codex', 'hooks.json'),
-    codex_wrapper: path.join(home, '.codex', 'aioson-wrapper.sh'), // pre-native-hooks workaround
-    opencode: path.join(home, '.config', 'opencode', 'plugins', 'aioson.js')
-  };
 }
 
 // ─── Hook command templates ───────────────────────────────────────────────────
@@ -69,8 +72,12 @@ function shellQuote(value) {
 // it as a starting point and walks up to the nearest `.aioson/` (see
 // `src/lib/project-root.js`). Commands that write refuse to run outside a
 // project rather than scaffolding a store in whatever directory was current.
-function makeEmitCommand(agentName, source) {
-  return `aioson hooks:emit "$PWD" --agent=${shellQuote(agentName)} --source=${shellQuote(source)} 2>/dev/null || true`;
+// `then` closes the turn in-process after the event (`--then=agent:done`);
+// `extra` carries further flags (`--event=SessionEnd`).
+function makeEmitCommand(agentName, source, { then = null, extra = [] } = {}) {
+  const thenFlag = then ? ` --then=${then}` : '';
+  const extraFlags = extra.length ? ` ${extra.join(' ')}` : '';
+  return `aioson hooks:emit "$PWD"${thenFlag} --agent=${shellQuote(agentName)} --source=${shellQuote(source)}${extraFlags} 2>/dev/null || true`;
 }
 
 function makeDoneCommand(agentName) {
@@ -91,95 +98,22 @@ function makeGuardCommand(agentName) {
   return `aioson context:guard "$PWD" --tool=claude --agent=${shellQuote(agentName)} --json 2>/dev/null || true`;
 }
 
-// ─── Claude Code ─────────────────────────────────────────────────────────────
-
-// True for any hook entry AIOSON owns, so reinstall/uninstall can scrub them
-// without disturbing user-authored hooks.
-const AIOSON_HOOK_SIGNATURES = [
-  'aioson hooks:emit',
-  'aioson hooks:recap',
-  'aioson agent:done',
-  'aioson context:guard',
-  'aioson live:start'
-];
-
-function isAiosonHookEntry(entry) {
-  const cmd = entry?.hooks?.[0]?.command || entry?.command || '';
-  return AIOSON_HOOK_SIGNATURES.some((sig) => cmd.includes(sig));
-}
-
-// Read a JSON config as the base of a merge. A missing file is a fresh start,
-// but a file that exists and does not parse must abort the merge for that
-// target: writing "merged" hooks over content we could not read would replace
-// the user's whole settings file with a hooks-only object.
-async function readJsonForMerge(filePath) {
-  let raw;
-  try {
-    raw = await fs.readFile(filePath, 'utf8');
-  } catch {
-    return { data: {}, corrupted: false };
-  }
-  try {
-    return { data: JSON.parse(raw), corrupted: false };
-  } catch {
-    return { data: null, corrupted: true };
-  }
-}
-
-// Merge AIOSON hook groups into a Claude-shaped settings object (`hooks` →
-// event → groups), keeping the user's own entries: previous AIOSON entries are
-// scrubbed first, so a reinstall never duplicates and an event dropped from
-// the build disappears.
-function mergeHookEvents(existing, newHooks) {
-  const merged = { ...(existing || {}) };
-  merged.hooks = { ...(merged.hooks || {}) };
-  for (const event of Object.keys(merged.hooks)) {
-    merged.hooks[event] = (merged.hooks[event] || []).filter((entry) => !isAiosonHookEntry(entry));
-    if (merged.hooks[event].length === 0) delete merged.hooks[event];
-  }
-  for (const [event, hookList] of Object.entries(newHooks)) {
-    merged.hooks[event] = [...(merged.hooks[event] || []), ...hookList];
-  }
-  return merged;
-}
-
-// Remove AIOSON entries from a Claude-shaped hooks file, leaving user hooks alone.
-async function scrubHookFile(tool, filePath, dryRun, logger, label) {
-  let existing;
-  try {
-    existing = JSON.parse(await fs.readFile(filePath, 'utf8'));
-  } catch {
-    logger.log(`  ${label} hooks not found — nothing to remove`);
-    return { tool, path: filePath, removed: false };
-  }
-  if (existing && existing.hooks) {
-    for (const event of Object.keys(existing.hooks)) {
-      existing.hooks[event] = (existing.hooks[event] || []).filter((entry) => !isAiosonHookEntry(entry));
-      if (existing.hooks[event].length === 0) delete existing.hooks[event];
-    }
-    if (Object.keys(existing.hooks).length === 0) delete existing.hooks;
-  }
-  if (!dryRun) {
-    await fs.writeFile(filePath, JSON.stringify(existing, null, 2), 'utf8');
-    logger.log(`  ✓ ${label} hooks removed — ${filePath}`);
-  } else {
-    logger.log(`  [dry-run] Would remove AIOSON hooks from: ${filePath}`);
-  }
-  return { tool, path: filePath, removed: true };
-}
-
 // The guard judges a write with the rules of the agent acting at that moment.
 // A default install (no `--agent`) bakes `auto`, and the guard resolves the
-// active agent at runtime; telemetry hooks keep the install-time agent.
+// active agent at runtime; telemetry hooks keep the install-time agent. A
+// default reinstall (init/install/update) passes the guard agent it found
+// installed (`guard-agent`), so it keeps what the user chose.
 function guardAgentFor(options, agentName) {
+  if (options && options['guard-agent']) return String(options['guard-agent']);
   return options && options.agent ? agentName : 'auto';
 }
+
+// ─── Claude Code ─────────────────────────────────────────────────────────────
 
 function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName) {
   const safeAgentName = normalizeHookAgentName(agentName);
   const safeGuardAgent = normalizeHookAgentName(guardAgent);
   const emitCmd = makeEmitCommand(safeAgentName, 'claude');
-  const doneCmd = makeDoneCommand(safeAgentName);
 
   const hooks = {
     PostToolUse: [
@@ -192,7 +126,9 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
         hooks: [{ type: 'command', command: emitCmd }]
       },
       {
-        matcher: 'Task|TodoWrite',
+        // `Skill`: an AIOSON agent the model activates itself (`aioson:agent:<id>`,
+        // an autopilot handoff) is recorded as the agent now working.
+        matcher: 'Task|TodoWrite|Skill',
         hooks: [{ type: 'command', command: emitCmd }]
       }
     ],
@@ -211,11 +147,11 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
         hooks: [{ type: 'command', command: emitCmd }]
       }
     ],
-    // The agent's final message is recorded first, then the turn is closed;
-    // one command so the order holds.
+    // The agent's final message is recorded first, then the turn is closed —
+    // agent:done in the same process, and only inside an AIOSON project.
     Stop: [
       {
-        hooks: [{ type: 'command', command: `${emitCmd}; ${doneCmd}` }]
+        hooks: [{ type: 'command', command: makeEmitCommand(safeAgentName, 'claude', { then: 'agent:done' }) }]
       }
     ],
     // Compaction keeps a model-written summary; the hooks keep the facts. The
@@ -248,22 +184,19 @@ function buildClaudeHooks(agentName, includeGuard = true, guardAgent = agentName
 
 async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true, guardAgent = agentName) {
   const configPath = configPaths().claude;
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
 
-  const { data: existing, corrupted } = await readJsonForMerge(configPath);
-  if (corrupted) {
-    logger.log(`  ⚠ Claude Code — ${configPath} exists but is not valid JSON; leaving it untouched. Fix the file and re-run: aioson hooks:install`);
-    return { tool: 'claude', configPath, skipped: 'invalid-config' };
-  }
+  const read = await readJsonForMerge(configPath);
+  const skipped = unusableConfig(read, 'Claude Code', configPath, logger);
+  if (skipped) return { tool: 'claude', configPath, skipped };
 
   const newHooks = buildClaudeHooks(agentName, includeGuard, guardAgent);
   // Merge: add AIOSON hooks without removing the user's own. A previously
   // installed guard hook is scrubbed too, so a reinstall with --no-guard
   // actually removes it.
-  const merged = mergeHookEvents(existing, newHooks);
+  const merged = mergeHookEvents(read.data, newHooks);
 
   if (!dryRun) {
-    await fs.writeFile(configPath, JSON.stringify(merged, null, 2), 'utf8');
+    await writeFileAtomic(configPath, JSON.stringify(merged, null, 2));
     logger.log(`  ✓ Claude Code — ${configPath}`);
   } else {
     logger.log(`  [dry-run] Would write: ${configPath}`);
@@ -271,7 +204,7 @@ async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true
     if (includeGuard) {
       logger.log(`    PreToolUse (Write|Edit|MultiEdit|NotebookEdit) → context:guard`);
     }
-    logger.log(`    PostToolUse (Write|Edit|MultiEdit|Bash|Task|TodoWrite) → hooks:emit`);
+    logger.log(`    PostToolUse (Write|Edit|MultiEdit|Bash|Task|TodoWrite|Skill) → hooks:emit`);
     logger.log(`    PostToolUseFailure (Bash) → hooks:emit`);
     logger.log(`    UserPromptSubmit → hooks:emit (agent activated in the session)`);
     logger.log(`    Stop → hooks:emit (final message) + agent:done`);
@@ -309,29 +242,25 @@ async function installAntigravityHooks(agentName, projectDir, dryRun, logger) {
   const hooks = buildAntigravityHooks(agentName);
 
   if (!dryRun) {
-    await fs.mkdir(path.dirname(globalPath), { recursive: true });
-    await fs.mkdir(path.dirname(workspacePath), { recursive: true });
     const skipped = [];
 
     // Global hooks
     const globalRead = await readJsonForMerge(globalPath);
-    if (globalRead.corrupted) {
+    if (unusableConfig(globalRead, 'Antigravity global', globalPath, logger)) {
       skipped.push('global');
-      logger.log(`  ⚠ Antigravity global — ${globalPath} exists but is not valid JSON; leaving it untouched. Fix the file and re-run: aioson hooks:install`);
     } else {
       const mergedGlobal = mergeAntigravityHooks(globalRead.data, hooks);
-      await fs.writeFile(globalPath, JSON.stringify(mergedGlobal, null, 2), 'utf8');
+      await writeFileAtomic(globalPath, JSON.stringify(mergedGlobal, null, 2));
       logger.log(`  ✓ Antigravity global — ${globalPath}`);
     }
 
     // Workspace hooks (project-scoped, takes priority)
     const wsRead = await readJsonForMerge(workspacePath);
-    if (wsRead.corrupted) {
+    if (unusableConfig(wsRead, 'Antigravity workspace', workspacePath, logger)) {
       skipped.push('workspace');
-      logger.log(`  ⚠ Antigravity workspace — ${workspacePath} exists but is not valid JSON; leaving it untouched. Fix the file and re-run: aioson hooks:install`);
     } else {
       const mergedWs = mergeAntigravityHooks(wsRead.data, hooks);
-      await fs.writeFile(workspacePath, JSON.stringify(mergedWs, null, 2), 'utf8');
+      await writeFileAtomic(workspacePath, JSON.stringify(mergedWs, null, 2));
       logger.log(`  ✓ Antigravity workspace — ${workspacePath}`);
     }
 
@@ -386,7 +315,7 @@ async function scrubAntigravityHookFile(filePath, dryRun, logger, label) {
     if (Object.keys(existing.hooks).length === 0) delete existing.hooks;
   }
   if (!dryRun) {
-    await fs.writeFile(filePath, JSON.stringify(existing, null, 2), 'utf8');
+    await writeFileAtomic(filePath, JSON.stringify(existing, null, 2));
     logger.log(`  ✓ ${label} hooks removed — ${filePath}`);
   } else {
     logger.log(`  [dry-run] Would remove AIOSON hooks from: ${filePath}`);
@@ -399,17 +328,23 @@ async function scrubAntigravityHookFile(filePath, dryRun, logger, label) {
 // Codex hooks (stable, on by default) read Claude's shape — `~/.codex/hooks.json`
 // with the events under `hooks`, matcher groups and command handlers — and send
 // the same stdin fields, so the emit/recap commands are shared. Differences:
-// a failing command still arrives as PostToolUse (no PostToolUseFailure; the
-// exit code travels in tool_response), file edits are the `apply_patch` tool
-// and the plan tool is `update_plan` (hooks:emit reads both), and the session
-// end has its own SessionEnd event. Codex runs `commandWindows` on Windows,
-// where "$PWD" and `|| true` mean nothing; the agent name is validated
-// kebab-case, so it needs no quoting there. A new or changed hook runs only
-// after the user trusts it (`/hooks` inside Codex) — by design, not ours to
-// grant.
+// a failing command still arrives as PostToolUse (no PostToolUseFailure, and the
+// output text carries no exit code), file edits are the `apply_patch` tool and
+// the plan tool is `update_plan` (hooks:emit reads both), and the session end
+// has its own SessionEnd event. Codex runs `commandWindows` through
+// `cmd.exe /C` on Windows, where "$PWD" and `|| true` mean nothing: those lines
+// end with `2>nul & exit /b 0`, so a missing `aioson` or a crash is never a
+// failed hook on every tool call. The agent name is validated kebab-case, so it
+// needs no quoting there.
+//
+// Telemetry handlers run `async` (Codex keeps going while they record); the
+// compaction marker and the checkpoint stay synchronous, so the marker lands
+// before the summary and the checkpoint before the next model request. A new or
+// changed hook runs only after the user trusts it (`/hooks` inside Codex) — by
+// design, not ours to grant — so every handler change ships in one release.
 function buildCodexHooks(agentName) {
   const safeAgentName = normalizeHookAgentName(agentName);
-  const windows = (parts) => parts.join(' ');
+  const windows = (parts) => `${parts.join(' ')} 2>nul & exit /b 0`;
   const handler = (spec, extra = {}) => ({ type: 'command', timeout: HOOK_TIMEOUT_SECONDS, ...spec, ...extra });
   const group = (matcher, hooks) => (matcher ? { matcher, hooks } : { hooks });
   const emit = {
@@ -418,65 +353,88 @@ function buildCodexHooks(agentName) {
   };
 
   return {
-    PostToolUse: [group('apply_patch|Bash|update_plan', [handler(emit, { statusMessage: 'AIOSON: recording' })])],
-    UserPromptSubmit: [group(null, [handler(emit)])],
+    PostToolUse: [group('apply_patch|Bash|update_plan', [handler(emit, { async: true })])],
+    UserPromptSubmit: [group(null, [handler(emit, { async: true })])],
     // The final message of a turn; the session itself closes at SessionEnd.
-    Stop: [group(null, [handler(emit)])],
+    Stop: [group(null, [handler(emit, { async: true })])],
     PreCompact: [group(null, [handler(emit)])],
     SessionStart: [group('compact', [handler({
       command: makeRecapCommand(safeAgentName, 'codex'),
       commandWindows: windows(['aioson hooks:recap .', `--agent=${safeAgentName}`, '--source=codex', '--json'])
     }, { statusMessage: 'AIOSON: restoring the session checkpoint' })])],
-    // Codex defaults SessionEnd handlers to a 1 s timeout; closing the run takes longer.
+    // Records the end and closes the hooks session — no done-gates within Codex's 3 s.
     SessionEnd: [group(null, [handler({
-      command: makeDoneCommand(safeAgentName),
-      commandWindows: windows(['aioson agent:done .', `--agent=${safeAgentName}`, '--summary="Session ended via codex hook"'])
-    }, { timeout: 20 })])]
+      command: makeEmitCommand(safeAgentName, 'codex', { extra: ['--event=SessionEnd'] }),
+      commandWindows: windows(['aioson hooks:emit .', `--agent=${safeAgentName}`, '--source=codex', '--event=SessionEnd'])
+    }, { timeout: SESSION_END_TIMEOUT_SECONDS })])]
   };
 }
 
-async function removeLegacyCodexWrapper(wrapperPath) {
+const LEGACY_WRAPPER_SIGNATURE = '# AIOSON session wrapper for Codex CLI';
+const CODEX_WRAPPER_PASSTHROUGH = [
+  '#!/bin/bash',
+  '# AIOSON: retired Codex wrapper. Codex runs the native hooks in hooks.json now;',
+  '# this file only passes through, so a shell alias that still points here keeps',
+  '# opening Codex. Drop the `alias codex=...` line from your shell rc, then delete it.',
+  'echo "aioson: $0 is deprecated (Codex runs the native AIOSON hooks); remove its alias from your shell rc." >&2',
+  'if command -v codex-bin >/dev/null 2>&1; then exec codex-bin "$@"; fi',
+  'exec codex "$@"',
+  ''
+].join('\n');
+
+// The pre-native-hooks wrapper becomes a pass-through instead of disappearing:
+// the old installer told users to alias `codex` to it, and deleting it left
+// that alias pointing at nothing. A file that is not that wrapper is left alone.
+async function retireLegacyCodexWrapper(wrapperPath) {
+  let content;
   try {
-    await fs.unlink(wrapperPath);
-    return true;
+    content = await fs.readFile(wrapperPath, 'utf8');
   } catch {
     return false;
   }
+  if (!content.includes(LEGACY_WRAPPER_SIGNATURE)) return false;
+  await writeFileAtomic(wrapperPath, CODEX_WRAPPER_PASSTHROUGH);
+  await fs.chmod(wrapperPath, 0o755).catch(() => {});
+  return true;
 }
 
 async function installCodexHooks(agentName, dryRun, logger) {
   const paths = configPaths();
   const configPath = paths.codex;
-  const { data: existing, corrupted } = await readJsonForMerge(configPath);
-  if (corrupted) {
-    logger.log(`  ⚠ Codex — ${configPath} exists but is not valid JSON; leaving it untouched. Fix the file and re-run: aioson hooks:install`);
-    return { tool: 'codex', configPath, skipped: 'invalid-config' };
-  }
+  const read = await readJsonForMerge(configPath);
+  const skipped = unusableConfig(read, 'Codex', configPath, logger);
+  if (skipped) return { tool: 'codex', configPath, skipped };
 
   const newHooks = buildCodexHooks(agentName);
-  const merged = mergeHookEvents(existing, newHooks);
+  const merged = mergeHookEvents(read.data, newHooks);
+  // Codex keeps trust by each hook's definition and position: an unchanged set
+  // is left byte for byte, so the review the user gave in /hooks still holds.
+  const unchanged = aiosonDefinition(read.data) === aiosonDefinition(merged);
 
   if (!dryRun) {
-    await fs.mkdir(path.dirname(configPath), { recursive: true });
-    await fs.writeFile(configPath, JSON.stringify(merged, null, 2), 'utf8');
-    logger.log(`  ✓ Codex — ${configPath}`);
-    logger.log('  ⚠ Codex runs a new or changed hook only after you trust it: open Codex and run /hooks once (automation may pass --dangerously-bypass-hook-trust).');
-    if (await removeLegacyCodexWrapper(paths.codex_wrapper)) {
-      logger.log(`  ✓ Legacy Codex wrapper removed — ${paths.codex_wrapper} (native hooks replace it; drop its alias from your shell rc)`);
+    if (unchanged) {
+      logger.log(`  ✓ Codex — ${configPath} (AIOSON hooks unchanged; the trust given in /hooks still holds)`);
+    } else {
+      await writeFileAtomic(configPath, JSON.stringify(merged, null, 2));
+      logger.log(`  ✓ Codex — ${configPath}`);
+      logger.log('  ⚠ Codex runs a new or changed hook only after you trust it: open Codex and run /hooks once — one review covers every AIOSON hook this version changed (automation may pass --dangerously-bypass-hook-trust).');
+    }
+    if (await retireLegacyCodexWrapper(paths.codex_wrapper)) {
+      logger.log(`  ✓ Legacy Codex wrapper retired — ${paths.codex_wrapper} now only passes through to codex (drop its alias from your shell rc)`);
     }
   } else {
-    logger.log(`  [dry-run] Would write: ${configPath}`);
+    logger.log(`  [dry-run] Would write: ${configPath}${unchanged ? ' (unchanged)' : ''}`);
     logger.log('  Hooks to add:');
-    logger.log('    PostToolUse (apply_patch|Bash|update_plan) → hooks:emit');
-    logger.log('    UserPromptSubmit → hooks:emit (agent activated in the session)');
-    logger.log('    Stop → hooks:emit (final message)');
+    logger.log('    PostToolUse (apply_patch|Bash|update_plan) → hooks:emit (async)');
+    logger.log('    UserPromptSubmit → hooks:emit (agent activated in the session, async)');
+    logger.log('    Stop → hooks:emit (final message, async)');
     logger.log('    PreCompact → hooks:emit (compaction marker)');
     logger.log('    SessionStart (compact) → hooks:recap (session checkpoint)');
-    logger.log('    SessionEnd → agent:done');
+    logger.log('    SessionEnd → hooks:emit --event=SessionEnd (closes the hooks session)');
     logger.log('  After installing, trust the hooks once with /hooks inside Codex.');
   }
 
-  return { tool: 'codex', configPath, hooks: newHooks };
+  return { tool: 'codex', configPath, hooks: newHooks, unchanged };
 }
 
 // ─── OpenCode ────────────────────────────────────────────────────────────────
@@ -507,8 +465,7 @@ async function installOpencodeHooks(agentName, dryRun, logger) {
     return { tool: 'opencode', pluginPath, skipped: 'foreign-file' };
   }
   if (!dryRun) {
-    await fs.mkdir(path.dirname(pluginPath), { recursive: true });
-    await fs.writeFile(pluginPath, source, 'utf8');
+    await writeFileAtomic(pluginPath, source);
     logger.log(`  ✓ OpenCode plugin — ${pluginPath}`);
     logger.log('  ⚠ OpenCode loads plugins at startup: restart it to pick the plugin up.');
   } else {
@@ -542,11 +499,12 @@ async function removeOpencodePlugin(pluginPath, dryRun, logger) {
 async function detectInstalledTools() {
   const detected = [];
   const home = homeDir();
+  const paths = configPaths();
   const checks = [
-    { tool: 'claude', path: path.join(home, '.claude') },
+    { tool: 'claude', path: path.dirname(paths.claude) },
     { tool: 'antigravity', path: path.join(home, '.gemini', 'antigravity') },
-    { tool: 'codex', path: path.join(home, '.codex') },
-    { tool: 'opencode', path: path.join(home, '.config', 'opencode') }
+    { tool: 'codex', path: path.dirname(paths.codex) },
+    { tool: 'opencode', path: path.dirname(path.dirname(paths.opencode)) }
   ];
 
   for (const { tool, path: p } of checks) {
@@ -666,8 +624,8 @@ async function runHooksUninstall({ args, options = {}, logger }) {
       ));
     } else if (t === 'codex') {
       results.push(await scrubHookFile('codex', paths.codex, dryRun, logger, 'Codex'));
-      if (!dryRun && await removeLegacyCodexWrapper(paths.codex_wrapper)) {
-        logger.log(`  ✓ Legacy Codex wrapper removed — ${paths.codex_wrapper} (drop its alias from your shell rc if you added one)`);
+      if (!dryRun && await retireLegacyCodexWrapper(paths.codex_wrapper)) {
+        logger.log(`  ✓ Legacy Codex wrapper retired — ${paths.codex_wrapper} now only passes through to codex (drop its alias from your shell rc)`);
       }
     } else if (t === 'opencode') {
       results.push(await removeOpencodePlugin(paths.opencode, dryRun, logger));
@@ -682,11 +640,39 @@ async function runHooksUninstall({ args, options = {}, logger }) {
 
 // ─── Default install for init/install/update ─────────────────────────────────
 
+// The agent a previous install baked into the hooks (and the guard agent of the
+// Claude hooks), so a default reinstall keeps what the user chose instead of
+// resetting it to `dev` — which, for Codex, would also void the trust given in
+// /hooks. Best-effort: nothing found answers {}.
+async function installedHookAgents() {
+  const paths = configPaths();
+  const found = {};
+  for (const file of [paths.claude, paths.codex]) {
+    const { data } = await readJsonForMerge(file);
+    for (const handler of allHandlers(data)) {
+      if (!isAiosonHandler(handler)) continue;
+      const match = /--agent='?([a-z][a-z0-9-]*)'?/.exec(handler.command);
+      if (!match) continue;
+      if (/^aioson context:guard /.test(handler.command)) found.guard = found.guard || match[1];
+      else found.agent = found.agent || match[1];
+    }
+  }
+  if (!found.agent) {
+    try {
+      const plugin = await fs.readFile(paths.opencode, 'utf8');
+      const match = plugin.startsWith(OPENCODE_PLUGIN_SIGNATURE) && /const AGENT = "([a-z][a-z0-9-]*)";/.exec(plugin);
+      if (match) found.agent = match[1];
+    } catch { /* no plugin */ }
+  }
+  return found;
+}
+
 // Best-effort hooks install the lifecycle commands run by default: honors
 // --no-hooks and dry-run, resolves the hooks target from the command's --tool
-// flag (falling back to machine auto-detection for prompt-only tools), and
-// never throws — a hooks failure must not fail the surrounding command.
-// Calls runHooksInstall through module.exports so tests can stub it.
+// flag (falling back to machine auto-detection for prompt-only tools), keeps
+// the agent already installed, and never throws — a hooks failure must not fail
+// the surrounding command. Calls runHooksInstall through module.exports so
+// tests can stub it.
 const DEFAULT_HOOK_TOOLS = new Set(['claude', 'antigravity', 'codex', 'opencode']);
 
 async function installDefaultHooks({ targetDir, options = {}, logger, t }) {
@@ -698,11 +684,13 @@ async function installDefaultHooks({ targetDir, options = {}, logger, t }) {
   logger.log('');
   logger.log(t('hooks_setup.installing'));
   try {
+    const kept = await installedHookAgents().catch(() => ({}));
     return await module.exports.runHooksInstall({
       args: [targetDir],
       options: {
         tool: DEFAULT_HOOK_TOOLS.has(requestedTool) ? requestedTool : 'all',
-        'dry-run': Boolean(options['dry-run'])
+        'dry-run': Boolean(options['dry-run']),
+        ...(kept.agent ? { agent: kept.agent, 'guard-agent': kept.guard || 'auto' } : {})
       },
       logger
     });
@@ -716,6 +704,7 @@ module.exports = {
   runHooksInstall,
   runHooksUninstall,
   installDefaultHooks,
+  installedHookAgents,
   buildClaudeHooks,
   buildCodexHooks,
   buildOpencodePlugin,
@@ -725,7 +714,9 @@ module.exports = {
   mergeHookEvents,
   normalizeHookAgentName,
   isAiosonHookEntry,
+  isAiosonHandler,
   readJsonForMerge,
+  writeFileAtomic,
   configPaths,
   OPENCODE_PLUGIN_SIGNATURE
 };

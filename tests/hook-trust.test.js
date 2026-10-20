@@ -27,12 +27,16 @@ function captureLogger() {
 }
 
 // configPaths() resolves the home per call, so pointing HOME/USERPROFILE at a
-// temporary directory keeps every write away from the real machine.
+// temporary directory — and clearing the harnesses' own overrides — keeps every
+// read and write away from the real machine.
+const HOME_OVERRIDES = ['CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME'];
 async function withTempHome(fn) {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-hook-trust-home-'));
   const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
+  for (const key of HOME_OVERRIDES) saved[key] = process.env[key];
   process.env.HOME = home;
   process.env.USERPROFILE = home;
+  for (const key of HOME_OVERRIDES) delete process.env[key];
   try {
     return await fn(home);
   } finally {
@@ -71,15 +75,18 @@ function fakeCodexSource(listsFlag) {
     "const fs = require('node:fs');",
     'const args = process.argv.slice(2);',
     "if (args.includes('--help')) {",
-    "  if (process.env.AIOSON_TEST_HELP_COUNTER) fs.appendFileSync(process.env.AIOSON_TEST_HELP_COUNTER, 'help\\n');",
-    `  process.stdout.write('${help}');`,
-    '  process.exit(0);',
+    '  setTimeout(() => {',
+    "    if (process.env.AIOSON_TEST_HELP_COUNTER) fs.appendFileSync(process.env.AIOSON_TEST_HELP_COUNTER, 'help\\n');",
+    `    process.stdout.write('${help}');`,
+    '    process.exit(0);',
+    '  }, Number(process.env.AIOSON_TEST_HELP_DELAY_MS || 0));',
+    '} else {',
+    '  if (process.env.AIOSON_TEST_ARGV_FILE) fs.writeFileSync(process.env.AIOSON_TEST_ARGV_FILE, JSON.stringify(args));',
+    "  process.stdin.on('error', () => process.exit(0));",
+    "  process.stdin.on('end', () => process.exit(0));",
+    '  process.stdin.resume();',
+    '  setTimeout(() => process.exit(0), 300);',
     '}',
-    'if (process.env.AIOSON_TEST_ARGV_FILE) fs.writeFileSync(process.env.AIOSON_TEST_ARGV_FILE, JSON.stringify(args));',
-    "process.stdin.on('error', () => process.exit(0));",
-    "process.stdin.on('end', () => process.exit(0));",
-    'process.stdin.resume();',
-    'setTimeout(() => process.exit(0), 300);',
     ''
   ].join('\n');
 }
@@ -150,7 +157,12 @@ test('resolveHookTrustArgs: only an unattended Codex session, with AIOSON hooks 
 
     await installCodexHooks(dir);
     assert.equal(aiosonHooksInstalled('codex'), true);
-    assert.deepEqual(await resolveHookTrustArgs('codex', { probe: probeFor(newer) }), { args: [FLAG], reason: 'added' });
+    assert.deepEqual(await resolveHookTrustArgs('codex', { probe: probeFor(newer) }), { args: [], reason: 'foreign_hooks' },
+      'the flag is per invocation: beside ours, the user\'s own unreviewed hook would run under it too');
+
+    await fs.rm(path.join(home, '.codex', 'hooks.json'));
+    await installCodexHooks(dir);
+    assert.deepEqual(await resolveHookTrustArgs('codex', { probe: probeFor(newer) }), { args: [FLAG], reason: 'added' }, 'AIOSON\'s hooks and nothing else');
     assert.deepEqual(await resolveHookTrustArgs('codex', { probe: probeFor(older) }), { args: [], reason: 'flag_unknown' }, 'an older Codex that would refuse the flag gets none');
     assert.deepEqual(await resolveHookTrustArgs('codex', { probe: { command: path.join(dir, 'missing.exe'), args: ['--help'] } }), { args: [], reason: 'flag_unknown' }, 'a binary that cannot run gets none, and nothing throws');
     assert.deepEqual(await resolveHookTrustArgs('codex', {}), { args: [], reason: 'flag_unknown' }, 'no way to ask the binary, no flag');
@@ -240,5 +252,41 @@ test('live:start adds the flag to an unattended Codex session, says so in the la
     assert.equal(attended.launch.hook_trust, 'attended');
     assert.deepEqual(attended.launch.args, []);
     assert.deepEqual(JSON.parse(await fs.readFile(argvFile, 'utf8')), [], 'a session with a human at the terminal trusts through /hooks');
+
+    const approvals = await start({ 'tool-args': '--ask-for-approval on-request --sandbox workspace-write' });
+    assert.equal(approvals.launch.hook_trust, 'attended', 'the caller asked for approvals: a human is at the terminal');
+    assert.deepEqual(JSON.parse(await fs.readFile(argvFile, 'utf8')), ['--ask-for-approval', 'on-request', '--sandbox', 'workspace-write']);
+
+    const yolo = await start({ 'tool-args': '--yolo' });
+    assert.equal(yolo.launch.hook_trust, 'added', 'the caller\'s own bypass alias is still unattended');
+    assert.deepEqual(JSON.parse(await fs.readFile(argvFile, 'utf8')), ['--yolo', FLAG]);
+  });
+});
+
+test('a lane aborted while the binary is being asked for its help is never spawned', async (t) => {
+  await withTempHome(async () => {
+    const dir = await tempDir(t);
+    const binDir = await writeFakeCodexBin(dir, true);
+    withEnv(t, 'AIOSON_TEST_HELP_DELAY_MS', '1500');
+    await installCodexHooks(dir);
+    resetHookTrustProbes();
+    const controller = new AbortController();
+    let spawned = false;
+    const pending = codexAdapter.execute({
+      mode: 'external',
+      sandbox_mode: 'workspace-write',
+      model: 'gpt-5.6',
+      cwd: dir,
+      prompt_text: 'hello',
+      timeout: 15000,
+      signal: controller.signal,
+      abortReason: 'lease_lost',
+      onSpawn: () => { spawned = true; },
+      resolverOptions: { env: { PATH: binDir, Path: binDir }, platform: 'win32' }
+    });
+    setTimeout(() => controller.abort(), 400);
+    const result = await pending;
+    assert.equal(result.reason, 'lease_lost');
+    assert.equal(spawned, false, 'the abort that arrived during the probe is honored before the spawn');
   });
 });

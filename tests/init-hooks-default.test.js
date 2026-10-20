@@ -132,6 +132,34 @@ test('--no-hooks skips the install and says how to run it later', async () => {
   }
 });
 
+test('a default reinstall (init/install/update) keeps the agent and the guard agent already installed', async () => {
+  const home = await makeTempDir();
+  const keys = ['HOME', 'USERPROFILE', 'CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME'];
+  const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  for (const key of keys.slice(2)) delete process.env[key];
+  try {
+    const { t } = createTranslator('en');
+    await fs.mkdir(path.join(home, '.claude'), { recursive: true });
+    await fs.mkdir(path.join(home, '.codex'), { recursive: true });
+    await hooksInstall.runHooksInstall({ args: [home], options: { tool: 'claude,codex', agent: 'qa' }, logger: createCollectLogger() });
+    await hooksInstall.installDefaultHooks({ targetDir: home, options: {}, logger: createCollectLogger(), t });
+
+    const codex = JSON.parse(await fs.readFile(path.join(home, '.codex', 'hooks.json'), 'utf8'));
+    assert.match(codex.hooks.PostToolUse[0].hooks[0].command, /--agent='qa'/, 'a reset to dev would also void the trust Codex keeps per hook');
+    const claude = JSON.parse(await fs.readFile(path.join(home, '.claude', 'settings.json'), 'utf8'));
+    assert.match(claude.hooks.PostToolUse[0].hooks[0].command, /--agent='qa'/);
+    assert.match(claude.hooks.PreToolUse[0].hooks[0].command, /context:guard .*--agent='qa'/, 'the guard agent chosen at install stays');
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await fs.rm(home, { recursive: true, force: true });
+  }
+});
+
 test('a hooks failure is reported but never fails the init', async () => {
   const tempDir = await makeTempDir();
   const originalCwd = process.cwd();

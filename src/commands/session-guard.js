@@ -50,6 +50,10 @@ async function getLastEventTime(runtimeDir, sessionKey) {
   }
 }
 
+// The session file is keyed by the agent handle (`@dev`), the name hooks:emit
+// and agent:done read — a bare `dev.json` was a second, unshared session.
+const sessionHandle = (agentName) => `@${agentName}`;
+
 async function startLiveSession(targetDir, runtimeDir, agentName, tool) {
   const now = nowIso();
   const sessionKey = `guard-${agentName}-${Date.now()}`;
@@ -79,7 +83,7 @@ async function startLiveSession(targetDir, runtimeDir, agentName, tool) {
       payload: { tool_session: tool, path: targetDir, guarded: true }
     });
 
-    await writeAgentSession(runtimeDir, agentName, {
+    await writeAgentSession(runtimeDir, sessionHandle(agentName), {
       runKey, taskKey, sessionKey,
       startedAt: now, finished: false, source: 'live'
     });
@@ -114,7 +118,7 @@ async function closeSession(targetDir, runtimeDir, agentName, runKey, taskKey, r
     if (taskKey) updateTask(db, taskKey, { status: 'completed', finishedAt: now });
 
     // Update state.json
-    const { db: _, ...rest } = await readAgentSession(runtimeDir, agentName).catch(() => ({}));
+    const { db: _, ...rest } = await readAgentSession(runtimeDir, sessionHandle(agentName)).catch(() => ({}));
     const sessionKey = rest?.sessionKey;
     if (sessionKey) {
       const statePath = path.join(runtimeDir, 'live', sessionKey, 'state.json');
@@ -127,7 +131,7 @@ async function closeSession(targetDir, runtimeDir, agentName, runKey, taskKey, r
     }
 
     // Clear session file
-    const sessionFile = path.join(runtimeDir, '.sessions', `${agentName}.json`);
+    const sessionFile = path.join(runtimeDir, '.sessions', `${sessionHandle(agentName)}.json`);
     try { await fs.unlink(sessionFile); } catch { /* already gone */ }
 
     log(`Session closed: ${runKey} (${reason})`);
@@ -137,7 +141,7 @@ async function closeSession(targetDir, runtimeDir, agentName, runKey, taskKey, r
 }
 
 async function tick(targetDir, runtimeDir, agentName, tool, idleMs, state) {
-  const session = await readAgentSession(runtimeDir, agentName);
+  const session = await readAgentSession(runtimeDir, sessionHandle(agentName));
 
   if (!session || session.finished) {
     // No session — start one

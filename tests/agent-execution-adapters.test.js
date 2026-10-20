@@ -1,5 +1,10 @@
 'use strict';
 const test=require('node:test');const assert=require('node:assert/strict');
+// Isolation: adapters/base.js asks src/lib/hook-trust.js whether AIOSON's Codex
+// hooks are installed before every spawn. Point CODEX_HOME at an empty folder so
+// these tests never read the real ~/.codex/hooks.json (nor depend on it).
+process.env.CODEX_HOME=require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(),'aioson-adapters-codex-home-'));
+process.on('exit',()=>{try{require('node:fs').rmSync(process.env.CODEX_HOME,{recursive:true,force:true});}catch{}});
 test('provider quota, credit and connection failures are classified for infrastructure fallback',()=>{const {normalizeError}=require('../src/agent-execution/adapters/base');assert.equal(normalizeError('insufficient credits for this request'),'capacity');assert.equal(normalizeError('429 too many requests'),'capacity');assert.equal(normalizeError('ECONNRESET socket hang up'),'connection');assert.equal(normalizeError('tests failed'),'crash')});
 for(const host of ['claude','codex','opencode','kimi','qwen'])test(`AC-AED-06 AC-AED-16 ${host} pauses unavailable native capability`,()=>{const a=require(`../src/agent-execution/adapters/${host}`);const r=a.build({mode:'subagent',model:'configured-default',cwd:process.cwd(),prompt_path:'prompt.md'});assert.equal(r.ok,false);assert.equal(r.reason,'unsupported_capability')});
 test('external adapter uses isolated argv and a killable process group',()=>{const a=require('../src/agent-execution/adapters/codex');const r=a.build({mode:'external',model:'gpt-x',cwd:process.cwd(),prompt_text:'p; rm x'});assert.equal(r.ok,true);assert.equal(r.options.shell,false);assert.equal(r.options.windowsHide,true);assert.equal(r.options.detached,process.platform!=='win32');assert.deepEqual(r.args,['exec','--skip-git-repo-check','--model','gpt-x','-']);assert.equal(r.stdin,true)});

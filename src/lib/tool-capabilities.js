@@ -93,6 +93,11 @@ const TOOL_CAPS = {
     // at the spawn of the sessions AIOSON launches unattended, once the
     // installed binary lists it — never through yolo_args.
     hook_trust_args: ['--dangerously-bypass-hook-trust'],
+    // The caller flags that mean nobody approves anything (the bypass and its
+    // `--yolo` alias): only a session unattended by one of them gets the
+    // hook-trust flag. `-a on-request` or a sandbox of the caller's own means a
+    // human at the terminal, who trusts hooks through `/hooks`.
+    unattended_flags: ['--dangerously-bypass-approvals-and-sandbox', '--yolo'],
     // Never `--sandbox workspace-write` for a lane worker: measured on the
     // operator's machine, the Windows sandbox setup fails to load and the
     // model reports DONE without writing (see the header note).

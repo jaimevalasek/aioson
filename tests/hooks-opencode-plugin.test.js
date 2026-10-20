@@ -126,6 +126,78 @@ test('the plugin records tool calls and replies, then gives a compacted session 
   }
 });
 
+test('edits through apply_patch (and the older patch) are recorded: GPT models in OpenCode edit with it', async (t) => {
+  const dir = makeProject();
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  await withPluginEnv(async () => {
+    const hooks = await (await loadPlugin(dir))({ directory: dir, worktree: dir });
+    await hooks['tool.execute.after'](
+      { tool: 'apply_patch', sessionID: 'p1', callID: 'c1', args: { patchText: '*** Begin Patch\n*** Update File: src/refund.js\n@@\n-a\n+b\n*** End Patch' } },
+      { title: 'apply_patch', output: 'Success', metadata: { files: [{ type: 'update', filePath: path.join(dir, 'src', 'refund.js'), relativePath: 'src/refund.js' }] } }
+    );
+    await hooks['tool.execute.after'](
+      { tool: 'patch', sessionID: 'p1', callID: 'c2', args: {} },
+      { title: 'patch', output: 'Success', metadata: { files: [{ type: 'update', filePath: path.join(dir, 'src', 'other.js'), relativePath: 'src/other.js' }] } }
+    );
+    const compacting = { context: [] };
+    await hooks['experimental.session.compacting']({ sessionID: 'p1' }, compacting);
+    assert.match(compacting.context[0] || '', /Files changed, newest first: src\/other\.js, src\/refund\.js/, compacting.context[0]);
+  });
+});
+
+test('the checkpoint speaks for the OpenCode session that compacted, not for another one on the project', async (t) => {
+  const dir = makeProject();
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  await withPluginEnv(async () => {
+    const hooks = await (await loadPlugin(dir))({ directory: dir, worktree: dir });
+    const write = (session, file) => hooks['tool.execute.after']({ tool: 'write', sessionID: session, callID: file, args: { filePath: path.join(dir, file) } }, { title: '', output: '', metadata: {} });
+    await write('s1', 'a.js');
+    await write('s2', 'b.js');
+    const compacting = { context: [] };
+    await hooks['experimental.session.compacting']({ sessionID: 's1' }, compacting);
+    assert.match(compacting.context[0] || '', /Files changed, newest first: a\.js/);
+    assert.doesNotMatch(compacting.context[0] || '', /b\.js/);
+  });
+});
+
+test('a hook never holds OpenCode: the telemetry is queued, and a compaction waits for the queue first', async (t) => {
+  const dir = makeProject();
+  const marker = path.join(dir, 'emits.log');
+  const fake = path.join(dir, 'slow-aioson.js');
+  fs.writeFileSync(fake, [
+    "const fs = require('node:fs');",
+    'const args = process.argv.slice(2);',
+    "if (args[0] === 'hooks:recap') { process.stdout.write(JSON.stringify({ additionalContext: 'checkpoint' })); process.exit(0); }",
+    `setTimeout(() => { fs.appendFileSync(${JSON.stringify(marker)}, args[0] + '\\n'); process.exit(0); }, 1500);`
+  ].join('\n'), 'utf8');
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  await withPluginEnv(async () => {
+    process.env.AIOSON_BIN = `node ${fake}`;
+    const hooks = await (await loadPlugin(dir))({ directory: dir, worktree: dir });
+    await hooks['tool.execute.after']({ tool: 'bash', sessionID: 'q1', callID: 'c1', args: { command: 'npm test' } }, { title: '', output: 'ok', metadata: { exit: 0 } });
+    assert.equal(fs.existsSync(marker), false, 'the tool call returned before the event was written');
+    const compacting = { context: [] };
+    await hooks['experimental.session.compacting']({ sessionID: 'q1' }, compacting);
+    assert.deepEqual(fs.readFileSync(marker, 'utf8').trim().split('\n'), ['hooks:emit', 'hooks:emit'], 'the queued event first, then the compaction marker');
+    assert.deepEqual(compacting.context, ['checkpoint']);
+  });
+});
+
+test('a project folder with a cmd metacharacter still gets its events (Windows runs the plugin through cmd.exe)', async (t) => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-oc-meta-'));
+  const dir = path.join(parent, 'R&D-app');
+  fs.mkdirSync(path.join(dir, '.aioson'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.aioson', 'config.md'), '# project\n', 'utf8');
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  await withPluginEnv(async () => {
+    const hooks = await (await loadPlugin(dir))({ directory: dir, worktree: dir });
+    await hooks['tool.execute.after']({ tool: 'write', sessionID: 'm1', callID: 'c1', args: { filePath: path.join(dir, 'src', 'a.js') } }, { title: '', output: '', metadata: {} });
+    const compacting = { context: [] };
+    await hooks['experimental.session.compacting']({ sessionID: 'm1' }, compacting);
+    assert.match(compacting.context[0] || '', /Files changed, newest first: src\/a\.js/);
+  });
+});
+
 test('a directory without .aioson gets no hooks at all', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-oc-none-'));
   try {
@@ -139,9 +211,14 @@ test('a directory without .aioson gets no hooks at all', async () => {
 
 test('hooks:install --tool=opencode writes the plugin into the OpenCode config; uninstall removes only ours', async () => {
   const home = await fsp.mkdtemp(path.join(os.tmpdir(), 'aioson-oc-home-'));
-  const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
+  // The home redirected and the harnesses' own overrides cleared: nothing here
+  // reads or writes the real ~/.config/opencode.
+  const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME, CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR };
   process.env.HOME = home;
   process.env.USERPROFILE = home;
+  delete process.env.XDG_CONFIG_HOME;
+  delete process.env.CODEX_HOME;
+  delete process.env.CLAUDE_CONFIG_DIR;
   try {
     const pluginPath = configPaths().opencode;
     assert.equal(pluginPath, path.join(home, '.config', 'opencode', 'plugins', 'aioson.js'));

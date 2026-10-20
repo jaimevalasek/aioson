@@ -56,8 +56,9 @@ async function eventsOf(dir, runKey) {
   }
 }
 
+// The per-agent hooks session is named the way agent:done reads it (`@dev`).
 function hooksSessionFile(dir) {
-  return path.join(dir, '.aioson', 'runtime', '.sessions', 'dev.json');
+  return path.join(dir, '.aioson', 'runtime', '.sessions', '@dev.json');
 }
 
 function startNoLaunch(dir, agent = 'product') {

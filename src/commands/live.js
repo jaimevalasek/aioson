@@ -20,7 +20,7 @@ const { ensureDir, exists } = require('../utils');
 const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
 const { getToolCapabilities, resolveResumeArgs, resolveLaunchPermission } = require('../lib/tool-capabilities');
-const { resolveHookTrustArgs } = require('../lib/hook-trust');
+const { resolveHookTrustArgs, isUnattendedPermission } = require('../lib/hook-trust');
 const { resolveTargetDir } = require('../lib/project-root');
 const { resolveNpmCmdShim } = require('../agent-execution/executable-resolver');
 
@@ -1440,14 +1440,16 @@ async function runLiveStart({ args, options = {}, logger, t }) {
   // and in the result's `launch` block instead of the session silently asking.
   // The hooks AIOSON installed run in an unattended session only under the
   // host's hook-trust flag (src/lib/hook-trust.js): added here for the binary
-  // actually launched, and reported as `launch.hook_trust`.
+  // actually launched, and reported as `launch.hook_trust`. Unattended means
+  // by the host's own bypass flag — `--tool-args "-a on-request"` keeps a
+  // human at the terminal, who trusts hooks through `/hooks`.
   let launch = null;
   const launchArgs = async () => {
     if (!launch) {
       launch = resolveLaunch(options, tool);
       if (launch.permission.warning && !options.json) logger.log(`⚠ ${launch.permission.warning}`);
       const trust = await resolveHookTrustArgs(launch.permission.host, {
-        unattended: launch.permission.mode === 'yolo',
+        unattended: isUnattendedPermission(launch.permission),
         existingArgs: launch.args,
         probe: await resolveToolSpawn(binaryPath, ['--help'])
       });

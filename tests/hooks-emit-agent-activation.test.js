@@ -96,13 +96,29 @@ test('o comando do agente digitado na sessão vira agent_activated, uma vez por 
   }
 });
 
-test('ativação fora de uma sessão aberta não cria a sessão de ganchos', async () => {
+// Sem `live:start`, a ativação fica no run de ganchos com a sessão do harness:
+// é o que diz ao checkpoint pós-compactação quem trabalha nessa sessão (antes
+// ela se perdia e o checkpoint saía sem agente).
+test('ativação fora de uma sessão aberta fica no run de ganchos, marcada com a sessão do harness', async () => {
   const dir = makeProject();
   try {
-    prompt(dir, null, '/aioson:agent:dev');
-    const runtimeDb = path.join(dir, '.aioson', 'runtime', 'aios.sqlite');
-    if (fs.existsSync(runtimeDb)) assert.deepEqual(await activations(dir), []);
-    assert.equal(fs.existsSync(path.join(dir, '.aioson', 'runtime', '.sessions', 'dev.json')), false);
+    const env = { ...process.env };
+    delete env.AIOSON_LIVE_SESSION_KEY;
+    delete env.AIOSON_LIVE_SESSION;
+    const send = (text, session) => {
+      const result = spawnSync(process.execPath, [CLI, 'hooks:emit', dir, '--agent=dev', '--source=claude'], {
+        input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: text, session_id: session }),
+        env,
+        encoding: 'utf8'
+      });
+      assert.equal(result.status, 0, result.stderr);
+    };
+    send('/aioson:agent:qa revisa', 'S1');
+    send('/aioson:agent:qa de novo', 'S1');
+    send('/aioson:agent:qa', 'S2');
+    const rows = await activations(dir);
+    assert.deepEqual(rows.map((row) => [row.message, JSON.parse(row.payload_json).session_id]), [['@qa', 'S1'], ['@qa', 'S2']], 'uma vez por troca, em cada sessão');
+    assert.equal(fs.existsSync(path.join(dir, '.aioson', 'runtime', '.sessions', '@dev.json')), true);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

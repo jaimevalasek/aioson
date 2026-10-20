@@ -83,7 +83,7 @@ function emitStaleHooksEvent(dir) {
     encoding: 'utf8'
   });
   assert.equal(result.status, 0, result.stderr);
-  const session = JSON.parse(fs.readFileSync(path.join(dir, '.aioson', 'runtime', '.sessions', 'dev.json'), 'utf8'));
+  const session = JSON.parse(fs.readFileSync(path.join(dir, '.aioson', 'runtime', '.sessions', '@dev.json'), 'utf8'));
   return session.runKey;
 }
 

@@ -25,6 +25,18 @@ function normalizeError(error) {
   return 'crash';
 }
 
+// A lane worker is a session of its own. The live session of the process that
+// spawned it (an orchestrator run from inside a `live:start` session) must not
+// reach the worker's hooks: hooks:emit would record the lane's edits and
+// failures as the parent session's, and the parent's checkpoint after a
+// compaction would speak for work it never did.
+function laneEnv(base = process.env) {
+  const env = { ...base };
+  delete env.AIOSON_LIVE_SESSION;
+  delete env.AIOSON_LIVE_SESSION_KEY;
+  return env;
+}
+
 function terminateChildTree(child, { force = false } = {}) {
   if (!child?.pid || child.exitCode !== null) return;
   if (process.platform === 'win32') {
@@ -152,12 +164,20 @@ function createAdapter(host, buildArgs) {
       });
       const trusted = trust.args.length > 0 ? this.build({ ...input, hook_trust_args: trust.args }) : null;
       const args = trusted && trusted.ok ? trusted.args : built.args;
+      // The probe can take seconds: a lane aborted meanwhile is never spawned.
+      if (input.signal?.aborted) {
+        return {
+          ok: false,
+          reason: input.abortReason || 'aborted',
+          error: 'execution aborted before spawn'
+        };
+      }
 
       return new Promise((resolve) => {
         const child = spawn(
           resolved.executable,
           [...resolved.prefixArgs, ...args],
-          built.options
+          { ...built.options, env: laneEnv(built.options.env) }
         );
         input.onSpawn?.(child.pid, new Date().toISOString());
         let stderr = '';
