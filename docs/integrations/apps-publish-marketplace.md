@@ -33,13 +33,12 @@ aioson system:publish [dir] [opções]
 {
   "cover": "store/capa.png",
   "gallery": ["store/tela-1.png", "store/tela-2.jpg"],
-  "release_notes": "Novo painel.
-Corrige a exportação."
+  "release_notes": "Novo painel.\nCorrige a exportação."
 }
 ```
 
 - `cover`/`gallery`: arquivos dentro da pasta do app (jpg, png ou webp, até 2 MB cada, galeria até 10). Arquivo fora da pasta, inexistente, de outro formato ou grande demais é recusado antes de publicar. Capa fora de 16:9 ou menor que 1280×720 e galeria acima de 1920 px de largura só geram aviso.
-- As imagens vão depois que a versão é aceita: cada uma em `POST /api/store/systems/{slug}/images` (bytes crus) e o conjunto em `POST /api/store/systems/{slug}/images/commit`. O site troca capa + galeria do app inteiro; publish sem `cover`/`gallery` mantém as imagens atuais. Falha de envio deixa a versão publicada e o conjunto anterior no lugar.
+- As imagens vão depois que a versão é aceita: cada uma em `POST /api/store/systems/{slug}/images` (bytes crus) e o conjunto em `POST /api/store/systems/{slug}/images/commit`. O site troca capa + galeria do app inteiro; publish sem `cover`/`gallery` mantém as imagens atuais. Declarar só `cover` (ou só `gallery`) gera aviso: a outra parte fica vazia na Loja. A mesma imagem duas vezes (ou a capa repetida na galeria) é recusada antes de publicar. Falha de envio deixa a versão publicada e o conjunto anterior no lugar, e o comando termina com código de saída 3 (versão publicada, imagens não).
 - `release_notes`: texto simples até 5.000 caracteres, gravado na versão publicada e mostrado na página do app no Play.
 
 ### Emails autorizados (privates)

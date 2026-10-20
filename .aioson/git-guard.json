@@ -131,6 +131,13 @@
         "generic_secret_assignment"
       ],
       "reason": "memory:search tests list single-word search terms under a `token` key (reuse, session, idempotency); they are query words, never credentials."
+    },
+    {
+      "path": "tests/store-site-security.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Store login tests seed a throwaway config with literal fake tokens (prod-token, PROD-SECRET-TOKEN-123456) to prove config show --json masks them and that each site keeps its own login; no credential value is present."
     }
   ],
   "blockPaths": [

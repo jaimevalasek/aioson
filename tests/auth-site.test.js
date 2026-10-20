@@ -37,6 +37,13 @@ async function loadAuthWithConfig(ctx, initial) {
     require.cache[configPath] = savedCache.config;
     require.cache[authPath] = savedCache.auth;
   }
+  // AIOSON_BASE_URL exportado na sessão do dev não muda o site destes testes.
+  const savedBaseUrl = process.env.AIOSON_BASE_URL;
+  delete process.env.AIOSON_BASE_URL;
+  ctx.after(() => {
+    if (savedBaseUrl === undefined) delete process.env.AIOSON_BASE_URL;
+    else process.env.AIOSON_BASE_URL = savedBaseUrl;
+  });
 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ username: 'dev' }), text: async () => '{"username":"dev"}' });

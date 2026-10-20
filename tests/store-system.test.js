@@ -433,6 +433,14 @@ async function loadPublishWithAccount(ctx, responseBody, account = { aiosonToken
     require.cache[configPath] = savedCache.config;
     require.cache[storePath] = savedCache.store;
   }
+  // AIOSON_BASE_URL exportado na sessão do dev (a receita sugere) não muda o
+  // site destes testes: sai durante o teste e volta no fim.
+  const savedBaseUrl = process.env.AIOSON_BASE_URL;
+  delete process.env.AIOSON_BASE_URL;
+  ctx.after(() => {
+    if (savedBaseUrl === undefined) delete process.env.AIOSON_BASE_URL;
+    else process.env.AIOSON_BASE_URL = savedBaseUrl;
+  });
 
   const requests = [];
   const originalFetch = globalThis.fetch;
@@ -697,7 +705,7 @@ test('AC-store-showcase-02: files outside the app, missing, wrong format, above 
     [{ gallery: ['media/anim.gif'] }, { 'media/anim.gif': Buffer.from('GIF89a') }, /system\.error_listing_image_format.*anim\.gif/],
     [{ gallery: ['media/fake.png'] }, { 'media/fake.png': Buffer.from('<html>not an image</html>') }, /system\.error_listing_image_format.*fake\.png/],
     [{ cover: 'media/big.png' }, { 'media/big.png': pngOfSize(1920, 1080, 2 * 1024 * 1024 + 1) }, /system\.error_listing_image_too_large.*big\.png/],
-    [{ gallery: Array.from({ length: 11 }, (_, i) => `g${i}.png`) }, {}, /"gallery" aceita no máximo 10/],
+    [{ gallery: Array.from({ length: 11 }, (_, i) => `g${i}.png`) }, {}, /system\.error_listing_gallery_limit \{"max":10,"count":11\}/],
   ];
   for (const [manifestExtra, images, expected] of cases) {
     const dir = await makeListingApp(ctx, manifestExtra, images);
@@ -769,7 +777,7 @@ test('AC-store-showcase-06: release_notes goes in the manifest; above 5000 chara
   const longDir = await makeListingApp(ctx, { release_notes: 'x'.repeat(5001) });
   await assert.rejects(
     publish({ args: [longDir], options: {}, logger: { log: () => {} }, t }),
-    /"release_notes" deve ter no máximo 5000 caracteres \(tem 5001\)/
+    /system\.error_release_notes_too_long \{"max":5000,"count":5001\}/
   );
   assert.equal(requests.length, 1);
 });
@@ -815,4 +823,138 @@ test('--images-only without cover or gallery in system.json refuses', async (ctx
     /system\.error_images_only_nothing/
   );
   assert.equal(requests.length, 0);
+});
+
+// ── revisão da Loja: capa/galeria, linhas do publish, saída 3 ───────────────
+
+test('ST-13: a file named "..cover.png" inside the app is accepted; "../x.png" stays outside', async (ctx) => {
+  const dir = await makeListingApp(ctx, { cover: '..cover.png', gallery: ['shot.png'] }, {
+    '..cover.png': pngOfSize(1920, 1080),
+    'shot.png': pngOfSize(1600, 900),
+  });
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+
+  const result = await publish({ args: [dir], options: {}, logger: { log: () => {} }, t });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.imagesFailed, false);
+  assert.equal(requests.filter((r) => r.url.endsWith('/images')).length, 2);
+  const outside = await makeListingApp(ctx, { cover: '../x.png' });
+  await assert.rejects(publish({ args: [outside], options: {}, logger: { log: () => {} }, t }), /system\.error_listing_image_outside/);
+});
+
+test('ST-8: declaring only "cover" or only "gallery" warns that the other set is left empty on the Store', async (ctx) => {
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  useStoreServer(ctx);
+  const images = { 'cover.png': pngOfSize(1920, 1080), 'shot.png': pngOfSize(1600, 900) };
+  const cases = [
+    [{ cover: 'cover.png' }, ['system.warn_listing_gallery_cleared']],
+    [{ gallery: ['shot.png'] }, ['system.warn_listing_cover_cleared']],
+    [{ cover: 'cover.png', gallery: ['shot.png'] }, []],
+  ];
+  for (const [manifestExtra, expected] of cases) {
+    const dir = await makeListingApp(ctx, manifestExtra, images);
+    const lines = [];
+    const result = await publish({ args: [dir], options: { 'images-only': true }, logger: { log: (line) => lines.push(line) }, t });
+    assert.equal(result.ok, true);
+    const cleared = lines.filter((line) => /warn_listing_(gallery|cover)_cleared/.test(line)).map((line) => line.replace(/^ {2}\[WARN\] /, '').split(' ')[0]);
+    assert.deepEqual(cleared, expected, JSON.stringify(manifestExtra));
+  }
+});
+
+test('ST-9: the same image twice (in the gallery, or the cover repeated in it) is refused before publishing', async (ctx) => {
+  const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK);
+  const requests = useStoreServer(ctx);
+  const images = { 'media/cover.png': pngOfSize(1920, 1080), 'media/a.png': pngOfSize(1600, 900) };
+  const cases = [
+    { gallery: ['media/a.png', 'media/a.png'] },
+    { cover: 'media/cover.png', gallery: ['media/a.png', './media/cover.png'] },
+    { gallery: ['media/a.png', 'media/../media/a.png'] },
+  ];
+  for (const manifestExtra of cases) {
+    const dir = await makeListingApp(ctx, manifestExtra, images);
+    await assert.rejects(publish({ args: [dir], options: {}, logger: { log: () => {} }, t }), /system\.error_listing_image_duplicate/);
+  }
+  assert.equal(requests.length, 0, 'no version is created');
+});
+
+test('ST-12: the publish lines name the site the version went to, in every locale', async (ctx) => {
+  const { createTranslator } = require('../src/i18n');
+  const dir = await makeApp(ctx, PUBLISH_APP);
+  for (const locale of ['en', 'pt-BR', 'es', 'fr']) {
+    const { runSystemPublish: publish } = await loadPublishWithAccount(ctx, PUBLISH_OK, {
+      aiosonToken: 'prod-token',
+      aiosonTokens: { 'http://localhost:3000': 'local-token' }
+    });
+    const lines = [];
+    await publish({ args: [dir], options: { 'base-url': 'http://localhost:3000' }, logger: { log: (line) => lines.push(line) }, t: createTranslator(locale).t });
+    const output = lines.join('\n');
+    assert.ok(!output.includes('aioson.com'), `${locale}:\n${output}`);
+    assert.ok(output.includes('http://localhost:3000/store/systems/access-probe'), locale);
+  }
+});
+
+test('ST-14: the store image and release-notes messages exist in every locale with the same placeholders', () => {
+  const { loadMessages } = require('../src/i18n');
+  const messages = loadMessages();
+  const keys = Object.keys(messages.en.system).filter((key) => /listing|images_|release_notes|dry_run_image/.test(key));
+  assert.ok(keys.length >= 25, `found ${keys.length}`);
+  const holes = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort().join(',');
+  for (const locale of ['pt-br', 'es', 'fr']) {
+    for (const key of keys) {
+      const value = messages[locale].system[key];
+      assert.equal(typeof value, 'string', `${locale}: system.${key}`);
+      assert.equal(holes(value), holes(messages.en.system[key]), `${locale}: system.${key}`);
+    }
+  }
+});
+
+test('ST-11: the store-showcase system.json example in the docs is valid JSON', async () => {
+  const doc = await fs.readFile(path.join(__dirname, '..', 'docs', 'integrations', 'apps-publish-marketplace.md'), 'utf8');
+  const section = doc.slice(doc.indexOf('### Capa, galeria e novidades da Loja'));
+  const example = JSON.parse(section.match(/```json\r?\n([\s\S]*?)```/)[1]);
+  assert.equal(typeof example.cover, 'string');
+  assert.ok(example.release_notes.includes('\n'), 'the notes keep their line break as \\n');
+});
+
+test('a publish whose store image fails after the version is accepted exits with code 3 (spawned CLI)', async (ctx) => {
+  const http = require('node:http');
+  const { spawn } = require('node:child_process');
+  const seen = [];
+  const server = http.createServer((req, res) => {
+    req.resume();
+    req.on('end', () => {
+      seen.push(`${req.method} ${req.url}`);
+      const image = req.url.endsWith('/images');
+      res.writeHead(image ? 413 : 200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(image ? { error: 'Request Entity Too Large' } : PUBLISH_OK));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  ctx.after(() => new Promise((resolve) => server.close(resolve)));
+  const site = `http://127.0.0.1:${server.address().port}`;
+
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-publish-exit-'));
+  ctx.after(() => fs.rm(home, { recursive: true, force: true }));
+  await fs.mkdir(path.join(home, '.aioson'), { recursive: true });
+  await fs.writeFile(path.join(home, '.aioson', 'config.json'), JSON.stringify({ aiosonToken: 'prod-token', aiosonTokens: { [site]: 'local-token' } }), 'utf8');
+  const dir = await makeListingApp(ctx, { cover: 'cover.png', gallery: ['shot.png'] }, {
+    'cover.png': pngOfSize(1920, 1080),
+    'shot.png': pngOfSize(1600, 900),
+  });
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  delete env.AIOSON_BASE_URL;
+
+  const cli = await new Promise((resolve) => {
+    const child = spawn(process.execPath, [path.join(__dirname, '..', 'bin', 'aioson.js'), 'system:publish', dir, `--base-url=${site}`], { cwd: home, env });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk; });
+    child.stderr.on('data', (chunk) => { output += chunk; });
+    child.on('close', (code) => resolve({ code, output }));
+  });
+
+  assert.equal(cli.code, 3, cli.output);
+  assert.ok(seen.includes('POST /api/store/systems/publish'), seen.join('\n'));
+  assert.ok(!seen.some((line) => line.endsWith('/images/commit')), 'no commit after a failed image');
 });

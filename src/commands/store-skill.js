@@ -3,10 +3,11 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { resolveTargetDir } = require('../lib/project-root');
+const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
 
 const DEFAULT_BASE_URL = 'https://aioson.com';
 const SKILLS_DIRS = ['.aioson/skills', '.aioson/installed-skills'];
@@ -100,7 +101,9 @@ async function findSkillDir(projectDir, slug) {
 
 async function runSkillPublish({ args, options, logger, t }) {
   const config = await readConfig();
-  const token = requireToken(config, t);
+  // Mesmo site do system:publish: --base-url > AIOSON_BASE_URL > padrão, com o
+  // token daquele site (sem login nele, recusa).
+  const { token, baseUrl } = requireSite(config, options, t);
   const projectDir = await findProjectRoot(resolveTargetDir(args));
   const slug = String(options.slug || '').trim();
   if (!slug) throw new Error(t('store.error_missing_slug'));
@@ -138,8 +141,7 @@ async function runSkillPublish({ args, options, logger, t }) {
   }
 
   logger.log(t('store.publish_scan_ok', { hash: scan.hash.slice(0, 12) }));
-  logger.log(t('store.publish_skill_sending', { count: fileCount }));
-  const baseUrl = resolveBaseUrl(config);
+  logger.log(t('store.publish_skill_sending', { count: fileCount, url: baseUrl }));
   const response = await storePost(`${baseUrl}/api/store/skills/publish`, {
     kind: 'aioson.store.skill',
     slug,
@@ -172,6 +174,9 @@ async function runSkillInstallStore({ args, options, logger, t }) {
   if (!slug || !response.files || typeof response.files !== 'object') {
     throw new Error(t('store.error_invalid_response'));
   }
+  // Slug e caminhos vêm do servidor: tudo dentro de installed-skills/<slug>/
+  // antes de criar pasta ou gravar arquivo.
+  const destDir = path.join(projectDir, '.aioson', 'installed-skills', assertInstallSlug(slug, t));
 
   // Install-side preview and scan
   const publisher = response.publisher || 'unknown';
@@ -192,6 +197,7 @@ async function runSkillInstallStore({ args, options, logger, t }) {
   const stringFiles = Object.fromEntries(
     Object.entries(response.files).filter(([, v]) => typeof v === 'string')
   );
+  const targets = Object.entries(stringFiles).map(([relPath, content]) => [installTarget(destDir, relPath, t), content]);
   const scan = scanPackage(stringFiles, 'skill');
   formatScanReport(scan, logger);
   if (!scan.ok) throw new Error(t('store.error_install_scan_failed', { slug }));
@@ -212,11 +218,9 @@ async function runSkillInstallStore({ args, options, logger, t }) {
     logger.log(t('store.install_unverified_hint', { slug }));
   }
 
-  const destDir = path.join(projectDir, '.aioson', 'installed-skills', slug);
   await fs.mkdir(destDir, { recursive: true });
 
-  for (const [relPath, content] of Object.entries(stringFiles)) {
-    const filePath = path.join(destDir, relPath);
+  for (const [filePath, content] of targets) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content, 'utf8');
   }

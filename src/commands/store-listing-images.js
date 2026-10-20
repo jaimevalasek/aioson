@@ -7,6 +7,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { isInside } = require('../lib/store/install-containment');
 
 const LISTING_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const LISTING_GALLERY_MAX = 10;
@@ -87,11 +88,6 @@ function declaredListingImages(manifest) {
   return declared;
 }
 
-function isInside(root, target) {
-  const relative = path.relative(root, target);
-  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative);
-}
-
 /**
  * Lê e valida capa + galeria declaradas. Recusa (lança) nomeando o arquivo:
  * fora da pasta do app, inexistente, formato fora de jpg/png/webp, acima de
@@ -109,6 +105,7 @@ async function readListingImages(dir, manifest, t) {
   }
 
   const root = await fs.realpath(dir);
+  const seen = new Map(); // caminho real → arquivo como declarado
   for (const { role, file } of declared) {
     const resolved = path.resolve(root, file);
     if (!isInside(root, resolved)) throw new Error(t('system.error_listing_image_outside', { file }));
@@ -121,6 +118,13 @@ async function readListingImages(dir, manifest, t) {
     }
     // Atalho/link dentro da pasta apontando para fora conta como fora.
     if (!isInside(root, real)) throw new Error(t('system.error_listing_image_outside', { file }));
+    // O mesmo arquivo duas vezes (ou a capa repetida na galeria) apareceria
+    // repetido na Loja: recusado antes do publish.
+    const realKey = process.platform === 'win32' ? real.toLowerCase() : real;
+    if (seen.has(realKey)) {
+      throw new Error(t('system.error_listing_image_duplicate', { file, first: seen.get(realKey) }));
+    }
+    seen.set(realKey, file);
 
     const stat = await fs.stat(real);
     if (!stat.isFile()) throw new Error(t('system.error_listing_image_missing', { file }));
@@ -151,6 +155,11 @@ async function readListingImages(dir, manifest, t) {
     }
     images.push({ role, file, bytes, mime });
   }
+  // O commit troca capa + galeria juntas: declarar só uma deixa a outra vazia na Loja.
+  const hasCover = images.some((image) => image.role === 'cover');
+  const hasGallery = images.some((image) => image.role === 'gallery');
+  if (hasCover && !hasGallery) warnings.push(t('system.warn_listing_gallery_cleared'));
+  if (hasGallery && !hasCover) warnings.push(t('system.warn_listing_cover_cleared'));
   return { images, warnings };
 }
 
@@ -193,7 +202,7 @@ async function sendListingImages({ dir, site, slug, images, logger, t }) {
         headers: { 'content-type': image.mime },
         body: image.bytes,
       });
-      if (!result || typeof result.id !== 'string') throw new Error('HTTP 200: resposta sem id');
+      if (!result || typeof result.id !== 'string') throw new Error(t('system.images_no_id'));
       if (image.role === 'cover') ids.cover = result.id;
       else ids.gallery.push(result.id);
     }

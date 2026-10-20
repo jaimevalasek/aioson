@@ -3,10 +3,11 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { resolveTargetDir } = require('../lib/project-root');
+const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
 
 const DEFAULT_BASE_URL = 'https://aioson.com';
 const GENOMES_DIR = '.aioson/genomes';
@@ -193,7 +194,9 @@ async function parseSingleFileMetadata(genomesDir, slug) {
 
 async function runGenomePublish({ args, options, logger, t }) {
   const config = await readConfig();
-  const token = requireToken(config, t);
+  // Mesmo site do system:publish: --base-url > AIOSON_BASE_URL > padrão, com o
+  // token daquele site (sem login nele, recusa).
+  const { token, baseUrl } = requireSite(config, options, t);
   const projectDir = await findProjectRoot(resolveTargetDir(args));
   const slug = String(options.slug || '').trim();
   if (!slug) throw new Error(t('store.error_missing_slug'));
@@ -214,17 +217,17 @@ async function runGenomePublish({ args, options, logger, t }) {
   // ── Folder format (Track 4.2/4.3) ────────────────────────────────────────
   if (fmt.primary === 'folder') {
     return await publishFolderGenome({
-      projectDir, slug, folderPath: fmt.paths.folder, options, logger, t, config, token
+      projectDir, slug, folderPath: fmt.paths.folder, options, logger, t, baseUrl, token
     });
   }
 
   // ── Single-file format (legacy) ──────────────────────────────────────────
   return await publishSingleFileGenome({
-    projectDir, slug, paths: fmt.paths, options, logger, t, config, token
+    projectDir, slug, paths: fmt.paths, options, logger, t, baseUrl, token
   });
 }
 
-async function publishFolderGenome({ projectDir, slug, folderPath, options, logger, t, config, token }) {
+async function publishFolderGenome({ projectDir, slug, folderPath, options, logger, t, baseUrl, token }) {
   logger.log(t('store.publish_genome_folder_collecting'));
   const files = await collectGenomeFolder(folderPath);
   const fileCount = Object.keys(files).length;
@@ -272,8 +275,7 @@ async function publishFolderGenome({ projectDir, slug, folderPath, options, logg
   }
 
   logger.log(t('store.publish_scan_ok', { hash: scan.hash.slice(0, 12) }));
-  logger.log(t('store.publish_genome_folder_sending', { count: fileCount }));
-  const baseUrl = resolveBaseUrl(config);
+  logger.log(t('store.publish_genome_folder_sending', { count: fileCount, url: baseUrl }));
   const response = await storePost(`${baseUrl}/api/store/genomes/publish`, {
     kind: 'aioson.store.genome',
     format: 'folder',
@@ -290,7 +292,7 @@ async function publishFolderGenome({ projectDir, slug, folderPath, options, logg
   return { ok: true, slug, visibility, paid, fileCount, format: 'folder', response };
 }
 
-async function publishSingleFileGenome({ projectDir, slug, paths, options, logger, t, config, token }) {
+async function publishSingleFileGenome({ projectDir, slug, paths, options, logger, t, baseUrl, token }) {
   logger.log(t('store.publish_genome_validating'));
   const content = await fs.readFile(paths.mdFile, 'utf8');
 
@@ -324,8 +326,7 @@ async function publishSingleFileGenome({ projectDir, slug, paths, options, logge
   }
 
   logger.log(t('store.publish_scan_ok', { hash: scan.hash.slice(0, 12) }));
-  logger.log(t('store.publish_genome_sending'));
-  const baseUrl = resolveBaseUrl(config);
+  logger.log(t('store.publish_genome_sending', { url: baseUrl }));
   const response = await storePost(`${baseUrl}/api/store/genomes/publish`, {
     kind: 'aioson.store.genome',
     format: 'single-file',
@@ -365,6 +366,8 @@ async function runGenomeInstallStore({ args, options, logger, t }) {
 
   const slug = response.slug;
   if (!slug) throw new Error(t('store.error_invalid_response'));
+  // O slug vira pasta/arquivo em .aioson/genomes: conferido antes de tudo.
+  assertInstallSlug(slug, t);
 
   // Detect response format: folder (has `files` map) or single-file (has `content`)
   const isFolder = response.format === 'folder' || (response.files && typeof response.files === 'object');
@@ -393,6 +396,10 @@ async function installFolderGenome({ projectDir, slug, response, options, logger
   if (!stringFiles['SKILL.md']) {
     throw new Error(t('store.error_genome_missing_skillmd', { slug }));
   }
+  // Caminhos vêm do servidor: tudo dentro de .aioson/genomes/<slug>/ antes do
+  // backup e de qualquer escrita.
+  const destDir = path.join(projectDir, GENOMES_DIR, slug);
+  const targets = Object.entries(stringFiles).map(([relPath, content]) => [installTarget(destDir, relPath, t), content]);
 
   // Server-side metadata for preview
   const publisher = response.publisher || 'unknown';
@@ -430,8 +437,6 @@ async function installFolderGenome({ projectDir, slug, response, options, logger
     logger.log(t('store.install_unverified_hint', { slug }));
   }
 
-  const destDir = path.join(projectDir, GENOMES_DIR, slug);
-
   // Backup any existing folder OR legacy single-file conflict
   const legacyMd = path.join(projectDir, GENOMES_DIR, `${slug}.md`);
   if ((await exists(legacyMd)) && !options.force) {
@@ -449,8 +454,7 @@ async function installFolderGenome({ projectDir, slug, response, options, logger
 
   // Write all files preserving directory structure
   await fs.mkdir(destDir, { recursive: true });
-  for (const [relPath, content] of Object.entries(stringFiles)) {
-    const filePath = path.join(destDir, relPath);
+  for (const [filePath, content] of targets) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content, 'utf8');
   }
@@ -468,6 +472,12 @@ async function installSingleFileGenome({ projectDir, slug, response, options, lo
 
   const destPath = path.join(projectDir, GENOMES_DIR, `${slug}.md`);
   const metaDestPath = path.join(projectDir, GENOMES_DIR, `${slug}.meta.json`);
+  // Nomes das refs vêm do servidor: dentro de <slug>.refs/ antes do backup e
+  // de qualquer escrita.
+  const refsDir = path.join(projectDir, GENOMES_DIR, `${slug}.refs`);
+  const refs = response.refs && typeof response.refs === 'object'
+    ? Object.entries(response.refs).map(([name, content]) => [installTarget(refsDir, name, t), content])
+    : null;
 
   // Backup existing version if present
   if ((await exists(destPath)) && !options.force) {
@@ -484,11 +494,10 @@ async function installSingleFileGenome({ projectDir, slug, response, options, lo
   }
 
   // Write refs if present (legacy {slug}.refs/ flat dir)
-  if (response.refs && typeof response.refs === 'object') {
-    const refsDir = path.join(projectDir, GENOMES_DIR, `${slug}.refs`);
+  if (refs) {
     await fs.mkdir(refsDir, { recursive: true });
-    for (const [name, content] of Object.entries(response.refs)) {
-      await fs.writeFile(path.join(refsDir, name), content, 'utf8');
+    for (const [refPath, content] of refs) {
+      await fs.writeFile(refPath, content, 'utf8');
     }
   }
 

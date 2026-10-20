@@ -6,10 +6,7 @@ const readline = require('readline');
 const { spawn } = require('child_process');
 const { readConfig, writeConfig, resolveSite, isLoopbackSite, DEFAULT_SITE_URL, CONFIG_DIR } = require('./config');
 
-function resolveBaseUrl(config, options = {}) {
-  return resolveSite(config, options).baseUrl;
-}
-
+// `rejected`: o site respondeu 401/403 — leu o token e recusou (não é "offline").
 async function fetchAuthMe(baseUrl, token) {
   try {
     const response = await fetch(`${baseUrl}/api/me`, {
@@ -18,12 +15,13 @@ async function fetchAuthMe(baseUrl, token) {
     });
     if (response.ok) {
       const data = await response.json();
-      return data.user || data;
+      return { user: data.user || data, rejected: false };
     }
+    return { user: null, rejected: response.status === 401 || response.status === 403 };
   } catch {
     // API unreachable
+    return { user: null, rejected: false };
   }
-  return null;
 }
 
 // ─── Detectar ambiente sem browser ───────────────────────────────────────
@@ -155,7 +153,8 @@ async function pasteLogin(baseUrl, logger, t) {
 async function runAuthLogin({ args, options, logger, t }) {
   const tokenOpt = String(options.token || '').trim();
   const config = await readConfig();
-  const baseUrl = resolveBaseUrl(config, options);
+  const site = resolveSite(config, options, t);
+  const baseUrl = site.baseUrl;
 
   let token = tokenOpt;
 
@@ -234,13 +233,23 @@ async function runAuthLogin({ args, options, logger, t }) {
 
   logger.log('');
   logger.log(t('auth.login_verifying'));
-  const user = await fetchAuthMe(baseUrl, token);
+  const { user, rejected } = await fetchAuthMe(baseUrl, token);
+  // 401/403: o site recusou o token. Salvar trocaria um login bom por um que não
+  // vale (ex.: o token de outro site); outras falhas seguem "não deu para verificar".
+  if (rejected) {
+    logger.log(t('auth.login_rejected', { url: baseUrl }));
+    return { ok: false, error: { code: 'token_rejected' } };
+  }
 
-  // Cada site guarda o próprio token. Login num site local (localhost) não vira
-  // o padrão quando já existe login em outro site — senão o próximo publish
-  // "normal" iria para o site de desenvolvimento.
-  config.aiosonTokens = { ...(config.aiosonTokens || {}), [baseUrl]: token };
-  const { defaultBaseUrl } = resolveSite(config);
+  // Cada site guarda o próprio token, e login nunca apaga outro login: antes de
+  // outro site virar o padrão, o token do padrão anterior fica sob o site dele.
+  // Login num site local não vira o padrão quando já existe login em outro site
+  // — senão o próximo publish "normal" iria para o site de desenvolvimento.
+  const defaultBaseUrl = site.defaultBaseUrl;
+  const tokens = { ...(config.aiosonTokens && typeof config.aiosonTokens === 'object' ? config.aiosonTokens : {}) };
+  if (config.aiosonToken && !tokens[defaultBaseUrl]) tokens[defaultBaseUrl] = config.aiosonToken;
+  tokens[baseUrl] = token;
+  config.aiosonTokens = tokens;
   const sideSite = isLoopbackSite(baseUrl) && Boolean(config.aiosonToken) && baseUrl !== defaultBaseUrl;
   if (!sideSite) {
     config.aiosonToken = token;
@@ -262,7 +271,8 @@ async function runAuthLogin({ args, options, logger, t }) {
 
 async function runAuthLogout({ args, options, logger, t }) {
   const config = await readConfig();
-  const site = resolveSite(config, options);
+  // Logout não manda nada pela rede: até o token de um login antigo em http:// sai.
+  const site = resolveSite(config, options, t, { requireSecure: false });
   if (config.aiosonTokens) {
     delete config.aiosonTokens[site.baseUrl];
     if (Object.keys(config.aiosonTokens).length === 0) delete config.aiosonTokens;
@@ -272,13 +282,14 @@ async function runAuthLogout({ args, options, logger, t }) {
     delete config.aiosonUsername;
   }
   await writeConfig(config);
-  logger.log(t('auth.logout_ok'));
+  // Nomeia o site: com AIOSON_BASE_URL na sessão, o logout é só daquele site.
+  logger.log(t('auth.logout_ok', { url: site.baseUrl }));
   return { ok: true };
 }
 
 async function runAuthStatus({ args, options, logger, t }) {
   const config = await readConfig();
-  const { token } = resolveSite(config, options);
+  const { token, baseUrl } = resolveSite(config, options, t);
 
   if (!token) {
     logger.log(t('auth.status_not_authenticated'));
@@ -286,9 +297,8 @@ async function runAuthStatus({ args, options, logger, t }) {
     return { ok: true, authenticated: false };
   }
 
-  const baseUrl = resolveBaseUrl(config, options);
   logger.log(t('auth.status_checking'));
-  const user = await fetchAuthMe(baseUrl, token);
+  const { user } = await fetchAuthMe(baseUrl, token);
 
   if (user?.username) {
     logger.log(t('auth.status_ok', { username: user.username }));

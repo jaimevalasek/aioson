@@ -4,10 +4,11 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const ignore = require('ignore');
 const { exists, ensureDir } = require('../utils');
-const { readConfig, resolveSite } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { resolveTargetDir } = require('../lib/project-root');
 const { readListingImages, sendListingImages, LISTING_GALLERY_MAX } = require('./store-listing-images');
+const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
 const { collectStagedSecretFindings } = require('../lib/security/staged-secret-detector');
 
 let _terser = null;
@@ -421,18 +422,6 @@ function parseInviteEmails(cliInvite, manifestEmails) {
   ));
 }
 
-// Site + token do comando (ver resolveSite em config.js). Sem login no site
-// escolhido, a mensagem diz o login exato que falta.
-function requireSite(config, options, t) {
-  const site = resolveSite(config, options);
-  if (!site.token) {
-    throw new Error(site.isDefault
-      ? t('store.error_not_authenticated')
-      : t('store.error_not_authenticated_site', { url: site.baseUrl }));
-  }
-  return site;
-}
-
 async function storePost(url, payload, token) {
   const response = await fetch(url, {
     method: 'POST',
@@ -655,7 +644,7 @@ async function readSystemJson(dir, t) {
   if (!manifest.slug) throw new Error(t('system.error_manifest_missing_slug'));
   if (!manifest.version) throw new Error(t('system.error_manifest_missing_version'));
   if (!manifest.name) throw new Error(t('system.error_manifest_missing_name'));
-  validateListingFields(manifest);
+  validateListingFields(manifest, t);
   return manifest;
 }
 
@@ -669,7 +658,7 @@ function isHttpUrl(value) {
   return typeof value === 'string' && /^https?:\/\/.+/i.test(value.trim());
 }
 
-function validateListingFields(m) {
+function validateListingFields(m, t) {
   const fail = (msg) => { throw new Error(`system.json: ${msg}`); };
 
   if (m.summary != null) {
@@ -701,16 +690,20 @@ function validateListingFields(m) {
   // store-showcase: capa/galeria são arquivos dentro da pasta do app (o
   // conteúdo é conferido em readListingImages); novidades são texto simples.
   const isFilePath = (value) => typeof value === 'string' && value.trim() !== '' && !isHttpUrl(value);
-  if (m.cover != null && !isFilePath(m.cover)) fail('"cover" deve ser o caminho de um arquivo de imagem dentro da pasta do app.');
+  if (m.cover != null && !isFilePath(m.cover)) throw new Error(t('system.error_listing_cover_path'));
   if (m.gallery != null) {
     if (!Array.isArray(m.gallery) || !m.gallery.every(isFilePath)) {
-      fail('"gallery" deve ser uma lista de caminhos de arquivos de imagem dentro da pasta do app.');
+      throw new Error(t('system.error_listing_gallery_paths'));
     }
-    if (m.gallery.length > LISTING_GALLERY_MAX) fail(`"gallery" aceita no máximo ${LISTING_GALLERY_MAX} imagens (tem ${m.gallery.length}).`);
+    if (m.gallery.length > LISTING_GALLERY_MAX) {
+      throw new Error(t('system.error_listing_gallery_limit', { max: LISTING_GALLERY_MAX, count: m.gallery.length }));
+    }
   }
   if (m.release_notes != null) {
-    if (typeof m.release_notes !== 'string') fail('"release_notes" deve ser texto.');
-    if (m.release_notes.length > 5000) fail(`"release_notes" deve ter no máximo 5000 caracteres (tem ${m.release_notes.length}).`);
+    if (typeof m.release_notes !== 'string') throw new Error(t('system.error_release_notes_type'));
+    if (m.release_notes.length > 5000) {
+      throw new Error(t('system.error_release_notes_too_long', { max: 5000, count: m.release_notes.length }));
+    }
   }
 
   for (const key of ['homepage_url', 'support_url', 'privacy_url']) {
@@ -978,8 +971,8 @@ async function runSystemPublish({ args, options, logger, t }) {
   const zipKb = (zipBuffer.length / 1024).toFixed(1);
   logger.log(`ZIP: ${zipKb} KB (${fileCount} files)`);
 
-  logger.log(t('system.publish_sending'));
   const baseUrl = site.baseUrl;
+  logger.log(t('system.publish_sending', { url: baseUrl }));
   const response = await storePost(`${baseUrl}/api/store/systems/publish`, {
     kind: 'aioson.store.system',
     slug: manifest.slug,
@@ -1006,10 +999,14 @@ async function runSystemPublish({ args, options, logger, t }) {
   const images = listingImages.images.length
     ? await sendListingImages({ dir, site, slug: manifest.slug, images: listingImages.images, logger, t })
     : null;
+  const imagesFailed = Boolean(images && !images.ok);
   return {
     ok: true, manifest, fileCount, totalBytes, visibility, paid, response, protectedTs, rawSource,
     protectionLevel: protection.level, protectedJs, unprotectedJs,
-    images, imagesFailed: Boolean(images && !images.ok)
+    images, imagesFailed,
+    // Versão publicada e imagens não: saída 3, para CI/scripts notarem a Loja
+    // com as imagens antigas (o `--images-only` do aviso resolve).
+    ...(imagesFailed ? { exitCode: 3 } : {})
   };
 }
 
@@ -1092,6 +1089,13 @@ async function runSystemInstall({ args, options, logger, t }) {
 
   const slug = response.manifest?.slug || response.slug;
   if (!slug || !response.files) throw new Error(t('store.error_invalid_response'));
+  // Slug e caminhos vêm do servidor (e `--base-url` aponta para qualquer site):
+  // nada é apagado, copiado ou gravado antes de tudo cair dentro da pasta do pacote.
+  const pkgDir = path.join(projectDir, SYSTEM_PACKAGES_DIR, assertInstallSlug(slug, t));
+  const writes = [];
+  for (const [relPath, content] of Object.entries(response.files)) {
+    if (typeof content === 'string') writes.push([installTarget(pkgDir, relPath, t), content]);
+  }
 
   const version = response.manifest?.version || '?';
   const publisher = response.publisher || 'unknown';
@@ -1104,8 +1108,6 @@ async function runSystemInstall({ args, options, logger, t }) {
     return { ok: true, slug, inspect: true, files: Object.keys(response.files) };
   }
 
-  const pkgDir = path.join(projectDir, SYSTEM_PACKAGES_DIR, slug);
-
   if ((await exists(pkgDir)) && !options.force) {
     const backupDir = path.join(projectDir, BACKUPS_DIR, `system-packages/${slug}`);
     logger.log(t('store.install_backing_up', { path: backupDir }));
@@ -1116,9 +1118,7 @@ async function runSystemInstall({ args, options, logger, t }) {
 
   // Write files
   logger.log(t('system.install_writing'));
-  for (const [relPath, content] of Object.entries(response.files)) {
-    if (typeof content !== 'string') continue;
-    const destPath = path.join(pkgDir, relPath);
+  for (const [destPath, content] of writes) {
     await ensureDir(path.dirname(destPath));
     await fs.writeFile(destPath, content, 'utf8');
   }

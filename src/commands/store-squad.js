@@ -3,10 +3,11 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists, ensureDir } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { resolveTargetDir } = require('../lib/project-root');
+const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
 
 const DEFAULT_BASE_URL = 'https://aioson.com';
 const SQUADS_DIR = '.aioson/squads';
@@ -115,7 +116,9 @@ function parseBundledDeps(content) {
 
 async function runSquadPublish({ args, options, logger, t }) {
   const config = await readConfig();
-  const token = requireToken(config, t);
+  // Mesmo site do system:publish: --base-url > AIOSON_BASE_URL > padrão, com o
+  // token daquele site (sem login nele, recusa).
+  const { token, baseUrl } = requireSite(config, options, t);
   const projectDir = await findProjectRoot(resolveTargetDir(args));
   const slug = String(options.slug || '').trim();
   if (!slug) throw new Error(t('store.error_missing_slug'));
@@ -217,8 +220,7 @@ async function runSquadPublish({ args, options, logger, t }) {
   }
 
   logger.log(t('store.publish_scan_ok', { hash: scan.hash.slice(0, 12) }));
-  logger.log(t('store.publish_squad_sending'));
-  const baseUrl = resolveBaseUrl(config);
+  logger.log(t('store.publish_squad_sending', { url: baseUrl }));
   const response = await storePost(`${baseUrl}/api/store/squads/publish`, {
     kind: 'aioson.store.squad',
     slug,
@@ -262,6 +264,7 @@ async function runSquadInstall({ args, options, logger, t }) {
 
   const slug = response.manifest?.slug || response.slug;
   if (!slug || !response.files) throw new Error(t('store.error_invalid_response'));
+  const squadDir = path.join(projectDir, SQUADS_DIR, assertInstallSlug(slug, t));
 
   // Install-side preview and scan
   const publisher = response.publisher || 'unknown';
@@ -283,6 +286,26 @@ async function runSquadInstall({ args, options, logger, t }) {
   const stringFiles = Object.fromEntries(
     Object.entries(response.files).filter(([, v]) => typeof v === 'string')
   );
+  // Destino de cada arquivo conferido antes de qualquer remoção, cópia ou
+  // escrita (caminhos vêm do servidor): squad/ e agents/ na pasta do squad,
+  // skills/<slug>/ na pasta da skill, genomes/ em .aioson/genomes.
+  const plan = [];
+  for (const [relPath, content] of Object.entries(stringFiles)) {
+    if (relPath.startsWith('skills/')) {
+      // skills/{skill-slug}/... → .aioson/installed-skills/{skill-slug}/...
+      const [skillSlug, ...parts] = relPath.slice('skills/'.length).split('/');
+      const skillDir = path.join(projectDir, INSTALLED_SKILLS_DIR, assertInstallSlug(skillSlug, t));
+      plan.push({ destPath: installTarget(skillDir, parts.join('/'), t), content, dep: { type: 'skill', slug: skillSlug, path: skillDir } });
+    } else if (relPath.startsWith('genomes/')) {
+      const rest = relPath.slice('genomes/'.length);
+      const destPath = installTarget(path.join(projectDir, GENOMES_DIR), rest, t);
+      plan.push({ destPath, content, dep: { type: 'genome', slug: rest.replace(/\.(md|meta\.json)$/, ''), path: destPath } });
+    } else if (relPath.startsWith('squad/') || relPath.startsWith('agents/')) {
+      // squad/ or agents/ → .aioson/squads/{slug}/...
+      const rest = relPath.startsWith('squad/') ? relPath.slice('squad/'.length) : relPath;
+      plan.push({ destPath: installTarget(squadDir, rest, t), content, dep: null });
+    }
+  }
   const scan = scanPackage(stringFiles, 'squad');
   formatScanReport(scan, logger);
   if (!scan.ok) throw new Error(t('store.error_install_scan_failed', { slug }));
@@ -302,8 +325,6 @@ async function runSquadInstall({ args, options, logger, t }) {
     logger.log(t('store.install_unverified_hint', { slug }));
   }
 
-  const squadDir = path.join(projectDir, SQUADS_DIR, slug);
-
   // Handle existing squad
   if ((await exists(squadDir)) && !options.force) {
     const backupDir = path.join(projectDir, BACKUPS_DIR, `squads/${slug}`);
@@ -315,40 +336,23 @@ async function runSquadInstall({ args, options, logger, t }) {
 
   // Write squad files
   logger.log(t('store.install_squad_writing'));
-  for (const [relPath, content] of Object.entries(response.files)) {
-    if (!relPath.startsWith('squad/') && !relPath.startsWith('agents/') && !relPath.startsWith('skills/') && !relPath.startsWith('genomes/')) continue;
-
-    let destPath;
-
-    if (relPath.startsWith('skills/')) {
-      // skills/{skill-slug}/... → .aioson/installed-skills/{skill-slug}/...
-      const rest = relPath.slice('skills/'.length);
-      const [skillSlug, ...parts] = rest.split('/');
-      const existingSkillDir = path.join(projectDir, INSTALLED_SKILLS_DIR, skillSlug);
-
-      if ((await exists(existingSkillDir)) && !options.force) {
-        logger.log(t('store.install_squad_dep_skip', { type: 'skill', slug: skillSlug }));
-        continue;
+  // Skill/genome já instalados ficam como estão (sem --force), conferido uma vez
+  // por dependência ANTES de gravar: conferido arquivo a arquivo, o 1º arquivo de
+  // uma skill nova criava a pasta e os outros eram pulados.
+  const installedDeps = new Set();
+  if (!options.force) {
+    const checked = new Set();
+    for (const { dep } of plan) {
+      if (!dep || checked.has(dep.path)) continue;
+      checked.add(dep.path);
+      if (await exists(dep.path)) {
+        installedDeps.add(dep.path);
+        logger.log(t('store.install_squad_dep_skip', { type: dep.type, slug: dep.slug }));
       }
-      destPath = path.join(projectDir, INSTALLED_SKILLS_DIR, skillSlug, ...parts);
-
-    } else if (relPath.startsWith('genomes/')) {
-      const rest = relPath.slice('genomes/'.length);
-      const destFile = path.join(projectDir, GENOMES_DIR, rest);
-      const genomeSlug = rest.replace(/\.(md|meta\.json)$/, '');
-
-      if ((await exists(destFile)) && !options.force) {
-        logger.log(t('store.install_squad_dep_skip', { type: 'genome', slug: genomeSlug }));
-        continue;
-      }
-      destPath = destFile;
-
-    } else {
-      // squad/ or agents/ → .aioson/squads/{slug}/...
-      const rest = relPath.startsWith('squad/') ? relPath.slice('squad/'.length) : relPath;
-      destPath = path.join(squadDir, rest);
     }
-
+  }
+  for (const { destPath, content, dep } of plan) {
+    if (dep && installedDeps.has(dep.path)) continue;
     await ensureDir(path.dirname(destPath));
     await fs.writeFile(destPath, content, 'utf8');
   }

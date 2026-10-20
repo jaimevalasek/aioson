@@ -258,8 +258,17 @@ AIOSON_BASE_URL=http://localhost:3000 aioson system:publish
 Sem `--base-url` (e sem `AIOSON_BASE_URL`) o publish continua indo para o site
 padrão. Cada site tem o próprio login (`aiosonTokens` em `~/.aioson/config.json`):
 publicar num site sem login nele recusa e diz o `auth:login` exato que falta, em
-vez de mandar o token do outro site. `system:list --remote` e `system:install`
-aceitam o mesmo `--base-url`.
+vez de mandar o token do outro site. `system:list --remote`, `system:install`,
+`skill:publish`, `squad:publish` e `genome:publish` aceitam o mesmo `--base-url`.
+
+- `--base-url` vazio (ex.: `--base-url=$VAR` com a variável vazia) é erro de uso,
+  nunca "vai para o site padrão".
+- O endereço precisa de esquema (`http://localhost:3000`, não `localhost:3000`).
+  `http://` só vale para a própria máquina ou a rede local (10.x, 172.16–31.x,
+  192.168.x, `*.local`); site público exige `https://` — o token não viaja aberto.
+- Login em outro site nunca apaga o login anterior: o token do site padrão fica
+  guardado sob o endereço dele em `aiosonTokens`.
+- `auth:logout` diz de qual site saiu (com `AIOSON_BASE_URL` na sessão, sai só dele).
 
 > Cuidado: o site local grava o ZIP no disco dele (`private/systems/`). Se o banco
 > do site local for o de produção, a versão fica registrada lá sem o arquivo — e a
