@@ -17,6 +17,40 @@
       "created_at": "2026-10-20T06:26:46.557Z",
       "updated_at": "2026-10-20T06:26:46.557Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-54cc71",
+      "kind": "defect",
+      "summary": "op:list --json piped into head crashes with an EPIPE stack trace instead of exiting quietly",
+      "detail": null,
+      "paths": [
+        "src/lib/console-write.js"
+      ],
+      "feature": null,
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-10-20T14:03:46.115Z",
+      "updated_at": "2026-10-20T14:03:46.115Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-b68ec4",
+      "kind": "idea",
+      "summary": "Operator store triage: archive the one-off feature approvals saved before decisions were scoped, which still fill most of the 522-decision store",
+      "detail": null,
+      "paths": [
+        "src/operator-memory/decay.js"
+      ],
+      "feature": null,
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-10-20T14:03:46.495Z",
+      "updated_at": "2026-10-20T14:03:46.495Z",
+      "resolution": null
     }
   ]
 }
