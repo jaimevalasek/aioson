@@ -17,8 +17,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { commandProject, positionalArgs, identityFor } = require('../operator-memory/command-context');
-const { ensureStorageTree, getStorageRoot } = require('../operator-memory/storage');
+const { positionalArgs, openCommand, commandIdentity } = require('../operator-memory/command-context');
+const { getStorageRoot } = require('../operator-memory/storage');
 const { loadMemoryIndex } = require('../operator-memory/index-md');
 const { readDecision } = require('../operator-memory/decision');
 const { resolveProjectScope, appliesInProject, parseList, SCOPE_PROJECT } = require('../operator-memory/project-scope');
@@ -38,13 +38,8 @@ async function runOpList({ args = [], options = {}, logger }) {
   }
 
   // The project is the `[path]` argument's, the working directory only without one.
-  const where = commandProject(positionalArgs(args)[0]);
-  if (where.error) {
-    const err = `op:list — ${where.error}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
-  }
+  const where = openCommand('op:list', positionalArgs(args)[0], options, logger);
+  if (where.failure) return where.failure;
 
   const format = options.format || 'table';
   const showProposals = Boolean(options.proposals);
@@ -52,8 +47,7 @@ async function runOpList({ args = [], options = {}, logger }) {
   const filterFeature = options.feature ? String(options.feature) : null;
   const filterAgent = options.agent ? String(options.agent) : null;
 
-  const resolved = identityFor(where.dir);
-  ensureStorageTree(resolved.identity);
+  const resolved = commandIdentity(where.dir);
   const root = getStorageRoot(resolved.identity);
 
   let items = [];

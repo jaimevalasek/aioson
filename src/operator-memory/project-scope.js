@@ -103,9 +103,11 @@ function namesCrossProjectScope(...texts) {
   return texts.flat().filter(Boolean).some(assertsCrossProjectScope);
 }
 
-// The normalization identities were hashed with before identity sets existed;
-// kept verbatim so a decision recorded with one of those keys still matches.
-function legacyNormalizeRemoteUrl(raw) {
+// A remote as `host/path`: scheme, credentials, port, trailing slash and
+// `.git` stripped, lowercased; null for a local path. Identities hashed before
+// identity sets existed used exactly this (see `legacyKeysFor`), so it stays
+// verbatim and the canonical forms are layered on top in `normalizeRemoteUrl`.
+function remoteHostPath(raw) {
   let url = String(raw || '').trim();
   if (!url || /^file:/i.test(url)) return null;
   const scheme = url.match(/^[a-z][a-z0-9+.-]*:\/\//i);
@@ -148,26 +150,9 @@ function canonicalRemote(url) {
 }
 
 function normalizeRemoteUrl(raw) {
-  let url = String(raw || '').trim();
-  if (!url || /^file:/i.test(url)) return null;
   // A query or fragment never names the repository and may carry a token.
-  url = url.replace(/[?#].*$/, '');
-  const scheme = url.match(/^[a-z][a-z0-9+.-]*:\/\//i);
-  if (scheme) {
-    url = url.slice(scheme[0].length);
-    const slash = url.indexOf('/');
-    const authority = slash === -1 ? url : url.slice(0, slash);
-    const rest = slash === -1 ? '' : url.slice(slash);
-    const host = authority.slice(authority.lastIndexOf('@') + 1).replace(/:\d+$/, '');
-    url = host + rest;
-  } else {
-    // scp-like `user@host:owner/repo` — a single-letter host is a Windows drive.
-    const scp = url.match(/^(?:[^@/\\]+@)?([^:/\\]{2,}):(.+)$/);
-    if (!scp) return null;
-    url = `${scp[1]}/${scp[2]}`;
-  }
-  url = url.toLowerCase().replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/\/+$/, '').replace(/\.git$/, '');
-  return url.includes('/') ? canonicalRemote(url) : null;
+  const hostPath = remoteHostPath(String(raw || '').trim().replace(/[?#].*$/, ''));
+  return hostPath ? canonicalRemote(hostPath) : null;
 }
 
 function sameDir(left, right) {
@@ -191,26 +176,29 @@ function findGitCheckout(startDir, stopAtHome = true) {
     let stat;
     try { stat = fs.statSync(dotGit); } catch { stat = null; }
     if (stat && stat.isDirectory()) return { root: dir, commonDir: dotGit, configPath: path.join(dotGit, 'config') };
-    if (stat && stat.isFile()) {
-      // Linked worktree: `.git` points at its gitdir, whose `commondir` holds the config.
-      try {
-        const pointer = fs.readFileSync(dotGit, 'utf8').match(/^gitdir:\s*(.+)$/m);
-        if (!pointer) return null;
-        const gitDir = path.resolve(dir, pointer[1].trim());
-        let commonDir = gitDir;
-        try {
-          commonDir = path.resolve(gitDir, fs.readFileSync(path.join(gitDir, 'commondir'), 'utf8').trim());
-        } catch { /* not a worktree gitdir — its own config */ }
-        return { root: dir, commonDir, configPath: path.join(commonDir, 'config') };
-      } catch {
-        return null;
-      }
-    }
+    if (stat && stat.isFile()) return linkedCheckout(dir, dotGit);
     const parent = path.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
   }
   return null;
+}
+
+// Linked worktree (or submodule): `.git` is a file pointing at its gitdir,
+// whose `commondir` holds the shared config.
+function linkedCheckout(dir, dotGit) {
+  try {
+    const pointer = fs.readFileSync(dotGit, 'utf8').match(/^gitdir:\s*(.+)$/m);
+    if (!pointer) return null;
+    const gitDir = path.resolve(dir, pointer[1].trim());
+    let commonDir = gitDir;
+    try {
+      commonDir = path.resolve(gitDir, fs.readFileSync(path.join(gitDir, 'commondir'), 'utf8').trim());
+    } catch { /* not a worktree gitdir — its own config */ }
+    return { root: dir, commonDir, configPath: path.join(commonDir, 'config') };
+  } catch {
+    return null;
+  }
 }
 
 /** The raw `url` value of each remote (first one wins), as written in the config. */
@@ -229,6 +217,8 @@ function readRemoteUrls(configPath) {
   return remotes;
 }
 
+const CONFIG_ESCAPES = { n: '\n', t: '\t' };
+
 /** A git config value as git reads it: quotes removed, escapes resolved, an inline `#`/`;` comment dropped. */
 function configValue(raw) {
   const text = String(raw || '');
@@ -237,12 +227,11 @@ function configValue(raw) {
   for (let i = 0; i < text.length; i += 1) {
     const ch = text[i];
     if (ch === '\\' && i + 1 < text.length) {
-      const next = text[i + 1];
-      out += next === 'n' ? '\n' : (next === 't' ? '\t' : next);
       i += 1;
+      out += CONFIG_ESCAPES[text[i]] || text[i];
     } else if (ch === '"') {
       quoted = !quoted;
-    } else if (!quoted && (ch === '#' || ch === ';')) {
+    } else if (!quoted && /[#;]/.test(ch)) {
       break;
     } else {
       out += ch;
@@ -292,27 +281,23 @@ function resolveProjectScope(startDir = process.cwd()) {
   if (checkout) keys.push(hashKey(`gitdir:${foldPath(checkout.commonDir)}${sub}`));
   keys.push(hashKey(`path:${foldPath(root)}`));
 
-  // The key this checkout had before identity sets: `upstream` first, the raw
-  // config value, no path inside the checkout, the walk past the home dir.
-  const legacyKeys = [];
-  const legacyCheckout = checkout || findGitCheckout(root, false);
-  const legacyRemotes = legacyCheckout === checkout ? remotes : readRemoteUrls(legacyCheckout ? legacyCheckout.configPath : '');
-  for (const remote of ['upstream', 'origin']) {
-    const normalized = legacyNormalizeRemoteUrl(legacyRemotes[remote]);
-    if (!normalized) continue;
-    const legacy = hashKey(`remote:${normalized}`);
-    if (!keys.includes(legacy)) legacyKeys.push(legacy);
-    break;
-  }
-
   return {
     key: keys[0],
     keys,
-    legacyKeys,
+    legacyKeys: legacyKeysFor(root, checkout, remotes).filter((key) => !keys.includes(key)),
     name: displayName(own && !sub ? own : root),
     source: own ? 'remote' : 'path',
     anchored: Boolean(aiosonRoot || checkout)
   };
+}
+
+// The key this checkout had before identity sets: `upstream` first, the raw
+// config value, no path inside the checkout, the walk past the home dir.
+function legacyKeysFor(root, checkout, remotes) {
+  const legacyCheckout = checkout || findGitCheckout(root, false);
+  const legacyRemotes = legacyCheckout === checkout ? remotes : readRemoteUrls(legacyCheckout ? legacyCheckout.configPath : '');
+  const hostPath = remoteHostPath(legacyRemotes.upstream) || remoteHostPath(legacyRemotes.origin);
+  return hostPath ? [hashKey(`remote:${hostPath}`)] : [];
 }
 
 // The `p` prefix keeps a key from ever reading as a number in the hand-rolled
@@ -415,8 +400,5 @@ module.exports = {
   parseList,
   SCOPE_OPERATOR,
   SCOPE_PROJECT,
-  VALID_SCOPES,
-  WIDEN_AT_PROJECTS,
-  MAX_PROJECTS,
-  CROSS_PROJECT_MARKERS
+  VALID_SCOPES
 };

@@ -20,8 +20,8 @@ function stripInjectionChars(text) {
 // Invisible carriers that smuggle text past a human reader: every format
 // character (Cf — zero-width, bidi controls, soft hyphen, the U+E0000 tag block
 // of "ASCII smuggling", which NFKC keeps) and the variation selectors (Mn —
-// U+FE00–FE0F and U+E0100–E01EF, bytes hidden after an emoji). One exported
-// set, so every reader of third-party text strips the same thing.
+// U+FE00–FE0F and U+E0100–E01EF, bytes hidden after an emoji). One set behind
+// one exported helper, so every reader of third-party text strips the same thing.
 const SMUGGLING_CHARS_RE = /[\p{Cf}\u{FE00}-\u{FE0F}\u{E0100}-\u{E01EF}]/gu;
 
 function stripSmugglingChars(text) {
@@ -158,7 +158,6 @@ module.exports = {
   scanInjectionPayloads,
   wrapAsExternalContent,
   INJECTION_PATTERNS,
-  SMUGGLING_CHARS_RE,
   ZERO_WIDTH_RE,
   BIDI_RE,
   HTML_COMMENT_RE

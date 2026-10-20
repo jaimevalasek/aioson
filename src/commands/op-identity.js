@@ -18,7 +18,7 @@ const {
   validateOverride,
   OVERRIDE_REGEX
 } = require('../operator-memory/identity');
-const { commandProject, positionalArgs, identityFor } = require('../operator-memory/command-context');
+const { positionalArgs, commandFailure, openCommand, commandIdentity } = require('../operator-memory/command-context');
 const {
   ensureStorageTree,
   openIndexDb,
@@ -38,6 +38,39 @@ function parseSubcommand(args) {
   return { rawPath, sub, setValue };
 }
 
+// Phase 5 full impl: process.env mutation works only within this Node process.
+// For shell-session persistence the user must export AIOSON_OPERATOR_ID. This
+// command initializes the identity storage tree for the new id so subsequent
+// op:* invocations in the same process see a ready identity.
+function setIdentity(setValue, options, logger) {
+  if (!setValue) return commandFailure(options, logger, 'op:identity set — missing <id>. Usage: aioson op:identity set <id>');
+  const validation = validateOverride(setValue);
+  if (!validation.ok) {
+    return commandFailure(options, logger, `op:identity set — '${setValue}' invalid (${validation.reason}; expected ${OVERRIDE_REGEX}, no reserved prefix _* or aioson-*).`);
+  }
+  process.env.AIOSON_OPERATOR_ID = setValue;
+  ensureStorageTree(setValue);
+  let db;
+  try {
+    db = openIndexDb();
+    recordIdentityActivity(db, { identity: setValue, source: 'override' });
+  } finally {
+    if (db) { try { db.close(); } catch { /* ignore */ } }
+  }
+  if (options.json) {
+    return {
+      ok: true,
+      identity: setValue,
+      source: 'override',
+      storage_root: getStorageRoot(setValue),
+      persistence: 'process_env_only',
+      shell_export: `export AIOSON_OPERATOR_ID=${setValue}`
+    };
+  }
+  if (logger) logger.log(`op:identity set — process env AIOSON_OPERATOR_ID=${setValue} (this process only). Persist via shell:\n  export AIOSON_OPERATOR_ID=${setValue}\n  # or .bashrc / equivalent`);
+  return { ok: true };
+}
+
 async function runOpIdentity({ args = [], options = {}, logger }) {
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
     const help = [
@@ -51,67 +84,17 @@ async function runOpIdentity({ args = [], options = {}, logger }) {
   }
 
   const { rawPath, sub, setValue } = parseSubcommand(args);
-  const where = commandProject(rawPath);
-  if (where.error) {
-    const err = `op:identity — ${where.error}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger) logger.error(err);
-    return { ok: false, error: err, exitCode: 1 };
-  }
+  const where = openCommand('op:identity', rawPath, options, logger);
+  if (where.failure) return where.failure;
   const targetDir = where.dir;
 
   if (sub !== 'show' && sub !== 'set') {
-    const err = `op:identity — unknown subcommand '${sub}'. Use: show | set <id>`;
-    if (options.json) return { ok: false, error: err };
-    if (logger) logger.error(err);
-    return { ok: false, error: err, exitCode: 1 };
+    return commandFailure(options, logger, `op:identity — unknown subcommand '${sub}'. Use: show | set <id>`);
   }
-
-  if (sub === 'set') {
-    if (!setValue) {
-      const err = `op:identity set — missing <id>. Usage: aioson op:identity set <id>`;
-      if (options.json) return { ok: false, error: err };
-      if (logger) logger.error(err);
-      return { ok: false, error: err, exitCode: 1 };
-    }
-    const validation = validateOverride(setValue);
-    if (!validation.ok) {
-      const err = `op:identity set — '${setValue}' invalid (${validation.reason}; expected ${OVERRIDE_REGEX}, no reserved prefix _* or aioson-*).`;
-      if (options.json) return { ok: false, error: err };
-      if (logger) logger.error(err);
-      return { ok: false, error: err, exitCode: 1 };
-    }
-    // Phase 5 full impl: process.env mutation works only within this Node process.
-    // For shell-session persistence the user must export AIOSON_OPERATOR_ID. This
-    // command initializes the identity storage tree for the new id so subsequent
-    // op:* invocations in the same process see a ready identity.
-    process.env.AIOSON_OPERATOR_ID = setValue;
-    ensureStorageTree(setValue);
-    let db;
-    try {
-      db = openIndexDb();
-      recordIdentityActivity(db, { identity: setValue, source: 'override' });
-    } finally {
-      if (db) { try { db.close(); } catch { /* ignore */ } }
-    }
-    const msg = `op:identity set — process env AIOSON_OPERATOR_ID=${setValue} (this process only). Persist via shell:\n  export AIOSON_OPERATOR_ID=${setValue}\n  # or .bashrc / equivalent`;
-    if (options.json) {
-      return {
-        ok: true,
-        identity: setValue,
-        source: 'override',
-        storage_root: getStorageRoot(setValue),
-        persistence: 'process_env_only',
-        shell_export: `export AIOSON_OPERATOR_ID=${setValue}`
-      };
-    }
-    if (logger) logger.log(msg);
-    return { ok: true };
-  }
+  if (sub === 'set') return setIdentity(setValue, options, logger);
 
   // sub === 'show'
-  const resolved = identityFor(targetDir);
-  ensureStorageTree(resolved.identity);
+  const resolved = commandIdentity(targetDir);
 
   let db;
   try {

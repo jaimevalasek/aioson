@@ -127,7 +127,6 @@ function preflightLoad(identity, taskDescription, options = {}) {
 module.exports = {
   preflightLoad,
   matchDecisions,
-  scopeIndexToProject,
   tokenize,
   DEFAULT_MAX_MATCHES,
   STOPWORDS

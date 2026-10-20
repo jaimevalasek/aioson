@@ -5,29 +5,19 @@
  */
 
 const fs = require('node:fs');
-const { commandProject, pathAndSlug, identityFor } = require('../operator-memory/command-context');
-const { ensureStorageTree } = require('../operator-memory/storage');
+const { commandFailure, openSlugCommand } = require('../operator-memory/command-context');
 const { readDecision, decisionPath } = require('../operator-memory/decision');
 const { readProposal } = require('../operator-memory/proposal');
 
 async function runOpShow({ args = [], options = {}, logger }) {
-  const { rawPath, slug } = pathAndSlug(args);
-
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
     if (logger) logger.log('op:show [path] <slug> — print a single decision (frontmatter + body). --json for structured output.');
     return { ok: true };
   }
 
-  const where = slug ? commandProject(rawPath) : {};
-  if (!slug || where.error) {
-    const err = where.error ? `op:show — ${where.error}.` : 'op:show — required argument: <slug>. Usage: aioson op:show [path] <slug>';
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
-  }
-
-  const resolved = identityFor(where.dir);
-  ensureStorageTree(resolved.identity);
+  const opened = openSlugCommand('op:show', args, options, logger);
+  if (opened.failure) return opened.failure;
+  const { slug, resolved } = opened;
 
   const decision = readDecision(resolved.identity, slug);
   if (decision) {
@@ -62,10 +52,7 @@ async function runOpShow({ args = [], options = {}, logger }) {
     return { ok: true, kind: 'proposal' };
   }
 
-  const err = `op:show — '${slug}' not found in decisions/ or proposals/ for identity ${resolved.identity}.`;
-  if (options.json) return { ok: false, error: err };
-  if (logger && logger.error) logger.error(err);
-  return { ok: false, exitCode: 1, error: err };
+  return commandFailure(options, logger, `op:show — '${slug}' not found in decisions/ or proposals/ for identity ${resolved.identity}.`);
 }
 
 module.exports = { runOpShow };

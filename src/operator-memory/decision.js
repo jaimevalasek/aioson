@@ -46,6 +46,7 @@ const {
   SCOPE_PROJECT,
   VALID_SCOPES
 } = require('./project-scope');
+const { escapeYamlString, quotesToYaml, projectLines } = require('./frontmatter');
 
 const SCHEMA_VERSION = '1.0';
 const MAX_BODY_CHARS = 500;
@@ -82,33 +83,31 @@ function historyPath(identity, slug, isoStamp) {
   return path.join(getStorageRoot(identity), 'history', `${isoStamp.replace(/[:.]/g, '-')}-${slug}.md`);
 }
 
-// One line per scalar: a newline inside a quote ended the frontmatter early
-// (a `---` line closed it), and the decision read back unscoped.
-function escapeYamlString(value) {
-  const s = String(value || '').replace(/[\r\n]+/g, ' ');
-  return `'${s.replace(/'/g, "''")}'`;
-}
-
-function quotesToYaml(quotes) {
-  if (!quotes || quotes.length === 0) return '[]';
-  return '\n' + quotes.map((q) => `  - ${escapeYamlString(q)}`).join('\n');
-}
-
 function deriveTitle(proposal) {
   const text = String(proposal || '').trim();
   if (!text) return 'Untitled decision';
   return text.charAt(0).toUpperCase() + text.slice(1, 100);
 }
 
-// `projects` stays the flat union of every key, so a reader that predates
-// identity sets still matches; `project_sets` groups them, one set per project.
-function scopeLines({ scope, projects, project_sets: sets, project_names: projectNames }) {
-  return [
-    `scope: ${scope}`,
-    `projects: ${escapeYamlString(parseList(projects).join(','))}`,
-    `project_sets: ${escapeYamlString(serializeProjectSets(projectSets({ project_sets: sets, projects })))}`,
-    `project_names: ${escapeYamlString(parseList(projectNames).join(','))}`
-  ];
+function scopeLines(record) {
+  return [`scope: ${record.scope}`, ...projectLines(record)];
+}
+
+// MEMORY.md is regenerable from decisions/ (markdown is the source of truth),
+// so a failed regeneration never fails the write that preceded it.
+function regenerateIndexQuietly(identity) {
+  try {
+    const { regenerateIndex } = require('./index-md');
+    regenerateIndex(identity);
+  } catch { /* index regen failure is non-fatal */ }
+}
+
+/** Atomic in-place rewrite of one decision file (tmp + rename), then the index. */
+function rewriteDecision(identity, filePath, content) {
+  const tmpPath = `${filePath}.tmp`;
+  fs.writeFileSync(tmpPath, content, 'utf8');
+  fs.renameSync(tmpPath, filePath);
+  regenerateIndexQuietly(identity);
 }
 
 function serializeDecision(data) {
@@ -262,12 +261,8 @@ function promoteProposal({ identity, proposal: proposalData, scope: requestedSco
     db.close();
   }
 
-  // Post-commit: regenerate MEMORY.md index (best-effort, outside transaction
-  // since MEMORY.md is regenerable from decisions/ — markdown source-of-truth).
-  try {
-    const { regenerateIndex } = require('./index-md');
-    regenerateIndex(identity);
-  } catch { /* index regen failure is non-fatal */ }
+  // Post-commit: regenerate MEMORY.md index (outside the transaction).
+  regenerateIndexQuietly(identity);
 
   return decision;
 }
@@ -298,16 +293,9 @@ function reinforceDecision(identity, slug) {
     .replace(/^(reinforcement_count:[ \t]*).*$/m, `$1${nextCount}`)
     .replace(/^(last_reinforced:[ \t]*).*$/m, `$1${now}`);
 
-  const tmpPath = `${filePath}.tmp`;
-  fs.writeFileSync(tmpPath, updated, 'utf8');
-  fs.renameSync(tmpPath, filePath);
-
-  // Post-write: regenerate MEMORY.md index (best-effort — it surfaces the
-  // reinforced date). FTS body/category are unchanged, so no FTS write needed.
-  try {
-    const { regenerateIndex } = require('./index-md');
-    regenerateIndex(identity);
-  } catch { /* index regen failure is non-fatal */ }
+  // The index surfaces the reinforced date; FTS body/category are unchanged,
+  // so no FTS write is needed.
+  rewriteDecision(identity, filePath, updated);
 
   return { slug, last_reinforced: now, previous, reinforcement_count: nextCount };
 }
@@ -346,14 +334,7 @@ function applyProjectScope(identity, slug, { project = null, quote = null, reque
     || serializeProjectSets(seen.sets) !== serializeProjectSets(projectSets(parsed));
   if (!changed) return { scope: nextScope, previous, projects: seen.keys, changed: false };
 
-  const updated = setFrontmatterFields(content, scopeLines({ scope: nextScope, projects: seen.keys, project_sets: seen.sets, project_names: seen.names }));
-  const tmpPath = `${filePath}.tmp`;
-  fs.writeFileSync(tmpPath, updated, 'utf8');
-  fs.renameSync(tmpPath, filePath);
-  try {
-    const { regenerateIndex } = require('./index-md');
-    regenerateIndex(identity);
-  } catch { /* index regen failure is non-fatal */ }
+  rewriteDecision(identity, filePath, setFrontmatterFields(content, scopeLines({ scope: nextScope, project_sets: seen.sets, project_names: seen.names })));
   return { scope: nextScope, previous, projects: seen.keys, changed: true };
 }
 
@@ -395,10 +376,7 @@ function forgetEntry(identity, slug) {
       db.close();
     }
     // Post-commit: regenerate MEMORY.md index after decision removed
-    try {
-      const { regenerateIndex } = require('./index-md');
-      regenerateIndex(identity);
-    } catch { /* index regen failure is non-fatal */ }
+    regenerateIndexQuietly(identity);
     return { mode: 'decision', archivedPath: archived };
   }
   if (fs.existsSync(propFilePath)) {

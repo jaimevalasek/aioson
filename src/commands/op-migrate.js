@@ -22,8 +22,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { commandProject, positionalArgs, identityFor } = require('../operator-memory/command-context');
-const { ensureStorageTree } = require('../operator-memory/storage');
+const { positionalArgs, openCommand, commandIdentity } = require('../operator-memory/command-context');
 const { captureSignal } = require('../operator-memory/proposal');
 const { readDecision, promoteProposal } = require('../operator-memory/decision');
 const { deriveSlug } = require('../operator-memory/slug');
@@ -121,13 +120,8 @@ async function runOpMigrate({ args = [], options = {}, logger }) {
   }
 
   // The project is the `[path]` argument's, the working directory only without one.
-  const where = commandProject(positionalArgs(args)[0]);
-  if (where.error) {
-    const err = `op:migrate — ${where.error}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
-  }
+  const where = openCommand('op:migrate', positionalArgs(args)[0], options, logger);
+  if (where.failure) return where.failure;
   const targetDir = where.dir;
   const profilePath = path.join(targetDir, '.aioson', 'context', 'user-profile.md');
 
@@ -153,9 +147,7 @@ async function runOpMigrate({ args = [], options = {}, logger }) {
     return { ok: true, migrated: 0, idempotent: true };
   }
 
-  const resolved = identityFor(targetDir);
-  ensureStorageTree(resolved.identity);
-
+  const resolved = commandIdentity(targetDir);
   const { migrated, skipped, results } = await migrateKnownFields(resolved.identity, fm, targetDir);
 
   rewriteUserProfileWithDeprecation(profilePath, fm);

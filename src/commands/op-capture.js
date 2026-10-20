@@ -20,8 +20,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { commandProject, positionalArgs, identityFor, projectTranslator } = require('../operator-memory/command-context');
-const { ensureStorageTree, recordIdentityActivity, openIndexDb, getStorageRoot } = require('../operator-memory/storage');
+const { positionalArgs, commandFailure, openCommand, commandIdentity, projectTranslator } = require('../operator-memory/command-context');
+const { recordIdentityActivity, openIndexDb } = require('../operator-memory/storage');
 const { deriveSlug, fingerprintProposal } = require('../operator-memory/slug');
 const { captureSignal, readProposal, deleteProposal, VALID_SIGNAL_TYPES } = require('../operator-memory/proposal');
 const { promoteProposal, readDecision, reinforceDecision, applyProjectScope } = require('../operator-memory/decision');
@@ -68,13 +68,8 @@ A decision applies only in the project it was said in until it is detected in a 
   }
 
   // The project is the `[path]` argument's, the working directory only without one.
-  const where = commandProject(positionalArgs(args)[0]);
-  if (where.error) {
-    const err = `op:capture — ${where.error}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
-  }
+  const where = openCommand('op:capture', positionalArgs(args)[0], options, logger);
+  if (where.failure) return where.failure;
   const targetDir = where.dir;
 
   const signal = options.signal;
@@ -85,23 +80,14 @@ A decision applies only in the project it was said in until it is detected in a 
   const sessionId = options['session-id'] || options.sessionId || null;
 
   if (!signal || !proposal) {
-    const err = `op:capture — required: --signal=<type> --proposal=<paraphrase>. Got signal=${signal}, proposal=${proposal ? 'present' : 'missing'}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
+    return commandFailure(options, logger, `op:capture — required: --signal=<type> --proposal=<paraphrase>. Got signal=${signal}, proposal=${proposal ? 'present' : 'missing'}.`);
   }
   if (!VALID_SIGNAL_TYPES.includes(signal)) {
-    const err = `op:capture — invalid --signal='${signal}'. Must be one of: ${VALID_SIGNAL_TYPES.join(', ')}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
+    return commandFailure(options, logger, `op:capture — invalid --signal='${signal}'. Must be one of: ${VALID_SIGNAL_TYPES.join(', ')}.`);
   }
   const requestedScope = options.scope == null ? null : String(options.scope);
   if (requestedScope !== null && !VALID_SCOPES.includes(requestedScope)) {
-    const err = `op:capture — invalid --scope='${requestedScope}'. Must be one of: ${VALID_SCOPES.join(', ')}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
+    return commandFailure(options, logger, `op:capture — invalid --scope='${requestedScope}'. Must be one of: ${VALID_SCOPES.join(', ')}.`);
   }
   let project;
   try { project = resolveProjectScope(targetDir); } catch { project = null; }
@@ -109,14 +95,10 @@ A decision applies only in the project it was said in until it is detected in a 
   // checkout, never whatever folder the shell stands in; falling back to
   // operator-wide would widen exactly the memory the caller asked to keep local.
   if (requestedScope === SCOPE_PROJECT && !(project && project.anchored)) {
-    const err = `op:capture — --scope=project needs a project (an AIOSON root or a git checkout), and none could be identified from ${targetDir}.`;
-    if (options.json) return { ok: false, error: err };
-    if (logger && logger.error) logger.error(err);
-    return { ok: false, exitCode: 1, error: err };
+    return commandFailure(options, logger, `op:capture — --scope=project needs a project (an AIOSON root or a git checkout), and none could be identified from ${targetDir}.`);
   }
 
-  const resolved = identityFor(targetDir);
-  ensureStorageTree(resolved.identity);
+  const resolved = commandIdentity(targetDir);
   const db = openIndexDb();
   try {
     recordIdentityActivity(db, { identity: resolved.identity, source: resolved.source });
@@ -147,10 +129,7 @@ A decision applies only in the project it was said in until it is detected in a 
       project
     });
   } catch (err) {
-    const errMsg = `op:capture failed: ${err.message}`;
-    if (options.json) return { ok: false, error: errMsg };
-    if (logger && logger.error) logger.error(errMsg);
-    return { ok: false, exitCode: 1, error: errMsg };
+    return commandFailure(options, logger, `op:capture failed: ${err.message}`);
   }
 
   // M2: append confirmation signals to session accumulator for decision_rationale
@@ -226,10 +205,7 @@ A decision applies only in the project it was said in until it is detected in a 
     try {
       decision = promoteProposal({ identity: resolved.identity, proposal: result.proposal, scope: requestedScope });
     } catch (err) {
-      const errMsg = `op:capture promotion failed: ${err.message}`;
-      if (options.json) return { ok: false, error: errMsg };
-      if (logger && logger.error) logger.error(errMsg);
-      return { ok: false, exitCode: 1, error: errMsg };
+      return commandFailure(options, logger, `op:capture promotion failed: ${err.message}`);
     }
 
     await emitDossierEvent(targetDir, {

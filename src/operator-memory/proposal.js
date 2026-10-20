@@ -26,7 +26,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ensureStorageTree, getStorageRoot } = require('./storage');
 const { fingerprintProposal, isValidDecisionSlug } = require('./slug');
-const { parseList, projectSets, recordProject, serializeProjectSets } = require('./project-scope');
+const { projectSets, recordProject } = require('./project-scope');
+const { escapeYamlString, quotesToYaml, projectLines } = require('./frontmatter');
 
 const MAX_QUOTES = 5;
 const VALID_SIGNAL_TYPES = ['authorization', 'exclusion', 'correction', 'confirmation'];
@@ -36,18 +37,6 @@ function proposalPath(identity, slug) {
     throw new Error(`invalid proposal slug: ${JSON.stringify(String(slug)).slice(0, 120)}`);
   }
   return path.join(getStorageRoot(identity), 'proposals', `${slug}.md`);
-}
-
-function escapeYamlString(value) {
-  // One line per scalar (a newline ended the frontmatter early); wrap in single
-  // quotes and escape embedded single quotes.
-  const s = String(value || '').replace(/[\r\n]+/g, ' ');
-  return `'${s.replace(/'/g, "''")}'`;
-}
-
-function quotesToYaml(quotes) {
-  if (!quotes || quotes.length === 0) return '[]';
-  return '\n' + quotes.map((q) => `  - ${escapeYamlString(q)}`).join('\n');
 }
 
 function serializeProposal(data) {
@@ -65,12 +54,7 @@ function serializeProposal(data) {
   ];
   if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
   if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
-  const sets = projectSets(data);
-  if (sets.length > 0) {
-    lines.push(`projects: ${escapeYamlString([...new Set(sets.flat())].join(','))}`);
-    lines.push(`project_sets: ${escapeYamlString(serializeProjectSets(sets))}`);
-    lines.push(`project_names: ${escapeYamlString(parseList(data.project_names).join(','))}`);
-  }
+  if (projectSets(data).length > 0) lines.push(...projectLines(data));
   lines.push('---', '');
   return lines.join('\n');
 }
