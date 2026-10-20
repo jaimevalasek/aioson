@@ -1164,6 +1164,11 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_rule_new');
   logHelpLine(t, logger, 'cli.help_doc_new');
   logHelpLine(t, logger, 'cli.help_decide');
+  logHelpLine(t, logger, 'cli.help_observe');
+  logHelpLine(t, logger, 'cli.help_observation_list');
+  logHelpLine(t, logger, 'cli.help_observation_resolve');
+  logHelpLine(t, logger, 'cli.help_op_list');
+  logHelpLine(t, logger, 'cli.help_hooks_recap');
   logHelpLine(t, logger, 'cli.help_briefing_sources');
   logHelpLine(t, logger, 'cli.help_briefing_approve');
   logHelpLine(t, logger, 'cli.help_briefing_unapprove');

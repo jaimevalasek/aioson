@@ -325,7 +325,7 @@ function handoffMatchesState(handoff, state) {
 
 async function runWorkflowStatus({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
-  const tool = options.tool || 'codex';
+  const tool = options.tool || require('../lib/project-tool').defaultProjectTool(targetDir);
 
   let state = null;
   let binding = null;

@@ -37,19 +37,45 @@ async function readProjectClassification(ctxDir) {
 /**
  * DEV, QA and planner append to the dossier best-effort (`|| true`), and no
  * agent instruction creates it, so a missing dossier silently dropped every
- * trail line. A slug with its own PRD is a real feature: the first write
- * bootstraps the dossier from its artifacts instead of refusing. A slug
- * without a PRD (a typo) still gets `not_found`.
+ * trail line. A slug with its own PRD or briefing is a real feature: the
+ * first write bootstraps the dossier from its artifacts instead of refusing.
+ * A slug with neither (a typo) still gets `not_found`.
  */
 async function bootstrapForWrite(targetDir, ctxDir, slug) {
   try {
     await fs.access(path.join(ctxDir, `prd-${slug}.md`));
   } catch {
+    return bootstrapFromBriefing(targetDir, ctxDir, slug);
+  }
+  try {
+    // initFromExisting reads the PRD's own tier before the project's.
+    await initFromExisting({ slug, contextDir: ctxDir, targetDir: resolveTargetDir(targetDir) });
+    return true;
+  } catch (err) {
+    return Boolean(err && err.code === 'EDOSSIEREXISTS');
+  }
+}
+
+// Before a PRD the feature's first artifact is its briefing: @briefing's trail
+// line (its kernel calls dossier:add-finding) lands instead of dying behind
+// `|| true`. Why/What come from the briefing's Problem and Proposed solution.
+async function bootstrapFromBriefing(targetDir, ctxDir, slug) {
+  let briefing;
+  try {
+    briefing = await fs.readFile(path.join(resolveTargetDir(targetDir), '.aioson', 'briefings', slug, 'briefings.md'), 'utf8');
+  } catch {
     return false;
   }
-  const classification = (await readProjectClassification(ctxDir)) || 'MEDIUM';
+  const sections = store.parseSections(briefing);
   try {
-    await initFromExisting({ slug, contextDir: ctxDir, classification, targetDir: resolveTargetDir(targetDir) });
+    await store.init({
+      slug,
+      contextDir: ctxDir,
+      classification: (await readProjectClassification(ctxDir)) || 'MEDIUM',
+      author: 'dossier-init',
+      whyText: sections.Problem || '',
+      whatText: sections['Proposed solution'] || ''
+    });
     return true;
   } catch (err) {
     return Boolean(err && err.code === 'EDOSSIEREXISTS');
@@ -270,7 +296,7 @@ async function runDossierAddFinding({ args = [], options = {}, logger } = {}) {
     if (!(err && err.code === 'EDOSSIERMISSING')) throw err;
     if (!(await bootstrapForWrite(targetDir, ctxDir, slug))) {
       if (jsonOut) return { ok: false, reason: 'not_found', slug };
-      log(`Dossier not found for slug "${slug}" and no prd-${slug}.md to bootstrap it from. Run dossier:init first.`);
+      log(`Dossier not found for slug "${slug}" and neither prd-${slug}.md nor .aioson/briefings/${slug}/briefings.md to bootstrap it from. Run dossier:init first.`);
       return { ok: false };
     }
     bootstrapped = true;

@@ -20,6 +20,7 @@ const readline = require('node:readline');
 const { parseYamlFrontmatter, getInteractionLanguage } = require('../context');
 const { createTranslator } = require('../i18n');
 const {
+  approvalHash,
   configPath: registryConfigPath,
   markRefinementState,
   readBriefingRegistry,
@@ -338,6 +339,7 @@ async function runBriefingApprove({ args, options = {}, logger }) {
   const projectDir = resolveTargetDir(args);
   const slugOpt = String(options.slug || '').trim() || null;
   const configFile = registryConfigPath(projectDir);
+  const t = await resolveProjectGateTranslator(projectDir);
 
   // ── Read config ────────────────────────────────────────────────────────────
   let data;
@@ -345,17 +347,17 @@ async function runBriefingApprove({ args, options = {}, logger }) {
     data = await readBriefingRegistry(projectDir);
   } catch (error) {
     if (error && error.code === 'invalid_frontmatter') {
-      logger.error('config.md com frontmatter inválido. Verifique o arquivo manualmente.');
+      logger.error(t('briefing_approval.invalid_frontmatter'));
       return { ok: false, error: 'invalid_frontmatter' };
     }
-    logger.error('Nenhum briefing encontrado. Ative @briefing para criar o primeiro briefing.');
+    logger.error(t('briefing_approval.no_registry'));
     return { ok: false, error: 'no_config' };
   }
 
   const drafts = data.briefings.filter((b) => b.status === 'draft');
 
   if (drafts.length === 0) {
-    logger.log('Nenhum briefing aguardando aprovação.');
+    logger.log(t('briefing_approval.none_pending'));
     return { ok: true, approved: null };
   }
 
@@ -365,17 +367,17 @@ async function runBriefingApprove({ args, options = {}, logger }) {
   if (slugOpt) {
     target = drafts.find((b) => b.slug === slugOpt);
     if (!target) {
-      logger.error(`Briefing "${slugOpt}" não encontrado ou não está em status draft.`);
-      logger.log(`Briefings draft disponíveis: ${drafts.map((b) => b.slug).join(', ')}`);
+      logger.error(t('briefing_approval.not_draft', { slug: slugOpt }));
+      logger.log(t('briefing_approval.drafts_available', { list: drafts.map((b) => b.slug).join(', ') }));
       return { ok: false, error: 'slug_not_found' };
     }
   } else {
-    const labels = drafts.map((b) => `${b.slug} — criado em ${b.created_at || '?'}`);
-    logger.log('Briefings aguardando aprovação:');
-    const idx = await promptSelect(labels, 'Digite o número do briefing para aprovar (Enter = cancelar):');
+    const labels = drafts.map((b) => t('briefing_approval.draft_label', { slug: b.slug, date: b.created_at || '?' }));
+    logger.log(t('briefing_approval.pending_header'));
+    const idx = await promptSelect(labels, t('briefing_approval.pick_prompt'));
 
     if (idx === -1) {
-      logger.log('Operação cancelada.');
+      logger.log(t('briefing_approval.cancelled'));
       return { ok: true, approved: null };
     }
     target = drafts[idx];
@@ -394,13 +396,15 @@ async function runBriefingApprove({ args, options = {}, logger }) {
     { acceptCraft: Boolean(options['accept-craft'] || options.acceptCraft) }
   );
   if (!prototypeApproval.ok) {
-    logPrototypeGateError(logger, target.slug, prototypeApproval, await resolveProjectGateTranslator(projectDir));
+    logPrototypeGateError(logger, target.slug, prototypeApproval, t);
     return { ok: false, error: prototypeApproval.error, slug: target.slug };
   }
 
   const briefingEntry = data.briefings.find((b) => b.slug === target.slug);
   briefingEntry.status = 'approved';
   briefingEntry.approved_at = today;
+  // Pins the approved text: verify:artifact --kind=sources/briefing warn when it drifts.
+  briefingEntry.approved_sha256 = briefingContent ? approvalHash(briefingContent) : null;
   data.updated_at = today;
 
   await writeBriefingRegistry(projectDir, data);
@@ -408,11 +412,11 @@ async function runBriefingApprove({ args, options = {}, logger }) {
     await fsp.writeFile(prototypeApproval.manifestPath, prototypeApproval.updated, 'utf8');
   }
 
-  logger.log(`✓ Briefing "${target.slug}" aprovado.`);
+  logger.log(t('briefing_approval.approved', { slug: target.slug }));
   if (prototypeApproval.applicable) {
-    logger.log('  prototype.html congelado como contrato visual/interacional aprovado.');
+    logger.log(t('briefing_approval.prototype_frozen'));
   }
-  logger.log('  Ative @product para gerar o PRD — ele detectará o briefing aprovado automaticamente.');
+  logger.log(t('briefing_approval.next_product'));
 
   return { ok: true, approved: target.slug };
 }
@@ -423,6 +427,7 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
   const projectDir = resolveTargetDir(args);
   const slugOpt = String(options.slug || '').trim() || null;
   const configFile = registryConfigPath(projectDir);
+  const t = await resolveProjectGateTranslator(projectDir);
 
   // ── Read config ────────────────────────────────────────────────────────────
   let data;
@@ -430,10 +435,10 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
     data = await readBriefingRegistry(projectDir);
   } catch (error) {
     if (error && error.code === 'invalid_frontmatter') {
-      logger.error('config.md com frontmatter inválido. Verifique o arquivo manualmente.');
+      logger.error(t('briefing_approval.invalid_frontmatter'));
       return { ok: false, error: 'invalid_frontmatter' };
     }
-    logger.error('Nenhum briefing encontrado. Ative @briefing para criar o primeiro briefing.');
+    logger.error(t('briefing_approval.no_registry'));
     return { ok: false, error: 'no_config' };
   }
 
@@ -444,7 +449,7 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
   const approveds = data.briefings.filter((b) => b.status === 'approved' && !b.prd_generated);
 
   if (approveds.length === 0) {
-    logger.log('Nenhum briefing aprovado disponível para retornar a draft.');
+    logger.log(t('briefing_approval.none_approved'));
     return { ok: true, unapproved: [] };
   }
 
@@ -454,21 +459,18 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
   if (slugOpt) {
     const found = approveds.find((b) => b.slug === slugOpt);
     if (!found) {
-      logger.error(`Briefing "${slugOpt}" não encontrado ou não está em status approved.`);
-      logger.log(`Briefings approved disponíveis: ${approveds.map((b) => b.slug).join(', ')}`);
+      logger.error(t('briefing_approval.not_approved', { slug: slugOpt }));
+      logger.log(t('briefing_approval.approved_available', { list: approveds.map((b) => b.slug).join(', ') }));
       return { ok: false, error: 'slug_not_found' };
     }
     targets = [found];
   } else {
-    const labels = approveds.map((b) => `${b.slug} — aprovado em ${b.approved_at || '?'}`);
-    logger.log('Briefings aprovados (todos marcados). Digite os números para DESMARCAR:');
-    const toDeselect = await promptCheckboxDeselect(
-      labels,
-      'Números para retornar a draft (vírgula-separados, Enter = sem mudanças):'
-    );
+    const labels = approveds.map((b) => t('briefing_approval.approved_label', { slug: b.slug, date: b.approved_at || '?' }));
+    logger.log(t('briefing_approval.unapprove_header'));
+    const toDeselect = await promptCheckboxDeselect(labels, t('briefing_approval.unapprove_prompt'));
 
     if (toDeselect.length === 0) {
-      logger.log('Nenhuma mudança aplicada.');
+      logger.log(t('briefing_approval.no_changes'));
       return { ok: true, unapproved: [] };
     }
     targets = toDeselect.map((i) => approveds[i]);
@@ -481,6 +483,7 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
     const entry = data.briefings.find((b) => b.slug === target.slug);
     entry.status = 'draft';
     entry.approved_at = null;
+    entry.approved_sha256 = null;
     const manifestPath = resolveBriefingPath(projectDir, target.slug, 'prototype-manifest.md');
     try {
       const manifest = await fsp.readFile(manifestPath, 'utf8');
@@ -496,7 +499,9 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
   await writeBriefingRegistry(projectDir, data);
 
   const names = targets.map((b) => b.slug);
-  logger.log(`✓ ${names.length === 1 ? `Briefing "${names[0]}" retornado` : `Briefings retornados`} para draft: ${names.join(', ')}`);
+  logger.log(names.length === 1
+    ? t('briefing_approval.returned_one', { slug: names[0] })
+    : t('briefing_approval.returned_many', { list: names.join(', ') }));
 
   return { ok: true, unapproved: names };
 }

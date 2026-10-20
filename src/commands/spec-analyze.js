@@ -75,9 +75,11 @@ const POST_IMPLEMENTATION_STAGES = new Set(['dev', 'qa', 'tester', 'validator', 
 /**
  * Delivered files that are support, not scope: tests and fixtures, lockfiles,
  * dependency manifests and generated/build output. A plan declares behavior
- * paths; it never enumerates every spec file the ACs grow.
+ * paths; it never enumerates every spec file the ACs grow. `plans/` and
+ * `researchs/` hold the owner's raw sources and research captures the
+ * briefing pinned: never delivery, never something to "revert".
  */
-const SUPPORT_PATH = /(?:^|\/)(?:__tests__|__mocks__|tests?|spec|e2e|cypress|fixtures|snapshots|__snapshots__|coverage|dist|build|out|target|vendor|node_modules)\/|\.(?:test|spec|stories|snap|d)\.[cm]?[jt]sx?$|(?:^|\/)(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|Cargo\.lock|composer\.lock|Gemfile\.lock|poetry\.lock|Pipfile\.lock|go\.sum|packages\.lock\.json|\.gitignore|\.gitattributes|CHANGELOG\.md)$|_test\.go$|_spec\.rb$|_test\.py$|^tests?\/|Test\.(?:java|kt|cs|php)$/i;
+const SUPPORT_PATH = /(?:^|\/)(?:__tests__|__mocks__|tests?|spec|e2e|cypress|fixtures|snapshots|__snapshots__|coverage|dist|build|out|target|vendor|node_modules)\/|\.(?:test|spec|stories|snap|d)\.[cm]?[jt]sx?$|(?:^|\/)(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|Cargo\.lock|composer\.lock|Gemfile\.lock|poetry\.lock|Pipfile\.lock|go\.sum|packages\.lock\.json|\.gitignore|\.gitattributes|CHANGELOG\.md)$|_test\.go$|_spec\.rb$|_test\.py$|^tests?\/|^(?:plans|researchs)\/|Test\.(?:java|kt|cs|php)$/i;
 
 function extractIds(content, regex) {
   return new Set(String(content || '').match(regex) || []);

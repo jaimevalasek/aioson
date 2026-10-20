@@ -61,6 +61,30 @@ async function collectFeatureSourceFiles(targetDir, slug) {
   return collected.files.map((file) => file.path);
 }
 
+/** A briefing that pins sources (an inventory or physical source_plans) has a lineage to check, PRD or not. */
+function pinsSources(briefing) {
+  return Boolean(extractSection(briefing, ['Source Inventory', 'Inventario de Fontes']))
+    || extractPhysicalSourcePlans(briefing).length > 0;
+}
+
+// The id column is the one whose cells hold the stable ids, whatever it is
+// called: in `| ID | Source | Locator | Promise | State |` the `Promise`
+// header sits over the promise text, which is the intent, never the id.
+function idColumn(table, aliases, idRe) {
+  const wanted = aliases.map(normalizeLabel);
+  const candidates = table.normalizedHeaders.flatMap((header, index) => (wanted.includes(header) ? [index] : []));
+  const holdsIds = (index) => table.rows.some((row) => idRe.test(cleanCell(row[index])));
+  const byContent = candidates.find(holdsIds);
+  return byContent !== undefined ? byContent : (candidates.length > 0 ? candidates[0] : -1);
+}
+
+function withIdColumn(table, columns, name, aliases, idRe) {
+  const index = idColumn(table, aliases, idRe);
+  columns.indexes[name] = index;
+  if (index === -1) columns.missing.unshift(name);
+  return columns;
+}
+
 async function validateSourceLineage({
   targetDir,
   slug,
@@ -68,13 +92,17 @@ async function validateSourceLineage({
   prd,
   productMap,
   acceptance,
-  lifecycle = {}
+  lifecycle = {},
+  // Before a PRD exists Source Coverage is not due yet: the inventory and the
+  // promise map are still checked where the lineage is born.
+  requireCoverage = true
 }) {
   const briefingArtifact = `.aioson/briefings/${slug}/briefings.md`;
   const prdArtifact = `.aioson/context/prd-${slug}.md`;
   if (!String(briefing || '').trim()) {
     return {
       applicable: false,
+      reason: 'no_briefing',
       findings: [],
       inventory: [],
       promises: [],
@@ -99,12 +127,11 @@ async function validateSourceLineage({
     if (!table) {
       findings.push(finding('product', 'source_inventory_invalid', 'Source Inventory must contain a Markdown table', briefingArtifact));
     } else {
-      const columns = mapColumns(table, {
-        source: ['SRC', 'Source', 'Source ID', 'Fonte', 'ID da fonte'],
+      const columns = withIdColumn(table, mapColumns(table, {
         path: ['Path', 'File', 'Caminho', 'Arquivo'],
         fingerprint: ['Fingerprint', 'SHA-256', 'SHA256', 'Hash'],
         purpose: ['Purpose', 'Use', 'Proposito', 'Finalidade', 'Uso']
-      });
+      }), 'source', ['SRC', 'Source', 'Source ID', 'Fonte', 'ID da fonte', 'ID'], SOURCE_ID_EXACT_RE);
       if (columns.missing.length > 0) {
         findings.push(finding('product', 'source_inventory_columns', `Source Inventory missing column(s): ${columns.missing.join(', ')}`, briefingArtifact));
       } else {
@@ -177,12 +204,20 @@ async function validateSourceLineage({
     if (!table) {
       findings.push(finding('product', 'source_promise_map_invalid', 'Source Promise Map must contain a Markdown table', briefingArtifact));
     } else {
-      const columns = mapColumns(table, {
-        promise: ['Promise', 'PROM', 'Promise ID', 'Promessa', 'ID da promessa'],
+      const columns = withIdColumn(table, mapColumns(table, {
         source: ['Source', 'SRC', 'Fonte'],
         intent: ['Approved intent', 'Intent', 'Intencao aprovada', 'Intencao'],
         state: ['State', 'Decision', 'Estado', 'Decisao']
-      });
+      }), 'promise', ['Promise', 'PROM', 'Promise ID', 'Promessa', 'ID da promessa', 'ID'], PROM_ID_EXACT_RE);
+      // A `Promise` column that is not the id column carries the promise text.
+      if (columns.indexes.intent === -1) {
+        const text = table.normalizedHeaders.findIndex((header, index) => index !== columns.indexes.promise
+          && ['promise', 'promessa'].includes(header));
+        if (text !== -1) {
+          columns.indexes.intent = text;
+          columns.missing = columns.missing.filter((name) => name !== 'intent');
+        }
+      }
       if (columns.missing.length > 0) {
         findings.push(finding('product', 'source_promise_map_columns', `Source Promise Map missing column(s): ${columns.missing.join(', ')}`, briefingArtifact));
       } else {
@@ -226,10 +261,10 @@ async function validateSourceLineage({
 
   const coverage = [];
   const validCoveragePromises = new Set();
-  const coverageSection = extractSection(prd, ['Source Coverage', 'Cobertura das Fontes']);
-  if (!coverageSection) {
+  const coverageSection = requireCoverage ? extractSection(prd, ['Source Coverage', 'Cobertura das Fontes']) : null;
+  if (requireCoverage && !coverageSection) {
     findings.push(missingSection('product', 'source_coverage_missing', 'Source Coverage in the PRD', prdArtifact));
-  } else {
+  } else if (requireCoverage) {
     const table = parseFirstMarkdownTable(coverageSection);
     if (!table) {
       findings.push(finding('product', 'source_coverage_invalid', 'Source Coverage must contain a Markdown table', prdArtifact));
@@ -356,6 +391,7 @@ async function validateSourceLineage({
     inventory,
     promises,
     coverage,
+    coverage_checked: requireCoverage,
     lifecycle: {
       stage: lifecycleStage,
       absorbed,
@@ -366,5 +402,6 @@ async function validateSourceLineage({
 }
 
 module.exports = {
+  pinsSources,
   validateSourceLineage
 };

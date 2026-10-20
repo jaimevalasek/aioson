@@ -32,6 +32,11 @@ module.exports = {
       'aioson setup [path] [--defaults] [--framework=<name>] [--lang=<bcp47-tag>] [--project-name=<name>] [--force] [--dry-run] [--tool=codex|claude|opencode] [--locale=en]',
     help_update: 'aioson update [path] [--dry-run] [--allow-downgrade] [--lang=<bcp47-tag>] [--locale=en]',
     help_info: 'aioson info [path] [--json] [--locale=en]',
+    help_observe: 'aioson observe [path] --kind=<defect|idea|process|risk|question> --summary="<one line>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--json] [--locale=en]',
+    help_observation_list: 'aioson observation:list [path] [--kind=<defect|idea|process|risk|question>] [--feature=<slug>|project] [--all] [--resolved] [--json] [--locale=en]',
+    help_observation_resolve: 'aioson observation:resolve [path] --id=OBS-xxxxxx --as=<fixed|planned|promoted|answered|dismissed> [--ref=<plan path|feature slug>] [--why="..."] [--by=<who>] [--json] [--locale=en]',
+    help_hooks_recap: 'aioson hooks:recap [path] [--when=compact|always] [--agent=<agent>] [--source=claude|codex|opencode] [--session=<id>] [--max-chars=<n>] [--json] [--locale=en]',
+    help_op_list: 'aioson op:list [path] [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--titles-only] [--format=table|json] [--json] [--locale=en]',
     help_doctor: 'aioson doctor [path] [--fix] [--dry-run] [--json] [--locale=en]',
     help_hygiene_scan: 'aioson hygiene:scan [path] [--json] [--locale=en]',
     help_evidence_prune: 'aioson evidence:prune [path] [--slug=<feature>] [--all] [--dry-run] [--json] [--locale=en]',
@@ -578,6 +583,39 @@ module.exports = {
     migrated: 'Lineage migration completed for "{slug}". Audit report: {report}.',
     already_canonical: 'Briefing "{slug}" already uses the canonical lineage schema.',
     error: 'Lineage migration failed ({code}): {message}'
+  },
+  briefing_approval: {
+    invalid_frontmatter: 'config.md has invalid frontmatter. Check the file manually.',
+    no_registry: 'No briefing found. Activate @briefing to create the first one.',
+    none_pending: 'No briefing awaiting approval.',
+    not_draft: 'Briefing "{slug}" not found or not in draft status.',
+    drafts_available: 'Draft briefings available: {list}',
+    draft_label: '{slug} — created {date}',
+    pending_header: 'Briefings awaiting approval:',
+    pick_prompt: 'Type the number of the briefing to approve (Enter = cancel):',
+    cancelled: 'Operation cancelled.',
+    approved: '✓ Briefing "{slug}" approved.',
+    prototype_frozen: '  prototype.html frozen as the approved visual/interaction contract.',
+    next_product: '  Activate @product to write the PRD — it detects the approved briefing automatically.',
+    none_approved: 'No approved briefing available to return to draft.',
+    not_approved: 'Briefing "{slug}" not found or not in approved status.',
+    approved_available: 'Approved briefings available: {list}',
+    approved_label: '{slug} — approved {date}',
+    unapprove_header: 'Approved briefings (all selected). Type the numbers to DESELECT:',
+    unapprove_prompt: 'Numbers to return to draft (comma-separated, Enter = no changes):',
+    no_changes: 'No changes applied.',
+    returned_one: '✓ Briefing "{slug}" returned to draft.',
+    returned_many: '✓ Briefings returned to draft: {list}'
+  },
+  dossier_bootstrap: {
+    not_found: '_(not found — fill in manually)_',
+    trail_synthesized: '_(synthesized from existing artifacts)_'
+  },
+  workflow_runtime: {
+    task_title_feature: 'Feature workflow {slug}',
+    task_title_project: 'Project workflow',
+    task_goal_feature: 'Govern the execution of feature {slug}',
+    task_goal_project: 'Govern the execution of the project'
   },
   init: {
     usage_error:

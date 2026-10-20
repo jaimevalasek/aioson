@@ -16,7 +16,7 @@ const {
   validateEngineeringControls
 } = require('./feature-repository-fit');
 const { validatePrototypeBinding } = require('./prototype-binding');
-const { validateSourceLineage } = require('./feature-source-lineage');
+const { pinsSources, validateSourceLineage } = require('./feature-source-lineage');
 const {
   findBriefing,
   readBriefingRegistry
@@ -985,6 +985,27 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
       execution = { findings: structural.findings, ledger: null, coveredCaps: [] };
       stageFindings.execution.push(...structural.findings);
     }
+  } else if (pinsSources(inputs.briefing)) {
+    // Lineage at birth: before any PRD makes the feature applicable, a
+    // briefing that pins sources is still re-hashed and parsed, so @briefing
+    // and @refiner see a stale source or a broken map while the CLI can still
+    // rewrite the briefing. Advisory to the gates: findings stay off `findings`.
+    sourceLineage = await validateSourceLineage({
+      targetDir,
+      slug,
+      briefing: inputs.briefing,
+      prd: inputs.prd,
+      productMap,
+      acceptance,
+      lifecycle: {
+        registry_entry: briefingRegistryEntry,
+        prd_exists: Boolean(artifacts.prd.exists)
+      },
+      requireCoverage: Boolean(String(inputs.prd || '').trim())
+    });
+    sourceLineage.at_birth = true;
+  } else {
+    sourceLineage.reason = inputs.briefing ? 'no_pinned_sources' : 'no_briefing';
   }
 
   const findings = Object.values(stageFindings).flat();

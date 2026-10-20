@@ -8,6 +8,10 @@ const {
   updateRun,
   appendRunEvent
 } = require('./runtime-store');
+const fs = require('node:fs');
+const path = require('node:path');
+const { parseYamlFrontmatter, getInteractionLanguage } = require('./context');
+const { createTranslator } = require('./i18n');
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -57,16 +61,26 @@ function makeWorkflowSessionKey(state) {
   return `workflow:${normalizeText(state.mode || 'project')}:${scope}`;
 }
 
-function makeWorkflowTaskTitle(state) {
-  return state.featureSlug
-    ? `Workflow da feature ${state.featureSlug}`
-    : 'Workflow do projeto';
+// Dashboard labels follow the project's interaction_language (LANGUAGE BOUNDARY).
+function projectTranslator(targetDir) {
+  try {
+    const raw = fs.readFileSync(path.join(targetDir, '.aioson', 'context', 'project.context.md'), 'utf8');
+    return createTranslator(getInteractionLanguage(parseYamlFrontmatter(raw).data, 'en')).t;
+  } catch {
+    return createTranslator('en').t;
+  }
 }
 
-function makeWorkflowTaskGoal(state) {
+function makeWorkflowTaskTitle(state, t) {
   return state.featureSlug
-    ? `Governar a execucao da feature ${state.featureSlug}`
-    : 'Governar a execucao do projeto';
+    ? t('workflow_runtime.task_title_feature', { slug: state.featureSlug })
+    : t('workflow_runtime.task_title_project');
+}
+
+function makeWorkflowTaskGoal(state, t) {
+  return state.featureSlug
+    ? t('workflow_runtime.task_goal_feature', { slug: state.featureSlug })
+    : t('workflow_runtime.task_goal_project');
 }
 
 function makeWorkflowControllerTitle(state) {
@@ -230,11 +244,12 @@ async function syncWorkflowRuntime(targetDir, input) {
 
     let task = findTaskBySession(db, sessionKey);
     if (!task) {
+      const t = projectTranslator(targetDir);
       task = {
         task_key: startTask(db, {
           sessionKey,
-          title: makeWorkflowTaskTitle(state),
-          goal: makeWorkflowTaskGoal(state),
+          title: makeWorkflowTaskTitle(state, t),
+          goal: makeWorkflowTaskGoal(state, t),
           createdBy: '@workflow',
           status: activationAgent ? 'running' : 'queued'
         }),

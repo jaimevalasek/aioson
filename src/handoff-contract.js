@@ -756,7 +756,10 @@ async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
   const normalizedAgent = String(agent || '').replace(/^@/, '').toLowerCase();
   if (!normalizedAgent) return null;
   const contract = CONTRACTS[normalizedAgent];
-  if (!contract) return null;
+  // A known agent outside the stage contracts (@quality, @neo, …) produces no
+  // canonical artifact: nothing to auto-advance, nothing to warn about. Only a
+  // name no agent answers to stays null.
+  if (!contract) return require('./agents').getAgentDefinition(normalizedAgent) ? [] : null;
   return await resolveArtifacts(contract, targetDir, state || {});
 }
 

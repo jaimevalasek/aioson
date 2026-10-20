@@ -2135,6 +2135,25 @@ async function logAgentEvent(db, runtimeDir, options) {
     runKey = session && !session.finished ? session.runKey : null;
     taskKey = session && !session.finished ? session.taskKey : null;
 
+    if (!runKey && options.startIfIdle === false) {
+      // A trailing event (memory reflection after agent:done closed the run)
+      // joins the agent's latest run; it never opens a run nobody finishes.
+      const latest = db.prepare(
+        `SELECT run_key, task_key FROM agent_runs WHERE agent_name = ? AND squad_slug IS NULL ORDER BY started_at DESC LIMIT 1`
+      ).get(agentName);
+      if (latest) {
+        appendRunEvent(db, {
+          runKey: latest.run_key,
+          eventType: options.type || 'status',
+          phase: options.type || 'run',
+          message: String(options.message || ''),
+          payload: options.meta,
+          createdAt: now
+        });
+      }
+      return { runKey: latest ? latest.run_key : null, taskKey: latest ? latest.task_key : null };
+    }
+
     if (!runKey) {
       const taskTitle = options.taskTitle || `@${agentName}`;
       taskKey = startTask(db, {

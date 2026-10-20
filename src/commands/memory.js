@@ -216,7 +216,9 @@ function formatTaskCounts(counts) {
 
 async function runMemoryStatus({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
-  const status = await collectMemoryStatus(targetDir);
+  // A status read that succeeded exits 0: `ok` still says whether the memory
+  // is complete, but a project that never ran /discover is not a failed command.
+  const status = { ...(await collectMemoryStatus(targetDir)), exitCode: 0 };
 
   if (options.json) return status;
 

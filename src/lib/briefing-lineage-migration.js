@@ -18,7 +18,8 @@ const {
 } = require('./feature-completeness-format');
 const {
   findBriefing,
-  readBriefingRegistry
+  readBriefingRegistry,
+  repinApproval
 } = require('./refiner/briefing-registry');
 const { resolveBriefingPath } = require('./refiner/briefing-paths');
 const {
@@ -32,6 +33,15 @@ const {
 const MAX_BRIEFING_BYTES = 5 * 1024 * 1024;
 const SAFE_SLUG = /^[a-z0-9][a-z0-9-]*$/;
 const SOURCE_REF_RE = /\bSRC(?:-[A-Za-z0-9]+)+\b/gi;
+// Report names carry digest prefixes; the full hashes live inside the report.
+// Two whole sha256s put a report at 179 chars + slug below the project root,
+// past Git for Windows' 260-char path limit on a modest root.
+const NAME_DIGEST_CHARS = 16;
+
+function reportRelativePath(migrationRelative, before, after, { legacy = false } = {}) {
+  const name = legacy ? `${before}-${after}` : `${before.slice(0, NAME_DIGEST_CHARS)}-${after.slice(0, NAME_DIGEST_CHARS)}`;
+  return `${migrationRelative}/reports/${name}.json`;
+}
 
 function migrationError(code, message, details = {}) {
   const error = new Error(message);
@@ -540,7 +550,9 @@ async function applyBriefingLineageMigration(plan, options = {}) {
   const migrationRelative = `.aioson/briefings/${plan.slug}/lineage-migration`;
   const migrationDir = await ensureSecureDirectory(plan.projectDir, migrationRelative);
   const backupRelative = `${migrationRelative}/backups/${plan.before_sha256}.md`;
-  const reportRelative = `${migrationRelative}/reports/${plan.before_sha256}-${plan.after_sha256}.json`;
+  // A report a pre-1.74 run already wrote under the full-digest name is reused, never duplicated.
+  const legacyReport = reportRelativePath(migrationRelative, plan.before_sha256, plan.after_sha256, { legacy: true });
+  const reportRelative = await fs.access(path.join(plan.projectDir, legacyReport)).then(() => legacyReport, () => reportRelativePath(migrationRelative, plan.before_sha256, plan.after_sha256));
   const markerPath = path.join(migrationDir, 'transaction.json');
   await ensureSecureDirectory(plan.projectDir, `${migrationRelative}/backups`);
   await ensureSecureDirectory(plan.projectDir, `${migrationRelative}/reports`);
@@ -589,6 +601,9 @@ async function applyBriefingLineageMigration(plan, options = {}) {
     }
     throw error;
   }
+  // The migration is the audited canonicalization of the same approval (its
+  // report keeps both hashes): a pinned approval follows the migrated text.
+  await repinApproval(plan.projectDir, plan.slug, plan.beforeContent, plan.afterContent).catch(() => {});
 
   return {
     ok: true,

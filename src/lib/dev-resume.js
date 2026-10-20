@@ -155,7 +155,8 @@ async function buildDevResumeData(projectPath) {
 
   const prdRaw = await readFileOrNull(path.join(ctxDir, `prd-${featureSlug}.md`));
   const specRaw = await readFileOrNull(path.join(ctxDir, `spec-${featureSlug}.md`));
-  const classification = readClassificationFromFrontmatters([dossierRaw, prdRaw, specRaw]);
+  // The PRD carries the feature's tier (classify --apply); the dossier holds a bootstrap-time copy.
+  const classification = readClassificationFromFrontmatters([prdRaw, specRaw, dossierRaw]);
 
   const devStateRaw = await readFileOrNull(path.join(ctxDir, 'dev-state.md'));
   const devStateFields = extractDevStateFields(devStateRaw);

@@ -21,11 +21,14 @@ async function emitEvent(targetDir, agent, type, message, payload) {
   try {
     const { db, runtimeDir } = await openRuntimeDb(targetDir);
     try {
+      // agent:done runs reflection after closing the agent's run: the event
+      // joins that run instead of opening a "running" one nobody finishes.
       await logAgentEvent(db, runtimeDir, {
         agentName: agent,
         message,
         type,
-        meta: payload || undefined
+        meta: payload || undefined,
+        startIfIdle: false
       });
     } finally {
       db.close();

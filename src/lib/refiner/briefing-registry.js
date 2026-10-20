@@ -1,10 +1,12 @@
 'use strict';
 
+const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { assertSafeSlug } = require('./briefing-paths');
+const { assertSafeSlug, resolveBriefingPath } = require('./briefing-paths');
 
 const KNOWN_FIELDS = ['slug', 'status', 'source_plans', 'created_at', 'approved_at', 'prd_generated'];
+const APPROVAL_FIELDS = ['approved_sha256'];
 const REFINEMENT_FIELDS = ['refinement_status', 'refinement_updated_at', 'review_html', 'refinement_report'];
 
 function configPath(projectDir) {
@@ -94,7 +96,7 @@ function serializeOptional(value) {
 
 function serializeConfigFrontmatter(data) {
   const lines = ['---', `updated_at: ${data.updated_at || new Date().toISOString().slice(0, 10)}`, 'briefings:'];
-  const fieldOrder = [...KNOWN_FIELDS.filter((field) => field !== 'slug'), ...REFINEMENT_FIELDS];
+  const fieldOrder = [...KNOWN_FIELDS.filter((field) => field !== 'slug'), ...APPROVAL_FIELDS, ...REFINEMENT_FIELDS];
 
   for (const briefing of data.briefings || []) {
     // Validate slug as a safe segment — blocks row spoofing via a crafted slug.
@@ -186,11 +188,46 @@ function returnApprovedBriefingToDraft(data, slug) {
   if (!entry || entry.status !== 'approved' || entry.prd_generated) return false;
   entry.status = 'draft';
   entry.approved_at = null;
+  entry.approved_sha256 = null;
   data.updated_at = new Date().toISOString().slice(0, 10);
   return true;
 }
 
+// The approved text is pinned at briefing:approve, line endings normalized so
+// a checkout that rewrites CRLF is not drift. An edit after approval is news
+// for @product/@sheldon, never a silent new authority.
+function approvalHash(markdown) {
+  return crypto.createHash('sha256').update(String(markdown || '').replace(/\r\n/g, '\n'), 'utf8').digest('hex');
+}
+
+/** `{ approved_sha256, current_sha256, drifted }` for an approved briefing with a pinned hash; null otherwise. */
+async function approvalDrift(projectDir, slug) {
+  let entry;
+  let text;
+  try {
+    entry = findBriefing(await readBriefingRegistry(projectDir), slug);
+    if (!entry || entry.status !== 'approved' || !entry.approved_sha256) return null;
+    text = await fs.readFile(resolveBriefingPath(projectDir, slug, 'briefings.md'), 'utf8');
+  } catch {
+    return null;
+  }
+  const current = approvalHash(text);
+  return { approved_sha256: entry.approved_sha256, current_sha256: current, drifted: current !== entry.approved_sha256 };
+}
+
+/** A mechanical rewrite of an approved briefing (lineage migration) keeps the approval pinned to the new text. */
+async function repinApproval(projectDir, slug, beforeText, afterText) {
+  const data = await readBriefingRegistry(projectDir);
+  const entry = findBriefing(data, slug);
+  if (!entry || entry.status !== 'approved' || entry.approved_sha256 !== approvalHash(beforeText)) return false;
+  entry.approved_sha256 = approvalHash(afterText);
+  await writeBriefingRegistry(projectDir, data);
+  return true;
+}
+
 module.exports = {
+  approvalDrift,
+  approvalHash,
   buildMarkdownTable,
   configPath,
   findBriefing,
@@ -198,6 +235,7 @@ module.exports = {
   markRefinementState,
   parseConfigFrontmatter,
   readBriefingRegistry,
+  repinApproval,
   returnApprovedBriefingToDraft,
   serializeConfigFrontmatter,
   writeBriefingRegistry

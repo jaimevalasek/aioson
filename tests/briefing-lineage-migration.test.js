@@ -162,7 +162,8 @@ test('normal CLI defaults to a byte-stable dry-run and --write is idempotent', a
   assert.equal(writtenResult.status, 'migrated');
   assert.equal(writtenResult.before_sha256, hash(beforeBriefing));
   assert.match(writtenResult.backup_path, /lineage-migration\/backups\/[a-f0-9]{64}\.md$/);
-  assert.match(writtenResult.report_path, /lineage-migration\/reports\/[a-f0-9]{64}-[a-f0-9]{64}\.json$/);
+  // Digest prefixes, not two whole sha256s: the full hashes live inside the report.
+  assert.match(writtenResult.report_path, /lineage-migration\/reports\/[a-f0-9]{16}-[a-f0-9]{16}\.json$/);
 
   const migrated = await readFile(root, briefingPath);
   assert.match(migrated, /\| Source \| Path \| Fingerprint \| Purpose \|/);
@@ -375,4 +376,35 @@ test('--dry-run and --write conflict before mutation', async (t) => {
   assert.notEqual(result.status, 0);
   assert.equal(JSON.parse(result.stdout).error.code, 'conflicting_write_options');
   assert.equal(await readFile(root, briefingPath), before);
+});
+
+// Two whole sha256s put a report at 179 chars + slug below the root, past Git
+// for Windows' 260-char limit on a modest root. A report a pre-1.74 run wrote
+// under the full-digest name is still the one used, never duplicated.
+test('a report already held under the full-digest name is reused, not duplicated', async (t) => {
+  const root = await makeProject(t);
+  const briefingPath = `.aioson/briefings/${SLUG}/briefings.md`;
+  const reportsDir = path.join(root, `.aioson/briefings/${SLUG}/lineage-migration/reports`);
+  const before = await readFile(root, briefingPath);
+
+  const first = await applyBriefingLineageMigration(await analyzeBriefingLineageMigration({ projectDir: root, slug: SLUG }));
+  const legacyName = `${first.before_sha256}-${first.after_sha256}.json`;
+  await fs.rename(path.join(root, first.report_path), path.join(reportsDir, legacyName));
+  await writeFile(root, briefingPath, before);
+
+  const again = await applyBriefingLineageMigration(await analyzeBriefingLineageMigration({ projectDir: root, slug: SLUG }));
+  assert.equal(again.report_path, `.aioson/briefings/${SLUG}/lineage-migration/reports/${legacyName}`);
+  assert.deepEqual(await fs.readdir(reportsDir), [legacyName]);
+});
+
+test('an approval pinned by briefing:approve follows the migrated text', async (t) => {
+  const { approvalHash, readBriefingRegistry } = require('../src/lib/refiner/briefing-registry');
+  const root = await makeProject(t, { prdGenerated: null });
+  const briefingPath = `.aioson/briefings/${SLUG}/briefings.md`;
+  const pinned = approvalHash(await readFile(root, briefingPath));
+  await writeFile(root, '.aioson/briefings/config.md', registry({ prdGenerated: null }).replace('    prd_generated: null', `    prd_generated: null\n    approved_sha256: "${pinned}"`));
+
+  await applyBriefingLineageMigration(await analyzeBriefingLineageMigration({ projectDir: root, slug: SLUG }));
+  const entry = (await readBriefingRegistry(root)).briefings.find((item) => item.slug === SLUG);
+  assert.equal(entry.approved_sha256, approvalHash(await readFile(root, briefingPath)));
 });

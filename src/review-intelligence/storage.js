@@ -455,19 +455,36 @@ function reviewStorageDirectories(featureSlug) {
   };
 }
 
-function packetRelativePath(featureSlug, agent, packetId) {
-  const dirs = reviewStorageDirectories(featureSlug);
-  return `${dirs.packets}/${validateCanonicalSegment(agent, 'agent')}-${normalizeDigest(packetId, 'packet_id')}.json`;
+// File names carry a digest prefix; the full ids live inside each file. Two
+// whole sha256s put a report at 185 chars + slug below the project root, past
+// Git for Windows' 260-char limit on a modest root, so `git add` failed for the
+// whole feature. 16 hex (64 bits) stays unique within one feature's reviews.
+// `{ legacy: true }` builds the pre-1.74 full-digest name, which readers accept.
+const NAME_DIGEST_CHARS = 16;
+
+function nameDigest(value, field, legacy) {
+  const digest = normalizeDigest(value, field);
+  return legacy ? digest : digest.slice(0, NAME_DIGEST_CHARS);
 }
 
-function draftRelativePath(featureSlug, agent, packetId) {
+function packetRelativePath(featureSlug, agent, packetId, { legacy = false } = {}) {
   const dirs = reviewStorageDirectories(featureSlug);
-  return `${dirs.drafts}/${validateCanonicalSegment(agent, 'agent')}-${normalizeDigest(packetId, 'packet_id')}.report.json`;
+  return `${dirs.packets}/${validateCanonicalSegment(agent, 'agent')}-${nameDigest(packetId, 'packet_id', legacy)}.json`;
 }
 
-function reportRelativePath(featureSlug, agent, packetId, reportHash) {
+function draftRelativePath(featureSlug, agent, packetId, { legacy = false } = {}) {
   const dirs = reviewStorageDirectories(featureSlug);
-  return `${dirs.reports}/${validateCanonicalSegment(agent, 'agent')}-${normalizeDigest(packetId, 'packet_id')}-${normalizeDigest(reportHash, 'report_hash')}.json`;
+  return `${dirs.drafts}/${validateCanonicalSegment(agent, 'agent')}-${nameDigest(packetId, 'packet_id', legacy)}.report.json`;
+}
+
+function reportRelativePath(featureSlug, agent, packetId, reportHash, { legacy = false } = {}) {
+  const dirs = reviewStorageDirectories(featureSlug);
+  return `${dirs.reports}/${validateCanonicalSegment(agent, 'agent')}-${nameDigest(packetId, 'packet_id', legacy)}-${nameDigest(reportHash, 'report_hash', legacy)}.json`;
+}
+
+/** True when `relativePath` is the record's short name or its legacy full-digest name. */
+function isCanonicalName(builder, relativePath, ...args) {
+  return relativePath === builder(...args) || relativePath === builder(...args, { legacy: true });
 }
 
 module.exports = {
@@ -482,6 +499,7 @@ module.exports = {
   packetRelativePath,
   draftRelativePath,
   reportRelativePath,
+  isCanonicalName,
   normalizePathInput,
   isInside
 };

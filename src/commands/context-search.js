@@ -35,7 +35,7 @@ async function runContextSearch({ args, options, logger }) {
   }, { projectDir: cwd });
 
   if (options.json) {
-    return { ok: true, ...result };
+    return { ok: true, ...compactSearchJson(result) };
   }
 
   const results = result.results || [];
@@ -98,6 +98,33 @@ function pathExists(targetPath) {
   } catch {
     return false;
   }
+}
+
+// An agent reads this JSON (@briefing and @refiner start with it): each hit
+// repeated the absolute projectDir, carried relPath and path twice and empty
+// metadata arrays, and the package buckets duplicated every result in full —
+// 39.5 KB for ten hits, past a host's 30k tool-output cap. Buckets now list
+// the relPaths of the results that carry the detail.
+function compactSearchJson(result) {
+  const results = (result.results || []).map(compactHit);
+  const pkg = {};
+  for (const [bucket, items] of Object.entries(result.package || {})) {
+    pkg[bucket] = Array.isArray(items) ? items.map((item) => item.relPath || item.path) : items;
+  }
+  return { ...result, results, package: pkg };
+}
+
+function compactHit(item) {
+  const { projectDir, path: hitPath, metadata, ...hit } = item;
+  if (hitPath && hitPath !== hit.relPath) hit.path = hitPath;
+  const kept = {};
+  for (const [key, value] of Object.entries(metadata || {})) {
+    if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) continue;
+    if (Object.prototype.hasOwnProperty.call(hit, key) && hit[key] === value) continue;
+    kept[key] = value;
+  }
+  if (Object.keys(kept).length > 0) hit.metadata = kept;
+  return hit;
 }
 
 function printBucket(logger, title, items) {

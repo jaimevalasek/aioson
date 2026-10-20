@@ -22,6 +22,7 @@ const {
   parseSurfacesOverride
 } = require('../lib/feature-completeness');
 const { resolveTargetDir } = require('../lib/project-root');
+const { SAFE_SLUG, resolveBriefingPath } = require('../lib/refiner/briefing-paths');
 
 const BAR = '━'.repeat(30);
 
@@ -337,11 +338,14 @@ async function runClassify({ args, options = {}, logger }) {
   } else {
     // Auto-detect from the canonical PRD; legacy sources remain fallbacks.
     const dir = contextDir(targetDir);
+    // Before a PRD exists the briefing is the feature's source: @refiner asks
+    // classify for recommend_prototype while refining, never after Product.
     const candidates = slug
       ? [
           path.join(dir, `prd-${slug}.md`),
           path.join(dir, `requirements-${slug}.md`),
-          path.join(dir, `sheldon-enrichment-${slug}.md`)
+          path.join(dir, `sheldon-enrichment-${slug}.md`),
+          ...(SAFE_SLUG.test(slug) ? [resolveBriefingPath(targetDir, slug, 'briefings.md')] : [])
         ]
       : [path.join(dir, 'requirements.md'), path.join(dir, 'prd.md')];
 
@@ -355,8 +359,11 @@ async function runClassify({ args, options = {}, logger }) {
     }
 
     if (!content) {
-      if (options.json) return { ok: false, reason: 'no_source', message: 'No prd or requirements file found. Use --interactive or --feature=<slug>.' };
-      logger.log('No source file found. Use --interactive or provide --feature=<slug>.');
+      const message = slug
+        ? `No PRD, requirements or briefing found for "${slug}". Use --interactive.`
+        : 'No prd or requirements file found. Use --interactive or --feature=<slug>.';
+      if (options.json) return { ok: false, reason: 'no_source', message };
+      logger.log(message);
       return { ok: false };
     }
 
@@ -426,7 +433,9 @@ async function runClassify({ args, options = {}, logger }) {
 
   const phaseDepth = classificationToPhaseDepth(classification);
   let applied = false;
-  if (options.apply && sourceFile && content) {
+  // The tier lives in the PRD; a briefing source is measured, never rewritten.
+  const briefingSource = Boolean(sourceFile && /(^|[\\/])\.aioson[\\/]briefings[\\/]/.test(sourceFile));
+  if (options.apply && sourceFile && content && !briefingSource) {
     const updated = setDeclaredClassification(content, classification);
     if (updated !== content) {
       await fs.writeFile(path.resolve(targetDir, sourceFile), updated, 'utf8');

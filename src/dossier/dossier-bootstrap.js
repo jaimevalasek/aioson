@@ -6,6 +6,8 @@ const path = require('node:path');
 
 const { isValidSlug, SCHEMA_VERSION, ALLOWED_CLASSIFICATIONS, validateFrontmatter } = require('./schema');
 const { featureDir, dossierPath, parseSections, parseFrontmatter } = require('./store');
+const { parseYamlFrontmatter, getInteractionLanguage } = require('../context');
+const { createTranslator } = require('../i18n');
 
 // Maps canonical artifact filenames to the agent that typically produces them.
 const ARTIFACT_AGENTS = {
@@ -42,7 +44,7 @@ function artifactHash(artifacts) {
   return crypto.createHash('sha256').update(payload).digest('hex').slice(0, 12);
 }
 
-function buildBootstrapDossier({ slug, classification, createdAt, artifacts, why, what, agentTrail }) {
+function buildBootstrapDossier({ slug, classification, createdAt, artifacts, why, what, agentTrail, t = createTranslator('en').t }) {
   const fm = [
     '---',
     `feature_slug: ${slug}`,
@@ -58,12 +60,12 @@ function buildBootstrapDossier({ slug, classification, createdAt, artifacts, why
     ''
   ].join('\n');
 
-  const whyText = why || '_(não encontrado — preencher manualmente)_';
-  const whatText = what || '_(não encontrado — preencher manualmente)_';
+  const whyText = why || t('dossier_bootstrap.not_found');
+  const whatText = what || t('dossier_bootstrap.not_found');
 
   const trailLines = agentTrail.length > 0
     ? agentTrail.map(e => `- **${e.timestamp}** | @${e.agent} | _${e.artifact}_`).join('\n')
-    : '_(sintetizado a partir de artefatos existentes)_';
+    : t('dossier_bootstrap.trail_synthesized');
 
   const body = [
     '## Why',
@@ -138,15 +140,14 @@ async function initFromExisting({ slug, contextDir, classification, targetDir, n
     throw err;
   }
 
-  // Resolve classification
+  // Resolve classification: the feature's PRD (classify --apply writes it)
+  // before the project's tier, which describes the project, not this feature.
   let cls = classification;
-  if (!cls) {
-    const ctxPath = path.join(contextDir, 'project.context.md');
-    const ctxRaw = await readText(ctxPath);
-    if (ctxRaw) {
-      const m = ctxRaw.match(/^classification:\s*"?([A-Z]+)"?\s*$/m);
-      if (m && ALLOWED_CLASSIFICATIONS.has(m[1])) cls = m[1];
-    }
+  const projectContext = await readText(path.join(contextDir, 'project.context.md'));
+  for (const raw of [artifacts.prd, projectContext]) {
+    if (cls || !raw) continue;
+    const m = raw.match(/^classification:\s*"?([A-Z]+)"?\s*$/m);
+    if (m && ALLOWED_CLASSIFICATIONS.has(m[1])) cls = m[1];
   }
   cls = cls || 'MEDIUM';
 
@@ -176,7 +177,9 @@ async function initFromExisting({ slug, contextDir, classification, targetDir, n
     throw err;
   }
 
-  const markdown = buildBootstrapDossier({ slug, classification: cls, createdAt, artifacts, why, what, agentTrail });
+  // Placeholders follow the project's interaction_language (LANGUAGE BOUNDARY).
+  const language = projectContext ? getInteractionLanguage(parseYamlFrontmatter(projectContext).data, 'en') : 'en';
+  const markdown = buildBootstrapDossier({ slug, classification: cls, createdAt, artifacts, why, what, agentTrail, t: createTranslator(language).t });
 
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(p, markdown, 'utf8');

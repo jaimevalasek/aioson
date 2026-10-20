@@ -324,7 +324,7 @@ async function checkGate(targetDir, slug, gateLetter) {
       } else if (gateCBaseline && gateCBaseline.blocking) {
         recommendation = `BLOCKED — ${gateCBaseline.recommendation}`;
       } else if (hasPlanContentDefect) {
-        recommendation = `BLOCKED — ${fixAgents.C}`;
+        recommendation = `BLOCKED — @planner repairs implementation-plan-${slug}.md against the findings listed, then re-runs gate:check`;
       } else if (sheldon && !sheldon.ok) {
         recommendation = 'BLOCKED — activate @sheldon to produce a current hash-bound PASS';
       } else {
@@ -410,8 +410,11 @@ async function runGateCheck({ args, options = {}, logger }) {
   if (completenessEvidence.length > 0) {
     for (const item of completenessEvidence) {
       const icon = item.ok ? '  ✓' : '  ✗';
-      const errors = item.findings ? item.findings.length : 0;
-      logger.log(`${icon} Feature completeness (${item.stage}): ${errors} blocking gap(s)`);
+      const findings = item.findings || [];
+      logger.log(`${icon} Feature completeness (${item.stage}): ${findings.length} blocking gap(s)`);
+      // The repair needs the findings themselves, not their count (--json was the only way to read them).
+      for (const finding of findings.slice(0, 10)) logger.log(`      - [${finding.check}] ${finding.message}`);
+      if (findings.length > 10) logger.log(`      … ${findings.length - 10} more (--json lists all)`);
     }
   }
 
@@ -442,7 +445,7 @@ async function runGateCheck({ args, options = {}, logger }) {
   logger.log('');
   const resultIcon = check.result === 'PASS' ? '✓' : '✗';
   if (check.disposition) logger.log(`Disposition: ${check.disposition} — pending work is preserved in linked Simple Plans at close`);
-  logger.log(`Result: ${resultIcon} ${check.result} — ${check.recommendation}`);
+  logger.log(`Result: ${resultIcon} ${check.result} — ${String(check.recommendation).replace(/^BLOCKED — /, '')}`);
   logger.log('');
 
   return result;

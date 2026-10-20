@@ -30,7 +30,11 @@ function normalizeRelPath(value) {
 
 function scalar(value) {
   const normalized = String(value ?? '').trim().replace(/^["']|["']$/g, '');
-  return NULL_TOKENS.has(normalized.toLowerCase()) ? null : normalized;
+  if (NULL_TOKENS.has(normalized.toLowerCase())) return null;
+  // `identity: none — API-only feature`: the explicit none with its reason the
+  // Product kernel asks for. Only the token before the reason is the value.
+  const lead = normalized.match(/^(?:null|none|~)(?:\s*[—–:(;,]|\s+-)/i);
+  return lead ? null : normalized;
 }
 
 function prototypeContractSection(prd) {

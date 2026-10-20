@@ -107,6 +107,22 @@ Inside `## Sources`, add:
 - `### Source Inventory`: one `SRC-*` row per inventoried file with project-relative path, current `sha256:` fingerprint — copied verbatim from the `fingerprint` fields of `aioson briefing:sources . --slug={slug} --json`, never computed or invented by hand — purpose, and no secret content; `Type`/`Role`/`Usage` columns preserve `consulted`, `metadata_only`, or `blocked`.
 - `### Source Promise Map`: one stable `PROM-*` row per material user promise, citing `SRC-*` or an explicit conversational/research source, its approved intent, and `required`, `deferred`, or `not_applicable`. Each row also records a locator into its `SRC-*` (heading or line anchor) so the refiner's blocking check and Product's coverage pass are targeted reads, never whole-pack re-reads.
 
+Use these headers verbatim — `aioson verify:artifact . --kind=briefing --slug={slug}` parses them from the first write; extra columns are allowed:
+
+```markdown
+### Source Inventory
+
+| Source | Path | Type | Role | Fingerprint | Usage | Purpose |
+|---|---|---|---|---|---|---|
+| SRC-001 | plans/{slug}/idea.md | documentation | intent | sha256:{fingerprint} | consulted | The owner's statement of the feature |
+
+### Source Promise Map
+
+| PROM | Source | Locator | Approved intent | State |
+|---|---|---|---|---|
+| PROM-001 | SRC-001 | item 1 | {the promise, in the user's words} | required |
+```
+
 ## Registry schema
 
 Create/update `.aioson/briefings/config.md` with valid YAML and a readable table:

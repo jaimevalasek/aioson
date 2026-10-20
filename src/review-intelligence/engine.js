@@ -21,6 +21,7 @@ const {
   atomicWriteImmutable,
   draftRelativePath,
   hashSecureFile,
+  isCanonicalName,
   listCanonicalJsonFiles,
   packetRelativePath,
   readSecureJson,
@@ -189,8 +190,9 @@ function assertPacketContract(packet, expectedPath) {
   const validation = validateReviewPacket(packet);
   if (!validation.ok) throw engineError('invalid_packet', { errors: validation.errors });
   if (packetIdFor(packetIdentity(packet)) !== packet.packet_id) throw engineError('packet_id_mismatch');
-  const canonicalPath = packetRelativePath(packet.feature_slug, packet.agent, packet.packet_id);
-  if (expectedPath && canonicalPath !== expectedPath) throw engineError('packet_path_mismatch');
+  if (expectedPath && !isCanonicalName(packetRelativePath, expectedPath, packet.feature_slug, packet.agent, packet.packet_id)) {
+    throw engineError('packet_path_mismatch');
+  }
   const profile = resolveProfilePaths(packet.agent, packet.feature_slug);
   if (!profile || packet.profile !== profile.profile || packet.review_mode !== profile.review_mode) {
     throw engineError('packet_profile_mismatch');
@@ -222,9 +224,20 @@ async function packetFreshness(rootDir, packet) {
   }
 }
 
-async function loadPacket(rootDir, featureSlug, agent, packetId) {
+// The short name first, then the pre-1.74 full-digest name a project may still hold.
+async function readPacketFile(rootDir, featureSlug, agent, packetId) {
   const packetPath = packetRelativePath(featureSlug, agent, packetId);
-  const loaded = await readSecureJson(rootDir, packetPath, { maxBytes: MAX_REPORT_BYTES });
+  try {
+    return { loaded: await readSecureJson(rootDir, packetPath, { maxBytes: MAX_REPORT_BYTES }), path: packetPath };
+  } catch (error) {
+    if (!isMissingFile(error)) throw error;
+    const legacyPath = packetRelativePath(featureSlug, agent, packetId, { legacy: true });
+    return { loaded: await readSecureJson(rootDir, legacyPath, { maxBytes: MAX_REPORT_BYTES }), path: legacyPath };
+  }
+}
+
+async function loadPacket(rootDir, featureSlug, agent, packetId) {
+  const { loaded, path: packetPath } = await readPacketFile(rootDir, featureSlug, agent, packetId);
   assertPacketContract(loaded.value, packetPath);
   return { packet: loaded.value, path: packetPath };
 }
@@ -247,13 +260,14 @@ async function prepareReview({ rootDir, featureSlug, agent, artifactPath, now = 
     max_passes: 2
   };
   const packetId = packetIdFor(identity);
-  const packetPath = packetRelativePath(input.feature_slug, input.agent, packetId);
+  let packetPath = packetRelativePath(input.feature_slug, input.agent, packetId);
   let packet;
   let created = false;
 
   try {
-    const existing = await readSecureJson(rootDir, packetPath, { maxBytes: MAX_REPORT_BYTES });
-    packet = existing.value;
+    const existing = await readPacketFile(rootDir, input.feature_slug, input.agent, packetId);
+    packetPath = existing.path;
+    packet = existing.loaded.value;
     assertPacketContract(packet, packetPath);
     if (!equalJson(packetIdentity(packet), identity)) throw engineError('immutable_packet_conflict');
   } catch (error) {
@@ -395,13 +409,7 @@ async function latestPromotedReportForPacket(rootDir, packet) {
         || report.packet_id !== packet.packet_id) {
         continue;
       }
-      const expectedPath = reportRelativePath(
-        report.feature_slug,
-        report.agent,
-        report.packet_id,
-        reportHashFor(report)
-      );
-      if (expectedPath !== reportPath) continue;
+      if (!isCanonicalName(reportRelativePath, reportPath, report.feature_slug, report.agent, report.packet_id, reportHashFor(report))) continue;
       if (reportBindingIssue(report, packet)) continue;
       matches.push({ report, path: reportPath, stored_at_ms: loaded.modified_at_ms });
     } catch {
@@ -446,13 +454,9 @@ async function reviewStatus({ rootDir, featureSlug }) {
       const loaded = await readSecureJson(rootDir, reportPath, { maxBytes: MAX_REPORT_BYTES });
       const validation = validateReviewReport(loaded.value);
       if (!validation.ok) throw engineError('invalid_report', { errors: validation.errors });
-      const expectedPath = reportRelativePath(
-        loaded.value.feature_slug,
-        loaded.value.agent,
-        loaded.value.packet_id,
-        reportHashFor(loaded.value)
-      );
-      if (expectedPath !== reportPath) throw engineError('report_path_mismatch');
+      if (!isCanonicalName(reportRelativePath, reportPath, loaded.value.feature_slug, loaded.value.agent, loaded.value.packet_id, reportHashFor(loaded.value))) {
+        throw engineError('report_path_mismatch');
+      }
       const packetRecord = packetByKey.get(`${loaded.value.agent}|${loaded.value.packet_id}`);
       if (!packetRecord) throw engineError('report_packet_missing');
       const binding = reportBindingIssue(loaded.value, packetRecord.packet);
