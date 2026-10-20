@@ -160,14 +160,18 @@ function insideProject(targetDir, target) {
  * Forward-slash, project-relative paths: tools hand agents absolute paths
  * while the brief passes relative ones, and `src/` must overlap `src/a.js`.
  */
+function normalizePath(entry, targetDir) {
+  const raw = String(entry == null ? '' : entry).trim();
+  const rel = targetDir && raw && path.isAbsolute(raw) ? (insideProject(targetDir, raw) ?? raw) : raw;
+  return rel.replace(/\\/g, '/').replace(/^(?:\.\/)+/, '').replace(/\/+$/, '');
+}
+
 function normalizePaths(value, targetDir) {
   if (value === true) return []; // a bare flag names no path
   const raw = Array.isArray(value) ? value : String(value == null ? '' : value).split(/[,\n]/);
   const out = [];
   for (const entry of raw) {
-    let rel = String(entry == null ? '' : entry).trim();
-    if (targetDir && rel && path.isAbsolute(rel)) rel = insideProject(targetDir, rel) ?? rel;
-    rel = rel.replace(/\\/g, '/').replace(/^(?:\.\/)+/, '').replace(/\/+$/, '');
+    const rel = normalizePath(entry, targetDir);
     if (!rel || out.includes(rel)) continue;
     out.push(rel);
     if (out.length >= MAX_PATHS) break;
@@ -275,6 +279,15 @@ function summaryWords(summary) {
   return new Set(normalizeSummary(summary).split(' ').filter((word) => word.length >= 3 && !STOPWORDS.has(word)));
 }
 
+/** How likely `other` names what `item` names: near-identical words, the same paths; 0 when neither. */
+function similarity(words, item, other) {
+  const otherWords = summaryWords(other.summary);
+  let shared = 0;
+  for (const word of words) if (otherWords.has(word)) shared += 1;
+  const overlap = shared / Math.max(1, Math.min(words.size, otherWords.size));
+  return (shared >= 3 && overlap >= 0.75 ? overlap : 0) + (pathOverlap(other.paths, item.paths) ? 1 : 0);
+}
+
 /**
  * Open items of the same kind that may be the one just recorded in other
  * words — the identity hash only joins identical wording, and agents
@@ -282,18 +295,33 @@ function summaryWords(summary) {
  */
 function similarOpen(items, item) {
   const words = summaryWords(item.summary);
-  const hits = [];
-  for (const other of items) {
-    if (!other || other === item || other.status !== 'open' || other.kind !== item.kind) continue;
-    const otherWords = summaryWords(other.summary);
-    let shared = 0;
-    for (const word of words) if (otherWords.has(word)) shared += 1;
-    const overlap = shared / Math.max(1, Math.min(words.size, otherWords.size));
-    const byWords = shared >= 3 && overlap >= 0.75;
-    const byPaths = pathOverlap(other.paths, item.paths);
-    if (byWords || byPaths) hits.push({ id: other.id, summary: other.summary, score: (byWords ? overlap : 0) + (byPaths ? 1 : 0) });
-  }
-  return hits.sort((a, b) => b.score - a.score).slice(0, 2).map(({ id, summary }) => ({ id, summary }));
+  return items
+    .filter((other) => other && other !== item && other.status === 'open' && other.kind === item.kind)
+    .map((other) => ({ id: other.id, summary: other.summary, score: similarity(words, item, other) }))
+    .filter((hit) => hit.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2)
+    .map(({ id, summary }) => ({ id, summary }));
+}
+
+/** A repeat: count it, merge what it adds, reopen it when it was settled. True when it reopened. */
+function reobserve(item, { detail, paths, agent, at, targetDir }) {
+  item.seen = (Number(item.seen) || 1) + 1;
+  item.updated_at = at;
+  if (detail && !item.detail) item.detail = detail;
+  // The file is readable and editable by hand: never trust its shapes.
+  item.paths = normalizePaths(item.paths, targetDir);
+  for (const rel of paths) if (!item.paths.includes(rel) && item.paths.length < MAX_PATHS) item.paths.push(rel);
+  // Only creation binds a feature: a project-wide item re-seen during a
+  // feature would otherwise be carried at its close with an origin it never had.
+  if (agent && !item.agent) item.agent = agent;
+  if (item.status === 'open') return false;
+  item.history = Array.isArray(item.history) ? item.history : [];
+  item.history.push({ ...(item.resolution || {}), reopened_at: at });
+  item.resolution = null;
+  item.status = 'open';
+  item.created_at = at;
+  return true;
 }
 
 /**
@@ -313,47 +341,24 @@ async function addObservation(targetDir, input = {}, { now } = {}) {
   return withStoreLock(targetDir, async () => {
     const store = await readStoreForWrite(targetDir);
     const { id, existing } = slotFor(store.items, kind, summary);
-    let created = false;
-    let reopened = false;
-    let item;
-    if (!existing) {
-      created = true;
-      item = {
-        id,
-        kind,
-        summary,
-        detail,
-        paths,
-        feature,
-        origin_feature: null,
-        agent,
-        status: 'open',
-        seen: 1,
-        created_at: at,
-        updated_at: at,
-        resolution: null
-      };
-      store.items.push(item);
-    } else {
-      item = existing;
-      item.seen = (Number(item.seen) || 1) + 1;
-      item.updated_at = at;
-      if (detail && !item.detail) item.detail = detail;
-      // The file is readable and editable by hand: never trust its shapes.
-      item.paths = normalizePaths(item.paths, targetDir);
-      for (const rel of paths) if (!item.paths.includes(rel) && item.paths.length < MAX_PATHS) item.paths.push(rel);
-      // Only creation binds a feature: a project-wide item re-seen during a
-      // feature would otherwise be carried at its close with an origin it never had.
-      if (agent && !item.agent) item.agent = agent;
-      if (item.status !== 'open') {
-        reopened = true;
-        item.history = Array.isArray(item.history) ? item.history : [];
-        item.history.push({ ...(item.resolution || {}), reopened_at: at });
-        item.resolution = null;
-        item.status = 'open';
-        item.created_at = at;
-      }
-    }
+    const created = !existing;
+    const reopened = existing ? reobserve(existing, { detail, paths, agent, at, targetDir }) : false;
+    const item = existing || {
+      id,
+      kind,
+      summary,
+      detail,
+      paths,
+      feature,
+      origin_feature: null,
+      agent,
+      status: 'open',
+      seen: 1,
+      created_at: at,
+      updated_at: at,
+      resolution: null
+    };
+    if (created) store.items.push(item);
     const file = await writeStore(targetDir, store);
     const similar = created ? similarOpen(store.items, item) : [];
     return { item, created, reopened, similar, path: path.relative(targetDir, file).replace(/\\/g, '/') };
@@ -448,11 +453,8 @@ async function refExists(targetDir, ref) {
   return { ok: false, reason: 'neither an existing path nor a known feature slug' };
 }
 
-/**
- * Settle an item once, with the outcome the next reader needs. `planned` and
- * `promoted` need an existing `ref`; `dismissed` and `answered` need a `why`.
- */
-async function resolveObservation(targetDir, input = {}, { now } = {}) {
+/** The settle request, validated: `planned`/`promoted` carry a ref, `dismissed`/`answered` a why. */
+function resolutionInput(input) {
   // Ids print as `OBS-` + lowercase hex; accept any casing the owner types.
   const id = String(input.id == null ? '' : input.id).trim().replace(/^obs-/i, 'OBS-').replace(/^(OBS-)(.*)$/, (_m, p, hex) => p + hex.toLowerCase());
   if (!id) throw new Error('--id=<OBS-xxxxxx> is required');
@@ -462,6 +464,15 @@ async function resolveObservation(targetDir, input = {}, { now } = {}) {
   const why = input.why ? cleanText(input.why, MAX_DETAIL_CHARS) : null;
   if ((as === 'dismissed' || as === 'answered') && !why) throw new Error(`--as=${as} needs --why="<reason or answer>"`);
   if ((as === 'planned' || as === 'promoted') && !ref) throw new Error(`--as=${as} needs --ref=<existing plan path or feature slug>`);
+  return { id, as, ref, why };
+}
+
+/**
+ * Settle an item once, with the outcome the next reader needs. `planned` and
+ * `promoted` need an existing `ref`; `dismissed` and `answered` need a `why`.
+ */
+async function resolveObservation(targetDir, input = {}, { now } = {}) {
+  const { id, as, ref, why } = resolutionInput(input);
   if (ref) {
     const check = await refExists(targetDir, ref);
     if (!check.ok) throw new Error(`--ref='${ref}' is ${check.reason} — record the outcome against something that exists`);
@@ -540,29 +551,32 @@ async function fanFor(targetDir, agent, { feature, paths, limit = DEFAULT_LIMIT,
   const slug = normalizeFeature(feature);
   const touched = normalizePaths(paths, targetDir);
   const listed = await listObservations(targetDir, { status: 'all' }, { now });
-  let closed = null;
-  const isClosed = async (value) => (closed || (closed = await closedFeatures(targetDir))).has(value);
-  const ranked = [];
-  const answered = [];
-  for (const item of listed.items) {
-    if (!(AUDIENCE[item.kind] || []).includes(who)) continue;
-    if (item.status !== 'open') {
-      const answer = item.resolution && item.resolution.as === 'answered';
-      if (answer && item.kind === 'question' && slug && item.feature === slug && !(await isClosed(slug))) {
-        answered.push({ ...item, answer: item.resolution.why || '' });
-      }
-      continue;
-    }
-    const bound = item.feature && item.feature !== slug && (await isClosed(item.feature)) ? null : item.feature;
-    let tier;
-    if (bound && bound === slug) tier = 0;
-    else if (pathOverlap(item.paths, touched)) tier = 1;
-    else if (!bound || !FEATURE_BOUND_KINDS.has(item.kind)) tier = 2;
-    else continue; // bound to another live feature
-    ranked.push({ item, tier });
-  }
-  ranked.sort((a, b) => a.tier - b.tier || String(b.item.updated_at || '').localeCompare(String(a.item.updated_at || '')));
-  return { items: ranked.slice(0, limit).map((entry) => entry.item), total: ranked.length, answered: answered.slice(0, limit) };
+  const addressed = listed.items.filter((item) => (AUDIENCE[item.kind] || []).includes(who));
+  const open = addressed.filter((item) => item.status === 'open');
+  const answers = addressed.filter((item) => item.status !== 'open' && isFeatureAnswer(item, slug));
+  // The registry is read only when a binding has to be judged.
+  const judged = answers.length > 0 || open.some((item) => item.feature && item.feature !== slug);
+  const closed = judged ? await closedFeatures(targetDir) : new Set();
+  const ranked = open
+    .map((item) => ({ item, tier: fanTier(item, slug, touched, closed) }))
+    .filter((entry) => entry.tier !== null)
+    .sort((a, b) => a.tier - b.tier || String(b.item.updated_at || '').localeCompare(String(a.item.updated_at || '')));
+  const answered = closed.has(slug) ? [] : answers.slice(0, limit).map((item) => ({ ...item, answer: item.resolution.why || '' }));
+  return { items: ranked.slice(0, limit).map((entry) => entry.item), total: ranked.length, answered };
+}
+
+/** Where an open item ranks in an agent's fan; null when it belongs to another live feature. */
+function fanTier(item, slug, touched, closed) {
+  const bound = item.feature && item.feature !== slug && closed.has(item.feature) ? null : item.feature;
+  if (bound && bound === slug) return 0;
+  if (pathOverlap(item.paths, touched)) return 1;
+  if (!bound || !FEATURE_BOUND_KINDS.has(item.kind)) return 2;
+  return null;
+}
+
+/** An answered question of this feature: the decision the stage that needs it reads. */
+function isFeatureAnswer(item, slug) {
+  return Boolean(slug) && item.kind === 'question' && item.feature === slug && Boolean(item.resolution) && item.resolution.as === 'answered';
 }
 
 async function observationsForAgent(targetDir, agent, options = {}) {
@@ -590,43 +604,78 @@ function answerOf(item) {
   return item.answer || (item.resolution && item.resolution.why) || '';
 }
 
-/** The lines those surfaces print for the fan; none when it is empty. */
-function fanLines(observations, total, answered = []) {
+function ageOf(item) {
+  return item.age_days != null ? `, ${item.age_days}d` : '';
+}
+
+/** Both blocks — the session-start fan and the handoff — in one shape; `style` words them. */
+function renderFan(observations, total, answered, style) {
   const open = Array.isArray(observations) ? observations : [];
   const settled = Array.isArray(answered) ? answered : [];
-  const lines = [];
-  if (open.length > 0) {
-    const count = Math.max(open.length, Number(total) || 0);
-    lines.push(`Open observations for you (${count}) — settle or carry them, never fix in passing (aioson observation:list .):`);
-    for (const item of open) {
-      const age = item.age_days != null ? `, ${item.age_days}d` : '';
-      lines.push(`- ${item.id} (${item.kind}${age}) ${item.summary}${itemPathsSuffix(item)} → ${item.next_step || NEXT_STEP[item.kind] || ''}`);
-    }
-    if (count > open.length) lines.push(`- +${count - open.length} more — aioson observation:list .`);
-  }
-  if (settled.length > 0) {
-    lines.push(`Answered questions on this feature (${settled.length}) — the answer stands, do not ask again:`);
-    for (const item of settled) lines.push(`- ${item.id} (question, answered) ${item.summary} → answer: ${answerOf(item)}`);
-  }
-  return lines;
+  const count = Math.max(open.length, Number(total) || 0);
+  const more = count > open.length ? [`${style.bullet}+${count - open.length} more — aioson observation:list .`] : [];
+  return [
+    ...(open.length > 0 ? [style.header(count), ...open.map(style.item), ...more] : []),
+    ...(settled.length > 0 ? [style.answeredHeader(settled.length), ...settled.map(style.answered)] : [])
+  ];
+}
+
+const SESSION_STYLE = {
+  bullet: '- ',
+  header: (count) => `Open observations for you (${count}) — settle or carry them, never fix in passing (aioson observation:list .):`,
+  item: (item) => `- ${item.id} (${item.kind}${ageOf(item)}) ${item.summary}${itemPathsSuffix(item)} → ${item.next_step || NEXT_STEP[item.kind] || ''}`,
+  answeredHeader: (count) => `Answered questions on this feature (${count}) — the answer stands, do not ask again:`,
+  answered: (item) => `- ${item.id} (question, answered) ${item.summary} → answer: ${answerOf(item)}`
+};
+
+/** The lines those surfaces print for the fan; none when it is empty. */
+function fanLines(observations, total, answered = []) {
+  return renderFan(observations, total, answered, SESSION_STYLE);
 }
 
 /** The handoff block (workflow:next, agent:done): a line for every item it counts. */
 function handoffLines(observations, total, agent, answered = []) {
-  const open = Array.isArray(observations) ? observations : [];
-  const settled = Array.isArray(answered) ? answered : [];
-  const lines = [];
-  if (open.length > 0) {
-    const count = Math.max(open.length, Number(total) || 0);
-    lines.push(`[Observations] ${count} open for @${agent} — settle or carry, never fix in passing (aioson observation:list .):`);
-    for (const item of open) lines.push(`  - ${item.id} (${item.kind}${item.age_days != null ? `, ${item.age_days}d` : ''}) ${item.summary}${itemPathsSuffix(item)}`);
-    if (count > open.length) lines.push(`  - +${count - open.length} more — aioson observation:list .`);
-  }
-  if (settled.length > 0) {
-    lines.push(`[Observations] ${settled.length} answered question(s) on this feature for @${agent} — the answer stands:`);
-    for (const item of settled) lines.push(`  - ${item.id} (question, answered) ${item.summary} — answer: ${answerOf(item)}`);
-  }
-  return lines;
+  return renderFan(observations, total, answered, {
+    bullet: '  - ',
+    header: (count) => `[Observations] ${count} open for @${agent} — settle or carry, never fix in passing (aioson observation:list .):`,
+    item: (item) => `  - ${item.id} (${item.kind}${ageOf(item)}) ${item.summary}${itemPathsSuffix(item)}`,
+    answeredHeader: (count) => `[Observations] ${count} answered question(s) on this feature for @${agent} — the answer stands:`,
+    answered: (item) => `  - ${item.id} (question, answered) ${item.summary} — answer: ${answerOf(item)}`
+  });
+}
+
+/**
+ * Attach the agent's fan to a context:brief or context:select result; the
+ * active feature binds when the call names none (@tester, @pentester and
+ * @quality brief without --feature; @briefing and @refiner start at select).
+ */
+async function attachFan(targetDir, result, options = {}) {
+  const fan = await sessionFan(targetDir, result.agent, {
+    feature: options.feature || options.slug || result.active_feature || '',
+    paths: options.paths || options.path || ''
+  });
+  result.observations = fan.items;
+  result.observations_total = fan.total;
+  result.observations_answered = fan.answered;
+  return result;
+}
+
+function printFan(logger, result) {
+  for (const line of fanLines(result.observations, result.observations_total, result.observations_answered)) logger.log(line);
+}
+
+/** The handoff fields a workflow:next payload carries; agent:done re-prints them. */
+function handoffFields(fan) {
+  return {
+    observations: fan.items.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, paths: item.paths, age_days: item.age_days })),
+    observations_total: fan.total,
+    observations_answered: fan.answered.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, answer: item.answer }))
+  };
+}
+
+/** Print the handoff block a workflow:next payload carries, for the agent it activates. */
+function printHandoff(logger, payload, agent = payload.agent || payload.next) {
+  for (const line of handoffLines(payload.observations, payload.observations_total, agent, payload.observations_answered)) logger.log(line);
 }
 
 /** Open items bound to a feature — what a close would carry. */
@@ -750,6 +799,10 @@ module.exports = {
   sessionFan,
   fanLines,
   handoffLines,
+  attachFan,
+  printFan,
+  handoffFields,
+  printHandoff,
   openForFeature,
   carryPreview,
   unreadableStore,

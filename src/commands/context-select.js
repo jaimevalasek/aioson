@@ -53,14 +53,8 @@ async function runContextSelect({ args, options = {}, logger }) {
   }), options);
   // @briefing and @refiner start here, not at context:brief: the ideas and
   // questions the hub holds for them reach them through this call.
-  const { sessionFan, fanLines } = require('../lib/observations');
-  const fan = await sessionFan(targetDir, result.agent, {
-    feature: options.feature || options.slug || result.active_feature || '',
-    paths: options.paths || options.path || ''
-  });
-  result.observations = fan.items;
-  result.observations_total = fan.total;
-  result.observations_answered = fan.answered;
+  const { attachFan, printFan } = require('../lib/observations');
+  await attachFan(targetDir, result, options);
 
   if (options.json) return result;
 
@@ -70,7 +64,7 @@ async function runContextSelect({ args, options = {}, logger }) {
   logger.log('Boundary: load only the selected files until the task, mode, feature, or touched paths change.');
   if (result.selected.length === 0 && (!result.memory || result.memory.length === 0)) {
     logger.log('No context files selected.');
-    for (const line of fanLines(result.observations, result.observations_total, result.observations_answered)) logger.log(line);
+    printFan(logger, result);
     return result;
   }
 
@@ -92,7 +86,7 @@ async function runContextSelect({ args, options = {}, logger }) {
       else logger.log(`- ${entry.path}: excluded — ${entry.cause}${entry.cause === 'below_threshold' ? ` (${entry.score}/${entry.threshold})` : ''}`);
     }
   }
-  for (const line of fanLines(result.observations, result.observations_total, result.observations_answered)) logger.log(line);
+  printFan(logger, result);
 
   return result;
 }

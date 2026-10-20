@@ -83,8 +83,7 @@ async function moveActiveFeature(targetDir, slug, options, logger) {
 }
 
 async function runPulseUpdate({ args, options = {}, logger }) {
-  // Run from a subfolder, `.` is the shell's cwd: update the project's pulse.
-  const targetDir = resolveProjectRootOrSelf(resolveTargetDir(args));
+  const targetDir = resolveProjectRootOrSelf(resolveTargetDir(args)); // from a subfolder too
   const agent = options.agent ? String(options.agent) : null;
   const slug = options.feature ? String(options.feature) : null;
   const gate = options.gate ? String(options.gate) : null;

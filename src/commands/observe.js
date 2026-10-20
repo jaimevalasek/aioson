@@ -41,8 +41,28 @@ function projectDir(args) {
   return resolveProjectRootOrSelf(resolveTargetDir(args));
 }
 
-function outsideProject(logger, options, command, targetDir) {
-  return fail(logger, options, `${command} — ${targetDir} is not inside an AIOSON project (no .aioson/ here or above); nothing was written`);
+function outsideProject(command, targetDir) {
+  return isProjectRoot(targetDir) ? null : `${command} — ${targetDir} is not inside an AIOSON project (no .aioson/ here or above); nothing was written`;
+}
+
+/** Why observe must not record here, or null. */
+function observeRefusal(targetDir, options) {
+  const outside = outsideProject('observe', targetDir);
+  if (outside) return outside;
+  // A bare flag parses as `true`: it would be recorded as the path or detail "true".
+  if (options.paths === true || options.path === true) return 'observe — --paths needs a value: --paths=src/a.js,src/b.js';
+  if (options.detail === true) return 'observe — --detail needs a value: --detail="..."';
+  return null;
+}
+
+function printRecorded(logger, { item, created, reopened, similar }) {
+  const scope = item.feature ? `feature ${item.feature}` : 'project';
+  const verb = reopened ? 'REOPENED (it came back after being settled)' : created ? 'recorded' : `already on record (seen ${item.seen}×)`;
+  logger.log(`observe — ${item.id} (${item.kind}) ${verb} · ${scope}${item.agent ? ` · @${item.agent}` : ''}`);
+  // Agents paraphrase: the same thing in other words would be a twin.
+  for (const other of similar) logger.log(`  possibly already on record: ${other.id} — ${other.summary}`);
+  logger.log(`  next: ${NEXT_STEP[item.kind]}`);
+  logger.log(`  settle: aioson observation:resolve . --id=${item.id} --as=<${RESOLUTION_LIST}>`);
 }
 
 async function defaultFeature(targetDir) {
@@ -104,10 +124,8 @@ Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}
     return { ok: true, help: true };
   }
   const targetDir = projectDir(args);
-  if (!isProjectRoot(targetDir)) return outsideProject(logger, options, 'observe', targetDir);
-  // A bare flag parses as `true`: it would be recorded as the path or detail "true".
-  if (options.paths === true || options.path === true) return fail(logger, options, 'observe — --paths needs a value: --paths=src/a.js,src/b.js');
-  if (options.detail === true) return fail(logger, options, 'observe — --detail needs a value: --detail="..."');
+  const refusal = observeRefusal(targetDir, options);
+  if (refusal) return fail(logger, options, refusal);
   const feature = given(options.feature) || await defaultFeature(targetDir);
   const agent = given(options.agent) || await defaultAgent(targetDir);
   let result;
@@ -125,14 +143,7 @@ Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}
   }
   const { item, created, reopened, similar = [] } = result;
   const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: NEXT_STEP[item.kind], similar };
-  if (options.json) return payload;
-  const scope = item.feature ? `feature ${item.feature}` : 'project';
-  const verb = reopened ? 'REOPENED (it came back after being settled)' : created ? 'recorded' : `already on record (seen ${item.seen}×)`;
-  logger.log(`observe — ${item.id} (${item.kind}) ${verb} · ${scope}${item.agent ? ` · @${item.agent}` : ''}`);
-  // Agents paraphrase: the same thing in other words would be a twin.
-  for (const other of similar) logger.log(`  possibly already on record: ${other.id} — ${other.summary}`);
-  logger.log(`  next: ${NEXT_STEP[item.kind]}`);
-  logger.log(`  settle: aioson observation:resolve . --id=${item.id} --as=<${RESOLUTION_LIST}>`);
+  if (!options.json) printRecorded(logger, { item, created, reopened, similar });
   return payload;
 }
 
@@ -196,7 +207,8 @@ planned/promoted need an existing --ref (a Simple Plan path, a feature slug); di
     return { ok: true, help: true };
   }
   const targetDir = projectDir(args);
-  if (!isProjectRoot(targetDir)) return outsideProject(logger, options, 'observation:resolve', targetDir);
+  const outside = outsideProject('observation:resolve', targetDir);
+  if (outside) return fail(logger, options, outside);
   let result;
   try {
     result = await resolveObservation(targetDir, {

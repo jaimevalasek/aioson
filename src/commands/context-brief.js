@@ -87,7 +87,7 @@ async function runContextBrief({ args, options = {}, logger }) {
   });
   await recordBriefEvent(targetDir, result, options.feature || options.slug || '');
   await recordActivation(targetDir, options);
-  await attachObservations(targetDir, result, options);
+  await require('../lib/observations').attachFan(targetDir, result, options); // the session-start fan, never a gate
 
   if (options.json) return result;
 
@@ -143,29 +143,9 @@ async function runContextBrief({ args, options = {}, logger }) {
     logger.log('Related (recall — history/archive select cannot see):');
     for (const item of result.related) logger.log(`- ${item.path} [${item.source_type}] ${item.reason || ''}`);
   }
-  printObservations(logger, result);
+  require('../lib/observations').printFan(logger, result);
 
   return result;
-}
-
-// The fan this agent gets at session start: open observations whose kind
-// addresses it and that belong to its feature, to no feature, or to the
-// paths it is about to touch. Recorded data with a next step, never a gate.
-// @tester, @pentester and @quality brief without --feature: the active one binds.
-async function attachObservations(targetDir, result, options) {
-  const { sessionFan } = require('../lib/observations');
-  const fan = await sessionFan(targetDir, result.agent, {
-    feature: options.feature || options.slug || result.active_feature || '',
-    paths: options.paths || options.path || ''
-  });
-  result.observations = fan.items;
-  result.observations_total = fan.total;
-  result.observations_answered = fan.answered;
-}
-
-function printObservations(logger, result) {
-  const { fanLines } = require('../lib/observations');
-  for (const line of fanLines(result.observations, result.observations_total, result.observations_answered)) logger.log(line);
 }
 
 module.exports = { runContextBrief };

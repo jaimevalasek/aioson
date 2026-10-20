@@ -2624,15 +2624,10 @@ async function runWorkflowNext({ args, options, logger, t }) {
     // feature for @dev/@qa, an idea for @product — travels with the handoff
     // instead of staying in the session that saw it. Advisory, never a gate.
     try {
-      const { fanFor, handoffLines } = require('../lib/observations');
+      const { fanFor, handoffFields, printHandoff } = require('../lib/observations');
       const fan = await fanFor(targetDir, activation.agent, { feature: state.featureSlug });
-      if (fan.items.length > 0 || fan.answered.length > 0) {
-        // agent:done runs this silenced and re-prints the block from the payload.
-        payload.observations = fan.items.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, paths: item.paths, age_days: item.age_days }));
-        payload.observations_total = fan.total;
-        payload.observations_answered = fan.answered.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, answer: item.answer }));
-        for (const line of handoffLines(fan.items, fan.total, activation.agent, fan.answered)) logger.log(line);
-      }
+      // agent:done runs this silenced and re-prints the block from the payload.
+      if (fan.items.length > 0 || fan.answered.length > 0) printHandoff(logger, Object.assign(payload, handoffFields(fan)));
     } catch { /* the hub is advisory; a broken store never blocks the handoff */ }
     logger.log(activation.prompt);
   } else {

@@ -153,6 +153,20 @@ async function runAgentsList({ args, options, logger, t }) {
   return { ok: true, targetDir, count: agents.length, agents, locale };
 }
 
+// The handoff block workflow:next printed to its silenced logger rides inside
+// the prompt: an external client or the Cockpit hands the agent this text only.
+function withHandoff(prompt, workflowResult) {
+  const lines = fanLines(workflowResult.observations, workflowResult.observations_total, workflowResult.observations_answered);
+  return prompt && lines.length > 0 ? `${prompt}\n\n${lines.join('\n')}` : prompt;
+}
+
+// What earlier stages noticed for this agent (@briefing and @refiner are no
+// workflow stage: this prompt is their only handoff).
+async function observationsContext(targetDir, agentId, options) {
+  const fan = await sessionFan(targetDir, agentId, { feature: options.feature || options.slug || await defaultFeature(targetDir) });
+  return fanLines(fan.items, fan.total, fan.answered).join('\n');
+}
+
 async function runAgentPrompt({ args, options, logger, t }) {
   const name = args[0];
   if (!name) {
@@ -200,10 +214,7 @@ async function runAgentPrompt({ args, options, logger, t }) {
       instructionPath = workflowResult.instructionPath;
       prompt = workflowResult.prompt;
       effectiveMode = workflowResult.effectiveMode || null;
-      // The handoff block went to the silenced logger above; an external
-      // client or the Cockpit hands the agent this prompt and nothing else.
-      const observationLines = fanLines(workflowResult.observations, workflowResult.observations_total, workflowResult.observations_answered);
-      if (prompt && observationLines.length > 0) prompt = `${prompt}\n\n${observationLines.join('\n')}`;
+      prompt = withHandoff(prompt, workflowResult);
     }
   }
 
@@ -228,12 +239,8 @@ async function runAgentPrompt({ args, options, logger, t }) {
       agent: promptAgent.id,
       featureSlug: options.feature ? String(options.feature).trim() : null
     });
-    // What earlier stages noticed for this agent (@briefing and @refiner are
-    // no workflow stage: this prompt is their only handoff).
-    const fan = await sessionFan(targetDir, promptAgent.id, {
-      feature: options.feature || options.slug || await defaultFeature(targetDir)
-    });
-    activationContext = [activationContext, generatedContext, chainActivationContext, fanLines(fan.items, fan.total, fan.answered).join('\n')].filter(Boolean).join('\n\n');
+    const observationContext = await observationsContext(targetDir, promptAgent.id, options);
+    activationContext = [activationContext, generatedContext, chainActivationContext, observationContext].filter(Boolean).join('\n\n');
     const autonomyProtocol = await readAutonomyProtocol(targetDir);
     const manifest = await readAgentManifest(targetDir, promptAgent.id);
     effectiveMode = resolveEffectiveMode({
