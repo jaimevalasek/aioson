@@ -1240,6 +1240,8 @@ aioson op:forget <slug>
 
 `authorization`, `exclusion`, and `correction` promote on the first detection; `confirmation` requires two. Re-detection of an existing decision reinforces it in place and does not duplicate FTS rows or reset `promoted_at`. Enable automatic loading with `AIOSON_OPERATOR_MEMORY=true`.
 
+Every `op:*` command takes an optional `[path]` first (`aioson op:list ../client-app --json --titles-only`): the project a decision is scoped to is resolved from that path, and from the working directory only when no path is given. A decision binds the project it was said in (`scope: project`) and widens to every project when the same signal is detected in a second distinct project or when the user's own quote names every project; `op:list` lists what applies in the current project, `--all` lists every project's.
+
 See [Operator memory](./operator-memory.md).
 
 ---

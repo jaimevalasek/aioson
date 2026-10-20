@@ -29,3 +29,13 @@ Nada — e esse era o problema. Todo push de `main` e todo workflow de Release f
 - Teste que lê `.aioson/<algo>` da raiz do repo: se o caminho é ignorado pelo git, use `readWorkspaceMirror` ou leia do `template/`.
 - Replay fiel do CI antes de dizer "suíte verde": `git archive <sha>` → container `node:20-bookworm-slim` + `apt-get install git` + `CI=true` → `node --test --test-reporter=tap`. A imagem slim não traz git (166 falhas falsas) nem Python (better-sqlite3 sem prebuild compila do fonte); root no container ignora permissão de arquivo; `tar` do Git Bash precisa de `--force-local` com `C:`.
 - Sem `gh`: a API pública do GitHub dá runs e jobs sem token, mas não os logs (403).
+
+## 2ª ocorrência (2026-10-07 → 2026-10-20)
+
+O passo "Lint and test" (`npm run ci`) falhou em todo push por 13 dias e quatro releases saíram por cima; a leitura "falha cedo demais para ser a suíte" estava errada — em Linux a suíte inteira roda em ~4 min. O replay em WSL (Node 24 de tarball em `~/node24`, `git clone --depth 1`, `CI=true TZ=UTC taskset -c 0-3`) mediu três causas:
+
+- **`quality:coverage` falhava sempre** (87% < 90%): `tests/quality-bench.test.js` nunca entrou no inventário `scripts/testing/quality-tests.js` que o portão roda. Teste novo de `src/lib/quality/**` entra no inventário no mesmo commit.
+- **`quality:static` acusa 505 achados** além do baseline revisado de 2026-09-14, em Windows e Linux igual (não é impressão digital de SO). O `.quality/README.md` proíbe regenerar o baseline só para ficar verde: é revisão do dono.
+- **Flakes a 4 CPUs**: um deles era bug real (o agendador deixava uma revisão escrever ao lado do DEV admitido — ver `a-review-wrote-beside-the-admitted-unit.md`); um atraso fixo de 600 ms virou espera por evento; relógio do WSL2 voltando para trás derrubava uma `Duration`.
+
+Regra: antes de cortar release com CI vermelho, rode o `npm run ci` inteiro (não só a suíte) e compare carga com o código original antes de chamar falha de "flaky".

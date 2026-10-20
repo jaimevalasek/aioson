@@ -21,6 +21,11 @@ Todo carregador existente era mais estreito que o problema: `op:capture` guarda 
 - Diretiva de captura no kernel de gateway (`## Memory capture`, byte-idêntica entre CLAUDE.md e AGENTS.md por teste). Orçamento < 4000 após `buildBlock`: couberam 167 chars cortando frases não pinadas e já cobertas por doc roteado (`Other specialists need evidence.`, `Between handoffs give only the next agent and why.`, a frase do continuity.md — os 7 kernels de feature e `handoff-persistence.md` continuam carregando-a). Receita: grep das frases candidatas em `tests/` antes de cortar; as cópias-raiz do repositório são `buildBlock(template)` e precisam ser reescritas junto.
 - Doc roteado `.aioson/docs/observations.md` (`load_tier: trigger`, triggers en/pt-BR/es) em `MANAGED_FILES`, espelhado no workspace, provado por `observations.evals.json` (4 positivos + 2 negativos) no corpus shipped.
 
+## Revisão do mesmo dia (ce1e8620)
+
+- **Escritor único não é escrita única.** O CLI era o único escritor, mas cada processo fazia leitura-modificação-escrita sem lock: 4 workers de lane ao mesmo tempo guardaram 4 de 16 itens, e um resolve correndo com um observe deixou JSON inválido (todo escritor passou a recusar). Agora todo escritor roda sob `withRegistryLock(dir, fn, { name: '.observations.lock' })` e grava por `writeAtomically`; o mesmo lock deixou de lançar `EPERM` sob contenção no Windows (o flake antigo do `.features.lock`).
+- **Alcance do ciclo 80/20 medido por agente**, não por tipo: @briefing/@refiner começam no `context:select` (que não tinha leque), @tester/@pentester/@quality chamam o brief sem `--feature` (o brief agora usa a feature ativa), @quality não estava em público nenhum. Ao criar uma superfície, rode o comando de início de sessão de **cada** agente do ciclo e veja o que ele recebe.
+
 ## Armadilhas
 
 - O `context:guard` dispara regras de UI (`status-change-confirmation`, `management-home-widgets`) em edições de kernel/markdown — ruído, não violação.
