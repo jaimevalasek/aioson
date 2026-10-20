@@ -15,7 +15,8 @@ const { spawnSync } = require('node:child_process');
 const Database = require('better-sqlite3');
 
 const { openRuntimeDb, logAgentEvent } = require('../src/runtime-store');
-const { runMemoryReflectPrepare } = require('../src/commands/memory-reflect-prepare');
+const { runMemoryReflectPrepare, REFLECT_PROMPT_RELATIVE } = require('../src/commands/memory-reflect-prepare');
+const { runMemoryReflectCommit } = require('../src/commands/memory-reflect-commit');
 
 const BIN = path.join(__dirname, '..', 'bin', 'aioson.js');
 
@@ -56,6 +57,32 @@ test('memory reflection after the run closed attaches to that run instead of ope
   const check = new Database(path.join(dir, '.aioson', 'runtime', 'aios.sqlite'), { readonly: true });
   try {
     const event = check.prepare("SELECT run_key FROM agent_events WHERE event_type = 'memory_reflect_skipped'").get();
+    assert.equal(event && event.run_key, closed.runKey, 'the event is kept on the closed run');
+  } finally {
+    check.close();
+  }
+});
+
+test('memory:reflect-commit after the run closed attaches to that run instead of opening a ghost one', async () => {
+  const dir = await tmpProject();
+  await fs.mkdir(path.join(dir, '.aioson', 'context', 'bootstrap'), { recursive: true });
+  const { db, runtimeDir } = await openRuntimeDb(dir);
+  let closed;
+  try {
+    await logAgentEvent(db, runtimeDir, { agentName: 'dev', message: 'implementation started' });
+    closed = await logAgentEvent(db, runtimeDir, { agentName: 'dev', message: 'done', finish: true, summary: 'done' });
+  } finally {
+    db.close();
+  }
+  // The manifest agent:done leaves behind; the agent then commits an output that fails validation.
+  await fs.writeFile(path.join(dir, REFLECT_PROMPT_RELATIVE), JSON.stringify({ snapshot_hash: 'x', targets: [], allowed_paths: [] }));
+  const result = await runMemoryReflectCommit({ args: [dir], options: { agent: 'dev', json: true, files: { '../escape.md': 'x' } }, logger: { log() {}, error() {} } });
+  assert.equal(result.error, 'validation_failed');
+  assert.deepEqual(running(dir), { tasks: 0, runs: 0 }, 'the commit event opened a run nobody finishes');
+
+  const check = new Database(path.join(dir, '.aioson', 'runtime', 'aios.sqlite'), { readonly: true });
+  try {
+    const event = check.prepare("SELECT run_key FROM agent_events WHERE event_type = 'memory_reflect_failed'").get();
     assert.equal(event && event.run_key, closed.runKey, 'the event is kept on the closed run');
   } finally {
     check.close();

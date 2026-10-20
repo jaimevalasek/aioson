@@ -19,9 +19,13 @@ function stripInjectionChars(text) {
 
 // Invisible carriers that smuggle text past a human reader: every format
 // character (Cf — zero-width, bidi controls, soft hyphen, the U+E0000 tag block
-// of "ASCII smuggling", which NFKC keeps) and the variation selectors (Mn —
-// U+FE00–FE0F and U+E0100–E01EF, bytes hidden after an emoji). One set behind
-// one exported helper, so every reader of third-party text strips the same thing.
+// of "ASCII smuggling") and the variation selectors (Mn — U+FE00–FE0F and
+// U+E0100–E01EF, bytes hidden after an emoji). One set behind one exported
+// helper, so every reader of third-party text strips the same thing. The whole
+// class goes on purpose: zero-width steganography is a real hidden-text channel
+// in untrusted pages. The accepted cost: joined emoji (family, profession) come
+// apart, VS16 emoji fall back to text style, subdivision flags lose their tags
+// and Persian loses its zero-width non-joiner — all still readable.
 const SMUGGLING_CHARS_RE = /[\p{Cf}\u{FE00}-\u{FE0F}\u{E0100}-\u{E01EF}]/gu;
 
 function stripSmugglingChars(text) {
@@ -29,13 +33,37 @@ function stripSmugglingChars(text) {
   return text.replace(SMUGGLING_CHARS_RE, '');
 }
 
+// `<` and everything a reader may take for an angle bracket, by code point (no
+// escapes, so the set survives every editor and shell): `<` with its small and
+// fullwidth forms, the small and fullwidth `>` (NFKC folds all four into `<`/`>`),
+// and the look-alikes: not-less/greater-than (they decompose to `<`/`>`), single
+// guillemets, mathematical, CJK and deprecated angle brackets, Canadian
+// syllabics PA/PO, modifier arrowheads, ornamental and curved angle brackets.
+const LT_FORMS = [0x3C, 0xFE64, 0xFF1C];
+const GT_FORMS = [0xFE65, 0xFF1E];
+const ANGLE_LOOKALIKES = [
+  0x226E, 0x226F, 0x2039, 0x203A, 0x27E8, 0x27E9, 0x3008, 0x3009, 0x2329, 0x232A, 0x1438, 0x1433,
+  0x02C2, 0x02C3, 0x276C, 0x276D, 0x276E, 0x276F, 0x2770, 0x2771, 0x29FC, 0x29FD
+];
+const ANGLE_LOOKALIKES_RE = new RegExp(`[${String.fromCharCode(...LT_FORMS, ...GT_FORMS, ...ANGLE_LOOKALIKES)}]`, 'g');
+
+// The forms of `<`/`>` read as the entity, a look-alike as its numeric
+// reference: escaped, never folded, so the reader still sees which it was.
+function escapeAngle(ch) {
+  const code = ch.codePointAt(0);
+  if (LT_FORMS.includes(code)) return '&lt;';
+  if (GT_FORMS.includes(code)) return '&gt;';
+  return `&#x${code.toString(16)};`;
+}
+
 // Third-party text an agent will read, inside the fence or around it:
-// compatibility forms folded (NFKC turns a fullwidth `＜` into `<`), invisible
-// carriers dropped, then every `<` escaped. No tag survives — a close tag
-// however spelled (zero-width inside, look-alike letters, `<//verbatim>`), a
-// forged trust attribute, chat markup — and the text stays readable.
+// invisible carriers dropped, then `<` and every angle look-alike escaped. No
+// tag survives — a close tag however spelled (zero-width inside, look-alike
+// letters or brackets, `<//verbatim>`), a forged trust attribute, chat markup —
+// and the text stays as written: no NFKC, which rewrote legitimate text (the
+// ordinals of "nº 42" and "1ª", superscripts, subscripts, fractions, micro sign).
 function neutralizeUntrustedText(text) {
-  return stripSmugglingChars(String(text == null ? '' : text).normalize('NFKC')).replace(/</g, '&lt;');
+  return stripSmugglingChars(String(text == null ? '' : text)).replace(ANGLE_LOOKALIKES_RE, escapeAngle);
 }
 
 // Wraps third-party content in explicit untrusted-content boundaries the LLM

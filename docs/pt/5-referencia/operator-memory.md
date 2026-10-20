@@ -58,6 +58,8 @@ O slug é derivado de forma determinística do proposal. A promoção depende do
 
 Uma autorização, exclusão ou correção explícita já é uma decisão permanente. `confirmation` continua exigindo duas ocorrências para evitar transformar uma aceitação pontual em preferência estável.
 
+Uma decisão vale só no projeto em que foi dita até o mesmo sinal aparecer num segundo projeto ou até a citação do próprio usuário nomear todos os projetos ("em todos os meus projetos", "in every project"). Uma negação só a mantém local quando nega esse escopo ("não se aplica a todos os projetos", "doesn't apply to every project", "nem em todos"); a negação de uma ação não: "nunca use yarn em qualquer projeto" e "never push to main in any repo" são proibições para todos os projetos.
+
 ## Reforço idempotente
 
 Se um sinal já promovido aparecer novamente, ele não cria outra linha no índice FTS nem reseta `promoted_at`. O AIOSON atualiza somente `last_reinforced` e incrementa `reinforcement_count`.
@@ -83,7 +85,9 @@ aioson op:list --include-archived
 aioson op:show <slug> --json
 ```
 
-O recall de início de sessão (`aioson op:list --json --titles-only`) lista as 40 decisões mais bem ranqueadas — as deste projeto, depois as mais frescas pela meia-vida da categoria e pelos reforços — com `total` e `omitted`; `--match="<palavras da tarefa>"` encontra o resto, `--limit=0` lista todas.
+O recall de início de sessão (`aioson op:list --json --titles-only`) lista as 40 decisões mais bem ranqueadas: as deste projeto primeiro; dentro de cada grupo, exclusões e correções antes de autorizações e confirmações (esquecer uma proibição é uma falha que o agente não vê, esquecer uma permissão custa só uma pergunta); depois as mais frescas pela meia-vida da categoria e pelos reforços. Sempre que há um corte, a saída traz `total` e `omitted` (0 quando nada ficou de fora); `--match="<palavras da tarefa>"` encontra o resto (palavras de duas letras ou mais, como `CI` e `PR`; sem nenhuma palavra utilizável, a saída diz `match_ignored: true` e o corte normal vale) e `--limit=0` lista todas. O corte padrão vale só para esse formato de ativação: `--titles-only` também corta a tabela de texto, enquanto `--feature` e `--proposals` listam tudo, a não ser que `--limit` seja passado.
+
+Os comandos que recebem um slug aceitam `[path] <slug>` e também `<slug> [path]` (`aioson op:show <slug> .`). As linhas que `op:capture` e `op:promote` imprimem seguem `--locale` quando informado e, sem ele, o `interaction_language` do projeto.
 
 `MEMORY.md` é um índice pequeno; o corpo da decisão vive em `decisions/{slug}.md`. O arquivo `MEMORY-archive.md` contém decisões fora do tier ativo, e `history/` recebe itens esquecidos.
 

@@ -27,7 +27,7 @@ const path = require('node:path');
 const { ensureStorageTree, getStorageRoot } = require('./storage');
 const { fingerprintProposal, isValidDecisionSlug } = require('./slug');
 const { projectSets, recordProject } = require('./project-scope');
-const { escapeYamlString, quotesToYaml, projectLines } = require('./frontmatter');
+const { escapeYamlString, quotesToYaml, projectLines, readScalar } = require('./frontmatter');
 
 const MAX_QUOTES = 5;
 const VALID_SIGNAL_TYPES = ['authorization', 'exclusion', 'correction', 'confirmation'];
@@ -49,8 +49,8 @@ function serializeProposal(data) {
     `last_detected: ${data.last_detected}`,
     `quotes:${quotesToYaml(data.quotes)}`,
     `proposal: ${escapeYamlString(data.proposal)}`,
-    `source_agent: ${data.source_agent}`,
-    `proposal_fingerprint: ${data.proposal_fingerprint}`
+    `source_agent: ${escapeYamlString(data.source_agent)}`,
+    `proposal_fingerprint: ${escapeYamlString(data.proposal_fingerprint)}`
   ];
   if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
   if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
@@ -93,8 +93,7 @@ function parseProposalFrontmatter(content) {
       if (value.startsWith("'") && value.endsWith("'")) {
         value = value.slice(1, -1).replace(/''/g, "'");
       }
-      if (/^\d+$/.test(value)) value = Number(value);
-      out[key] = value;
+      out[key] = readScalar(rawValue, value, false);
     }
   }
   if (inQuotes) out.quotes = quotes;

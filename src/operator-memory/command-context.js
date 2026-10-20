@@ -48,22 +48,39 @@ function commandIdentity(projectDir) {
   return resolved;
 }
 
+function isDirectory(rawPath) {
+  try { return fs.statSync(resolveTargetDir([rawPath])).isDirectory(); } catch { return false; }
+}
+
 /**
- * The prologue of a `[path] <slug>` command — two positionals are the path and
- * the slug, one is the slug: its slug, project and identity, or its `failure`
- * when the slug is missing or the path is not a directory.
+ * `[path] <slug>` from the positionals — or `<slug> [path]` when only the second
+ * names a directory (`op:show <slug> .`, the order 1.73.0 accepted); a lone
+ * positional is the slug, a lone `.` none.
+ */
+function pathAndSlug(positional) {
+  if (positional.length < 2) return [null, positional[0] === '.' ? undefined : positional[0]];
+  const [first, second] = positional;
+  return !isDirectory(first) && isDirectory(second) ? [second, first] : [first, second];
+}
+
+/**
+ * The prologue of a `[path] <slug>` command: its slug, project and identity, or
+ * its `failure` when the slug is missing or the path is not a directory.
  */
 function openSlugCommand(name, args, options, logger) {
-  const positional = positionalArgs(args);
-  const [rawPath, slug] = positional.length >= 2 ? positional : [null, positional[0] === '.' ? undefined : positional[0]];
+  const [rawPath, slug] = pathAndSlug(positionalArgs(args));
   if (!slug) return { failure: commandFailure(options, logger, `${name} — required argument: <slug>. Usage: aioson ${name} [path] <slug>`) };
   const opened = openCommand(name, rawPath, options, logger);
   if (opened.failure) return opened;
   return { slug, dir: opened.dir, resolved: commandIdentity(opened.dir) };
 }
 
-/** The translator for the project's interaction_language (English without one). */
-function projectTranslator(projectDir) {
+/**
+ * The translator for the lines a person reads: an explicit --locale first, as
+ * across the CLI, else the project's interaction_language, else English.
+ */
+function projectTranslator(projectDir, options = {}) {
+  if (options && options.locale) return createTranslator(String(options.locale)).t;
   let language = 'en';
   try {
     const { parseYamlFrontmatter, getInteractionLanguage } = require('../context');

@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const { spawnSync } = require('node:child_process');
 
 const TEST_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-om-recall-'));
 process.env.HOME = TEST_HOME;
@@ -22,6 +23,8 @@ process.env.USERPROFILE = TEST_HOME;
 const { serializeDecision, decisionPath, readDecision } = require('../src/operator-memory/decision');
 const { ensureStorageTree } = require('../src/operator-memory/storage');
 const { regenerateIndex } = require('../src/operator-memory/index-md');
+const { writeProposal } = require('../src/operator-memory/proposal');
+const { createTranslator } = require('../src/i18n');
 const { runOpCapture } = require('../src/commands/op-capture');
 const { runOpList, DEFAULT_RECALL_LIMIT } = require('../src/commands/op-list');
 
@@ -38,11 +41,11 @@ function useIdentity(identity) {
   return identity;
 }
 
-function seed(identity, slug, { daysAgo = 0, category = 'default', reinforced = 0, body = `decision ${slug}` } = {}) {
+function seed(identity, slug, { daysAgo = 0, category = 'default', reinforced = 0, body = `decision ${slug}`, signal = 'authorization', feature = null } = {}) {
   const at = new Date(Date.now() - daysAgo * DAY_MS).toISOString();
   fs.writeFileSync(decisionPath(identity, slug), serializeDecision({
-    slug, signal_type: 'authorization', promoted_at: at, last_reinforced: at, reinforcement_count: reinforced,
-    category, source_agent: 'dev', quotes: ['q'], body, title: body
+    slug, signal_type: signal, promoted_at: at, last_reinforced: at, reinforcement_count: reinforced,
+    category, source_agent: 'dev', quotes: ['q'], body, title: body, feature_slug: feature
   }));
 }
 
@@ -88,7 +91,23 @@ test('the session-start recall lists the decisions ranked first and counts the r
 
   const refused = await list({ 'titles-only': true, limit: '-3' });
   assert.equal(refused.ok, false, 'the CLI exits 1 on ok:false');
-  assert.match(refused.error, /--limit must be a whole number/);
+  assert.equal(refused.error, 'limit_invalid');
+  assert.match(refused.message, /--limit must be a whole number/);
+});
+
+test('--limit with no value, a fraction or a negative number is a usage error in every shape', async () => {
+  useIdentity('recall-limit-usage-bot');
+  for (const limit of [true, '', '1.5', '-1']) {
+    const json = await list({ 'titles-only': true, limit });
+    assert.deepEqual([json.ok, json.error], [false, 'limit_invalid'], JSON.stringify(limit));
+    const errors = [];
+    const text = await inDir(TEST_HOME, () => runOpList({ args: [], options: { 'titles-only': true, limit }, logger: { log() {}, error: (line) => errors.push(line), warn() {} } }));
+    assert.equal(text.exitCode, 1, JSON.stringify(limit));
+    assert.equal(errors.length, 1, 'one line');
+  }
+  const cli = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'aioson.js'), 'op:list', '--json', '--titles-only', '--limit'], { cwd: TEST_HOME, env: process.env, encoding: 'utf8' });
+  assert.equal(cli.status, 1, cli.stderr);
+  assert.equal(JSON.parse(cli.stdout).error, 'limit_invalid');
 });
 
 test('the recall ranks by the decay model: reinforcements and a long half-life outrank a fresh one-off', async () => {
@@ -134,5 +153,104 @@ test('--match finds a decision the head leaves out, ranked by the words it share
   assert.ok(!slugs(await list({ 'titles-only': true })).includes('old-deploy-rule'), 'out of the head');
   const found = await list({ 'titles-only': true, match: 'how do I deploy with dokploy' });
   assert.deepEqual(slugs(found), ['old-deploy-rule']);
-  assert.equal(found.omitted, undefined);
+  assert.equal(found.total, 1);
+  assert.equal(found.omitted, 0, 'a head applied: total and omitted always come with it');
+  assert.equal(found.match_ignored, undefined);
+});
+
+// ─── 2026-10-20 review: what the head keeps ───
+
+test('prohibitions head the recall: sixty fresh permissions never push an exclusion or a correction out', async () => {
+  const identity = useIdentity('recall-prohibitive-bot');
+  for (let i = 0; i < 60; i += 1) seed(identity, `allow-${String(i).padStart(2, '0')}`, { daysAgo: 0, reinforced: 2 });
+  for (let i = 0; i < 5; i += 1) seed(identity, `never-${i}`, { daysAgo: 80 + i, signal: 'exclusion' });
+  for (let i = 0; i < 5; i += 1) seed(identity, `fix-${i}`, { daysAgo: 60 + i, signal: 'correction' });
+  regenerateIndex(identity);
+
+  const recall = await list({ 'titles-only': true });
+  assert.equal(recall.count, DEFAULT_RECALL_LIMIT);
+  assert.equal(recall.total, 70);
+  assert.equal(recall.omitted, 30);
+  const head = slugs(recall);
+  assert.deepEqual(head.slice(0, 10).map((slug) => slug.split('-')[0]).sort(), ['fix', 'fix', 'fix', 'fix', 'fix', 'never', 'never', 'never', 'never', 'never']);
+  assert.ok(head.slice(10).every((slug) => slug.startsWith('allow-')), 'permissions follow');
+});
+
+test('a head always reports total and omitted, 0 when nothing is left out', async () => {
+  const identity = useIdentity('recall-exact-bot');
+  for (let i = 0; i < DEFAULT_RECALL_LIMIT; i += 1) seed(identity, `exact-${String(i).padStart(2, '0')}`, { daysAgo: i });
+  regenerateIndex(identity);
+  const recall = await list({ 'titles-only': true });
+  assert.equal(recall.count, DEFAULT_RECALL_LIMIT);
+  assert.equal(recall.total, DEFAULT_RECALL_LIMIT);
+  assert.equal(recall.omitted, 0);
+  assert.equal(recall.more, undefined);
+});
+
+test('--match reads two-letter task words and reports a query with no usable word', async () => {
+  const identity = useIdentity('recall-short-words-bot');
+  seed(identity, 'pr-review', { body: 'Abra um PR e peça review no CI' });
+  seed(identity, 'ui-kit', { body: 'Use o kit de UI da casa' });
+  for (let i = 0; i < 5; i += 1) seed(identity, `filler-${i}`, { body: `rotina generica numero ${i}` });
+  regenerateIndex(identity);
+
+  assert.deepEqual(slugs(await list({ 'titles-only': true, match: 'CI PR' })), ['pr-review']);
+  assert.deepEqual(slugs(await list({ 'titles-only': true, match: 'ui' })), ['ui-kit']);
+  const ignored = await list({ 'titles-only': true, match: 'às' });
+  assert.equal(ignored.match_ignored, true);
+  assert.equal(ignored.count, 7, 'the normal head, unfiltered');
+  assert.equal(ignored.omitted, 0);
+
+  const lines = [];
+  await inDir(TEST_HOME, () => runOpList({ args: [], options: { 'titles-only': true, match: 'às' }, logger: { log: (line) => lines.push(line), error() {}, warn() {} } }));
+  assert.equal(lines[0], createTranslator('en').t('cli.operator_memory.match_ignored', { match: 'às' }), 'one line says the filter was not applied');
+});
+
+test('--all keeps "this project\'s" for decisions said here, not for every scoped one', async () => {
+  const identity = useIdentity('recall-all-bot');
+  const here = makeCheckout('all-here', 'https://github.com/acme/recall-all-here.git');
+  const other = makeCheckout('all-other', 'https://github.com/acme/recall-all-other.git');
+  const captured = await inDir(other, () => runOpCapture({
+    args: [], options: { json: true, 'source-agent': 'dev', signal: 'authorization', quote: 'aqui pode usar yarn', proposal: 'usar yarn no outro repositorio' }, logger: silent()
+  }));
+  assert.equal(captured.scope, 'project');
+  const old = new Date(Date.now() - 300 * DAY_MS).toISOString();
+  const decision = readDecision(identity, captured.slug);
+  fs.writeFileSync(decisionPath(identity, captured.slug), serializeDecision({ ...decision, slug: captured.slug, promoted_at: old, last_reinforced: old }));
+  for (let i = 0; i < DEFAULT_RECALL_LIMIT; i += 1) seed(identity, `fresh-all-${String(i).padStart(2, '0')}`, { daysAgo: 0 });
+  regenerateIndex(identity);
+
+  const fromHere = await list({ 'titles-only': true, all: true }, here);
+  assert.ok(!slugs(fromHere).includes(captured.slug), 'a 300-day-old decision of another project is not this project\'s');
+  assert.equal(fromHere.total, DEFAULT_RECALL_LIMIT + 1);
+  assert.equal(fromHere.omitted, 1);
+  const fromOther = await list({ 'titles-only': true, all: true }, other);
+  assert.equal(slugs(fromOther)[0], captured.slug, 'where it was said, it heads the recall');
+});
+
+test('the default head is the activation recall only; an explicit --limit applies to every shape, with its counts', async () => {
+  const identity = useIdentity('recall-shapes-bot');
+  for (let i = 0; i < DEFAULT_RECALL_LIMIT + 7; i += 1) seed(identity, `feat-${String(i).padStart(2, '0')}`, { daysAgo: i, feature: 'checkout' });
+  regenerateIndex(identity);
+  const feature = await list({ 'titles-only': true, feature: 'checkout' });
+  assert.equal(feature.decisions.length, DEFAULT_RECALL_LIMIT + 7, 'a feature\'s record is listed whole');
+  assert.equal(feature.total, DEFAULT_RECALL_LIMIT + 7);
+  assert.equal(feature.omitted, undefined);
+  const limited = await list({ 'titles-only': true, feature: 'checkout', limit: '5' });
+  assert.equal(limited.decisions.length, 5);
+  assert.equal(limited.total, DEFAULT_RECALL_LIMIT + 7);
+  assert.equal(limited.omitted, DEFAULT_RECALL_LIMIT + 2);
+
+  const now = Date.now();
+  for (const [slug, daysAgo] of [['a-oldest', 2], ['b-middle', 1], ['c-newest', 0]]) {
+    const at = new Date(now - daysAgo * DAY_MS).toISOString();
+    writeProposal(identity, { slug, signal_type: 'confirmation', detected_count: 1, first_detected: at, last_detected: at, quotes: ['q'], proposal: slug, source_agent: 'dev', proposal_fingerprint: 'f' });
+  }
+  const queue = await list({ 'titles-only': true, proposals: true });
+  assert.equal(queue.count, 3, 'the proposals queue has no default head');
+  assert.equal(queue.omitted, undefined);
+  const newest = await list({ 'titles-only': true, proposals: true, limit: '2' });
+  assert.deepEqual(slugs(newest), ['c-newest', 'b-middle'], 'a limited queue keeps the latest detections');
+  assert.equal(newest.total, 3);
+  assert.equal(newest.omitted, 1);
 });

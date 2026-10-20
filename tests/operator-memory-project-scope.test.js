@@ -28,7 +28,7 @@ const {
   projectSets
 } = require('../src/operator-memory/project-scope');
 const { deriveSlug } = require('../src/operator-memory/slug');
-const { readDecision, serializeDecision, decisionPath } = require('../src/operator-memory/decision');
+const { readDecision, serializeDecision, decisionPath, promoteProposal } = require('../src/operator-memory/decision');
 const { captureSignal, readProposal } = require('../src/operator-memory/proposal');
 const { ensureStorageTree, getStorageRoot } = require('../src/operator-memory/storage');
 const { regenerateIndex } = require('../src/operator-memory/index-md');
@@ -585,4 +585,139 @@ test('op:list --titles-only is lean: no empty field, dates as days, one compact 
     for (const [key, value] of Object.entries(item)) assert.ok(value !== null && value !== '', `${item.slug}.${key} is empty`);
     if (item.last_reinforced) assert.match(item.last_reinforced, /^\d{4}-\d{2}-\d{2}$/);
   }
+});
+
+// ─── 2026-10-20 review: the scope a quote names ───
+
+test('namesCrossProjectScope: the review table of quotes in pt-BR, en and es, each with its scope', () => {
+  const cases = [
+    ['em todos os meus projetos use pnpm', 'operator'],
+    ['pode commitar sozinho em qualquer projeto', 'operator'],
+    ['in every project, run the linter before committing', 'operator'],
+    ['use pnpm in all my projects', 'operator'],
+    ['en todos mis proyectos usa pnpm', 'operator'],
+    ['en cualquier proyecto, nunca hagas push a main', 'operator'],
+    ['across all my repos, squash before merging', 'operator'],
+    ['independentemente do projeto, responda em português', 'operator'],
+    ['regardless of the project, keep answers short', 'operator'],
+    ['Em TODOS os projetos, NÃO faça push sem perguntar', 'operator'],
+    ['en todos los repos usa pnpm', 'operator'],
+    ['não importa o projeto, use pnpm', 'operator'],
+    ['rode lint no CI em todos os projetos', 'operator'],
+    ['nunca use yarn em qualquer projeto', 'operator'],
+    ['never push to main in any repo', 'operator'],
+    ['não commitar sem pedir em todos os projetos', 'operator'],
+    ['não precisa ser em todos os projetos', 'project'],
+    ['não é para todos os projetos', 'project'],
+    ['I don\'t want this in every project', 'project'],
+    ['not across all my repos', 'project'],
+    ['isso não vale para todos os projetos', 'project'],
+    ['isso não se aplica a todos os projetos', 'project'],
+    ['não precisa ser em todos os projetos, só aqui', 'project'],
+    ['não quero isso em todos os projetos', 'project'],
+    ['isso é só deste projeto, não de todos os projetos', 'project'],
+    ['não generalize para todos os projetos', 'project'],
+    ['não deve valer para todos os meus projetos', 'project'],
+    ['nem em todos os projetos', 'project'],
+    ['nem todos os projetos usam pnpm', 'project'],
+    ['this does not apply to every project', 'project'],
+    ['this doesn’t apply to every project', 'project'],
+    ['this shouldn\'t apply to all my projects', 'project'],
+    ['this won\'t hold for every project', 'project'],
+    ['not in all my projects, just this one', 'project'],
+    ['every project has its own lint config', 'project'],
+    ['every project uses its own node version', 'project'],
+    ['todo projeto tem sua própria configuração', 'project'],
+    ['no es para todos mis proyectos', 'project'],
+    ['no se aplica a todos mis proyectos', 'project'],
+    ['no vale para todos mis proyectos', 'project'],
+    ['use pnpm aqui', 'project'],
+    ['diferente de todos os outros projetos, aqui usamos yarn', 'project'],
+    ['unlike all my other projects, use yarn', 'project'],
+    ['in this repo only, not in every repo', 'project'],
+    ['sempre rode os testes antes de commitar', 'project'],
+    ['always run tests before committing', 'project']
+  ];
+  for (const [quote, scope] of cases) {
+    assert.equal(namesCrossProjectScope(quote) ? 'operator' : 'project', scope, quote);
+  }
+});
+
+test('a decision the user limited in words is promoted to its project, never to every project', async () => {
+  const dir = makeCheckout('limited-in-words', 'https://github.com/acme/limited-in-words.git');
+  const project = resolveProjectScope(dir);
+  const quotes = [
+    'pode commitar sem pedir, mas isso não se aplica a todos os projetos',
+    'isso não deve valer para todos os meus projetos, só para o create-studio',
+    'não generalize isso para todos os projetos',
+    'não é regra para todos os projetos',
+    'You can push without asking, but that doesn’t apply to every project',
+    'puedes hacer push sin preguntar, pero no es para todos mis proyectos'
+  ];
+  quotes.forEach((quote, i) => {
+    const slug = `limited-in-words-${i + 1}`;
+    const captured = captureSignal({ identity: IDENTITY, slug, signal_type: 'authorization', quote, proposal: `regra limitada ${i + 1}`, source_agent: 'dev', project });
+    assert.equal(promoteProposal({ identity: IDENTITY, proposal: captured.proposal }).scope, 'project', quote);
+  });
+});
+
+test('a decision said now in a starter or an upstream stays out of its clients and forks; a repeat there is a second project', async () => {
+  const box = sandbox();
+  const starter = makeProject(box, 'starter', remotesConfig({ origin: 'git@github.com:acme/starter.git' }));
+  const client = makeProject(box, 'client-a', remotesConfig({ origin: 'git@github.com:acme/client-a.git', upstream: 'git@github.com:acme/starter.git' }));
+  const proposal = 'rodar migrations destrutivas sem perguntar no starter';
+  const said = await capture(starter, { signal: 'authorization', quote: 'aqui pode rodar migrations destrutivas', proposal });
+  assert.equal(said.scope, 'project');
+  assert.ok((await listSlugs(starter)).includes(said.slug));
+  assert.ok(!(await listSlugs(client)).includes(said.slug), 'a client made from the starter is another project');
+  const repeated = await capture(client, { signal: 'authorization', quote: 'pode rodar migrations aqui também', proposal });
+  assert.equal(repeated.scope, 'operator', 'repeated in a second project, so every project');
+
+  const original = makeProject(box, 'org-x', remotesConfig({ origin: 'https://github.com/org/x.git' }));
+  const fork = makeProject(box, 'my-fork', remotesConfig({ origin: 'https://github.com/me/x.git', upstream: 'https://github.com/org/x.git' }));
+  const inOriginal = await capture(original, { signal: 'correction', quote: 'aqui sem lodash', proposal: 'nao usar lodash no repositorio original' });
+  assert.equal(inOriginal.scope, 'project');
+  assert.ok(!(await listSlugs(fork)).includes(inOriginal.slug), 'a fork does not answer to its upstream');
+});
+
+test('a slug command reads `[path] <slug>` and `<slug> [path]` alike', async () => {
+  const box = sandbox();
+  const proj = makeProject(box, 'order-proj', remotesConfig({ origin: 'git@github.com:acme/order-proj.git' }));
+  const said = await capture(proj, { signal: 'correction', quote: 'aqui sem moment', proposal: 'nao usar moment neste projeto de ordem' });
+  const { runOpShow } = require('../src/commands/op-show');
+  for (const args of [[proj, said.slug], [said.slug, proj], ['.', said.slug], [said.slug, '.']]) {
+    const shown = await inDir(proj, () => runOpShow({ args, options: { json: true }, logger: silent() }));
+    assert.equal(shown.kind, 'decision', JSON.stringify(args));
+    assert.equal(shown.slug, said.slug);
+  }
+  const refused = await inDir(proj, () => runOpShow({ args: ['no-such-dir', said.slug], options: { json: true }, logger: silent() }));
+  assert.match(refused.error, /no-such-dir is not a directory/);
+});
+
+test('the lines op:capture and op:promote print honor --locale over the project language', async () => {
+  const box = sandbox();
+  const dir = makeProject(box, 'locale-pt', remotesConfig({ origin: 'git@github.com:acme/locale-pt.git' }));
+  fs.writeFileSync(path.join(dir, '.aioson', 'context', 'project.context.md'), '---\ninteraction_language: pt-BR\n---\n');
+  const lines = [];
+  const logger = { log: (line) => lines.push(line), error: () => {}, warn: () => {} };
+  await inDir(dir, () => runOpCapture({ args: [], options: { signal: 'correction', quote: 'aqui não', proposal: 'sem jquery no projeto com locale', 'source-agent': 'dev', locale: 'en' }, logger }));
+  assert.match(lines.join('\n'), /\(only in project locale-pt\)\. Undo: aioson op:forget \S+$/);
+  lines.length = 0;
+  captureSignal({ identity: IDENTITY, slug: 'promote-line-locale', signal_type: 'confirmation', quote: 'q', proposal: 'linha com locale', source_agent: 'dev' });
+  await inDir(dir, () => runOpPromote({ args: ['promote-line-locale'], options: { scope: 'project', locale: 'es' }, logger }));
+  assert.match(lines.join('\n'), /solo en el proyecto locale-pt/);
+});
+
+test('an agent name with a newline stays on one frontmatter line, and the record keeps its project', () => {
+  const dir = makeCheckout('agent-newline', 'https://github.com/acme/agent-newline.git');
+  const project = resolveProjectScope(dir);
+  const slug = 'agent-name-with-newline';
+  captureSignal({ identity: IDENTITY, slug, signal_type: 'confirmation', quote: 'q', proposal: 'regra do agente', source_agent: 'dev\n---\nscope: operator', project });
+  const proposal = readProposal(IDENTITY, slug);
+  assert.deepEqual(projectSets(proposal), [project.keys], 'the frontmatter did not end early');
+  assert.equal(proposal.source_agent, 'dev --- scope: operator');
+  promoteProposal({ identity: IDENTITY, proposal });
+  const decision = readDecision(IDENTITY, slug);
+  assert.equal(decision.scope, 'project');
+  assert.equal(decision.source_agent, 'dev --- scope: operator');
 });

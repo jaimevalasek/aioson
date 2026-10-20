@@ -37,6 +37,7 @@ const { deleteProposal, proposalPath } = require('./proposal');
 const { isValidDecisionSlug } = require('./slug');
 const {
   decideScope,
+  foldText,
   namesCrossProjectScope,
   parseList,
   projectSets,
@@ -46,7 +47,7 @@ const {
   SCOPE_PROJECT,
   VALID_SCOPES
 } = require('./project-scope');
-const { escapeYamlString, quotesToYaml, projectLines } = require('./frontmatter');
+const { escapeYamlString, quotesToYaml, projectLines, readScalar } = require('./frontmatter');
 
 const SCHEMA_VERSION = '1.0';
 const MAX_BODY_CHARS = 500;
@@ -64,11 +65,19 @@ const CATEGORY_KEYWORDS = {
   tooling: ['cli', 'tool', 'comando', 'command', 'aws', 'gcp', 'kubectl', 'docker', 'npm', 'pip']
 };
 
+// Whole words of folded text, never substrings: "automático" holds no `tom`
+// (tone) and "client" no `cli`, while "preferência" is `preferencia`. The
+// boundaries are Unicode letters and digits — `\b` breaks beside a non-ASCII
+// letter. A plural (`commits`, `pushes`, `preferencias`) still counts.
+function hasWord(text, word) {
+  return new RegExp(`(?<![\\p{L}\\p{N}])${word}(?:e?s)?(?![\\p{L}\\p{N}])`, 'u').test(text);
+}
+
 function inferCategory(signalType, body) {
   if (signalType !== 'authorization') return 'default';
-  const text = String(body || '').toLowerCase();
+  const text = foldText(body);
   for (const cat of ['identity', 'autonomy', 'tooling']) {
-    if (CATEGORY_KEYWORDS[cat].some((kw) => text.includes(kw))) return cat;
+    if (CATEGORY_KEYWORDS[cat].some((kw) => hasWord(text, kw))) return cat;
   }
   return 'default';
 }
@@ -122,7 +131,7 @@ function serializeDecision(data) {
     `reinforcement_count: ${data.reinforcement_count}`,
     `superseded_by: ${data.superseded_by ?? 'null'}`,
     `category: ${data.category}`,
-    `source_agent: ${data.source_agent}`,
+    `source_agent: ${escapeYamlString(data.source_agent)}`,
     `quotes:${quotesToYaml(data.quotes)}`,
     `version_schema: "${SCHEMA_VERSION}"`,
     `deprecated_by: ${data.deprecated_by ?? 'null'}`
@@ -174,9 +183,7 @@ function parseDecisionFile(content) {
       let value = rawValue.trim();
       if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1).replace(/''/g, "'");
       if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
-      if (value === 'null') value = null;
-      else if (/^\d+$/.test(value)) value = Number(value);
-      out[key] = value;
+      out[key] = readScalar(rawValue, value);
     }
   }
   if (inQuotes) out.quotes = quotes;

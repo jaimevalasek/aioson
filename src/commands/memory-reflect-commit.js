@@ -9,9 +9,16 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { validate, readBootstrapSnapshot } = require('../memory-reflect-engine');
-const { REFLECT_PROMPT_RELATIVE, emitReflectEvent: emitEvent } = require('./memory-reflect-prepare');
+const { REFLECT_PROMPT_RELATIVE, emitReflectEvent } = require('./memory-reflect-prepare');
 const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
 const { resolveTargetDir } = require('../lib/project-root');
+
+// The manifest comes from agent:done, which already closed the agent's run: the
+// commit's event joins that run (or the live one) instead of opening a
+// "running" task and run nobody finishes.
+function emitEvent(targetDir, agent, type, message, payload) {
+  return emitReflectEvent(targetDir, agent, type, message, payload, { trailing: true });
+}
 
 async function readJsonFile(filePath) {
   const raw = await fs.readFile(filePath, 'utf8');

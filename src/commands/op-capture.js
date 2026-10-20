@@ -49,7 +49,9 @@ function existsCheckFactory(identity) {
   return (slug) => {
     const existing = readProposal(identity, slug);
     if (!existing) return null;
-    return existing.proposal_fingerprint || fingerprintProposal(existing.proposal || '');
+    // The frontmatter parser reads an all-digit fingerprint as a Number (leading
+    // zeros lost): back to its 12 hex characters, or the repeat forks a `-2` slug.
+    return existing.proposal_fingerprint ? String(existing.proposal_fingerprint).padStart(12, '0') : fingerprintProposal(existing.proposal || '');
   };
 }
 
@@ -195,7 +197,7 @@ A decision applies only in the project it was said in until it is detected in a 
       };
     }
     // The line a person reads, in the project's language.
-    if (logger) logger.log((t || projectTranslator(targetDir))(`cli.operator_memory.${widened ? 'reinforced_widened' : 'reinforced'}`, { proposal, slug }));
+    if (logger) logger.log((t || projectTranslator(targetDir, options))(`cli.operator_memory.${widened ? 'reinforced_widened' : 'reinforced'}`, { proposal, slug }));
     return { ok: true, promoted: false, reinforced: true, slug };
   }
 
@@ -220,7 +222,7 @@ A decision applies only in the project it was said in until it is detected in a 
     }
     const onlyHere = decision.scope === SCOPE_PROJECT && project;
     if (logger) {
-      logger.log((t || projectTranslator(targetDir))(`cli.operator_memory.${onlyHere ? 'saved_here' : 'saved'}`, { proposal, slug, project: onlyHere ? project.name : '' }));
+      logger.log((t || projectTranslator(targetDir, options))(`cli.operator_memory.${onlyHere ? 'saved_here' : 'saved'}`, { proposal, slug, project: onlyHere ? project.name : '' }));
     }
     return { ok: true, promoted: true, slug };
   }

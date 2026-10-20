@@ -18,11 +18,15 @@ process.env.HOME = TEST_HOME;
 process.env.USERPROFILE = TEST_HOME;
 // Force resolveIdentity to return our test identity for CLI command tests.
 process.env.AIOSON_OPERATOR_ID = 'p2-test-bot';
+// Every op:* call below runs in a throwaway project: the runtime events and the
+// confirmation log they write never land in the repository's own .aioson/.
+const TEST_PROJECT = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-om-p2-project-'));
+process.chdir(TEST_PROJECT);
 
 const { deriveSlug, fingerprintProposal, normalize } = require('../src/operator-memory/slug');
 const { captureSignal, readProposal, deleteProposal, MAX_QUOTES, VALID_SIGNAL_TYPES } = require('../src/operator-memory/proposal');
 const { promoteProposal, forgetEntry, readDecision, inferCategory, SCHEMA_VERSION, MAX_BODY_CHARS } = require('../src/operator-memory/decision');
-const { ensureStorageTree, openIndexDb } = require('../src/operator-memory/storage');
+const { ensureStorageTree, openIndexDb, getStorageRoot } = require('../src/operator-memory/storage');
 const { runOpCapture } = require('../src/commands/op-capture');
 const { runOpPromote } = require('../src/commands/op-promote');
 const { runOpForget } = require('../src/commands/op-forget');
@@ -167,6 +171,69 @@ test('inferCategory: authorization+commit → autonomy', () => {
   assert.equal(inferCategory('authorization', 'use kubectl'), 'tooling');
   assert.equal(inferCategory('exclusion', 'whatever'), 'default');
   assert.equal(inferCategory('authorization', 'random text'), 'default');
+});
+
+test('inferCategory: whole folded words — "automático" holds no `tom`, accented keywords count', () => {
+  assert.equal(inferCategory('authorization', 'commit automático após aprovação'), 'autonomy');
+  assert.equal(inferCategory('authorization', 'preferência por respostas curtas'), 'identity');
+  assert.equal(inferCategory('authorization', 'comunicação sempre em português'), 'identity');
+  assert.equal(inferCategory('authorization', 'customizar o pipeline sem perguntar'), 'default');
+  assert.equal(inferCategory('authorization', 'rodar o client de testes'), 'default');
+  assert.equal(inferCategory('authorization', 'commits e pushes sem perguntar'), 'autonomy');
+});
+
+function textWithFingerprint(pattern) {
+  for (let i = 0; ; i += 1) {
+    if (pattern.test(fingerprintProposal(`digits-only-${i}`))) return `digits-only-${i}`;
+  }
+}
+
+test('a proposal whose fingerprint is all digits is re-detected, never forked into a -2 slug', async () => {
+  // Written now: the fingerprint is quoted and reads back as the string it was.
+  const text = textWithFingerprint(/^\d{12}$/);
+  const first = await runOpCapture({ args: [], options: { json: true, signal: 'confirmation', quote: 'q1', proposal: text, 'source-agent': 'dev' }, logger: silentLogger() });
+  const second = await runOpCapture({ args: [], options: { json: true, signal: 'confirmation', quote: 'q2', proposal: text, 'source-agent': 'dev' }, logger: silentLogger() });
+  assert.equal(second.slug, first.slug, 'the same proposal keeps its slug');
+  assert.equal(second.promoted, true, 'a confirmation promotes on its second detection');
+
+  // Written before: a bare fingerprint read back as a number, its leading zero lost.
+  const legacyText = textWithFingerprint(/^0\d{11}$/);
+  const slug = deriveSlug(legacyText);
+  const at = new Date().toISOString();
+  fs.writeFileSync(path.join(getStorageRoot(TEST_IDENTITY), 'proposals', `${slug}.md`), [
+    '---', `slug: ${slug}`, 'signal_type: confirmation', 'detected_count: 1', `first_detected: ${at}`, `last_detected: ${at}`,
+    'quotes:', "  - 'q1'", `proposal: '${legacyText}'`, 'source_agent: dev', `proposal_fingerprint: ${fingerprintProposal(legacyText)}`, '---', ''
+  ].join('\n'));
+  const legacy = await runOpCapture({ args: [], options: { json: true, signal: 'confirmation', quote: 'q2', proposal: legacyText, 'source-agent': 'dev' }, logger: silentLogger() });
+  assert.equal(legacy.slug, slug, 'the bare fingerprint of an older proposal still matches');
+  assert.equal(legacy.promoted, true);
+});
+
+test('a value that looks like a number or null reads back as the string it was written as', () => {
+  const text = textWithFingerprint(/^0\d{11}$/);
+  const slug = `round-trip-${Date.now()}`;
+  captureSignal({ identity: TEST_IDENTITY, slug, signal_type: 'authorization', quote: 'q', proposal: text, source_agent: '123', feature_slug: 'true', session_id: '123' });
+  const proposal = readProposal(TEST_IDENTITY, slug);
+  assert.equal(proposal.proposal_fingerprint, fingerprintProposal(text), 'twelve characters, leading zero kept');
+  assert.equal(proposal.source_agent, '123');
+  assert.equal(proposal.session_id, '123');
+  assert.equal(proposal.feature_slug, 'true');
+  assert.equal(proposal.detected_count, 1, 'a bare count is still a number');
+
+  promoteProposal({ identity: TEST_IDENTITY, proposal });
+  const decision = readDecision(TEST_IDENTITY, slug);
+  assert.equal(decision.source_agent, '123');
+  assert.equal(decision.session_id, '123');
+  assert.equal(decision.feature_slug, 'true');
+  assert.equal(decision.superseded_by, null, 'a bare null is still null');
+  assert.equal(decision.reinforcement_count, 0);
+
+  const named = `round-trip-null-${Date.now()}`;
+  captureSignal({ identity: TEST_IDENTITY, slug: named, signal_type: 'authorization', quote: 'q', proposal: 'agente chamado null', source_agent: 'null', session_id: 'null' });
+  assert.equal(readProposal(TEST_IDENTITY, named).source_agent, 'null');
+  promoteProposal({ identity: TEST_IDENTITY, proposal: readProposal(TEST_IDENTITY, named) });
+  assert.equal(readDecision(TEST_IDENTITY, named).source_agent, 'null');
+  assert.equal(readDecision(TEST_IDENTITY, named).session_id, 'null');
 });
 
 test('AC-P2-06 forgetEntry on decision → moves to history, removes FTS5 row', () => {

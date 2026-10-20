@@ -81,7 +81,7 @@ async function runOpPromote({ args = [], options = {}, logger, t = null }) {
   // The line a person reads, in the project's language.
   const onlyIn = boundProjectName(decision, project);
   if (logger) {
-    logger.log((t || projectTranslator(targetDir))(`cli.operator_memory.${onlyIn ? 'saved_here' : 'saved'}`, { proposal: proposal.proposal, slug, project: onlyIn }));
+    logger.log((t || projectTranslator(targetDir, options))(`cli.operator_memory.${onlyIn ? 'saved_here' : 'saved'}`, { proposal: proposal.proposal, slug, project: onlyIn }));
   }
   return { ok: true, slug };
 }

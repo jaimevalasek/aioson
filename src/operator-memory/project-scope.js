@@ -56,27 +56,52 @@ const CROSS_PROJECT_MARKERS = [
   /\b(?:todos|todas)\s+(?:os\s+|as\s+)?(?:meus\s+|minhas\s+|nossos\s+|nossas\s+)?(?:projetos|repositorios|repos)\b/,
   /\b(?:todo|qualquer)\s+(?:projeto|repositorio|repo)\b/,
   /\b(?:independente(?:mente)?\s+do|seja\s+qual\s+for\s+o)\s+projeto\b/,
-  /\btodos\s+(?:los\s+)?(?:mis\s+|nuestros\s+)?(?:proyectos|repositorios)\b/,
+  /\btodos\s+(?:los\s+)?(?:mis\s+|nuestros\s+)?(?:proyectos|repositorios|repos)\b/,
   /\bcualquier\s+(?:proyecto|repositorio)\b/,
-  /\bsin\s+importar\s+el\s+proyecto\b/
+  /\bsin\s+importar\s+el\s+proyecto\b/,
+  /\b(?:nao|no)\s+importa\s+(?:o|el|qual|cual|que)\s+(?:projeto|proyecto|repositorio|repo)\b/,
+  /\bno\s+matter\s+(?:the|which|what)\s+(?:project|repo|repository|codebase)\b/
 ];
 
 // A marker only widens when it is the scope the sentence asserts. Not when a
-// negation governs it ("não vale para todos os projetos", "not in all my
-// projects", "nem todos"), not as the subject of a distributive possessive
-// ("every project has its own…", "todo projeto tem sua…"), and not when the
-// same words point at one project ("aqui", "here", "this one", "neste", "só
-// este"). A negated action is still a scope: "nunca use yarn em qualquer
-// projeto" widens.
-const NEGATED_SCOPE = /(?:\bnem|\b(?:nao|not|no|never|nunca|isn't|doesn't|don't|does\s+not|do\s+not|is\s+not)(?:\s+(?:vale|valem|e|eh|is|are|apply|applies|aplica|aplicam|serve|meant))?(?:\s+(?:para|pra|a|em|in|to|for|en|across))?)\s+$/;
-const DISTRIBUTIVE_AFTER = /^(?:\s+\S+){0,3}?\s+(?:(?:has|have)\s+(?:its|their)\s+own|(?:tem|teem)\s+(?:a\s+|o\s+|as\s+|os\s+)?(?:sua|seu|suas|seus|propria|proprio)|tienen?\s+(?:su|sus))\b/;
-const ONE_PROJECT_HERE = /\b(?:aqui|here|neste|nesta|nesse|nessa)\b|\bthis\s+(?:one|repo|repository|project|codebase)\b|\b(?:so|apenas|somente|only|just|solo)\s+(?:este|esse|esta|essa|this)\b|\b(?:este|esse)\s+(?:projeto|repo|repositorio|proyecto)\b|\ben\s+este\b/;
+// negation in its own clause negates that scope: followed, modals, clitics or
+// a copula allowed in between, by a scope verb or phrase ("não se aplica a
+// todos os projetos", "doesn't apply to every project", "no es para todos mis
+// proyectos", "não quero isso em todos"), or standing right before the marker
+// or its preposition ("nem em todos", "not in every project", "no en todos").
+// A negated action leaves the marker in force: "nunca use yarn em qualquer
+// projeto", "never push to main in any repo" and "não commitar sem pedir em
+// todos os projetos" are prohibitions said for every project. Not either as the
+// subject of a distributive possessive ("every project uses its own…", "todo
+// projeto tem sua…"), nor when the same words point at one project ("aqui",
+// "here", "this one", "neste", "deste", "só este"). A clause ends at punctuation
+// or at "mas"/"but"/"pero": "não use yarn, em todos os projetos" widens.
+const CLAUSE_BREAK = /[.;:!?,()\n\u2013\u2014]|\b(?:mas|porem|contudo|but|however|pero)\b/;
+// Bare "no" reads as a negation only when what follows it does: in pt-BR it is
+// "em + o" before a noun ("rode lint no CI em todos os projetos" widens).
+const NEGATION_WORD = String.raw`(?:nao|nem|nunca|jamais|jamas|tampoco|ni|no|not|never|nor|cannot|[a-z]+n't|dont|doesnt|didnt|isnt|arent|wont|cant|shouldnt|wouldnt|couldnt|mustnt)`;
+// Between the negation and what it negates: clitics, modals, a copula, and a
+// "want" aimed at the rule itself ("não quero isso", "I don't want this").
+const SCOPE_FILLER = String.raw`(?:se|me|te|lhe|lo|la|le|deve|devem|deveria|pode|podem|poderia|precisa|precisam|vai|vao|tem\s+que|e|eh|ser|estar|should|must|can|could|would|will|may|might|need\s+to|needs\s+to|has\s+to|have\s+to|be|debe|deben|deberia|puede|pueden|va|(?:quero|quer|queremos|want|wants|quiero|quiere)\s+(?:isso|isto|this|that|it|esto|eso))`;
+const SCOPE_VERB = String.raw`(?:aplica|aplicam|aplicar|aplican|vale|valem|valer|valen|serve|servem|servir|sirve|sirven|generaliza|generalizam|generalizar|generalize|generalizes|generalice|conta|contam|contar|cuenta|cuentan|estende|estendem|estender|extend|extends|apply|applies|hold|holds|count|counts|meant|go\s+for|goes\s+for|is\s+for|e\s+para|e\s+pra|es\s+para|(?:is\s+|e\s+|es\s+)?(?:a\s+|uma\s+|una\s+)?(?:rule|regra|regla))`;
+const SCOPE_PREPOSITION = String.raw`(?:em|para|pra|a|ao|de|do|da|en|in|on|for|to|at|across)`;
+const NEGATED_SCOPE = new RegExp(String.raw`(?:^|\s)${NEGATION_WORD}(?:\s+${SCOPE_FILLER})*(?:\s+${SCOPE_VERB}(?![a-z])|(?:\s+${SCOPE_PREPOSITION})?\s*$)`);
+const DISTRIBUTIVE_AFTER = /^(?:\s+\S+){0,3}?\s+(?:(?:its|their)\s+own|(?:tem|teem)\s+(?:a\s+|o\s+|as\s+|os\s+)?(?:sua|seu|suas|seus|propria|proprio)|(?:sua|seu|suas|seus)\s+propri[oa]s?|tienen?\s+(?:su|sus)|(?:su|sus)\s+propi[oa]s?)\b/;
+const ONE_PROJECT_HERE = /\b(?:aqui|here|neste|nesta|nesse|nessa|deste|desse|daqui)\b|\bthis\s+(?:one|repo|repository|project|codebase)\b|\b(?:so|apenas|somente|only|just|solo)\s+(?:este|esse|esta|essa|this)\b|\b(?:este|esse)\s+(?:projeto|repo|repositorio|proyecto)\b|\ben\s+este\b/;
+// Curly apostrophes (U+2018, U+2019, U+02BC) read as `'`: "doesn’t" is "doesn't".
+const CURLY_APOSTROPHES = new RegExp(`[${String.fromCharCode(0x2018, 0x2019, 0x02BC)}]`, 'g');
 
 function foldText(text) {
   return String(text || '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+    .replace(CURLY_APOSTROPHES, "'")
     .toLowerCase();
+}
+
+/** True when a negation in the marker's own clause, before it, negates its scope. */
+function negatedInClause(before) {
+  return NEGATED_SCOPE.test(before.split(CLAUSE_BREAK).pop());
 }
 
 function assertsCrossProjectScope(text) {
@@ -86,9 +111,8 @@ function assertsCrossProjectScope(text) {
     const re = new RegExp(marker.source, 'g');
     let match;
     while ((match = re.exec(folded)) !== null) {
-      const before = folded.slice(Math.max(0, match.index - 60), match.index);
       const after = folded.slice(match.index + match[0].length);
-      if (!NEGATED_SCOPE.test(before) && !DISTRIBUTIVE_AFTER.test(after)) return true;
+      if (!negatedInClause(folded.slice(0, match.index)) && !DISTRIBUTIVE_AFTER.test(after)) return true;
     }
     return false;
   });
@@ -343,7 +367,7 @@ function recordProject(record, project) {
   names = names.slice(0, sets.length);
   const own = project && Array.isArray(project.keys) ? project.keys.filter(Boolean) : [];
   if (own.length > 0) {
-    const known = new Set([...own, ...(project.legacyKeys || [])]);
+    const known = new Set(answersTo(project, record));
     const hits = sets.map((set, i) => (set.some((key) => known.has(key)) ? i : -1)).filter((i) => i !== -1);
     if (hits.length === 0) {
       if (sets.length < MAX_PROJECTS) {
@@ -375,16 +399,27 @@ function decideScope({ projectKeys = [], explicit = false, requested = null } = 
 }
 
 /**
+ * The keys `project` (a resolveProjectScope result, or a single key) answers to
+ * for `record`: its own identities, plus the key 1.73.0 gave this checkout only
+ * when the record was written before identity sets. A newer record never sees
+ * the old key — a fork's or a client's is the upstream's remote, which is the
+ * starter's own identity today.
+ */
+function answersTo(project, record) {
+  if (typeof project === 'string') return [project];
+  if (!project) return [];
+  const legacy = parseList(record && record.project_sets).length === 0 ? (project.legacyKeys || []) : [];
+  return [...(project.keys || []), ...legacy];
+}
+
+/**
  * True when a decision applies in `project` — a resolveProjectScope result,
  * matched on any key it answers to, or a single key.
  */
 function appliesInProject(decision, project) {
   if (!decision || decision.scope !== SCOPE_PROJECT) return true;
-  const here = typeof project === 'string'
-    ? [project]
-    : (project ? [...(project.keys || []), ...(project.legacyKeys || [])] : []);
   const recorded = new Set(projectSets(decision).flat());
-  return here.some((key) => recorded.has(key));
+  return answersTo(project, decision).some((key) => recorded.has(key));
 }
 
 module.exports = {
@@ -398,6 +433,7 @@ module.exports = {
   projectSets,
   serializeProjectSets,
   parseList,
+  foldText,
   SCOPE_OPERATOR,
   SCOPE_PROJECT,
   VALID_SCOPES

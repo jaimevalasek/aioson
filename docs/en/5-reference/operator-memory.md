@@ -58,6 +58,8 @@ The slug is deterministic. Promotion now depends on signal type:
 
 An explicit authorization, exclusion, or correction is already a standing decision. `confirmation` still needs two observations so a one-off acceptance does not become a permanent preference.
 
+A decision binds the project it was said in until the same signal is detected in a second project or the user's own quote names every project ("em todos os meus projetos", "in every project"). A negation keeps it local only when it negates that scope ("não se aplica a todos os projetos", "doesn't apply to every project", "nem em todos"); a negated action does not: "nunca use yarn em qualquer projeto" and "never push to main in any repo" are prohibitions for every project.
+
 ## Idempotent reinforcement
 
 When an already-promoted signal is detected again, AIOSON does not create another FTS row or reset `promoted_at`. It only refreshes `last_reinforced` and increments `reinforcement_count`.
@@ -83,7 +85,9 @@ aioson op:list --include-archived
 aioson op:show <slug> --json
 ```
 
-The session-start recall (`aioson op:list --json --titles-only`) lists the 40 decisions ranked first — this project's, then the freshest by category half-life and reinforcements — with `total` and `omitted`; `--match="<task words>"` finds the rest, `--limit=0` lists all.
+The session-start recall (`aioson op:list --json --titles-only`) lists the 40 decisions ranked first: this project's first; within each group, exclusions and corrections before authorizations and confirmations (forgetting a prohibition is a failure the agent cannot see, forgetting a permission only costs a question); then the freshest by category half-life and reinforcements. Whenever a head applies, the output carries `total` and `omitted` (0 when nothing is left out); `--match="<task words>"` finds the rest (words of two letters or more, such as `CI` and `PR`; with no usable word the output says `match_ignored: true` and the normal head applies) and `--limit=0` lists all. The default head belongs to this activation shape only: `--titles-only` also cuts the text table, while `--feature` and `--proposals` list everything unless `--limit` is given.
+
+Commands that take a slug accept `[path] <slug>` and also `<slug> [path]` (`aioson op:show <slug> .`). The lines `op:capture` and `op:promote` print follow `--locale` when it is given and the project's `interaction_language` otherwise.
 
 `MEMORY.md` is a small index; the decision body lives in `decisions/{slug}.md`. `MEMORY-archive.md` holds decisions outside the active tier, and `history/` receives forgotten items.
 

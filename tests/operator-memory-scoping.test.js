@@ -6,6 +6,12 @@ const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
 
+// Every identity below and the shared _index.sqlite live in a throwaway home,
+// never in the operator's real ~/.aioson/operators.
+const TEST_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-om-scoping-'));
+process.env.HOME = TEST_HOME;
+process.env.USERPROFILE = TEST_HOME;
+
 const { captureSignal, readProposal } = require('../src/operator-memory/proposal');
 const { promoteProposal } = require('../src/operator-memory/decision');
 const { ensureStorageTree, getStorageRoot } = require('../src/operator-memory/storage');
