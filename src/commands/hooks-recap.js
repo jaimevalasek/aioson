@@ -97,10 +97,12 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
   }
 
   const resume = await buildDevResumeData(targetDir).catch(() => null);
+  const observations = await require('../lib/observations').recentObservations(targetDir, { hours: 24 }).catch(() => []);
   const recap = buildCompactionRecap({
     events,
     resume,
     continuityPath: continuityFor(targetDir, resume),
+    observations,
     targetDir,
     maxChars: options.maxChars
   });

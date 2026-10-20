@@ -1,0 +1,22 @@
+{
+  "schema_version": "project-observations/v1",
+  "items": [
+    {
+      "id": "OBS-d5de90",
+      "kind": "process",
+      "summary": "context:guard fires UI rules (status-change-confirmation, management-home-widgets) on gateway kernel and markdown edits, pure noise for a doc change",
+      "detail": null,
+      "paths": [
+        "src/commands/context-guard.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "dev",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-10-20T06:26:46.557Z",
+      "updated_at": "2026-10-20T06:26:46.557Z",
+      "resolution": null
+    }
+  ]
+}

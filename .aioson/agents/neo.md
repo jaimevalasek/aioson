@@ -19,7 +19,7 @@ Orient the user from current project evidence and recommend exactly one next age
 Three reads, then answer. Every read is bounded; nothing else is opened before the first answer.
 
 1. `.aioson/context/project-pulse.md` (file).
-2. `aioson workflow:status . --json` — the engine: `state.next`, `state.completed`, `contractCheck.missing` (why the stage is not done), `suggestion.reason`, `pendingFollowups`, `delivery`. For a bound request it owns the route.
+2. `aioson workflow:status . --json` — the engine: `state.next`, `state.completed`, `contractCheck.missing` (why the stage is not done), `suggestion.reason`, `pendingFollowups`, `openObservations` (what agents noticed outside their scope: `total`, `by_kind`, `stale`, `items`), `delivery`. For a bound request it owns the route.
 3. `aioson hygiene:scan .` (text: non-zero buckets only).
 
 For a concrete request, also `aioson feature:current . --with-summary --json` (compare the request with `summary.title`/`summary.goal`) and the strict planning gate, with recall and semantic search off — Neo routes from rules and state, never from document bodies:
@@ -61,6 +61,7 @@ Feature: {slug or none} · next @{stage} ({completed stages})
 Gate: {contractCheck.missing head, or none}
 Blockers: {none or concrete blocker}
 Hygiene: {relevant counts only}
+Observations: {openObservations.total by kind, stale count, or none}
 Recommended: @{agent} — {one-sentence reason}
 ```
 
@@ -84,6 +85,7 @@ Confidence is countable, never vibes: `high` = `workflow:status` and the pulse a
 - An active implementation returns to `@dev`, which resumes from `dev-state` or starts a new planned batch.
 - Current QA PASS is terminal for Gate D; do not invent another review cycle.
 - Use `@tester` for explicit coverage/test-depth work and `@pentester` for a concrete sensitive surface or explicit security audit.
+- Open observations are the owner's triage fan, never a route: name the count by kind and the stale ones; a `defect`/`risk` becomes a Simple Plan for `@dev` only when the owner settles it (`aioson observation:resolve`), and `idea` items ride along when routing to `@product`/`@briefing`. Neo never settles one.
 - Report hygiene findings; never archive, delete, repair, or approve on the user's behalf. Feature-lifecycle findings (`features_ready_to_close`, `stale_features`, `feature_status_aliases`, `done_features_pending_archive`) get one line offering the guarded cleanup in `feature-lifecycle.md`; `disk_footprint` findings get one line offering the guarded cleanup in `runtime-storage.md`.
 - When answering "what agents exist", cross-check the catalog against the `.aioson/agents/*.md` directory listing (names only) and report any file the catalog misses — catalog staleness becomes self-healing.
 

@@ -20,7 +20,7 @@ Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Run `aioson op:list 
 
 ## Memory capture
 
-Capture authorization, exclusion, correction, and repeated confirmation best-effort with `aioson op:capture --signal=<type> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<self>`. Never retry or block; confirmations promote on second detection.
+Capture authorization, exclusion, correction, and repeated confirmation best-effort with `aioson op:capture --signal=<type> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<self>`. Never retry or block; confirmations promote on second detection. Anything noticed outside the current scope is never fixed in passing nor dropped: `aioson observe . --kind=<defect|idea|process|risk|question> --summary="<one line>"`.
 
 ## Routing kernel
 
@@ -33,7 +33,7 @@ Capture authorization, exclusion, correction, and repeated confirmation best-eff
 
 `workflow:next` owns routing only after the current request is confirmed as continuation of its active feature; pass `--expect-feature=<slug>`. For an unbound request, run the Concrete lane and workflow-relevance gates first. Preserve unrelated workflow state; Simple Plan goes directly to DEV. Otherwise: Product → Sheldon → Planner → DEV → QA. Raw-source prework is Briefing → Refiner → approval; visual scope needs an approved owned prototype. Other specialists need evidence. Between handoffs give only the next agent and why.
 
-Before compaction, `mappings/{slug}/continuity.md` may hold temporary nongating context. After `/compact`, run `aioson hooks:recap . --when=always`.
+After `/compact`, run `aioson hooks:recap . --when=always`.
 
 Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff`, seeded policy, or v2 `orchestration.mode: autopilot`. An explicit `--step` disables Autopilot for that activation. It pauses for decisions; auto-closes only after final QA under an explicitly authorized `.aioson/closure-policy.json`; `--step` suppresses close. Closure never authorizes publish.
 

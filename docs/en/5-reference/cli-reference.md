@@ -385,6 +385,29 @@ The decision becomes a routed doc (options as aliases, the question as its birth
 
 ---
 
+## observe / observation:list / observation:resolve
+
+The project's working memory for what an agent notices outside its current scope: a defect beside the feature, an improvement idea, a process gap, a risk, a question a later stage will need. One line on record instead of a fix in passing or a detail the next compaction drops.
+
+```bash
+aioson observe . --kind=defect --summary="Profile avatar upload fails after the storage change" --paths=src/profile/avatar.js
+aioson observe . --kind=idea --summary="Order history could offer a reorder button"
+aioson observe . --kind=process --summary="Seed the test database before the walkthrough next time"
+```
+
+Kinds: `defect` · `idea` · `process` · `risk` · `question`. The feature defaults to the active one and the agent to the active one; the same summary observed again raises its `seen` count, a settled one observed again reopens. Secrets are redacted on write. The store is `.aioson/context/observations.json`, written only by the CLI.
+
+Where it surfaces: `workflow:status` (`Open observations: N (defect 2, idea 1), 1 stale`, and `openObservations` in `--json` — @neo's dashboard reads it), `context:brief` (`Open observations for you (N)`: the items whose kind addresses the agent and that belong to its feature, to no feature, or to the paths it passed), the `workflow:next` handoff (`[Observations] N open for @<next>`), `feature:close` (open items bound to the closed feature are carried to the project hub with `origin_feature` kept, never deleted; `--preflight` lists them), `hygiene:scan` (`stale_observations`: open for 30 days or more) and the post-compaction recap (items touched in the last 24 hours).
+
+```bash
+aioson observation:list . [--kind=<kind>] [--feature=<slug>|project] [--all] [--json]
+aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answered|dismissed> [--ref=<plan path|feature slug>] [--why="..."] [--by=<who>]
+```
+
+`planned`/`promoted` need an existing `--ref` (a Simple Plan path, a feature slug, a rule or learning path) — an outcome recorded against nothing is refused; `dismissed`/`answered` need `--why`. Observations are noncanonical memory: never scope, never approval, never a gate. The routed `.aioson/docs/observations.md` carries the full protocol.
+
+---
+
 ## verify:artifact --kind=visual
 
 Static visual telemetry: it reads the HTML/CSS that was actually written and returns numbers instead of opinion. No browser, no build, no toolchain — identical behavior on any host or model.

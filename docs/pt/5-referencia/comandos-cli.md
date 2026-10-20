@@ -124,6 +124,18 @@ O mesmo resolver é usado por `verification:plan`; nomes como `GPT 5.6 Terra`, `
 
 `authorization`, `exclusion` e `correction` promovem na primeira detecção; `confirmation` exige duas. Redetecção de decisão já promovida reforça a mesma entrada, sem duplicar o índice FTS.
 
+### Observações (memória de trabalho do projeto)
+
+O que um agente nota fora do escopo atual — um defeito ao lado da feature, uma ideia de melhoria, uma falha de processo, um risco, uma pergunta que uma etapa futura vai precisar — vira uma linha registrada em vez de um conserto "de passagem" ou de um detalhe que a próxima compactação apaga.
+
+| Comando | O que faz | Quando usar |
+|---|---|---|
+| `observe . --kind=<defect\|idea\|process\|risk\|question> --summary="..."` | Registra a observação (feature e agente ativos por padrão; repetição conta `seen`, item resolvido reabre; segredos redigidos) | No momento em que notar algo que não é o trabalho atual |
+| `observation:list . [--kind=] [--feature=<slug>\|project] [--all]` | O leque aberto agrupado por tipo, cada item com o próximo passo | Triagem do dono; `workflow:status` e o @neo mostram a contagem |
+| `observation:resolve . --id=OBS-xxxxxx --as=<fixed\|planned\|promoted\|answered\|dismissed>` | Encerra uma vez com o desfecho (`planned`/`promoted` exigem `--ref` existente; `dismissed`/`answered` exigem `--why`) | Quando o dono decide o que fazer com o item |
+
+Onde aparece: `workflow:status` (`Open observations: N (...)`, `openObservations` no `--json`), `context:brief` de cada agente (os itens cujo tipo o endereça e que pertencem à feature dele, a nenhuma, ou aos caminhos informados), o handoff do `workflow:next`, o `feature:close` (itens abertos da feature fechada vão para o hub do projeto com `origin_feature`, nunca apagados), o `hygiene:scan` (`stale_observations`, abertos há 30 dias ou mais) e o recap pós-compactação. Memória não canônica: nunca escopo, nunca aprovação, nunca gate. O protocolo completo está em `.aioson/docs/observations.md`.
+
 ### Orquestração paralela
 
 | Comando | O que faz | Quando usar |

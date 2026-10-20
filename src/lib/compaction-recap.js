@@ -135,7 +135,7 @@ function summarizeWindow(window, targetDir) {
  * @param {number} [input.maxChars]
  * @returns {string|null}  null when there is nothing worth restoring
  */
-function buildCompactionRecap({ events = [], resume = null, continuityPath = null, agent = null, targetDir = null, maxChars = DEFAULT_MAX_CHARS } = {}) {
+function buildCompactionRecap({ events = [], resume = null, continuityPath = null, observations = [], agent = null, targetDir = null, maxChars = DEFAULT_MAX_CHARS } = {}) {
   const summary = summarizeWindow(compactionWindow(events), targetDir);
   const lines = [];
   const who = summary.agent || agent;
@@ -158,6 +158,13 @@ function buildCompactionRecap({ events = [], resume = null, continuityPath = nul
   }
   if (summary.plan) lines.push(oneLine(`Plan: ${summary.plan}`, 320));
   if (continuityPath) lines.push(`Continuity notes the agent kept: ${continuityPath}`);
+  // What was noticed beside the work and put on record (observe): after the
+  // compaction the agent must know it already reported the cracked tile, so
+  // it neither re-reports it nor "fixes it in passing" from a half memory.
+  if (Array.isArray(observations) && observations.length > 0) {
+    const noted = observations.map((item) => `${item.id} (${item.kind}${item.status === 'resolved' ? ', settled' : ''}) ${item.summary}`);
+    lines.push(oneLine(`Observations on record (last 24h, aioson observation:list .): ${noted.join('; ')}`, 480));
+  }
   if (summary.reply) lines.push(oneLine(`Agent's last message (its own claim): ${summary.reply}`, MAX_REPLY_CHARS));
 
   const substantive = lines.some((line) => !line.startsWith('Agent: '));

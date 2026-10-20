@@ -226,6 +226,7 @@ const { runAgentEpilogue } = require('./commands/agent-epilogue');
 const { runStateSave, runStateReset } = require('./commands/state-save');
 const { runOpIdentity } = require('./commands/op-identity');
 const { runOpCapture } = require('./commands/op-capture');
+const { runObserve, runObservationList, runObservationResolve } = require('./commands/observe');
 const { runOpPromote } = require('./commands/op-promote');
 const { runOpForget } = require('./commands/op-forget');
 const { runOpList } = require('./commands/op-list');
@@ -938,6 +939,11 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'op-reinforce',
   'op:migrate',
   'op-migrate',
+  'observe',
+  'observation:list',
+  'observation-list',
+  'observation:resolve',
+  'observation-resolve',
   'dev:state:write',
   'dev-state-write',
   'feature:close',
@@ -1076,7 +1082,10 @@ const DEDICATED_HELP_COMMANDS = new Set([
   'op:list', 'op-list',
   'op:show', 'op-show',
   'op:reinforce', 'op-reinforce',
-  'op:migrate', 'op-migrate'
+  'op:migrate', 'op-migrate',
+  'observe',
+  'observation:list', 'observation-list',
+  'observation:resolve', 'observation-resolve'
 ]);
 
 const LEGACY_DASHBOARD_COMMANDS = new Set([
@@ -2175,6 +2184,12 @@ async function main() {
       result = await runOpIdentity({ args, options, logger: commandLogger });
     } else if (command === 'op:capture' || command === 'op-capture') {
       result = await runOpCapture({ args, options, logger: commandLogger });
+    } else if (command === 'observe') {
+      result = await runObserve({ args, options, logger: commandLogger });
+    } else if (command === 'observation:list' || command === 'observation-list') {
+      result = await runObservationList({ args, options, logger: commandLogger });
+    } else if (command === 'observation:resolve' || command === 'observation-resolve') {
+      result = await runObservationResolve({ args, options, logger: commandLogger });
     } else if (command === 'op:promote' || command === 'op-promote') {
       result = await runOpPromote({ args, options, logger: commandLogger });
     } else if (command === 'op:forget' || command === 'op-forget') {

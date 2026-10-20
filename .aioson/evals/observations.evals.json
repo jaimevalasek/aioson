@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "dev-noticed-a-defect-outside-the-feature",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "While implementing the checkout form I noticed a defect outside the scope: the profile avatar upload is broken. Record the observation for the owner instead of fixing it.",
+      "paths": ["src/checkout/Form.tsx"],
+      "expect": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    },
+    {
+      "name": "qa-side-finding-is-an-observation",
+      "agent": "qa",
+      "mode": "executing",
+      "task": "Register a side finding noticed during verification that is out of scope for this feature as an observation.",
+      "expect": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    },
+    {
+      "name": "product-reviews-improvement-ideas-noted-for-later",
+      "agent": "product",
+      "mode": "planning",
+      "task": "Review the improvement ideas the team noted for later and the open observations before scoping the next feature.",
+      "expect": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    },
+    {
+      "name": "planner-pt-br-achado-fora-do-escopo",
+      "agent": "planner",
+      "mode": "planning",
+      "task": "Registrar uma observação sobre um achado fora do escopo visto durante o planejamento.",
+      "expect": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    },
+    {
+      "name": "observations-stay-quiet-for-a-readme-typo",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix a spelling error in the README introduction.",
+      "paths": ["README.md"],
+      "absent": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    },
+    {
+      "name": "observations-stay-quiet-for-a-dependency-bump",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Bump the testing library to its latest patch release and run the suite.",
+      "paths": ["package.json"],
+      "absent": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    }
+  ]
+}

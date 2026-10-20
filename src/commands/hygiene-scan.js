@@ -11,6 +11,7 @@ const { heavyEvidenceArtifacts } = require('../lib/evidence-artifacts');
 const { triageFeatures, findingsOf } = require('../lib/feature-lifecycle');
 const { canonicalStatus } = require('../lib/feature-registry');
 const { storageHygieneItems } = require('../lib/storage-footprint');
+const { staleObservations } = require('../lib/observations');
 
 const REVIEW_PREFIXES = new Set(['qa-report', 'security-findings']);
 const GLOBAL_REVIEW_SLUGS = new Set(['project', 'test-coverage']);
@@ -493,6 +494,9 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
   // aioson's own disk footprint: retention past due, oversized logs, and heavy
   // paths aioson cannot regenerate that the owner has not chosen to keep.
   const diskFootprint = storageHygieneItems(targetDir, retainedPaths);
+  // Observations nobody settled: a cracked tile reported a month ago and
+  // still open is the owner's to plan or dismiss, not the hub's to keep.
+  const staleObservationItems = await staleObservations(targetDir).catch(() => []);
 
   const buckets = {
     pending_chain_noises: chainNoises.pending,
@@ -507,7 +511,8 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
     on_demand_review_artifacts: reviewArtifacts,
     orphan_slug_artifacts: orphanSlugArtifacts,
     heavy_evidence_artifacts: evidenceArtifacts,
-    disk_footprint: diskFootprint
+    disk_footprint: diskFootprint,
+    stale_observations: staleObservationItems
   };
   const result = {
     ok: true,

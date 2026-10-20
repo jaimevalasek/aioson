@@ -128,6 +128,7 @@ const MANAGED_FILES = [
   '.aioson/docs/product/prd-contract.md',
   '.aioson/docs/feature-continuity-mapping.md',
   '.aioson/docs/handoff-persistence.md',
+  '.aioson/docs/observations.md',
   '.aioson/docs/integrations/dashboard-app-form-publish-mapping.md',
   '.aioson/docs/play/README.md',
   '.aioson/docs/play/agent-usage-guide.md',

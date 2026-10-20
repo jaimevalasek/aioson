@@ -87,6 +87,7 @@ async function runContextBrief({ args, options = {}, logger }) {
   });
   await recordBriefEvent(targetDir, result, options.feature || options.slug || '');
   await recordActivation(targetDir, options);
+  await attachObservations(targetDir, result, options);
 
   if (options.json) return result;
 
@@ -142,8 +143,34 @@ async function runContextBrief({ args, options = {}, logger }) {
     logger.log('Related (recall — history/archive select cannot see):');
     for (const item of result.related) logger.log(`- ${item.path} [${item.source_type}] ${item.reason || ''}`);
   }
+  printObservations(logger, result.observations);
 
   return result;
+}
+
+// The fan this agent gets at session start: open observations whose kind
+// addresses it and that belong to its feature, to no feature, or to the
+// paths it is about to touch. Recorded data with a next step, never a gate.
+async function attachObservations(targetDir, result, options) {
+  try {
+    const { observationsForAgent } = require('../lib/observations');
+    result.observations = await observationsForAgent(targetDir, result.agent, {
+      feature: options.feature || options.slug || '',
+      paths: options.paths || options.path || ''
+    });
+  } catch {
+    result.observations = [];
+  }
+}
+
+function printObservations(logger, observations) {
+  if (!Array.isArray(observations) || observations.length === 0) return;
+  logger.log(`Open observations for you (${observations.length}) — settle or carry them, never fix in passing (aioson observation:list .):`);
+  for (const item of observations) {
+    const age = item.age_days != null ? `, ${item.age_days}d` : '';
+    const paths = item.paths && item.paths.length > 0 ? ` [${item.paths.join(', ')}]` : '';
+    logger.log(`- ${item.id} (${item.kind}${age}) ${item.summary}${paths} → ${item.next_step}`);
+  }
 }
 
 module.exports = { runContextBrief };

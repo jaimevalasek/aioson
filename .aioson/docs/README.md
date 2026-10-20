@@ -51,6 +51,7 @@ Create a doc when:
 
 Do NOT create a doc for:
 - Feature-specific decisions (use the PRD/plan decision sections or `aioson decision:add`)
+- Something noticed outside the current scope — a defect, an idea, a process gap (use `aioson observe`)
 - Project conventions (use `rules/` instead)
 - Current implementation state (use `spec-{slug}.md` instead)
 

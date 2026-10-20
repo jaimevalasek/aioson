@@ -2620,6 +2620,18 @@ async function runWorkflowNext({ args, options, logger, t }) {
     if (payload.next) {
       logger.log(t('workflow_next.next_agent', { agent: `@${payload.next}` }));
     }
+    // What earlier stages noticed and left for this one — a defect beside the
+    // feature for @dev/@qa, an idea for @product — travels with the handoff
+    // instead of staying in the session that saw it. Advisory, never a gate.
+    try {
+      const { observationsForAgent } = require('../lib/observations');
+      const open = await observationsForAgent(targetDir, activation.agent, { feature: state.featureSlug });
+      if (open.length > 0) {
+        payload.observations = open.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, paths: item.paths }));
+        logger.log(`[Observations] ${open.length} open for @${activation.agent} — settle or carry, never fix in passing (aioson observation:list .):`);
+        for (const item of open) logger.log(`  - ${item.id} (${item.kind}${item.age_days != null ? `, ${item.age_days}d` : ''}) ${item.summary}${item.paths.length ? ` [${item.paths.join(', ')}]` : ''}`);
+      }
+    } catch { /* the hub is advisory; a broken store never blocks the handoff */ }
     logger.log(activation.prompt);
   } else {
     logger.log(t('workflow_next.done'));

@@ -403,6 +403,11 @@ async function runWorkflowStatus({ args, options, logger, t }) {
   let followupError = null;
   const followupPlans = await require('./feature-closure').listFollowups(targetDir).catch(error => { followupError = error.message; return []; });
   const pendingFollowups = followupPlans.filter(plan => !['done', 'dismissed'].includes(plan.status));
+  // The owner's triage fan: what agents noticed outside their scope and
+  // nobody has settled yet. A count here is what keeps a cracked tile from
+  // living only in the conversation that saw it.
+  const openObservations = await require('../lib/observations').summarizeOpen(targetDir)
+    .catch(error => ({ total: 0, by_kind: {}, stale: 0, items: [], error: error.message }));
   const suggestion = buildSuggestion({
     contextValid: context.valid,
     state,
@@ -464,6 +469,13 @@ async function runWorkflowStatus({ args, options, logger, t }) {
 
     logger.log('Current Status:');
     logger.log(`  Pending delivery followups: ${followupError ? 'unavailable: ' + followupError : pendingFollowups.length} (aioson feature:closure . --list)`);
+    {
+      const { describeByKind } = require('../lib/observations');
+      const detail = openObservations.error
+        ? `unavailable: ${openObservations.error}`
+        : `${openObservations.total}${openObservations.total ? ` (${describeByKind(openObservations.by_kind)})` : ''}${openObservations.stale ? `, ${openObservations.stale} stale` : ''}`;
+      logger.log(`  Open observations: ${detail} (aioson observation:list .)`);
+    }
     if (delivery) logger.log(`  Delivery: ${delivery.state}${delivery.reason ? ' — ' + delivery.reason : ''}`);
     if (!focusStage && delivery?.command) logger.log(`  Close: ${delivery.command}`);
     logger.log(`  Active stage: ${focusStage ? `@${focusStage}` : 'none'}`);
@@ -563,6 +575,7 @@ async function runWorkflowStatus({ args, options, logger, t }) {
     delivery,
     pendingFollowups,
     followupError,
+    openObservations,
     contractCheck,
     artifacts,
     squads,
