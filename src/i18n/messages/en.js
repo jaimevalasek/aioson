@@ -75,7 +75,7 @@ module.exports = {
     help_briefing_approve:
       'aioson briefing:approve [path] [--slug=<slug>] [--accept-craft] [--locale=en]',
     help_briefing_unapprove:
-      'aioson briefing:unapprove [path] [--slug=<slug>] [--locale=en]',
+      'aioson briefing:unapprove [path] [--slug=<slug>] [--force] [--locale=en]',
     help_briefing_review:
       'aioson briefing:review [path] [--slug=<slug>] [--findings=<path>] [--force] [--json] [--locale=en]',
     help_briefing_apply_feedback:
@@ -189,7 +189,8 @@ module.exports = {
       saved: "✔ Memory: '{proposal}'. Undo: aioson op:forget {slug}",
       saved_here: "✔ Memory: '{proposal}' (only in project {project}). Undo: aioson op:forget {slug}",
       reinforced: "✔ Memory reinforced: '{proposal}'. Undo: aioson op:forget {slug}",
-      reinforced_widened: "✔ Memory reinforced: '{proposal}' — now applies in every project. Undo: aioson op:forget {slug}"
+      reinforced_widened: "✔ Memory reinforced: '{proposal}' — now applies in every project. Undo: aioson op:forget {slug}",
+      match_ignored: 'op:list — --match="{match}" has no word to match (two letters or more, grammar words aside); the list below is the unfiltered head.',
     },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=en]',
@@ -564,7 +565,9 @@ module.exports = {
     dashboard_moved_line: '{message}\n',
     unknown_command: 'Unknown command: {command}',
     unknown_command_line: '{message}\n',
-    error_prefix: 'Error: {message}'
+    error_prefix: 'Error: {message}',
+    help_op_capture: 'aioson op:capture [path] --signal=<authorization|exclusion|correction|confirmation> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<agent> [--scope=operator|project] [--json] [--locale=en]',
+    help_op_show: 'aioson op:show [path] <slug> [--json] [--locale=en]',
   },
   cloud: {
     project_missing: 'Project directory not found: {path}',
@@ -605,7 +608,9 @@ module.exports = {
     unapprove_prompt: 'Numbers to return to draft (comma-separated, Enter = no changes):',
     no_changes: 'No changes applied.',
     returned_one: '✓ Briefing "{slug}" returned to draft.',
-    returned_many: '✓ Briefings returned to draft: {list}'
+    returned_many: '✓ Briefings returned to draft: {list}',
+    repinned: '✓ Briefing "{slug}" re-pinned: its current text is now the approved one (route substantive changes through @product and @sheldon).',
+    unapprove_prd_exists: 'Briefing "{slug}" already has .aioson/context/prd-{slug}.md — returning it to draft would desync that PRD. Route the change through @product and @sheldon, or re-run with --force to return it to draft anyway.',
   },
   dossier_bootstrap: {
     not_found: '_(not found — fill in manually)_',
@@ -2099,5 +2104,8 @@ module.exports = {
     install_fetching: 'Fetching system "{ref}" from aioson.com...',
     install_writing: 'Writing files...',
     install_done: 'System "{slug}" installed at {path}.'
+  },
+  observe: {
+    feature_not_live: 'note: --feature={feature} is not a live feature in features.md, so this item counts as project-wide (every agent of its kind sees it) until {feature} is registered — check the slug, or register it: aioson feature:register . --feature={feature}',
   }
 };

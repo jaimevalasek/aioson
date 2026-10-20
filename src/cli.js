@@ -6,123 +6,126 @@ const { createTranslator, normalizeLocale } = require('./i18n');
 
 // A command module loads on its first call: one CLI invocation — and every
 // hook event — pays for the command it runs, not for all of them up front.
-function lazy(load, names) {
+// Each loader destructures the names it binds right at the require, so static
+// analysis still sees which exports of the module are in use: a bare
+// `() => require(x)` reads as "every export used" and hides the dead ones.
+function lazy(load) {
   let mod = null;
   const get = () => (mod ||= load());
-  return Object.fromEntries(names.map((name) => [name, (...args) => get()[name](...args)]));
+  return new Proxy({}, { get: (_, name) => (...args) => get()[name](...args) });
 }
-const { runInit } = lazy(() => require('./commands/init'), ['runInit']);
-const { runInstall } = lazy(() => require('./commands/install'), ['runInstall']);
-const { runSetup } = lazy(() => require('./commands/setup'), ['runSetup']);
-const { runUpdate } = lazy(() => require('./commands/update'), ['runUpdate']);
-const { runInfo } = lazy(() => require('./commands/info'), ['runInfo']);
-const { runDoctorCommand } = lazy(() => require('./commands/doctor'), ['runDoctorCommand']);
-const { runI18nAdd } = lazy(() => require('./commands/i18n-add'), ['runI18nAdd']);
-const { runAgentsList, runAgentPrompt } = lazy(() => require('./commands/agents'), ['runAgentsList', 'runAgentPrompt']);
-const { runContextValidate } = lazy(() => require('./commands/context-validate'), ['runContextValidate']);
-const { runContextPack } = lazy(() => require('./commands/context-pack'), ['runContextPack']);
-const { runContextSelect } = lazy(() => require('./commands/context-select'), ['runContextSelect']);
-const { runContextBrief } = lazy(() => require('./commands/context-brief'), ['runContextBrief']);
-const { runRulesLint } = lazy(() => require('./commands/rules-lint'), ['runRulesLint']);
-const { runContextEvalsCommand } = lazy(() => require('./commands/context-evals'), ['runContextEvalsCommand']);
-const { runContextUsageCommand } = lazy(() => require('./commands/context-usage'), ['runContextUsageCommand']);
-const { runContextLoad } = lazy(() => require('./commands/context-load'), ['runContextLoad']);
-const { runChainAudit } = lazy(() => require('./commands/chain-audit'), ['runChainAudit']);
+const { runInit } = lazy(() => { const { runInit } = require('./commands/init'); return { runInit }; });
+const { runInstall } = lazy(() => { const { runInstall } = require('./commands/install'); return { runInstall }; });
+const { runSetup } = lazy(() => { const { runSetup } = require('./commands/setup'); return { runSetup }; });
+const { runUpdate } = lazy(() => { const { runUpdate } = require('./commands/update'); return { runUpdate }; });
+const { runInfo } = lazy(() => { const { runInfo } = require('./commands/info'); return { runInfo }; });
+const { runDoctorCommand } = lazy(() => { const { runDoctorCommand } = require('./commands/doctor'); return { runDoctorCommand }; });
+const { runI18nAdd } = lazy(() => { const { runI18nAdd } = require('./commands/i18n-add'); return { runI18nAdd }; });
+const { runAgentsList, runAgentPrompt } = lazy(() => { const { runAgentsList, runAgentPrompt } = require('./commands/agents'); return { runAgentsList, runAgentPrompt }; });
+const { runContextValidate } = lazy(() => { const { runContextValidate } = require('./commands/context-validate'); return { runContextValidate }; });
+const { runContextPack } = lazy(() => { const { runContextPack } = require('./commands/context-pack'); return { runContextPack }; });
+const { runContextSelect } = lazy(() => { const { runContextSelect } = require('./commands/context-select'); return { runContextSelect }; });
+const { runContextBrief } = lazy(() => { const { runContextBrief } = require('./commands/context-brief'); return { runContextBrief }; });
+const { runRulesLint } = lazy(() => { const { runRulesLint } = require('./commands/rules-lint'); return { runRulesLint }; });
+const { runContextEvalsCommand } = lazy(() => { const { runContextEvalsCommand } = require('./commands/context-evals'); return { runContextEvalsCommand }; });
+const { runContextUsageCommand } = lazy(() => { const { runContextUsageCommand } = require('./commands/context-usage'); return { runContextUsageCommand }; });
+const { runContextLoad } = lazy(() => { const { runContextLoad } = require('./commands/context-load'); return { runContextLoad }; });
+const { runChainAudit } = lazy(() => { const { runChainAudit } = require('./commands/chain-audit'); return { runChainAudit }; });
 const {
   runChainClaim,
   runChainList,
   runChainReconcile,
   runChainRelease,
   runChainResolve
-} = lazy(() => require('./commands/chain-work'), ['runChainClaim', 'runChainList', 'runChainReconcile', 'runChainRelease', 'runChainResolve']);
-const { runMemorySearch } = lazy(() => require('./commands/memory-search'), ['runMemorySearch']);
-const { runMemoryArchive } = lazy(() => require('./commands/memory-archive'), ['runMemoryArchive']);
-const { runMemoryRestore } = lazy(() => require('./commands/memory-restore'), ['runMemoryRestore']);
-const { runMemoryTrim } = lazy(() => require('./commands/memory-trim'), ['runMemoryTrim']);
-const { runSetupContext } = lazy(() => require('./commands/setup-context'), ['runSetupContext']);
-const { runLocaleApply } = lazy(() => require('./commands/locale-apply'), ['runLocaleApply']);
-const { runSmokeTest } = lazy(() => require('./commands/smoke'), ['runSmokeTest']);
-const { runMcpInit } = lazy(() => require('./commands/mcp-init'), ['runMcpInit']);
-const { runScoutPrep } = lazy(() => require('./commands/scout-prep'), ['runScoutPrep']);
-const { runScoutValidate } = lazy(() => require('./commands/scout-validate'), ['runScoutValidate']);
-const { runScoutCommit } = lazy(() => require('./commands/scout-commit'), ['runScoutCommit']);
-const { runMcpDoctor } = lazy(() => require('./commands/mcp-doctor'), ['runMcpDoctor']);
-const { runPackageTest } = lazy(() => require('./commands/package-e2e'), ['runPackageTest']);
-const { runWorkflowPlan } = lazy(() => require('./commands/workflow-plan'), ['runWorkflowPlan']);
-const { runWorkflowNext } = lazy(() => require('./commands/workflow-next'), ['runWorkflowNext']);
-const { runWorkflowStatus } = lazy(() => require('./commands/workflow-status'), ['runWorkflowStatus']);
-const { runWorkflowHeal } = lazy(() => require('./commands/workflow-heal'), ['runWorkflowHeal']);
-const { runWorkflowHarden } = lazy(() => require('./commands/workflow-harden'), ['runWorkflowHarden']);
-const { runParallelInit } = lazy(() => require('./commands/parallel-init'), ['runParallelInit']);
-const { runParallelDoctor } = lazy(() => require('./commands/parallel-doctor'), ['runParallelDoctor']);
-const { runParallelAssign } = lazy(() => require('./commands/parallel-assign'), ['runParallelAssign']);
-const { runParallelStatus } = lazy(() => require('./commands/parallel-status'), ['runParallelStatus']);
-const { runParallelMerge } = lazy(() => require('./commands/parallel-merge'), ['runParallelMerge']);
-const { runParallelGuard } = lazy(() => require('./commands/parallel-guard'), ['runParallelGuard']);
-const { runTestAgents } = lazy(() => require('./commands/test-agents'), ['runTestAgents']);
-const { runLocaleDiff } = lazy(() => require('./commands/locale-diff'), ['runLocaleDiff']);
-const { runQaDoctor } = lazy(() => require('./commands/qa-doctor'), ['runQaDoctor']);
-const { runQaInit } = lazy(() => require('./commands/qa-init'), ['runQaInit']);
-const { runQaRun } = lazy(() => require('./commands/qa-run'), ['runQaRun']);
-const { runBrowserRun, runBrowserSnapshot } = lazy(() => require('./commands/browser-run'), ['runBrowserRun', 'runBrowserSnapshot']);
-const { runQaScan } = lazy(() => require('./commands/qa-scan'), ['runQaScan']);
-const { runQaReport } = lazy(() => require('./commands/qa-report'), ['runQaReport']);
-const { runPentesterReport, runPentesterCoverage } = lazy(() => require('./commands/pentester-report'), ['runPentesterReport', 'runPentesterCoverage']);
-const { runWebMap } = lazy(() => require('./commands/web-map'), ['runWebMap']);
-const { runWebScrape } = lazy(() => require('./commands/web-scrape'), ['runWebScrape']);
-const { runWebSave } = lazy(() => require('./commands/web-save'), ['runWebSave']);
-const { runWebExtract } = lazy(() => require('./commands/web-extract'), ['runWebExtract']);
-const { runWebDiscover } = lazy(() => require('./commands/web-discover'), ['runWebDiscover']);
-const { runWebCollect } = lazy(() => require('./commands/web-collect'), ['runWebCollect']);
-const { runScanProject } = lazy(() => require('./commands/scan-project'), ['runScanProject']);
-const { runSecurityScan } = lazy(() => require('./commands/security-scan'), ['runSecurityScan']);
-const { runSecurityAudit } = lazy(() => require('./commands/security-audit'), ['runSecurityAudit']);
-const { runReviewFeature } = lazy(() => require('./commands/review-feature'), ['runReviewFeature']);
-const { runReviewPrepare, runReviewCheck, runReviewStatus } = lazy(() => require('./commands/review-intelligence'), ['runReviewPrepare', 'runReviewCheck', 'runReviewStatus']);
-const { runConfig } = lazy(() => require('./commands/config'), ['runConfig']);
-const { runGenomeDoctor } = lazy(() => require('./commands/genome-doctor'), ['runGenomeDoctor']);
-const { runGenomeApprove } = lazy(() => require('./commands/genome-approve'), ['runGenomeApprove']);
-const { runGenomeMigrate } = lazy(() => require('./commands/genome-migrate'), ['runGenomeMigrate']);
-const { runSquadStatus } = lazy(() => require('./commands/squad-status'), ['runSquadStatus']);
-const { runSquadDoctor } = lazy(() => require('./commands/squad-doctor'), ['runSquadDoctor']);
-const { runSquadRepairGenomes } = lazy(() => require('./commands/squad-repair-genomes'), ['runSquadRepairGenomes']);
-const { runSquadValidate } = lazy(() => require('./commands/squad-validate'), ['runSquadValidate']);
-const { runSquadEval } = lazy(() => require('./commands/squad-eval'), ['runSquadEval']);
-const { runSquadPilotApprove } = lazy(() => require('./commands/squad-pilot-approve'), ['runSquadPilotApprove']);
-const { runSquadRoleScan } = lazy(() => require('./commands/squad-role-scan'), ['runSquadRoleScan']);
-const { runSquadPlaybook } = lazy(() => require('./commands/squad-playbook'), ['runSquadPlaybook']);
-const { runSquadExport } = lazy(() => require('./commands/squad-export'), ['runSquadExport']);
-const { runSquadPipeline } = lazy(() => require('./commands/squad-pipeline'), ['runSquadPipeline']);
-const { runSquadSession } = lazy(() => require('./commands/squad-session'), ['runSquadSession']);
-const { runSquadAgentCreate } = lazy(() => require('./commands/squad-agent-create'), ['runSquadAgentCreate']);
-const { runSquadInvestigate } = lazy(() => require('./commands/squad-investigate'), ['runSquadInvestigate']);
-const { runImplementationPlan } = lazy(() => require('./commands/implementation-plan'), ['runImplementationPlan']);
-const { runFeatureClosure } = lazy(() => require('./commands/feature-closure'), ['runFeatureClosure']);
-const { runSquadPlan } = lazy(() => require('./commands/squad-plan'), ['runSquadPlan']);
-const { runSquadLearning } = lazy(() => require('./commands/squad-learning'), ['runSquadLearning']);
-const { runLearning } = lazy(() => require('./commands/learning'), ['runLearning']);
-const { runSquadDashboard } = lazy(() => require('./commands/squad-dashboard'), ['runSquadDashboard']);
-const { runSquadWorker } = lazy(() => require('./commands/squad-worker'), ['runSquadWorker']);
-const { runSquadDaemon } = lazy(() => require('./commands/squad-daemon'), ['runSquadDaemon']);
-const { runSquadMcp } = lazy(() => require('./commands/squad-mcp'), ['runSquadMcp']);
-const { runSquadRoi } = lazy(() => require('./commands/squad-roi'), ['runSquadRoi']);
-const { runSquadScore } = lazy(() => require('./commands/squad-score'), ['runSquadScore']);
-const { runSquadProcesses } = lazy(() => require('./commands/squad-processes'), ['runSquadProcesses']);
-const { runSquadWorktrees, runSquadMerge } = lazy(() => require('./commands/squad-worktrees'), ['runSquadWorktrees', 'runSquadMerge']);
-const { runSquadRecovery } = lazy(() => require('./commands/squad-recovery'), ['runSquadRecovery']);
-const { runSquadDeploy } = lazy(() => require('./commands/squad-deploy'), ['runSquadDeploy']);
-const { runSquadWebhook } = lazy(() => require('./commands/squad-webhook'), ['runSquadWebhook']);
-const { runSquadBus } = lazy(() => require('./commands/squad-bus'), ['runSquadBus']);
-const { runSquadAutorun } = lazy(() => require('./commands/squad-autorun'), ['runSquadAutorun']);
-const { runSquadDependencyGraph } = lazy(() => require('./commands/squad-dependency-graph'), ['runSquadDependencyGraph']);
-const { runSquadToolRegister } = lazy(() => require('./commands/squad-tool-register'), ['runSquadToolRegister']);
-const { runSquadReview } = lazy(() => require('./commands/squad-review'), ['runSquadReview']);
-const { runAgentAudit } = lazy(() => require('./commands/agent-audit'), ['runAgentAudit']);
-const { runSkillAudit } = lazy(() => require('./commands/skill-audit'), ['runSkillAudit']);
-const { isQualityCommand, runQualityCommand } = lazy(() => require('./commands/quality'), ['isQualityCommand', 'runQualityCommand']);
-const { runBriefGen } = lazy(() => require('./commands/brief-gen'), ['runBriefGen']);
-const { runHarnessInit, runHarnessValidate, runHarnessApplyValidation } = lazy(() => require('./commands/harness'), ['runHarnessInit', 'runHarnessValidate', 'runHarnessApplyValidation']);
-const { runVerifyGate } = lazy(() => require('./commands/verify-gate'), ['runVerifyGate']);
+} = lazy(() => { const { runChainClaim, runChainList, runChainReconcile, runChainRelease, runChainResolve } = require('./commands/chain-work'); return { runChainClaim, runChainList, runChainReconcile, runChainRelease, runChainResolve }; });
+const { runMemorySearch } = lazy(() => { const { runMemorySearch } = require('./commands/memory-search'); return { runMemorySearch }; });
+const { runMemoryArchive } = lazy(() => { const { runMemoryArchive } = require('./commands/memory-archive'); return { runMemoryArchive }; });
+const { runMemoryRestore } = lazy(() => { const { runMemoryRestore } = require('./commands/memory-restore'); return { runMemoryRestore }; });
+const { runMemoryTrim } = lazy(() => { const { runMemoryTrim } = require('./commands/memory-trim'); return { runMemoryTrim }; });
+const { runSetupContext } = lazy(() => { const { runSetupContext } = require('./commands/setup-context'); return { runSetupContext }; });
+const { runLocaleApply } = lazy(() => { const { runLocaleApply } = require('./commands/locale-apply'); return { runLocaleApply }; });
+const { runSmokeTest } = lazy(() => { const { runSmokeTest } = require('./commands/smoke'); return { runSmokeTest }; });
+const { runMcpInit } = lazy(() => { const { runMcpInit } = require('./commands/mcp-init'); return { runMcpInit }; });
+const { runScoutPrep } = lazy(() => { const { runScoutPrep } = require('./commands/scout-prep'); return { runScoutPrep }; });
+const { runScoutValidate } = lazy(() => { const { runScoutValidate } = require('./commands/scout-validate'); return { runScoutValidate }; });
+const { runScoutCommit } = lazy(() => { const { runScoutCommit } = require('./commands/scout-commit'); return { runScoutCommit }; });
+const { runMcpDoctor } = lazy(() => { const { runMcpDoctor } = require('./commands/mcp-doctor'); return { runMcpDoctor }; });
+const { runPackageTest } = lazy(() => { const { runPackageTest } = require('./commands/package-e2e'); return { runPackageTest }; });
+const { runWorkflowPlan } = lazy(() => { const { runWorkflowPlan } = require('./commands/workflow-plan'); return { runWorkflowPlan }; });
+const { runWorkflowNext } = lazy(() => { const { runWorkflowNext } = require('./commands/workflow-next'); return { runWorkflowNext }; });
+const { runWorkflowStatus } = lazy(() => { const { runWorkflowStatus } = require('./commands/workflow-status'); return { runWorkflowStatus }; });
+const { runWorkflowHeal } = lazy(() => { const { runWorkflowHeal } = require('./commands/workflow-heal'); return { runWorkflowHeal }; });
+const { runWorkflowHarden } = lazy(() => { const { runWorkflowHarden } = require('./commands/workflow-harden'); return { runWorkflowHarden }; });
+const { runParallelInit } = lazy(() => { const { runParallelInit } = require('./commands/parallel-init'); return { runParallelInit }; });
+const { runParallelDoctor } = lazy(() => { const { runParallelDoctor } = require('./commands/parallel-doctor'); return { runParallelDoctor }; });
+const { runParallelAssign } = lazy(() => { const { runParallelAssign } = require('./commands/parallel-assign'); return { runParallelAssign }; });
+const { runParallelStatus } = lazy(() => { const { runParallelStatus } = require('./commands/parallel-status'); return { runParallelStatus }; });
+const { runParallelMerge } = lazy(() => { const { runParallelMerge } = require('./commands/parallel-merge'); return { runParallelMerge }; });
+const { runParallelGuard } = lazy(() => { const { runParallelGuard } = require('./commands/parallel-guard'); return { runParallelGuard }; });
+const { runTestAgents } = lazy(() => { const { runTestAgents } = require('./commands/test-agents'); return { runTestAgents }; });
+const { runLocaleDiff } = lazy(() => { const { runLocaleDiff } = require('./commands/locale-diff'); return { runLocaleDiff }; });
+const { runQaDoctor } = lazy(() => { const { runQaDoctor } = require('./commands/qa-doctor'); return { runQaDoctor }; });
+const { runQaInit } = lazy(() => { const { runQaInit } = require('./commands/qa-init'); return { runQaInit }; });
+const { runQaRun } = lazy(() => { const { runQaRun } = require('./commands/qa-run'); return { runQaRun }; });
+const { runBrowserRun, runBrowserSnapshot } = lazy(() => { const { runBrowserRun, runBrowserSnapshot } = require('./commands/browser-run'); return { runBrowserRun, runBrowserSnapshot }; });
+const { runQaScan } = lazy(() => { const { runQaScan } = require('./commands/qa-scan'); return { runQaScan }; });
+const { runQaReport } = lazy(() => { const { runQaReport } = require('./commands/qa-report'); return { runQaReport }; });
+const { runPentesterReport, runPentesterCoverage } = lazy(() => { const { runPentesterReport, runPentesterCoverage } = require('./commands/pentester-report'); return { runPentesterReport, runPentesterCoverage }; });
+const { runWebMap } = lazy(() => { const { runWebMap } = require('./commands/web-map'); return { runWebMap }; });
+const { runWebScrape } = lazy(() => { const { runWebScrape } = require('./commands/web-scrape'); return { runWebScrape }; });
+const { runWebSave } = lazy(() => { const { runWebSave } = require('./commands/web-save'); return { runWebSave }; });
+const { runWebExtract } = lazy(() => { const { runWebExtract } = require('./commands/web-extract'); return { runWebExtract }; });
+const { runWebDiscover } = lazy(() => { const { runWebDiscover } = require('./commands/web-discover'); return { runWebDiscover }; });
+const { runWebCollect } = lazy(() => { const { runWebCollect } = require('./commands/web-collect'); return { runWebCollect }; });
+const { runScanProject } = lazy(() => { const { runScanProject } = require('./commands/scan-project'); return { runScanProject }; });
+const { runSecurityScan } = lazy(() => { const { runSecurityScan } = require('./commands/security-scan'); return { runSecurityScan }; });
+const { runSecurityAudit } = lazy(() => { const { runSecurityAudit } = require('./commands/security-audit'); return { runSecurityAudit }; });
+const { runReviewFeature } = lazy(() => { const { runReviewFeature } = require('./commands/review-feature'); return { runReviewFeature }; });
+const { runReviewPrepare, runReviewCheck, runReviewStatus } = lazy(() => { const { runReviewPrepare, runReviewCheck, runReviewStatus } = require('./commands/review-intelligence'); return { runReviewPrepare, runReviewCheck, runReviewStatus }; });
+const { runConfig } = lazy(() => { const { runConfig } = require('./commands/config'); return { runConfig }; });
+const { runGenomeDoctor } = lazy(() => { const { runGenomeDoctor } = require('./commands/genome-doctor'); return { runGenomeDoctor }; });
+const { runGenomeApprove } = lazy(() => { const { runGenomeApprove } = require('./commands/genome-approve'); return { runGenomeApprove }; });
+const { runGenomeMigrate } = lazy(() => { const { runGenomeMigrate } = require('./commands/genome-migrate'); return { runGenomeMigrate }; });
+const { runSquadStatus } = lazy(() => { const { runSquadStatus } = require('./commands/squad-status'); return { runSquadStatus }; });
+const { runSquadDoctor } = lazy(() => { const { runSquadDoctor } = require('./commands/squad-doctor'); return { runSquadDoctor }; });
+const { runSquadRepairGenomes } = lazy(() => { const { runSquadRepairGenomes } = require('./commands/squad-repair-genomes'); return { runSquadRepairGenomes }; });
+const { runSquadValidate } = lazy(() => { const { runSquadValidate } = require('./commands/squad-validate'); return { runSquadValidate }; });
+const { runSquadEval } = lazy(() => { const { runSquadEval } = require('./commands/squad-eval'); return { runSquadEval }; });
+const { runSquadPilotApprove } = lazy(() => { const { runSquadPilotApprove } = require('./commands/squad-pilot-approve'); return { runSquadPilotApprove }; });
+const { runSquadRoleScan } = lazy(() => { const { runSquadRoleScan } = require('./commands/squad-role-scan'); return { runSquadRoleScan }; });
+const { runSquadPlaybook } = lazy(() => { const { runSquadPlaybook } = require('./commands/squad-playbook'); return { runSquadPlaybook }; });
+const { runSquadExport } = lazy(() => { const { runSquadExport } = require('./commands/squad-export'); return { runSquadExport }; });
+const { runSquadPipeline } = lazy(() => { const { runSquadPipeline } = require('./commands/squad-pipeline'); return { runSquadPipeline }; });
+const { runSquadSession } = lazy(() => { const { runSquadSession } = require('./commands/squad-session'); return { runSquadSession }; });
+const { runSquadAgentCreate } = lazy(() => { const { runSquadAgentCreate } = require('./commands/squad-agent-create'); return { runSquadAgentCreate }; });
+const { runSquadInvestigate } = lazy(() => { const { runSquadInvestigate } = require('./commands/squad-investigate'); return { runSquadInvestigate }; });
+const { runImplementationPlan } = lazy(() => { const { runImplementationPlan } = require('./commands/implementation-plan'); return { runImplementationPlan }; });
+const { runFeatureClosure } = lazy(() => { const { runFeatureClosure } = require('./commands/feature-closure'); return { runFeatureClosure }; });
+const { runSquadPlan } = lazy(() => { const { runSquadPlan } = require('./commands/squad-plan'); return { runSquadPlan }; });
+const { runSquadLearning } = lazy(() => { const { runSquadLearning } = require('./commands/squad-learning'); return { runSquadLearning }; });
+const { runLearning } = lazy(() => { const { runLearning } = require('./commands/learning'); return { runLearning }; });
+const { runSquadDashboard } = lazy(() => { const { runSquadDashboard } = require('./commands/squad-dashboard'); return { runSquadDashboard }; });
+const { runSquadWorker } = lazy(() => { const { runSquadWorker } = require('./commands/squad-worker'); return { runSquadWorker }; });
+const { runSquadDaemon } = lazy(() => { const { runSquadDaemon } = require('./commands/squad-daemon'); return { runSquadDaemon }; });
+const { runSquadMcp } = lazy(() => { const { runSquadMcp } = require('./commands/squad-mcp'); return { runSquadMcp }; });
+const { runSquadRoi } = lazy(() => { const { runSquadRoi } = require('./commands/squad-roi'); return { runSquadRoi }; });
+const { runSquadScore } = lazy(() => { const { runSquadScore } = require('./commands/squad-score'); return { runSquadScore }; });
+const { runSquadProcesses } = lazy(() => { const { runSquadProcesses } = require('./commands/squad-processes'); return { runSquadProcesses }; });
+const { runSquadWorktrees, runSquadMerge } = lazy(() => { const { runSquadWorktrees, runSquadMerge } = require('./commands/squad-worktrees'); return { runSquadWorktrees, runSquadMerge }; });
+const { runSquadRecovery } = lazy(() => { const { runSquadRecovery } = require('./commands/squad-recovery'); return { runSquadRecovery }; });
+const { runSquadDeploy } = lazy(() => { const { runSquadDeploy } = require('./commands/squad-deploy'); return { runSquadDeploy }; });
+const { runSquadWebhook } = lazy(() => { const { runSquadWebhook } = require('./commands/squad-webhook'); return { runSquadWebhook }; });
+const { runSquadBus } = lazy(() => { const { runSquadBus } = require('./commands/squad-bus'); return { runSquadBus }; });
+const { runSquadAutorun } = lazy(() => { const { runSquadAutorun } = require('./commands/squad-autorun'); return { runSquadAutorun }; });
+const { runSquadDependencyGraph } = lazy(() => { const { runSquadDependencyGraph } = require('./commands/squad-dependency-graph'); return { runSquadDependencyGraph }; });
+const { runSquadToolRegister } = lazy(() => { const { runSquadToolRegister } = require('./commands/squad-tool-register'); return { runSquadToolRegister }; });
+const { runSquadReview } = lazy(() => { const { runSquadReview } = require('./commands/squad-review'); return { runSquadReview }; });
+const { runAgentAudit } = lazy(() => { const { runAgentAudit } = require('./commands/agent-audit'); return { runAgentAudit }; });
+const { runSkillAudit } = lazy(() => { const { runSkillAudit } = require('./commands/skill-audit'); return { runSkillAudit }; });
+const { isQualityCommand, runQualityCommand } = lazy(() => { const { isQualityCommand, runQualityCommand } = require('./commands/quality'); return { isQualityCommand, runQualityCommand }; });
+const { runBriefGen } = lazy(() => { const { runBriefGen } = require('./commands/brief-gen'); return { runBriefGen }; });
+const { runHarnessInit, runHarnessValidate, runHarnessApplyValidation } = lazy(() => { const { runHarnessInit, runHarnessValidate, runHarnessApplyValidation } = require('./commands/harness'); return { runHarnessInit, runHarnessValidate, runHarnessApplyValidation }; });
+const { runVerifyGate } = lazy(() => { const { runVerifyGate } = require('./commands/verify-gate'); return { runVerifyGate }; });
 const {
   runRuntimeInit,
   runRuntimeIngest,
@@ -148,7 +151,7 @@ const {
   runRuntimeStorage,
   runRuntimePrune,
   runRuntimeCompact
-} = lazy(() => require('./commands/runtime'), ['runRuntimeInit', 'runRuntimeIngest', 'runRuntimeTaskStart', 'runRuntimeStart', 'runRuntimeUpdate', 'runRuntimeTaskFinish', 'runRuntimeFinish', 'runRuntimeTaskFail', 'runRuntimeFail', 'runRuntimeStatus', 'runRuntimeLog', 'runAgentDone', 'runAgentRecover', 'runRuntimeSessionStart', 'runRuntimeSessionLog', 'runRuntimeSessionFinish', 'runRuntimeSessionStatus', 'runDeliver', 'runOutputStrategyExport', 'runOutputStrategyImport', 'runDevlogSync', 'runRuntimeStorage', 'runRuntimePrune', 'runRuntimeCompact']);
+} = lazy(() => { const { runRuntimeInit, runRuntimeIngest, runRuntimeTaskStart, runRuntimeStart, runRuntimeUpdate, runRuntimeTaskFinish, runRuntimeFinish, runRuntimeTaskFail, runRuntimeFail, runRuntimeStatus, runRuntimeLog, runAgentDone, runAgentRecover, runRuntimeSessionStart, runRuntimeSessionLog, runRuntimeSessionFinish, runRuntimeSessionStatus, runDeliver, runOutputStrategyExport, runOutputStrategyImport, runDevlogSync, runRuntimeStorage, runRuntimePrune, runRuntimeCompact } = require('./commands/runtime'); return { runRuntimeInit, runRuntimeIngest, runRuntimeTaskStart, runRuntimeStart, runRuntimeUpdate, runRuntimeTaskFinish, runRuntimeFinish, runRuntimeTaskFail, runRuntimeFail, runRuntimeStatus, runRuntimeLog, runAgentDone, runAgentRecover, runRuntimeSessionStart, runRuntimeSessionLog, runRuntimeSessionFinish, runRuntimeSessionStatus, runDeliver, runOutputStrategyExport, runOutputStrategyImport, runDevlogSync, runRuntimeStorage, runRuntimePrune, runRuntimeCompact }; });
 const {
   runLiveStart,
   runRuntimeEmit,
@@ -156,140 +159,140 @@ const {
   runLiveStatus,
   runLiveClose,
   runLiveList
-} = lazy(() => require('./commands/live'), ['runLiveStart', 'runRuntimeEmit', 'runLiveHandoff', 'runLiveStatus', 'runLiveClose', 'runLiveList']);
+} = lazy(() => { const { runLiveStart, runRuntimeEmit, runLiveHandoff, runLiveStatus, runLiveClose, runLiveList } = require('./commands/live'); return { runLiveStart, runRuntimeEmit, runLiveHandoff, runLiveStatus, runLiveClose, runLiveList }; });
 const {
   runToolCapabilities,
-} = lazy(() => require('./commands/tool-capabilities'), ['runToolCapabilities']);
-const { runHostSignature } = lazy(() => require('./commands/host-signature'), ['runHostSignature']);
-const { runScaffoldComplete } = lazy(() => require('./commands/scaffold-complete'), ['runScaffoldComplete']);
+} = lazy(() => { const { runToolCapabilities } = require('./commands/tool-capabilities'); return { runToolCapabilities }; });
+const { runHostSignature } = lazy(() => { const { runHostSignature } = require('./commands/host-signature'); return { runHostSignature }; });
+const { runScaffoldComplete } = lazy(() => { const { runScaffoldComplete } = require('./commands/scaffold-complete'); return { runScaffoldComplete }; });
 const {
   runCloudImportSquad,
   runCloudImportGenome,
   runCloudPublishGenome,
   runCloudPublishSquad
-} = lazy(() => require('./commands/cloud'), ['runCloudImportSquad', 'runCloudImportGenome', 'runCloudPublishGenome', 'runCloudPublishSquad']);
+} = lazy(() => { const { runCloudImportSquad, runCloudImportGenome, runCloudPublishGenome, runCloudPublishSquad } = require('./commands/cloud'); return { runCloudImportSquad, runCloudImportGenome, runCloudPublishGenome, runCloudPublishSquad }; });
 const {
   runRuntimeBackup,
   runRuntimeRestore
-} = lazy(() => require('./commands/backup'), ['runRuntimeBackup', 'runRuntimeRestore']);
+} = lazy(() => { const { runRuntimeBackup, runRuntimeRestore } = require('./commands/backup'); return { runRuntimeBackup, runRuntimeRestore }; });
 const {
   runSkillInstall,
   runSkillList,
   runSkillRemove
-} = lazy(() => require('./commands/skill'), ['runSkillInstall', 'runSkillList', 'runSkillRemove']);
-const { runDesignHybridOptions } = lazy(() => require('./commands/design-hybrid-options'), ['runDesignHybridOptions']);
-const { runBackupLocal } = lazy(() => require('./commands/backup-local-cmd'), ['runBackupLocal']);
-const { runRecoveryGenerate, runRecoveryShow } = lazy(() => require('./commands/recovery'), ['runRecoveryGenerate', 'runRecoveryShow']);
-const { runContextMonitor } = lazy(() => require('./commands/context-monitor'), ['runContextMonitor']);
-const { runContextSearch, runContextSearchIndex } = lazy(() => require('./commands/context-search'), ['runContextSearch', 'runContextSearchIndex']);
-const { runContextGuard } = lazy(() => require('./commands/context-guard'), ['runContextGuard']);
-const { runContextCacheList, runContextCacheSave, runContextCacheRestore, runContextCacheCleanup } = lazy(() => require('./commands/context-cache'), ['runContextCacheList', 'runContextCacheSave', 'runContextCacheRestore', 'runContextCacheCleanup']);
-const { runSandboxExec } = lazy(() => require('./commands/sandbox'), ['runSandboxExec']);
-const { runAgentLoad, runAgentShardIndex } = lazy(() => require('./commands/agent-loader'), ['runAgentLoad', 'runAgentShardIndex']);
-const { runLearningEvolve, runLearningApply } = lazy(() => require('./commands/learning-evolve'), ['runLearningEvolve', 'runLearningApply']);
-const { runLearningRollback } = lazy(() => require('./commands/learning-rollback'), ['runLearningRollback']);
-const { runToolRegistry } = lazy(() => require('./commands/tool-registry-cmd'), ['runToolRegistry']);
-const { runHealth } = lazy(() => require('./commands/health'), ['runHealth']);
-const { runContextHealth } = lazy(() => require('./commands/context-health'), ['runContextHealth']);
-const { runHygieneScan } = lazy(() => require('./commands/hygiene-scan'), ['runHygieneScan']);
-const { runEvidencePrune } = lazy(() => require('./commands/evidence-prune'), ['runEvidencePrune']);
-const { runStorageTriage } = lazy(() => require('./commands/storage-triage'), ['runStorageTriage']);
-const { runContextTrim } = lazy(() => require('./commands/context-trim'), ['runContextTrim']);
-const { runHooksEmit } = lazy(() => require('./commands/hooks-emit'), ['runHooksEmit']);
-const { runHooksRecap } = lazy(() => require('./commands/hooks-recap'), ['runHooksRecap']);
-const { runHooksInstall, runHooksUninstall } = lazy(() => require('./commands/hooks-install'), ['runHooksInstall', 'runHooksUninstall']);
-const { runSessionGuard } = lazy(() => require('./commands/session-guard'), ['runSessionGuard']);
-const { runDevlogProcess } = lazy(() => require('./commands/devlog-process'), ['runDevlogProcess']);
-const { runDevlogWatch } = lazy(() => require('./commands/devlog-watch'), ['runDevlogWatch']);
-const { runDevlogExportBrains } = lazy(() => require('./commands/devlog-export-brains'), ['runDevlogExportBrains']);
-const { runBrainQuery } = lazy(() => require('./commands/brain-query'), ['runBrainQuery']);
+} = lazy(() => { const { runSkillInstall, runSkillList, runSkillRemove } = require('./commands/skill'); return { runSkillInstall, runSkillList, runSkillRemove }; });
+const { runDesignHybridOptions } = lazy(() => { const { runDesignHybridOptions } = require('./commands/design-hybrid-options'); return { runDesignHybridOptions }; });
+const { runBackupLocal } = lazy(() => { const { runBackupLocal } = require('./commands/backup-local-cmd'); return { runBackupLocal }; });
+const { runRecoveryGenerate, runRecoveryShow } = lazy(() => { const { runRecoveryGenerate, runRecoveryShow } = require('./commands/recovery'); return { runRecoveryGenerate, runRecoveryShow }; });
+const { runContextMonitor } = lazy(() => { const { runContextMonitor } = require('./commands/context-monitor'); return { runContextMonitor }; });
+const { runContextSearch, runContextSearchIndex } = lazy(() => { const { runContextSearch, runContextSearchIndex } = require('./commands/context-search'); return { runContextSearch, runContextSearchIndex }; });
+const { runContextGuard } = lazy(() => { const { runContextGuard } = require('./commands/context-guard'); return { runContextGuard }; });
+const { runContextCacheList, runContextCacheSave, runContextCacheRestore, runContextCacheCleanup } = lazy(() => { const { runContextCacheList, runContextCacheSave, runContextCacheRestore, runContextCacheCleanup } = require('./commands/context-cache'); return { runContextCacheList, runContextCacheSave, runContextCacheRestore, runContextCacheCleanup }; });
+const { runSandboxExec } = lazy(() => { const { runSandboxExec } = require('./commands/sandbox'); return { runSandboxExec }; });
+const { runAgentLoad, runAgentShardIndex } = lazy(() => { const { runAgentLoad, runAgentShardIndex } = require('./commands/agent-loader'); return { runAgentLoad, runAgentShardIndex }; });
+const { runLearningEvolve, runLearningApply } = lazy(() => { const { runLearningEvolve, runLearningApply } = require('./commands/learning-evolve'); return { runLearningEvolve, runLearningApply }; });
+const { runLearningRollback } = lazy(() => { const { runLearningRollback } = require('./commands/learning-rollback'); return { runLearningRollback }; });
+const { runToolRegistry } = lazy(() => { const { runToolRegistry } = require('./commands/tool-registry-cmd'); return { runToolRegistry }; });
+const { runHealth } = lazy(() => { const { runHealth } = require('./commands/health'); return { runHealth }; });
+const { runContextHealth } = lazy(() => { const { runContextHealth } = require('./commands/context-health'); return { runContextHealth }; });
+const { runHygieneScan } = lazy(() => { const { runHygieneScan } = require('./commands/hygiene-scan'); return { runHygieneScan }; });
+const { runEvidencePrune } = lazy(() => { const { runEvidencePrune } = require('./commands/evidence-prune'); return { runEvidencePrune }; });
+const { runStorageTriage } = lazy(() => { const { runStorageTriage } = require('./commands/storage-triage'); return { runStorageTriage }; });
+const { runContextTrim } = lazy(() => { const { runContextTrim } = require('./commands/context-trim'); return { runContextTrim }; });
+const { runHooksEmit } = lazy(() => { const { runHooksEmit } = require('./commands/hooks-emit'); return { runHooksEmit }; });
+const { runHooksRecap } = lazy(() => { const { runHooksRecap } = require('./commands/hooks-recap'); return { runHooksRecap }; });
+const { runHooksInstall, runHooksUninstall } = lazy(() => { const { runHooksInstall, runHooksUninstall } = require('./commands/hooks-install'); return { runHooksInstall, runHooksUninstall }; });
+const { runSessionGuard } = lazy(() => { const { runSessionGuard } = require('./commands/session-guard'); return { runSessionGuard }; });
+const { runDevlogProcess } = lazy(() => { const { runDevlogProcess } = require('./commands/devlog-process'); return { runDevlogProcess }; });
+const { runDevlogWatch } = lazy(() => { const { runDevlogWatch } = require('./commands/devlog-watch'); return { runDevlogWatch }; });
+const { runDevlogExportBrains } = lazy(() => { const { runDevlogExportBrains } = require('./commands/devlog-export-brains'); return { runDevlogExportBrains }; });
+const { runBrainQuery } = lazy(() => { const { runBrainQuery } = require('./commands/brain-query'); return { runBrainQuery }; });
 const {
   runMemoryStatus,
   runMemorySummary,
   runMemoryReflectPrepare,
   runMemoryReflectCommit
-} = lazy(() => require('./commands/memory'), ['runMemoryStatus', 'runMemorySummary', 'runMemoryReflectPrepare', 'runMemoryReflectCommit']);
-const { runNotify } = lazy(() => require('./commands/notify'), ['runNotify']);
-const { runSpecSync } = lazy(() => require('./commands/spec-sync'), ['runSpecSync']);
-const { runSpecStatus } = lazy(() => require('./commands/spec-status'), ['runSpecStatus']);
-const { runSpecCheckpoint } = lazy(() => require('./commands/spec-checkpoint'), ['runSpecCheckpoint']);
-const { runSpecTasks } = lazy(() => require('./commands/spec-tasks'), ['runSpecTasks']);
-const { runLearningExport } = lazy(() => require('./commands/learning-export'), ['runLearningExport']);
-const { runRunnerRun } = lazy(() => require('./commands/runner-run'), ['runRunnerRun']);
-const { runRunnerQueue } = lazy(() => require('./commands/runner-queue'), ['runRunnerQueue']);
-const { runRunnerPlan } = lazy(() => require('./commands/runner-plan'), ['runRunnerPlan']);
-const { runRunnerDaemon } = lazy(() => require('./commands/runner-daemon'), ['runRunnerDaemon']);
-const { runPreflight } = lazy(() => require('./commands/preflight'), ['runPreflight']);
-const { runClassify } = lazy(() => require('./commands/classify'), ['runClassify']);
-const { runPrototypeCheck } = lazy(() => require('./commands/prototype-check'), ['runPrototypeCheck']);
-const { runVerifyImplementation } = lazy(() => require('./commands/verify-implementation'), ['runVerifyImplementation']);
-const { runVerificationPlan } = lazy(() => require('./commands/verification-plan'), ['runVerificationPlan']);
-const { runAgentExecution } = lazy(() => require('./commands/agent-execution'), ['runAgentExecution']);
-const { runExecution } = lazy(() => require('./commands/execution'), ['runExecution']);
-const { runDelegationPlan, runDelegationRun } = lazy(() => require('./commands/delegation'), ['runDelegationPlan', 'runDelegationRun']);
-const { runSizing } = lazy(() => require('./commands/sizing'), ['runSizing']);
-const { runDetectTestRunner } = lazy(() => require('./commands/detect-test-runner'), ['runDetectTestRunner']);
-const { runPulseUpdate } = lazy(() => require('./commands/pulse-update'), ['runPulseUpdate']);
-const { runAgentEpilogue } = lazy(() => require('./commands/agent-epilogue'), ['runAgentEpilogue']);
-const { runStateSave, runStateReset } = lazy(() => require('./commands/state-save'), ['runStateSave', 'runStateReset']);
-const { runOpIdentity } = lazy(() => require('./commands/op-identity'), ['runOpIdentity']);
-const { runOpCapture } = lazy(() => require('./commands/op-capture'), ['runOpCapture']);
-const { runObserve, runObservationList, runObservationResolve } = lazy(() => require('./commands/observe'), ['runObserve', 'runObservationList', 'runObservationResolve']);
-const { runOpPromote } = lazy(() => require('./commands/op-promote'), ['runOpPromote']);
-const { runOpForget } = lazy(() => require('./commands/op-forget'), ['runOpForget']);
-const { runOpList } = lazy(() => require('./commands/op-list'), ['runOpList']);
-const { runOpShow } = lazy(() => require('./commands/op-show'), ['runOpShow']);
-const { runOpReinforce } = lazy(() => require('./commands/op-reinforce'), ['runOpReinforce']);
-const { runOpMigrate } = lazy(() => require('./commands/op-migrate'), ['runOpMigrate']);
-const { runFeatureClose } = lazy(() => require('./commands/feature-close'), ['runFeatureClose']);
-const { runFeatureArchive, runFeatureSweep } = lazy(() => require('./commands/feature-archive'), ['runFeatureArchive', 'runFeatureSweep']);
-const { runFeatureTrace } = lazy(() => require('./commands/feature-trace'), ['runFeatureTrace']);
-const { runFeatureDiff } = lazy(() => require('./commands/feature-diff'), ['runFeatureDiff']);
-const { runWorkflowMode } = lazy(() => require('./commands/workflow-mode'), ['runWorkflowMode']);
-const { runGenomeApply } = lazy(() => require('./commands/genome-apply'), ['runGenomeApply']);
-const { runSetupDetect } = lazy(() => require('./commands/setup-detect'), ['runSetupDetect']);
-const { runProfilerCoverage } = lazy(() => require('./commands/profiler-coverage'), ['runProfilerCoverage']);
-const { runFeatureExport } = lazy(() => require('./commands/feature-export'), ['runFeatureExport']);
-const { runFeatureCurrent } = lazy(() => require('./commands/feature-current'), ['runFeatureCurrent']);
-const { runFeatureList } = lazy(() => require('./commands/feature-list'), ['runFeatureList']);
-const { runFeatureRegister, runFeatureTidy } = lazy(() => require('./commands/feature-registry'), ['runFeatureRegister', 'runFeatureTidy']);
-const { runFeatureTriage } = lazy(() => require('./commands/feature-triage'), ['runFeatureTriage']);
-const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = lazy(() => require('./commands/dossier'), ['runDossierInit', 'runDossierShow', 'runDossierAddFinding', 'runDossierAddCodemap', 'runDossierLinkRule', 'runDossierCompact']);
-const { runDossierAddResearch } = lazy(() => require('./commands/dossier-add-research'), ['runDossierAddResearch']);
-const { runDossierAudit } = lazy(() => require('./commands/dossier-audit'), ['runDossierAudit']);
-const { runDevResumeData } = lazy(() => require('./commands/dev-resume'), ['runDevResumeData']);
-const { runRevisionOpen, runRevisionList, runRevisionResolve } = lazy(() => require('./commands/revision'), ['runRevisionOpen', 'runRevisionList', 'runRevisionResolve']);
-const { runAcTestAudit } = lazy(() => require('./commands/ac-test-audit'), ['runAcTestAudit']);
-const { runSddBenchmark } = lazy(() => require('./commands/sdd-benchmark'), ['runSddBenchmark']);
-const { runBenchmarkBootstrap } = lazy(() => require('./commands/benchmark-bootstrap'), ['runBenchmarkBootstrap']);
-const { runGateCheck } = lazy(() => require('./commands/gate-check'), ['runGateCheck']);
-const { runGateApprove } = lazy(() => require('./commands/gate-approve'), ['runGateApprove']);
-const { runArtifactValidate } = lazy(() => require('./commands/artifact-validate'), ['runArtifactValidate']);
-const { runWorkflowExecute } = lazy(() => require('./commands/workflow-execute'), ['runWorkflowExecute']);
-const { runReviewCycle } = lazy(() => require('./commands/review-cycle'), ['runReviewCycle']);
-const { runRunnerQueueFromPlan } = lazy(() => require('./commands/runner-queue-from-plan'), ['runRunnerQueueFromPlan']);
-const { runLearningAutoPromote } = lazy(() => require('./commands/learning-auto-promote'), ['runLearningAutoPromote']);
-const { runBriefValidate } = lazy(() => require('./commands/brief-validate'), ['runBriefValidate']);
-const { runIntakeAsk } = lazy(() => require('./commands/intake-ask'), ['runIntakeAsk']);
-const { runPreflightContext } = lazy(() => require('./commands/preflight-context'), ['runPreflightContext']);
-const { runContextCompact } = lazy(() => require('./commands/context-compact'), ['runContextCompact']);
-const { runSquadScaffold } = lazy(() => require('./commands/squad-scaffold'), ['runSquadScaffold']);
-const { runSquadPreflight } = lazy(() => require('./commands/squad-preflight'), ['runSquadPreflight']);
-const { runPatternDetect } = lazy(() => require('./commands/pattern-detect'), ['runPatternDetect']);
-const { runSelfLoop } = lazy(() => require('./commands/self-implement-loop'), ['runSelfLoop']);
-const { runSquadCard } = lazy(() => require('./commands/squad-card'), ['runSquadCard']);
-const { runAgentExportSkill } = lazy(() => require('./commands/agent-export-skill'), ['runAgentExportSkill']);
-const { runGitGuard } = lazy(() => require('./commands/git-guard'), ['runGitGuard']);
-const { runCommitPrepare } = lazy(() => require('./commands/commit-prepare'), ['runCommitPrepare']);
-const { runAuthLogin, runAuthLogout, runAuthStatus } = lazy(() => require('./commands/auth'), ['runAuthLogin', 'runAuthLogout', 'runAuthStatus']);
-const { runWorkspaceInit, runWorkspaceStatus, runWorkspaceOpen } = lazy(() => require('./commands/workspace'), ['runWorkspaceInit', 'runWorkspaceStatus', 'runWorkspaceOpen']);
-const { runGenomePublish, runGenomeInstallStore, runGenomeInstall, runGenomeList, runGenomeRemove } = lazy(() => require('./commands/store-genome'), ['runGenomePublish', 'runGenomeInstallStore', 'runGenomeInstall', 'runGenomeList', 'runGenomeRemove']);
-const { runSkillPublish, runSkillInstallStore, runSkillListRemote } = lazy(() => require('./commands/store-skill'), ['runSkillPublish', 'runSkillInstallStore', 'runSkillListRemote']);
-const { runSquadPublish, runSquadInstall, runSquadGrant, runSquadList } = lazy(() => require('./commands/store-squad'), ['runSquadPublish', 'runSquadInstall', 'runSquadGrant', 'runSquadList']);
-const { runSystemPackage, runSystemPublish, runSystemList, runSystemInstall } = lazy(() => require('./commands/store-system'), ['runSystemPackage', 'runSystemPublish', 'runSystemList', 'runSystemInstall']);
-const { runBriefingApprove, runBriefingUnapprove, runBriefingReview, runBriefingApplyFeedback, runBriefingFeedback } = lazy(() => require('./commands/briefing'), ['runBriefingApprove', 'runBriefingUnapprove', 'runBriefingReview', 'runBriefingApplyFeedback', 'runBriefingFeedback']);
-const { runBriefingSources } = lazy(() => require('./commands/briefing-sources'), ['runBriefingSources']);
-const { runBriefingMigrateLineage } = lazy(() => require('./commands/briefing-migrate-lineage'), ['runBriefingMigrateLineage']);
+} = lazy(() => { const { runMemoryStatus, runMemorySummary, runMemoryReflectPrepare, runMemoryReflectCommit } = require('./commands/memory'); return { runMemoryStatus, runMemorySummary, runMemoryReflectPrepare, runMemoryReflectCommit }; });
+const { runNotify } = lazy(() => { const { runNotify } = require('./commands/notify'); return { runNotify }; });
+const { runSpecSync } = lazy(() => { const { runSpecSync } = require('./commands/spec-sync'); return { runSpecSync }; });
+const { runSpecStatus } = lazy(() => { const { runSpecStatus } = require('./commands/spec-status'); return { runSpecStatus }; });
+const { runSpecCheckpoint } = lazy(() => { const { runSpecCheckpoint } = require('./commands/spec-checkpoint'); return { runSpecCheckpoint }; });
+const { runSpecTasks } = lazy(() => { const { runSpecTasks } = require('./commands/spec-tasks'); return { runSpecTasks }; });
+const { runLearningExport } = lazy(() => { const { runLearningExport } = require('./commands/learning-export'); return { runLearningExport }; });
+const { runRunnerRun } = lazy(() => { const { runRunnerRun } = require('./commands/runner-run'); return { runRunnerRun }; });
+const { runRunnerQueue } = lazy(() => { const { runRunnerQueue } = require('./commands/runner-queue'); return { runRunnerQueue }; });
+const { runRunnerPlan } = lazy(() => { const { runRunnerPlan } = require('./commands/runner-plan'); return { runRunnerPlan }; });
+const { runRunnerDaemon } = lazy(() => { const { runRunnerDaemon } = require('./commands/runner-daemon'); return { runRunnerDaemon }; });
+const { runPreflight } = lazy(() => { const { runPreflight } = require('./commands/preflight'); return { runPreflight }; });
+const { runClassify } = lazy(() => { const { runClassify } = require('./commands/classify'); return { runClassify }; });
+const { runPrototypeCheck } = lazy(() => { const { runPrototypeCheck } = require('./commands/prototype-check'); return { runPrototypeCheck }; });
+const { runVerifyImplementation } = lazy(() => { const { runVerifyImplementation } = require('./commands/verify-implementation'); return { runVerifyImplementation }; });
+const { runVerificationPlan } = lazy(() => { const { runVerificationPlan } = require('./commands/verification-plan'); return { runVerificationPlan }; });
+const { runAgentExecution } = lazy(() => { const { runAgentExecution } = require('./commands/agent-execution'); return { runAgentExecution }; });
+const { runExecution } = lazy(() => { const { runExecution } = require('./commands/execution'); return { runExecution }; });
+const { runDelegationPlan, runDelegationRun } = lazy(() => { const { runDelegationPlan, runDelegationRun } = require('./commands/delegation'); return { runDelegationPlan, runDelegationRun }; });
+const { runSizing } = lazy(() => { const { runSizing } = require('./commands/sizing'); return { runSizing }; });
+const { runDetectTestRunner } = lazy(() => { const { runDetectTestRunner } = require('./commands/detect-test-runner'); return { runDetectTestRunner }; });
+const { runPulseUpdate } = lazy(() => { const { runPulseUpdate } = require('./commands/pulse-update'); return { runPulseUpdate }; });
+const { runAgentEpilogue } = lazy(() => { const { runAgentEpilogue } = require('./commands/agent-epilogue'); return { runAgentEpilogue }; });
+const { runStateSave, runStateReset } = lazy(() => { const { runStateSave, runStateReset } = require('./commands/state-save'); return { runStateSave, runStateReset }; });
+const { runOpIdentity } = lazy(() => { const { runOpIdentity } = require('./commands/op-identity'); return { runOpIdentity }; });
+const { runOpCapture } = lazy(() => { const { runOpCapture } = require('./commands/op-capture'); return { runOpCapture }; });
+const { runObserve, runObservationList, runObservationResolve } = lazy(() => { const { runObserve, runObservationList, runObservationResolve } = require('./commands/observe'); return { runObserve, runObservationList, runObservationResolve }; });
+const { runOpPromote } = lazy(() => { const { runOpPromote } = require('./commands/op-promote'); return { runOpPromote }; });
+const { runOpForget } = lazy(() => { const { runOpForget } = require('./commands/op-forget'); return { runOpForget }; });
+const { runOpList } = lazy(() => { const { runOpList } = require('./commands/op-list'); return { runOpList }; });
+const { runOpShow } = lazy(() => { const { runOpShow } = require('./commands/op-show'); return { runOpShow }; });
+const { runOpReinforce } = lazy(() => { const { runOpReinforce } = require('./commands/op-reinforce'); return { runOpReinforce }; });
+const { runOpMigrate } = lazy(() => { const { runOpMigrate } = require('./commands/op-migrate'); return { runOpMigrate }; });
+const { runFeatureClose } = lazy(() => { const { runFeatureClose } = require('./commands/feature-close'); return { runFeatureClose }; });
+const { runFeatureArchive, runFeatureSweep } = lazy(() => { const { runFeatureArchive, runFeatureSweep } = require('./commands/feature-archive'); return { runFeatureArchive, runFeatureSweep }; });
+const { runFeatureTrace } = lazy(() => { const { runFeatureTrace } = require('./commands/feature-trace'); return { runFeatureTrace }; });
+const { runFeatureDiff } = lazy(() => { const { runFeatureDiff } = require('./commands/feature-diff'); return { runFeatureDiff }; });
+const { runWorkflowMode } = lazy(() => { const { runWorkflowMode } = require('./commands/workflow-mode'); return { runWorkflowMode }; });
+const { runGenomeApply } = lazy(() => { const { runGenomeApply } = require('./commands/genome-apply'); return { runGenomeApply }; });
+const { runSetupDetect } = lazy(() => { const { runSetupDetect } = require('./commands/setup-detect'); return { runSetupDetect }; });
+const { runProfilerCoverage } = lazy(() => { const { runProfilerCoverage } = require('./commands/profiler-coverage'); return { runProfilerCoverage }; });
+const { runFeatureExport } = lazy(() => { const { runFeatureExport } = require('./commands/feature-export'); return { runFeatureExport }; });
+const { runFeatureCurrent } = lazy(() => { const { runFeatureCurrent } = require('./commands/feature-current'); return { runFeatureCurrent }; });
+const { runFeatureList } = lazy(() => { const { runFeatureList } = require('./commands/feature-list'); return { runFeatureList }; });
+const { runFeatureRegister, runFeatureTidy } = lazy(() => { const { runFeatureRegister, runFeatureTidy } = require('./commands/feature-registry'); return { runFeatureRegister, runFeatureTidy }; });
+const { runFeatureTriage } = lazy(() => { const { runFeatureTriage } = require('./commands/feature-triage'); return { runFeatureTriage }; });
+const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = lazy(() => { const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier'); return { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact }; });
+const { runDossierAddResearch } = lazy(() => { const { runDossierAddResearch } = require('./commands/dossier-add-research'); return { runDossierAddResearch }; });
+const { runDossierAudit } = lazy(() => { const { runDossierAudit } = require('./commands/dossier-audit'); return { runDossierAudit }; });
+const { runDevResumeData } = lazy(() => { const { runDevResumeData } = require('./commands/dev-resume'); return { runDevResumeData }; });
+const { runRevisionOpen, runRevisionList, runRevisionResolve } = lazy(() => { const { runRevisionOpen, runRevisionList, runRevisionResolve } = require('./commands/revision'); return { runRevisionOpen, runRevisionList, runRevisionResolve }; });
+const { runAcTestAudit } = lazy(() => { const { runAcTestAudit } = require('./commands/ac-test-audit'); return { runAcTestAudit }; });
+const { runSddBenchmark } = lazy(() => { const { runSddBenchmark } = require('./commands/sdd-benchmark'); return { runSddBenchmark }; });
+const { runBenchmarkBootstrap } = lazy(() => { const { runBenchmarkBootstrap } = require('./commands/benchmark-bootstrap'); return { runBenchmarkBootstrap }; });
+const { runGateCheck } = lazy(() => { const { runGateCheck } = require('./commands/gate-check'); return { runGateCheck }; });
+const { runGateApprove } = lazy(() => { const { runGateApprove } = require('./commands/gate-approve'); return { runGateApprove }; });
+const { runArtifactValidate } = lazy(() => { const { runArtifactValidate } = require('./commands/artifact-validate'); return { runArtifactValidate }; });
+const { runWorkflowExecute } = lazy(() => { const { runWorkflowExecute } = require('./commands/workflow-execute'); return { runWorkflowExecute }; });
+const { runReviewCycle } = lazy(() => { const { runReviewCycle } = require('./commands/review-cycle'); return { runReviewCycle }; });
+const { runRunnerQueueFromPlan } = lazy(() => { const { runRunnerQueueFromPlan } = require('./commands/runner-queue-from-plan'); return { runRunnerQueueFromPlan }; });
+const { runLearningAutoPromote } = lazy(() => { const { runLearningAutoPromote } = require('./commands/learning-auto-promote'); return { runLearningAutoPromote }; });
+const { runBriefValidate } = lazy(() => { const { runBriefValidate } = require('./commands/brief-validate'); return { runBriefValidate }; });
+const { runIntakeAsk } = lazy(() => { const { runIntakeAsk } = require('./commands/intake-ask'); return { runIntakeAsk }; });
+const { runPreflightContext } = lazy(() => { const { runPreflightContext } = require('./commands/preflight-context'); return { runPreflightContext }; });
+const { runContextCompact } = lazy(() => { const { runContextCompact } = require('./commands/context-compact'); return { runContextCompact }; });
+const { runSquadScaffold } = lazy(() => { const { runSquadScaffold } = require('./commands/squad-scaffold'); return { runSquadScaffold }; });
+const { runSquadPreflight } = lazy(() => { const { runSquadPreflight } = require('./commands/squad-preflight'); return { runSquadPreflight }; });
+const { runPatternDetect } = lazy(() => { const { runPatternDetect } = require('./commands/pattern-detect'); return { runPatternDetect }; });
+const { runSelfLoop } = lazy(() => { const { runSelfLoop } = require('./commands/self-implement-loop'); return { runSelfLoop }; });
+const { runSquadCard } = lazy(() => { const { runSquadCard } = require('./commands/squad-card'); return { runSquadCard }; });
+const { runAgentExportSkill } = lazy(() => { const { runAgentExportSkill } = require('./commands/agent-export-skill'); return { runAgentExportSkill }; });
+const { runGitGuard } = lazy(() => { const { runGitGuard } = require('./commands/git-guard'); return { runGitGuard }; });
+const { runCommitPrepare } = lazy(() => { const { runCommitPrepare } = require('./commands/commit-prepare'); return { runCommitPrepare }; });
+const { runAuthLogin, runAuthLogout, runAuthStatus } = lazy(() => { const { runAuthLogin, runAuthLogout, runAuthStatus } = require('./commands/auth'); return { runAuthLogin, runAuthLogout, runAuthStatus }; });
+const { runWorkspaceInit, runWorkspaceStatus, runWorkspaceOpen } = lazy(() => { const { runWorkspaceInit, runWorkspaceStatus, runWorkspaceOpen } = require('./commands/workspace'); return { runWorkspaceInit, runWorkspaceStatus, runWorkspaceOpen }; });
+const { runGenomePublish, runGenomeInstallStore, runGenomeInstall, runGenomeList, runGenomeRemove } = lazy(() => { const { runGenomePublish, runGenomeInstallStore, runGenomeInstall, runGenomeList, runGenomeRemove } = require('./commands/store-genome'); return { runGenomePublish, runGenomeInstallStore, runGenomeInstall, runGenomeList, runGenomeRemove }; });
+const { runSkillPublish, runSkillInstallStore, runSkillListRemote } = lazy(() => { const { runSkillPublish, runSkillInstallStore, runSkillListRemote } = require('./commands/store-skill'); return { runSkillPublish, runSkillInstallStore, runSkillListRemote }; });
+const { runSquadPublish, runSquadInstall, runSquadGrant, runSquadList } = lazy(() => { const { runSquadPublish, runSquadInstall, runSquadGrant, runSquadList } = require('./commands/store-squad'); return { runSquadPublish, runSquadInstall, runSquadGrant, runSquadList }; });
+const { runSystemPackage, runSystemPublish, runSystemList, runSystemInstall } = lazy(() => { const { runSystemPackage, runSystemPublish, runSystemList, runSystemInstall } = require('./commands/store-system'); return { runSystemPackage, runSystemPublish, runSystemList, runSystemInstall }; });
+const { runBriefingApprove, runBriefingUnapprove, runBriefingReview, runBriefingApplyFeedback, runBriefingFeedback } = lazy(() => { const { runBriefingApprove, runBriefingUnapprove, runBriefingReview, runBriefingApplyFeedback, runBriefingFeedback } = require('./commands/briefing'); return { runBriefingApprove, runBriefingUnapprove, runBriefingReview, runBriefingApplyFeedback, runBriefingFeedback }; });
+const { runBriefingSources } = lazy(() => { const { runBriefingSources } = require('./commands/briefing-sources'); return { runBriefingSources }; });
+const { runBriefingMigrateLineage } = lazy(() => { const { runBriefingMigrateLineage } = require('./commands/briefing-migrate-lineage'); return { runBriefingMigrateLineage }; });
 const {
   runExplorationAddRun,
   runExplorationConfigure,
@@ -304,8 +307,8 @@ const {
   runExplorationSelect,
   runExplorationStatus,
   runExplorationValidate
-} = lazy(() => require('./commands/exploration'), ['runExplorationAddRun', 'runExplorationConfigure', 'runExplorationInit', 'runExplorationIntake', 'runExplorationPromote', 'runExplorationRecord', 'runExplorationReferences', 'runExplorationReview', 'runExplorationRun', 'runExplorationScan', 'runExplorationSelect', 'runExplorationStatus', 'runExplorationValidate']);
-const { runCompressAgents } = lazy(() => require('./commands/compress-agents'), ['runCompressAgents']);
+} = lazy(() => { const { runExplorationAddRun, runExplorationConfigure, runExplorationInit, runExplorationIntake, runExplorationPromote, runExplorationRecord, runExplorationReferences, runExplorationReview, runExplorationRun, runExplorationScan, runExplorationSelect, runExplorationStatus, runExplorationValidate } = require('./commands/exploration'); return { runExplorationAddRun, runExplorationConfigure, runExplorationInit, runExplorationIntake, runExplorationPromote, runExplorationRecord, runExplorationReferences, runExplorationReview, runExplorationRun, runExplorationScan, runExplorationSelect, runExplorationStatus, runExplorationValidate }; });
+const { runCompressAgents } = lazy(() => { const { runCompressAgents } = require('./commands/compress-agents'); return { runCompressAgents }; });
 
 const JSON_SUPPORTED_COMMANDS = new Set([
   'squad',
@@ -1150,14 +1153,14 @@ const HELP_KEYS = [
   'cli.help_storage_triage', 'cli.help_i18n_add', 'cli.help_agents', 'cli.help_agent_prompt',
   'cli.help_agent_help', 'cli.help_agent_invoke', 'cli.help_agent_epilogue', 'cli.help_rule_new',
   'cli.help_doc_new', 'cli.help_decide', 'cli.help_observe', 'cli.help_observation_list',
-  'cli.help_observation_resolve', 'cli.help_op_list', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
+  'cli.help_observation_resolve', 'cli.help_op_list', 'cli.help_op_show', 'cli.help_op_capture', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
   'cli.help_briefing_approve', 'cli.help_briefing_unapprove', 'cli.help_briefing_review', 'cli.help_briefing_apply_feedback',
   'cli.help_briefing_feedback', 'cli.help_briefing_migrate_lineage', 'cli.help_exploration', 'cli.help_context_validate',
   'cli.help_context_pack', 'cli.help_context_search', 'cli.help_context_select', 'cli.help_context_brief',
   'cli.help_context_guard', 'cli.help_context_evals', 'cli.help_context_usage', 'cli.help_context_load',
   'cli.help_chain_audit', 'cli.help_chain_list', 'cli.help_chain_claim', 'cli.help_chain_resolve',
   'cli.help_chain_release', 'cli.help_chain_reconcile', 'cli.help_memory_status', 'cli.help_memory_summary',
-  'cli.help_memory_search', 'cli.help_memory_archive', 'cli.help_memory_restore', 'cli.help_brain_query',
+  'cli.help_memory_search', 'cli.help_memory_archive', 'cli.help_memory_restore', 'cli.help_memory_trim', 'cli.help_brain_query',
   'cli.help_setup_context', 'cli.help_locale_apply', 'cli.help_locale_diff', 'cli.help_test_agents',
   'cli.help_test_smoke', 'cli.help_test_package', 'cli.help_workflow_plan', 'cli.help_workflow_next',
   'cli.help_workflow_status', 'cli.help_workflow_mode', 'cli.help_workflow_execute', 'cli.help_review_cycle',
@@ -1171,7 +1174,8 @@ const HELP_KEYS = [
   'cli.help_setup_detect', 'cli.help_genome_apply', 'cli.help_profiler_coverage', 'cli.help_feature_closure',
   'cli.help_feature_close', 'cli.help_feature_archive', 'cli.help_gate_check', 'cli.help_gate_approve',
   'cli.help_prototype_check', 'cli.help_ac_test_audit', 'cli.help_preflight', 'cli.help_pulse_update',
-  'cli.help_agent_done', 'cli.help_dossier_add_finding', 'cli.help_detect_test_runner', 'cli.help_dev_resume_data',
+  'cli.help_agent_done', 'cli.help_commit_prepare', 'cli.help_dossier_init', 'cli.help_dossier_show', 'cli.help_dossier_add_finding',
+  'cli.help_detect_test_runner', 'cli.help_dev_resume_data', 'cli.help_plan',
   'cli.help_harness_init', 'cli.help_harness_validate', 'cli.help_harness_apply_validation', 'cli.help_harness_approve',
   'cli.help_harness_reject', 'cli.help_harness_status', 'cli.help_harness_check', 'cli.help_harness_retro',
   'cli.help_harness_preview', 'cli.help_verification_plan', 'cli.help_delegation_plan', 'cli.help_delegation_run',
@@ -1180,19 +1184,19 @@ const HELP_KEYS = [
   'cli.help_jev_agent_review', 'cli.help_scan_project', 'cli.help_config', 'cli.help_genome_doctor',
   'cli.help_genome_approve', 'cli.help_genome_migrate', 'cli.help_squad_status', 'cli.help_squad_doctor',
   'cli.help_squad_repair_genomes', 'cli.help_squad_validate', 'cli.help_squad_eval', 'cli.help_squad_preflight',
-  'cli.help_squad_pilot_approve', 'cli.help_squad_export', 'cli.help_squad_pipeline', 'cli.help_squad_agent_create',
+  'cli.help_squad_pilot_approve', 'cli.help_squad_export', 'cli.help_squad_pipeline', 'cli.help_squad_plan', 'cli.help_squad_agent_create',
   'cli.help_squad_investigate', 'cli.help_squad_dashboard', 'cli.help_squad_worker', 'cli.help_squad_daemon',
   'cli.help_squad_mcp', 'cli.help_squad_roi', 'cli.help_squad_score', 'cli.help_squad_learning',
   'cli.help_agent_audit', null, 'cli.help_learning', 'cli.help_runtime_init',
   'cli.help_runtime_ingest', 'cli.help_runtime_task_start', 'cli.help_runtime_start', 'cli.help_runtime_update',
   'cli.help_runtime_task_finish', 'cli.help_runtime_finish', 'cli.help_runtime_task_fail', 'cli.help_runtime_fail',
-  'cli.help_runtime_status', 'cli.help_runtime_storage', 'cli.help_runtime_prune', 'cli.help_runtime_compact',
+  'cli.help_runtime_status', 'cli.help_runtime_log', 'cli.help_runtime_storage', 'cli.help_runtime_prune', 'cli.help_runtime_compact',
   'cli.help_agent_recover', 'cli.help_runtime_session_start', 'cli.help_runtime_session_log', 'cli.help_runtime_session_finish',
   'cli.help_runtime_session_status', 'cli.help_runtime_emit', 'cli.help_host_signature', 'cli.help_execution_offer',
   'cli.help_execution_seed', 'cli.help_execution_profiles_validate', 'cli.help_execution_compile', 'cli.help_execution_run',
   'cli.help_execution_decide', 'cli.help_execution_status', 'cli.help_execution_dashboard', 'cli.help_execution_prices',
   'cli.help_execution_graph', 'cli.help_execution_dependencies', 'cli.help_live_start', 'cli.help_live_status',
-  'cli.help_live_handoff', 'cli.help_live_close', 'cli.help_scaffold_complete', 'cli.help_runtime_backup',
+  'cli.help_live_handoff', 'cli.help_live_close', 'cli.help_live_list', 'cli.help_scaffold_complete', 'cli.help_runtime_backup',
   'cli.help_runtime_restore', 'cli.help_skill_install', 'cli.help_skill_list', 'cli.help_skill_remove',
   'cli.help_skill_audit', 'cli.help_design_hybrid_options', 'cli.help_cloud_import_squad', 'cli.help_cloud_import_genome',
   'cli.help_cloud_publish_squad', 'cli.help_cloud_publish_genome', 'cli.help_auth_login', 'cli.help_auth_logout',
@@ -1466,7 +1470,7 @@ async function main() {
     } else if (command === 'context:usage' || command === 'context-usage') {
       result = await runContextUsageCommand({ args, options, logger: commandLogger, t });
     } else if (command === 'rules:check' || command === 'rules-check') {
-      const { runRulesCheck } = lazy(() => require('./commands/rules-check'), ['runRulesCheck']);
+      const { runRulesCheck } = lazy(() => { const { runRulesCheck } = require('./commands/rules-check'); return { runRulesCheck }; });
       result = await runRulesCheck({ args, options, logger: commandLogger, t });
     } else if (command === 'context:load' || command === 'context-load') {
       result = await runContextLoad({ args, options, logger: commandLogger, t });
@@ -1597,13 +1601,13 @@ async function main() {
     } else if (command === 'web:collect' || command === 'web-collect') {
       result = await runWebCollect({ args, options, logger: commandLogger, t });
     } else if (command === 'jev:judge' || command === 'jev-judge') {
-      const { runJevJudge } = lazy(() => require('./commands/jev-judge'), ['runJevJudge']);
+      const { runJevJudge } = lazy(() => { const { runJevJudge } = require('./commands/jev-judge'); return { runJevJudge }; });
       result = await runJevJudge({ args, options, logger: commandLogger });
     } else if (command === 'jev:review' || command === 'jev-review') {
-      const { runJevReview } = lazy(() => require('./commands/jev-review'), ['runJevReview']);
+      const { runJevReview } = lazy(() => { const { runJevReview } = require('./commands/jev-review'); return { runJevReview }; });
       result = await runJevReview({ args, options, logger: commandLogger });
     } else if (command === 'jev:agent-review' || command === 'jev-agent-review') {
-      const { runJevAgentReview } = lazy(() => require('./commands/jev-agent-review'), ['runJevAgentReview']);
+      const { runJevAgentReview } = lazy(() => { const { runJevAgentReview } = require('./commands/jev-agent-review'); return { runJevAgentReview }; });
       result = await runJevAgentReview({ args, options, logger: commandLogger });
     } else if (command === 'scan:project' || command === 'scan-project') {
       result = await runScanProject({ args, options, logger: commandLogger, t });
@@ -1612,22 +1616,22 @@ async function main() {
     } else if (command === 'security:audit' || command === 'security-audit') {
       result = await runSecurityAudit({ args, options, logger: commandLogger, t });
     } else if (command === 'audit:code' || command === 'audit-code') {
-      const { runAuditCode } = lazy(() => require('./commands/audit-code'), ['runAuditCode']);
+      const { runAuditCode } = lazy(() => { const { runAuditCode } = require('./commands/audit-code'); return { runAuditCode }; });
       result = await runAuditCode({ args, options, logger: commandLogger, t });
     } else if (command === 'rule:new' || command === 'rule-new') {
-      const { runRuleNew } = lazy(() => require('./commands/rule-new'), ['runRuleNew']);
+      const { runRuleNew } = lazy(() => { const { runRuleNew } = require('./commands/rule-new'); return { runRuleNew }; });
       result = await runRuleNew({ args, options, logger: commandLogger, t });
     } else if (command === 'doc:new' || command === 'doc-new') {
-      const { runDocNew } = lazy(() => require('./commands/rule-new'), ['runDocNew']);
+      const { runDocNew } = lazy(() => { const { runDocNew } = require('./commands/rule-new'); return { runDocNew }; });
       result = await runDocNew({ args, options, logger: commandLogger, t });
     } else if (command === 'verify:artifact' || command === 'verify-artifact') {
-      const { runVerifyArtifact } = lazy(() => require('./commands/verify-artifact'), ['runVerifyArtifact']);
+      const { runVerifyArtifact } = lazy(() => { const { runVerifyArtifact } = require('./commands/verify-artifact'); return { runVerifyArtifact }; });
       result = await runVerifyArtifact({ args, options, logger: commandLogger, t });
     } else if (command === 'delivery:parity' || command === 'delivery-parity') {
-      const { runDeliveryParity } = lazy(() => require('./commands/delivery-parity'), ['runDeliveryParity']);
+      const { runDeliveryParity } = lazy(() => { const { runDeliveryParity } = require('./commands/delivery-parity'); return { runDeliveryParity }; });
       result = await runDeliveryParity({ args, options, logger: commandLogger, t });
     } else if (command === 'design:seed' || command === 'design-seed') {
-      const { runDesignSeed } = lazy(() => require('./commands/design-seed'), ['runDesignSeed']);
+      const { runDesignSeed } = lazy(() => { const { runDesignSeed } = require('./commands/design-seed'); return { runDesignSeed }; });
       result = await runDesignSeed({ args, options, logger: commandLogger, t });
     } else if (command === 'review:prepare' || command === 'review-prepare') {
       result = await runReviewPrepare({ args, options, logger: commandLogger });
@@ -1733,25 +1737,25 @@ async function main() {
     } else if (command === 'harness:apply-validation' || command === 'harness-apply-validation') {
       result = await runHarnessApplyValidation({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:approve' || command === 'harness-approve') {
-      const { runHarnessApprove } = lazy(() => require('./commands/harness-gate'), ['runHarnessApprove']);
+      const { runHarnessApprove } = lazy(() => { const { runHarnessApprove } = require('./commands/harness-gate'); return { runHarnessApprove }; });
       result = await runHarnessApprove({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:reject' || command === 'harness-reject') {
-      const { runHarnessReject } = lazy(() => require('./commands/harness-gate'), ['runHarnessReject']);
+      const { runHarnessReject } = lazy(() => { const { runHarnessReject } = require('./commands/harness-gate'); return { runHarnessReject }; });
       result = await runHarnessReject({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:status' || command === 'harness-status') {
-      const { runHarnessStatus } = lazy(() => require('./commands/harness-status'), ['runHarnessStatus']);
+      const { runHarnessStatus } = lazy(() => { const { runHarnessStatus } = require('./commands/harness-status'); return { runHarnessStatus }; });
       result = await runHarnessStatus({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:check' || command === 'harness-check') {
-      const { runHarnessCheck } = lazy(() => require('./commands/harness-check'), ['runHarnessCheck']);
+      const { runHarnessCheck } = lazy(() => { const { runHarnessCheck } = require('./commands/harness-check'); return { runHarnessCheck }; });
       result = await runHarnessCheck({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:retro' || command === 'harness-retro') {
-      const { runHarnessRetro } = lazy(() => require('./commands/harness-retro'), ['runHarnessRetro']);
+      const { runHarnessRetro } = lazy(() => { const { runHarnessRetro } = require('./commands/harness-retro'); return { runHarnessRetro }; });
       result = await runHarnessRetro({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:retro-promote' || command === 'harness-retro-promote') {
-      const { runHarnessRetroPromote } = lazy(() => require('./commands/harness-retro-promote'), ['runHarnessRetroPromote']);
+      const { runHarnessRetroPromote } = lazy(() => { const { runHarnessRetroPromote } = require('./commands/harness-retro-promote'); return { runHarnessRetroPromote }; });
       result = await runHarnessRetroPromote({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:preview' || command === 'harness-preview') {
-      const { runHarnessPreview } = lazy(() => require('./commands/harness-preview'), ['runHarnessPreview']);
+      const { runHarnessPreview } = lazy(() => { const { runHarnessPreview } = require('./commands/harness-preview'); return { runHarnessPreview }; });
       result = await runHarnessPreview({ args, options, logger: commandLogger, t });
     } else if (command === 'verify:gate' || command === 'verify-gate') {
       result = await runVerifyGate({ args, options, logger: commandLogger, t });
@@ -1791,6 +1795,8 @@ async function main() {
       result = await runLearningApply({ args, options, logger: commandLogger, t });
     } else if (command === 'learning:export' || command === 'learning-export') {
       result = await runLearningExport({ args, options, logger: commandLogger });
+    } else if (command === 'learning:auto-promote' || command === 'learning-auto-promote') {
+      result = await runLearningAutoPromote({ args, options, logger: commandLogger });
     } else if (command === 'spec:sync' || command === 'spec-sync') {
       result = await runSpecSync({ args, options, logger: commandLogger });
     } else if (command === 'spec:status' || command === 'spec-status') {
@@ -2079,22 +2085,22 @@ async function main() {
     } else if (command === 'feature:trace' || command === 'feature-trace') {
       result = await runFeatureTrace({ args, options, logger: commandLogger });
     } else if (command === 'feature:summary' || command === 'feature-summary') {
-      const { runFeatureSummary } = lazy(() => require('./commands/feature-summary'), ['runFeatureSummary']);
+      const { runFeatureSummary } = lazy(() => { const { runFeatureSummary } = require('./commands/feature-summary'); return { runFeatureSummary }; });
       result = await runFeatureSummary({ args, options, logger: commandLogger });
     } else if (command === 'feature:acknowledge' || command === 'feature-acknowledge') {
-      const { runFeatureAcknowledge } = lazy(() => require('./commands/feature-summary'), ['runFeatureAcknowledge']);
+      const { runFeatureAcknowledge } = lazy(() => { const { runFeatureAcknowledge } = require('./commands/feature-summary'); return { runFeatureAcknowledge }; });
       result = await runFeatureAcknowledge({ args, options, logger: commandLogger });
     } else if (command === 'decision:add' || command === 'decision-add') {
-      const { runDecisionAdd } = lazy(() => require('./commands/decision'), ['runDecisionAdd']);
+      const { runDecisionAdd } = lazy(() => { const { runDecisionAdd } = require('./commands/decision'); return { runDecisionAdd }; });
       result = await runDecisionAdd({ args, options, logger: commandLogger });
     } else if (command === 'decision:resolve' || command === 'decision-resolve') {
-      const { runDecisionResolve } = lazy(() => require('./commands/decision'), ['runDecisionResolve']);
+      const { runDecisionResolve } = lazy(() => { const { runDecisionResolve } = require('./commands/decision'); return { runDecisionResolve }; });
       result = await runDecisionResolve({ args, options, logger: commandLogger });
     } else if (command === 'decision:list' || command === 'decision-list') {
-      const { runDecisionList } = lazy(() => require('./commands/decision'), ['runDecisionList']);
+      const { runDecisionList } = lazy(() => { const { runDecisionList } = require('./commands/decision'); return { runDecisionList }; });
       result = await runDecisionList({ args, options, logger: commandLogger });
     } else if (command === 'decide') {
-      const { runDecide } = lazy(() => require('./commands/decide'), ['runDecide']);
+      const { runDecide } = lazy(() => { const { runDecide } = require('./commands/decide'); return { runDecide }; });
       result = await runDecide({ args, options, logger: commandLogger });
     } else if (command === 'feature:diff' || command === 'feature-diff') {
       result = await runFeatureDiff({ args, options, logger: commandLogger });
@@ -2153,10 +2159,10 @@ async function main() {
     } else if (command === 'artifact:validate' || command === 'artifact-validate') {
       result = await runArtifactValidate({ args, options, logger: commandLogger });
     } else if (command === 'spec:analyze' || command === 'spec-analyze') {
-      const { runSpecAnalyze } = lazy(() => require('./commands/spec-analyze'), ['runSpecAnalyze']);
+      const { runSpecAnalyze } = lazy(() => { const { runSpecAnalyze } = require('./commands/spec-analyze'); return { runSpecAnalyze }; });
       result = await runSpecAnalyze({ args, options, logger: commandLogger });
     } else if (command === 'forge:compile' || command === 'forge-compile') {
-      const { runForgeCompile } = lazy(() => require('./commands/forge-compile'), ['runForgeCompile']);
+      const { runForgeCompile } = lazy(() => { const { runForgeCompile } = require('./commands/forge-compile'); return { runForgeCompile }; });
       result = await runForgeCompile({ args, options, logger: commandLogger });
     } else if (command === 'workflow:execute' || command === 'workflow-execute') {
       result = await runWorkflowExecute({ args, options, logger: commandLogger });
@@ -2165,8 +2171,6 @@ async function main() {
       result = await runReviewCycle({ args, options: { ...options, sub }, logger: commandLogger, t });
     } else if (command === 'runner:queue:from-plan' || command === 'runner-queue-from-plan') {
       result = await runRunnerQueueFromPlan({ args, options, logger: commandLogger });
-    } else if (command === 'learning:auto-promote' || command === 'learning-auto-promote') {
-      result = await runLearningAutoPromote({ args, options, logger: commandLogger });
     } else if (command === 'auth:login' || command === 'auth-login') {
       result = await runAuthLogin({ args, options, logger: commandLogger, t });
     } else if (command === 'auth:logout' || command === 'auth-logout') {

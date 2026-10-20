@@ -76,7 +76,7 @@ module.exports = {
     help_briefing_approve:
       'aioson briefing:approve [chemin] [--slug=<slug>] [--accept-craft] [--locale=fr]',
     help_briefing_unapprove:
-      'aioson briefing:unapprove [chemin] [--slug=<slug>] [--locale=fr]',
+      'aioson briefing:unapprove [chemin] [--slug=<slug>] [--force] [--locale=fr]',
     help_briefing_review:
       'aioson briefing:review [chemin] [--slug=<slug>] [--findings=<chemin>] [--force] [--json] [--locale=fr]',
     help_briefing_apply_feedback:
@@ -190,7 +190,8 @@ module.exports = {
       saved: "✔ Memory: '{proposal}'. Pour annuler : aioson op:forget {slug}",
       saved_here: "✔ Memory: '{proposal}' (uniquement dans le projet {project}). Pour annuler : aioson op:forget {slug}",
       reinforced: "✔ Memory renforcée : '{proposal}'. Pour annuler : aioson op:forget {slug}",
-      reinforced_widened: "✔ Memory renforcée : '{proposal}' — vaut désormais dans tous les projets. Pour annuler : aioson op:forget {slug}"
+      reinforced_widened: "✔ Memory renforcée : '{proposal}' — vaut désormais dans tous les projets. Pour annuler : aioson op:forget {slug}",
+      match_ignored: 'op:list — --match="{match}" n\'a aucun mot à filtrer (deux lettres ou plus, hors mots grammaticaux) ; la liste ci-dessous est la tête non filtrée.',
     },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=fr]',
@@ -376,7 +377,9 @@ module.exports = {
     dashboard_moved_line: '{message}\n',
     unknown_command: 'Commande inconnue : {command}',
     unknown_command_line: '{message}\n',
-    error_prefix: 'Erreur : {message}'
+    error_prefix: 'Erreur : {message}',
+    help_op_capture: 'aioson op:capture [path] --signal=<authorization|exclusion|correction|confirmation> --quote="<texte exact>" --proposal="<paraphrase>" --source-agent=<agent> [--scope=operator|project] [--json] [--locale=fr]',
+    help_op_show: 'aioson op:show [path] <slug> [--json] [--locale=fr]',
   },
   briefing_lineage_migration: {
     preview: 'La migration de traçabilité de « {slug} » est prête ({sources} source(s), {promises} promesse(s)). Aucun fichier modifié.',
@@ -405,7 +408,9 @@ module.exports = {
     unapprove_prompt: 'Numéros à remettre en draft (séparés par des virgules, Entrée = aucun changement) :',
     no_changes: 'Aucun changement appliqué.',
     returned_one: '✓ Briefing « {slug} » remis en draft.',
-    returned_many: '✓ Briefings remis en draft : {list}'
+    returned_many: '✓ Briefings remis en draft : {list}',
+    repinned: '✓ Briefing "{slug}" réépinglé : son texte actuel devient le texte approuvé (les changements de fond passent par @product et @sheldon).',
+    unapprove_prd_exists: 'Le briefing "{slug}" a déjà .aioson/context/prd-{slug}.md — le repasser en brouillon désynchroniserait ce PRD. Faites passer le changement par @product et @sheldon, ou relancez avec --force pour le repasser en brouillon quand même.',
   },
   dossier_bootstrap: {
     not_found: '_(introuvable — à compléter manuellement)_',
@@ -1813,5 +1818,8 @@ module.exports = {
     install_fetching: 'Recuperation du systeme "{ref}" depuis aioson.com...',
     install_writing: 'Ecriture des fichiers...',
     install_done: 'Systeme "{slug}" installe dans {path}.'
+  },
+  observe: {
+    feature_not_live: 'note : --feature={feature} n\'est pas une feature active dans features.md, donc cet élément compte pour tout le projet (chaque agent de son type le voit) jusqu\'à ce que {feature} soit enregistrée — vérifiez le slug ou enregistrez-la : aioson feature:register . --feature={feature}',
   }
 };

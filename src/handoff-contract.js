@@ -747,24 +747,34 @@ async function getBlockingRevisions(targetDir, featureSlug) {
  * @param {string} agent       Agent name (with or without leading `@`).
  * @param {string} targetDir   Project root path (absolute).
  * @param {object} state       Workflow state: { mode, featureSlug, classification }.
- * @returns {string[]|null}    Array of absolute artifact paths, or `null` when the
- *                             agent is not registered in CONTRACTS. An empty array
+ * @returns {string[]|null}    Array of absolute artifact paths, or `null` for a
+ *                             retired or unknown agent name (a renamed agent's old
+ *                             id answers as its current id). An empty array
  *                             means the agent produces no canonical artifact (e.g.
  *                             `@committer`, `@dev`) — auto-emit should be skipped.
  */
 async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
   const normalizedAgent = String(agent || '').replace(/^@/, '').toLowerCase();
   if (!normalizedAgent) return null;
-  const contract = CONTRACTS[normalizedAgent];
+  const agentId = contractOwnerId(normalizedAgent);
+  if (!agentId) return null;
+  const contract = CONTRACTS[agentId];
   // A known agent outside the stage contracts (@quality, @neo, …) produces no
-  // canonical artifact: nothing to auto-advance, nothing to warn about. A name
-  // no agent answers to — or a retired id, which resolves to the agent that
-  // absorbed it — stays null: it owns no contract of its own.
-  if (!contract) {
-    const definition = require('./agents').getAgentDefinition(normalizedAgent);
-    return definition && definition.id === normalizedAgent ? [] : null;
-  }
+  // canonical artifact: nothing to auto-advance, nothing to warn about.
+  if (!contract) return [];
   return await resolveArtifacts(contract, targetDir, state || {});
+}
+
+// The agent id whose contract a name owns: its own id, or a renamed agent's
+// current id (`briefing-refiner` → `refiner`: the same agent). A retired id
+// resolves to the agent that absorbed its work but owns no contract of its
+// own, and a name no agent answers to owns none: both null.
+function contractOwnerId(name) {
+  if (CONTRACTS[name]) return name;
+  const { canonicalAgentId, getAgentDefinition, isRetiredAgentId } = require('./agents');
+  if (isRetiredAgentId(name)) return null;
+  const id = canonicalAgentId(name);
+  return getAgentDefinition(id) ? id : null;
 }
 
 module.exports = {
