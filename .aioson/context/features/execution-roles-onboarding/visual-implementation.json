@@ -17,7 +17,7 @@
     "5 distinct font families (inter, jetbrains mono, sf mono, system-ui) — a coherent system rarely needs more than two",
     "kanban/pipeline surface with no drag-and-drop markers — recurrent status flows move by drag-and-drop with an accessible fallback (status-flow-drag-and-drop rule)",
     "21 emoji glyph(s) in the UI corpus (⚙ ⚠ 🔒 ⚡ ⚖ ✅ …) — emoji standing in for icons is a slop marker; use the icon set. Emoji inside seeded mock content is fine — judge in context",
-    "663 spaced em dash(es) across UI copy and mock content (\"<title>FlowBoard — protótipo (mock)</titl\", \"s=\"proto-badge\">● MOCK — refresh reseta · sem b\", \"<title>Squad Dashboard — AIOSON</title>\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
+    "664 spaced em dash(es) across UI copy and mock content (\"<title>FlowBoard — protótipo (mock)</titl\", \"s=\"proto-badge\">● MOCK — refresh reseta · sem b\", \"<title>Squad Dashboard — AIOSON</title>\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
     "declared finish never applied: --primary-glow — effects that exist only in the stylesheet decorate the code while the user sees flat; wire each one to a real surface or delete it. Dead declarations are not craft, and they read as leftovers in review",
     "generation tell: 6 gradient-text declaration(s) (background-clip: text) — emphasis comes from weight, size, or the accent, not from painting the letters; keep gradients in the material layer",
     "generation tell: 3 rule(s) ride a thick colored side border — the most recognizable generated-UI signature; carry the state in a background wash, an icon, or the tokened border system instead (status/tab/blockquote contexts are already exempt)",
@@ -25,7 +25,7 @@
     "generation tell: 7 zero-offset chromatic glow shadow(s) — a halo with no offset is decoration, not depth; shadows take offset and soft blur from the shadow vocabulary, and glow is reserved for live/focus states that mean something",
     "generation tell: 48 font-size declaration(s) under 11px (10.56px, 9.6px, 10.88px, 9.92px) — functional text floors at 11px; if it matters enough to render, it matters enough to read",
     "copy tell: 2 marketing buzzword(s) in visible copy (revolucionária, streamlined) — replace each with the concrete claim it is hiding: a number, a named capability, or delete the sentence",
-    "corpus truncated: 355 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
+    "corpus truncated: 363 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
     "visual conformance NOT measured: no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to — this surface was not held to any prototype floor; record the outcome instead of assuming it",
     "cross-project palette repetition / visual fingerprint: accent hue ~80° on a dark ground resembles recent project \"aioson-com\" (Δ2°, same accent family with the ground polarity flipped) — palette, type, composition, material and motion fingerprints are compared; this source similarity is a review hint, not proof of identical rendered layouts. Draw a diversified start with `aioson design:seed` (or extract the owner's identity), or record the product reason for continuity"
   ],
@@ -37,8 +37,8 @@
     }
   ],
   "metrics": {
-    "declarations": 8653,
-    "scoped_declarations": 7442,
+    "declarations": 8654,
+    "scoped_declarations": 7443,
     "css_scope": {
       "scoped": true,
       "excluded_selectors": [
@@ -1433,29 +1433,30 @@
         "addBlocker: [`self-loop exhausted: \"$",
         "\" ($",
         ";\r\n\n'use strict';\r\n\r\n\r\n\r\nconst path = require('node:path');\r\nconst fs = require('node:fs/promises');\r\nconst",
-        "= require('../lib/project-root');\n\r\nconst POLL_INTERVAL_MS = 30_000;\r\nconst DEFAULT_IDLE_MINUTES = 60;\r\n\r\nfunction nowIso()",
+        "= require('../lib/project-root');\r\n\r\nconst POLL_INTERVAL_MS = 30_000;\r\nconst DEFAULT_IDLE_MINUTES = 60;\r\n\r\nfunction nowIso()",
         "process.stderr.write(`[session:guard] $",
         "const eventsPath = path.join(runtimeDir, 'live', sessionKey, 'events.ndjson');\r\n  try",
+        "const sessionHandle = (agentName) => `@$",
         "const now = nowIso();\r\n  const sessionKey = `guard-$",
         "`;\r\n  const title = `[guard] $",
         "taskKey,\r\n      agentName,\r\n      agentKind: 'official',\r\n      sessionKey,\r\n      source: 'live',\r\n      title,\r\n      eventType: 'session_started',\r\n      phase: 'live',\r\n      message: `Session auto-started by session:guard ($",
         ")`,\r\n      payload:",
-        ");\r\n\r\n    await writeAgentSession(runtimeDir, agentName,",
+        ");\r\n\r\n    await writeAgentSession(runtimeDir, sessionHandle(agentName),",
         ");\r\n\r\n    \n    const stateDir = path.join(runtimeDir, 'live', sessionKey);\r\n    await fs.mkdir(stateDir,",
         "ts: now, type: 'session_started', summary: `Auto-started by session:guard ($",
         ", null, 2), 'utf8');\r\n\r\n    log(`Session started: $",
         "(run: $",
         ")`);\r\n    return",
         "const now = nowIso();\r\n  const",
-        ");\r\n    updateRun(db, runKey,",
-        ");\r\n    if (taskKey) updateTask(db, taskKey,",
+        ");\r\n    \n    updateRun(db,",
+        ");\r\n    if (taskKey) updateTask(db,",
         ");\r\n\r\n    \n    const",
-        "= await readAgentSession(runtimeDir, agentName).catch(() => (",
+        "= await readAgentSession(runtimeDir, sessionHandle(agentName)).catch(() => (",
         "const statePath = path.join(runtimeDir, 'live', sessionKey, 'state.json');\r\n      try",
         "const sessionFile = path.join(runtimeDir, '.sessions', `$",
         ".json`);\r\n    try",
         "log(`Session closed: $",
-        "const session = await readAgentSession(runtimeDir, agentName);\r\n\r\n  if (!session || session.finished)",
+        "const session = await readAgentSession(runtimeDir, sessionHandle(agentName));\r\n\r\n  if (!session || session.finished)",
         "const idleMin = Math.round(idleFor / 60000);\r\n    log(`Idle for $",
         "m — closing session`);\r\n    await closeSession(targetDir, runtimeDir, agentName, session.runKey, session.taskKey,\r\n      `Idle for $",
         "const targetDir = resolveTargetDir(args);\r\n  const agentName = options.agent ? String(options.agent).replace(/^@/, '') : 'dev';\r\n  const tool = options.tool ? String(options.tool).trim() : 'claude';\r\n  const once = options.once || options['once'] || false;\r\n  const idleMinutes = Number(options['idle-minutes'] || options.idleMinutes || DEFAULT_IDLE_MINUTES);\r\n  const idleMs = idleMinutes * 60 * 1000;\r\n  const intervalMs = Number(options.interval || POLL_INTERVAL_MS);\r\n\r\n  const",
@@ -1792,7 +1793,7 @@
         "= require('../harness/plan-waves');\r\nconst",
         "= require('../harness/review-payload');\r\nconst",
         "= require('../harness/glob-match');\r\nconst",
-        "= require('../lib/feature-completeness');\r\n\r\n\r\nconst POST_IMPLEMENTATION_STAGES = new Set(['dev', 'qa', 'tester', 'validator', 'shakedown', 'pentester']);\r\n\r\n\r\nconst SUPPORT_PATH = /(?:^|\\/)(?:__tests__|__mocks__|tests?|spec|e2e|cypress|fixtures|snapshots|__snapshots__|coverage|dist|build|out|target|vendor|node_modules)\\/|\\.(?:test|spec|stories|snap|d)\\.[cm]?[jt]sx?$|(?:^|\\/)(?:package-lock\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lockb?|Cargo\\.lock|composer\\.lock|Gemfile\\.lock|poetry\\.lock|Pipfile\\.lock|go\\.sum|packages\\.lock\\.json|\\.gitignore|\\.gitattributes|CHANGELOG\\.md)$|_test\\.go$|_spec\\.rb$|_test\\.py$|^tests?\\/|Test\\.(?:java|kt|cs|php)$/i;\r\n\r\nfunction extractIds(content, regex)",
+        "= require('../lib/feature-completeness');\r\n\r\n\r\nconst POST_IMPLEMENTATION_STAGES = new Set(['dev', 'qa', 'tester', 'validator', 'shakedown', 'pentester']);\r\n\r\n\r\nconst SUPPORT_PATH = /(?:^|\\/)(?:__tests__|__mocks__|tests?|spec|e2e|cypress|fixtures|snapshots|__snapshots__|coverage|dist|build|out|target|vendor|node_modules)\\/|\\.(?:test|spec|stories|snap|d)\\.[cm]?[jt]sx?$|(?:^|\\/)(?:package-lock\\.json|yarn\\.lock|pnpm-lock\\.yaml|bun\\.lockb?|Cargo\\.lock|composer\\.lock|Gemfile\\.lock|poetry\\.lock|Pipfile\\.lock|go\\.sum|packages\\.lock\\.json|\\.gitignore|\\.gitattributes|CHANGELOG\\.md)$|_test\\.go$|_spec\\.rb$|_test\\.py$|^tests?\\/|^(?:plans|researchs)\\/|Test\\.(?:java|kt|cs|php)$/i;\r\n\r\nfunction extractIds(content, regex)",
         "const REUSE_MARK = /^\\s*(?:reuse|reusar)\\s*:|\\s+\\((?:reuse|existing|reusar|existente)\\)\\s*$/i;\r\n\r\nfunction splitPlanCell(value)",
         "for (const item of splitPlanCell(row.files))",
         "for (const row of (completeness.implementation_delta && completeness.implementation_delta.rows) || [])",
@@ -2989,7 +2990,7 @@
       "📁",
       "🎙"
     ],
-    "em_dash_prose": 663,
+    "em_dash_prose": 664,
     "prototype_anchors": false,
     "primary_marker": false,
     "tour_marker": false,
@@ -3301,7 +3302,7 @@
       "stylesheets": 17,
       "components": 363,
       "files_total": 400,
-      "truncated": 355
+      "truncated": 363
     },
     "conformance": {
       "prototype": null,
@@ -3337,5 +3338,5 @@
     }
   },
   "exitCode": 0,
-  "measured_at": "2026-10-20T06:29:35.988Z"
+  "measured_at": "2026-10-20T17:03:03.321Z"
 }
