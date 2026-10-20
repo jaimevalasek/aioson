@@ -76,13 +76,17 @@ function summarizeWindow(window, targetDir) {
     const payload = parsePayload(event);
     switch (event.event_type) {
       case 'artifact': {
-        const file = relativePath(payload.file, targetDir);
-        // Scratch files outside the project are not project state; count them only.
-        if (file === '') outside.add(String(payload.file));
-        if (file) {
-          const at = files.indexOf(file);
-          if (at !== -1) files.splice(at, 1);
-          files.push(file);
+        // One event may carry several files (a patch tool); `file` is the first of them.
+        const touched = Array.isArray(payload.files) && payload.files.length > 0 ? payload.files : [payload.file];
+        for (const raw of touched) {
+          const file = relativePath(raw, targetDir);
+          // Scratch files outside the project are not project state; count them only.
+          if (file === '') outside.add(String(raw));
+          if (file) {
+            const at = files.indexOf(file);
+            if (at !== -1) files.splice(at, 1);
+            files.push(file);
+          }
         }
         break;
       }

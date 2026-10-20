@@ -833,10 +833,13 @@ aioson update . --no-hooks
 
 aioson hooks:install . --agent=dev --tool=claude            # instalar depois
 aioson hooks:install . --agent=dev --tool=claude --no-guard # só telemetria
+aioson hooks:install . --agent=dev --tool=codex             # hooks nativos do Codex em ~/.codex/hooks.json (confirme uma vez com /hooks)
+aioson hooks:install . --agent=dev --tool=opencode          # plugin em ~/.config/opencode/plugins/aioson.js (reinicie o OpenCode)
+aioson hooks:install . --agent=dev --tool=all               # tudo que estiver instalado na máquina
 aioson hooks:uninstall . --tool=claude                      # remover
 ```
 
-A ferramenta-alvo vem do `--tool` quando ele nomeia `claude`, `codex` ou `antigravity`; caso contrário o instalador detecta o que existe na máquina. Falha na instalação dos hooks nunca derruba o comando. Detalhes em [Hooks e Session Guard](./hooks-session-guard.md).
+A ferramenta-alvo vem do `--tool` quando ele nomeia `claude`, `codex`, `opencode` ou `antigravity`; caso contrário o instalador detecta o que existe na máquina. Falha na instalação dos hooks nunca derruba o comando. Detalhes em [Hooks e Session Guard](./hooks-session-guard.md).
 
 ### 3. Atualizar sem perder contexto
 

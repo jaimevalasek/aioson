@@ -34,17 +34,88 @@ const { recordAgentActivation } = require('../lib/agent-activation');
 
 const HOOKS_EMIT_VERSION = '1';
 
-// Tool name → event_type mapping
+// Tool name → event_type mapping. `apply_patch` and `update_plan` are Codex's
+// file-edit and plan tools (its hooks report them under those names).
 const TOOL_EVENT_MAP = {
   Write: 'artifact',
   Edit: 'artifact',
   MultiEdit: 'artifact',
+  apply_patch: 'artifact',
   Bash: 'step_done',
   Task: 'note',
   TodoWrite: 'note',
+  update_plan: 'note',
   WebSearch: 'note',
   WebFetch: 'note'
 };
+
+// File headers of an apply_patch body: `*** Add File: path`, `*** Update File: path`, `*** Delete File: path`.
+const PATCH_FILE_RE = /^\*\*\* (?:Add|Update|Delete) File: (.+?)\s*$/gm;
+
+/** Files an apply_patch call touches, in order, from whichever input field holds the patch. */
+function patchFiles(input) {
+  const text = [input.patch, input.input, input.content, ...Object.values(input || {})]
+    .find((value) => typeof value === 'string' && value.includes('*** Begin Patch')) || '';
+  const files = [];
+  for (const match of text.matchAll(PATCH_FILE_RE)) {
+    if (!files.includes(match[1])) files.push(match[1]);
+  }
+  return files;
+}
+
+/** The exit code a harness reports inside tool_response, when it reports one. */
+function responseExitCode(response) {
+  if (!response || typeof response !== 'object') return undefined;
+  return [response.exit_code, response.exitCode, response.exit].find((value) => Number.isInteger(value));
+}
+
+/** Outcome and summary line of a shell command, from the hook that reported it. */
+function bashOutcome(hookEvent, payload) {
+  const extra = {};
+  const response = payload.tool_response || {};
+  if (hookEvent === 'PostToolUseFailure') {
+    // Claude Code: a non-zero exit fires PostToolUseFailure with `error` ("Exit code N\n…").
+    if (!payload.is_interrupt) {
+      extra.outcome = 'failed';
+      const exit = /^Exit code \d+/.exec(String(payload.error || ''));
+      extra.result = resultLine(payload.error) || (exit ? exit[0] : null);
+    }
+  } else if (typeof response === 'string') {
+    // A harness that hands over the raw output: the summary line, no verdict.
+    extra.result = resultLine(response);
+  } else if (typeof response === 'object' && response && !response.interrupted) {
+    // Codex has no PostToolUseFailure: a failing command arrives as PostToolUse
+    // with its exit code, and its output may sit under `output`, not `stdout`.
+    const exitCode = responseExitCode(response);
+    const line = resultLine(response.stdout != null ? response.stdout : response.output, response.stderr);
+    if (Number.isInteger(exitCode) && exitCode !== 0) {
+      extra.outcome = 'failed';
+      extra.result = line || `Exit code ${exitCode}`;
+    } else {
+      extra.outcome = 'passed';
+      extra.result = line;
+    }
+  }
+  if (!extra.result) delete extra.result;
+  return extra;
+}
+
+/** Codex edits files through one patch tool; the files are in the patch text. */
+function patchArtifact(input) {
+  const files = patchFiles(input);
+  return {
+    filePath: files[0] || null,
+    message: files.length ? `apply_patch: ${files.map((file) => path.basename(file)).join(', ')}` : 'apply_patch',
+    extra: files.length > 1 ? { files } : {}
+  };
+}
+
+/** Codex's update_plan steps, summarized like a TodoWrite list. */
+function planUpdate(input) {
+  const steps = Array.isArray(input.plan) ? input.plan : [];
+  const summary = taskListMessage(steps.map((step) => ({ content: step && step.step, status: step && step.status })));
+  return { message: summary || 'Plan updated', eventTypeOverride: summary ? 'plan_updated' : null };
+}
 
 // Tools to skip — too noisy, no meaningful event
 const SKIP_TOOLS = new Set(['Read', 'Glob', 'Grep', 'LS', 'NotebookRead', 'mcp__']);
@@ -194,7 +265,7 @@ function buildEventFromPayload(payload, source) {
   let message = `[${source}] ${toolName}`;
   let filePath = null;
   let eventTypeOverride = null;
-  const extra = {};
+  let extra = {};
 
   if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit') {
     filePath = input.file_path || input.path || null;
@@ -202,21 +273,11 @@ function buildEventFromPayload(payload, source) {
   } else if (toolName === 'Bash') {
     const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
     message = cmd ? `$ ${cmd}` : 'Bash';
-    // PostToolUse fires only on success; a non-zero exit fires
-    // PostToolUseFailure with `error` ("Exit code N\n…").
-    const response = payload.tool_response || {};
-    if (hookEvent === 'PostToolUseFailure') {
-      if (!payload.is_interrupt) {
-        extra.outcome = 'failed';
-        const exit = /^Exit code \d+/.exec(String(payload.error || ''));
-        extra.result = resultLine(payload.error) || (exit ? exit[0] : null);
-      }
-    } else if (typeof response === 'object' && response && !response.interrupted) {
-      extra.outcome = 'passed';
-      const line = resultLine(response.stdout, response.stderr);
-      if (line) extra.result = line;
-    }
-    if (!extra.result) delete extra.result;
+    extra = bashOutcome(hookEvent, payload);
+  } else if (toolName === 'apply_patch') {
+    ({ filePath, message, extra } = patchArtifact(input));
+  } else if (toolName === 'update_plan') {
+    ({ message, eventTypeOverride } = planUpdate(input));
   } else if (toolName === 'Task') {
     const desc = String(input.description || input.prompt || '').slice(0, 80);
     message = desc || 'Task launched';

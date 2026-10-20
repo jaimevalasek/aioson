@@ -10,10 +10,12 @@
  * plan, continuity notes. Any other SessionStart (startup, resume, clear)
  * answers `{}`.
  *
- * Harnesses without a post-compaction hook (Codex, OpenCode) get the same
- * checkpoint on demand: `--when=always` skips the hook payload and the
- * compaction gate, and the text output is what their kernels read right after
- * `/compact`. The data layer is the same; only the door differs.
+ * Codex's SessionStart hook (matcher `compact`) speaks the same payload and
+ * envelope. OpenCode has no shell hook: its AIOSON plugin calls
+ * `--when=always --json` around a compaction and reads the bare context. The
+ * same flag, as text, is the on-demand door a kernel uses right after
+ * `/compact` when no hook is installed. The data layer is the same; only the
+ * door differs.
  *
  * Like context:guard it answers on the hook's stdout channel, so every failure
  * is an empty injection, never a non-hook envelope — it must never block.
@@ -31,15 +33,15 @@ const { readStdin } = require('./hooks-emit');
 const MAX_EVENTS = 2000;
 const WHEN_VALUES = ['compact', 'always'];
 
-// Tools with a Claude-style SessionStart hook get its envelope (the default,
-// so a harness that copies that format keeps working); the ones that call on
-// demand get the bare context.
+// Tools with a Claude-style SessionStart hook — Claude Code, Codex, and by
+// default any harness that copies that format — get its envelope; the
+// OpenCode plugin, which calls on demand, gets the bare context.
 function formatForTool(tool, additionalContext) {
   switch (tool) {
-    case 'codex':
     case 'opencode':
       return { additionalContext };
     case 'claude':
+    case 'codex':
     default:
       return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext } };
   }
@@ -137,4 +139,4 @@ async function runHooksRecap({ args, options = {}, logger }) {
   return { ok: true, injected: Boolean(context) };
 }
 
-module.exports = { runHooksRecap, buildRecapResponse, WHEN_VALUES };
+module.exports = { runHooksRecap, buildRecapResponse, formatForTool, WHEN_VALUES };

@@ -42,7 +42,7 @@ Nesse caso a saída avisa: `Hooks ignorados (--no-hooks). Instale depois com: ai
 Três detalhes que valem saber:
 
 - **Falha em hook nunca derruba o comando.** Se a instalação dos hooks falhar, o `init`/`install`/`update` continua e imprime `Falha ao instalar hooks (nao bloqueia)`.
-- **A ferramenta-alvo vem do `--tool`.** Se você passou `--tool=claude`, `--tool=codex` ou (para hooks) `antigravity`, os hooks vão para essa ferramenta. Sem `--tool` reconhecido, o instalador detecta o que existe na máquina e configura tudo que encontrar.
+- **A ferramenta-alvo vem do `--tool`.** Se você passou `--tool=claude`, `--tool=codex`, `--tool=opencode` ou (para hooks) `antigravity`, os hooks vão para essa ferramenta. Sem `--tool` reconhecido, o instalador detecta o que existe na máquina e configura tudo que encontrar.
 - **O `update` também reinstala.** É exatamente ao atualizar um projeto antigo que a camada de hooks costuma estar faltando.
 
 Por que o padrão é instalar: as regras do projeto em `.aioson/rules/` só chegam de fato no momento da escrita quando o `context:guard` está ativo. Sem ele, uma regra depende do agente ter carregado o contexto certo antes.
@@ -52,7 +52,7 @@ Por que o padrão é instalar: as regras do projeto em `.aioson/rules/` só cheg
 ## Como funciona
 
 ```
-Claude Code / Antigravity / Codex
+Claude Code / Antigravity / Codex (hooks nativos) / OpenCode (plugin)
   └─ agente VAI escrever src/cart.ts  (PreToolUse: Write)
        └─ hook dispara → aioson context:guard
             └─ deriva uma query do próprio arquivo (nome + conteúdo)
@@ -75,7 +75,7 @@ Claude Code / Antigravity / Codex
        └─ hook dispara → aioson agent:done
             └─ fecha a run, registra completion
 
-  └─ conversa vai ser compactada  (PreCompact, só Claude Code)
+  └─ conversa vai ser compactada  (PreCompact: Claude Code e Codex; no OpenCode, o plugin)
        └─ hook dispara → aioson hooks:emit
             └─ grava o marcador "compaction" na sessão
 
@@ -94,7 +94,7 @@ O `session:guard` é opcional — o `hooks:emit` já inicia a sessão automatica
 
 A compactação troca a conversa por um resumo que o próprio modelo escreve, e são justamente os detalhes para continuar (arquivos tocados, teste que ainda falha, onde o plano parou) que um resumo perde. Pedir ao agente que anote isso antes é uma instrução em prosa, que perde para a vontade de seguir trabalhando. Os hooks já gravam esses fatos enquanto acontecem; por isso o checkpoint é remontado dos eventos, nunca do modelo. O texto injetado tem no máximo 2.000 caracteres, só linhas inteiras, e vem rotulado como dado gravado (verifique antes de confiar). Um comando que falhou e depois passou não aparece como falhando. Para ver o que seria injetado: `echo '{"source":"compact"}' | aioson hooks:recap .`.
 
-Codex e OpenCode não têm hook pós-compactação, então os kernels deles (`AGENTS.md`, `OPENCODE.md`) mandam o agente rodar `aioson hooks:recap . --when=always` logo depois do `/compact`: a mesma remontagem, impressa em texto (com `--source=codex|opencode --json` vem como `{"additionalContext": …}`). O que entra nesse checkpoint é o que o projeto gravou sem hooks: feature, fase e próximo passo do registro, `continuity.md` e os eventos que os agentes reportam por `runtime:emit`. No Claude Code sem hooks instalados o mesmo comando vale. O `hooks:recap` lê só a sessão em que os hooks escrevem (a do `live:start` ou a que o `hooks:emit` abre sozinho); a run própria de um agente oficial não é lida.
+No Codex o caminho é o mesmo: `PreCompact` grava o marcador e o `SessionStart` com matcher `compact` injeta o envelope. No OpenCode o plugin faz as duas pontas: antes da compactação o checkpoint entra no prompt do resumo, e no primeiro turno depois dela entra no system prompt (`hooks:recap --when=always --json`, que para `--source=opencode` responde `{"additionalContext": …}` sem envelope). Sem hook instalado, os kernels `AGENTS.md`/`OPENCODE.md` mandam o agente rodar `aioson hooks:recap . --when=always` logo depois do `/compact` — a mesma remontagem, em texto; com hook, a repetição é inofensiva (o mesmo texto, no máximo 2.000 caracteres). O `hooks:recap` lê só a sessão em que os hooks escrevem (a do `live:start` ou a que o `hooks:emit` abre sozinho); a run própria de um agente oficial não é lida.
 
 ---
 
@@ -383,9 +383,9 @@ Com Antigravity, a sessão é aberta no `SessionStart` (limpo) e fechada no `Ses
 
 ## Passo a passo: Codex (OpenAI)
 
-Codex CLI **não tem sistema de hooks nativo**. A solução é um wrapper shell que envolve o comando `codex`.
+O Codex CLI tem hooks nativos no mesmo formato do Claude Code (`hooks.json` com os eventos sob `hooks`, grupos por `matcher`, handlers `command`), com os mesmos campos no stdin e o mesmo envelope `hookSpecificOutput` na resposta. O `aioson hooks:install --tool=codex` escreve em `~/.codex/hooks.json`, preservando os hooks que já estavam lá.
 
-### 1. Gerar o wrapper
+### 1. Instalar
 
 ```bash
 aioson hooks:install . --agent=dev --tool=codex
@@ -396,40 +396,92 @@ Saída:
 ```
 Hooks Install — agent: @dev
 ──────────────────────────────────────────────────
-  ✓ Codex wrapper — /home/user/.codex/aioson-wrapper.sh
-  ⚠ Codex has no native hooks. Add this to ~/.bashrc:
-    alias codex='/home/user/.codex/aioson-wrapper.sh'
-  Or rename: mv $(which codex) $(which codex)-bin
+  ✓ Codex — /home/user/.codex/hooks.json
+  ⚠ Codex runs a new or changed hook only after you trust it: open Codex and run /hooks once (automation may pass --dangerously-bypass-hook-trust).
 ```
 
-### 2. Ativar o wrapper
+### 2. Confiar nos hooks (uma vez)
 
-**Opção A — Alias (recomendado):**
+O Codex só executa um hook novo ou alterado depois que você o revisa: a confiança é gravada pelo hash da definição. Abra o Codex, rode `/hooks`, confira as entradas `aioson …` e confirme. Ao reinstalar com outro agente o hash muda e a revisão volta a ser pedida; automação que já valida o arquivo pode usar `codex --dangerously-bypass-hook-trust`.
+
+### 3. O que é configurado
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "apply_patch|Bash|update_plan",
+      "hooks": [{ "type": "command", "timeout": 30, "statusMessage": "AIOSON: recording",
+                  "command": "aioson hooks:emit \"$PWD\" --agent='dev' --source='codex' 2>/dev/null || true",
+                  "commandWindows": "aioson hooks:emit . --agent=dev --source=codex" }]
+    }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "timeout": 30, "command": "aioson hooks:emit …", "commandWindows": "…" }] }],
+    "Stop":             [{ "hooks": [{ "type": "command", "timeout": 30, "command": "aioson hooks:emit …", "commandWindows": "…" }] }],
+    "PreCompact":       [{ "hooks": [{ "type": "command", "timeout": 30, "command": "aioson hooks:emit …", "commandWindows": "…" }] }],
+    "SessionStart": [{
+      "matcher": "compact",
+      "hooks": [{ "type": "command", "timeout": 30, "statusMessage": "AIOSON: restoring the session checkpoint",
+                  "command": "aioson hooks:recap \"$PWD\" --agent='dev' --source='codex' --json 2>/dev/null || true",
+                  "commandWindows": "aioson hooks:recap . --agent=dev --source=codex --json" }]
+    }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "timeout": 20, "command": "aioson agent:done …", "commandWindows": "…" }] }]
+  }
+}
+```
+
+`commandWindows` é o handler que o Codex executa no Windows, onde `"$PWD"` e `|| true` não existem; o `hooks:emit` resolve a raiz do projeto a partir do diretório atual.
+
+### 4. Diferenças em relação ao Claude Code
+
+| | Claude Code | Codex |
+|---|---|---|
+| Edição de arquivo | `Write`/`Edit`/`MultiEdit` com `file_path` | tool `apply_patch`; o `hooks:emit` lê os cabeçalhos `*** Update File:` do patch e registra cada arquivo |
+| Comando que falha | `PostToolUseFailure` com `error` | chega como `PostToolUse` com o código de saída em `tool_response` |
+| Plano | `TodoWrite` | `update_plan` (mesmo resumo "Tarefas: N de M feitas") |
+| Fim de sessão | `Stop` → `agent:done` | `SessionEnd` → `agent:done`; `Stop` só grava a última mensagem |
+| Guard de regras (`PreToolUse`) | sim | não — a entrada do `apply_patch` é um patch, não um arquivo |
+| Checkpoint pós-`/compact` | `PreCompact` + `SessionStart(compact)` | idem, mesmo envelope |
+
+O wrapper shell das versões anteriores (`~/.codex/aioson-wrapper.sh`) é removido na instalação; tire o alias do seu `.bashrc` se tiver adicionado.
+
+---
+
+## Passo a passo: OpenCode
+
+O OpenCode não tem hooks de shell: ele carrega plugins JavaScript de `~/.config/opencode/plugins/` ao iniciar e chama os hooks que cada plugin devolve. O `aioson hooks:install --tool=opencode` escreve o plugin `aioson.js` nessa pasta e nunca sobrescreve um arquivo que não seja dele.
+
+### 1. Instalar e reiniciar
 
 ```bash
-echo "alias codex='~/.codex/aioson-wrapper.sh'" >> ~/.bashrc
-source ~/.bashrc
+aioson hooks:install . --agent=dev --tool=opencode
 ```
 
-**Opção B — Rename:**
+Saída:
+
+```
+Hooks Install — agent: @dev
+──────────────────────────────────────────────────
+  ✓ OpenCode plugin — /home/user/.config/opencode/plugins/aioson.js
+  ⚠ OpenCode loads plugins at startup: restart it to pick the plugin up.
+```
+
+### 2. O que o plugin faz
+
+| Hook do OpenCode | O que o AIOSON grava |
+|---|---|
+| `tool.execute.after` (`write`, `edit`, `patch`, `bash`, `todowrite`, `task`) | `hooks:emit` no mesmo formato do `PostToolUse` do Claude Code; um `bash` com `exit` diferente de 0 vira comando falhando |
+| `chat.message` | o prompt — `/dev` ou `@dev` registra o agente ativado |
+| `experimental.text.complete` | a resposta do agente, como alegação dele |
+| `experimental.session.compacting` | marcador `compaction` e o checkpoint do `hooks:recap` anexado ao prompt do resumo |
+| `session.compacted` → `experimental.chat.system.transform` | o mesmo checkpoint injetado no system prompt do primeiro turno depois da compactação, uma vez |
+
+O plugin só age em pastas que têm um projeto AIOSON (`.aioson/config.md` ou equivalente); em outros projetos não dispara processo nenhum. Cada chamada tem limite de 15 s e nunca lança erro para dentro do OpenCode. Se o `aioson` não estiver no PATH do OpenCode, defina `AIOSON_BIN` (por exemplo `node /caminho/sem/espacos/bin/aioson.js`).
+
+### 3. Remover
 
 ```bash
-mv $(which codex) $(which codex)-bin
-cp ~/.codex/aioson-wrapper.sh $(which codex)-bin/../codex
-chmod +x $(which codex)-bin/../codex
+aioson hooks:uninstall . --tool=opencode
 ```
-
-### 3. O que o wrapper faz
-
-```bash
-# Quando você roda: codex "implemente o cart"
-# O wrapper executa:
-aioson live:start "$PWD" --agent=dev --tool=codex --no-launch  # abre sessão
-codex-bin "implemente o cart"                                   # roda Codex
-aioson agent:done "$PWD" --agent=dev --summary="..."           # fecha sessão
-```
-
-**Limitação:** sem hooks nativos, não há eventos intermediários (só abertura e fechamento de sessão). Para eventos durante a sessão com Codex, use `devlog:watch` em paralelo. Depois de um `/compact`, o checkpoint volta por `aioson hooks:recap . --when=always` — o kernel `AGENTS.md` já instrui o agente a rodar isso.
 
 ---
 
@@ -440,15 +492,19 @@ aioson agent:done "$PWD" --agent=dev --summary="..."           # fecha sessão
 aioson hooks:install . --agent=dev --tool=all
 ```
 
-Saída se Claude Code e Antigravity estiverem instalados:
+Saída com os quatro instalados:
 
 ```
-Detected tools: claude, antigravity
+Detected tools: claude, antigravity, codex, opencode
 Hooks Install — agent: @dev
 ──────────────────────────────────────────────────
   ✓ Claude Code — /home/user/.claude/settings.json
   ✓ Antigravity global — /home/user/.gemini/antigravity/hooks.json
   ✓ Antigravity workspace — .agents/hooks.json
+  ✓ Codex — /home/user/.codex/hooks.json
+  ⚠ Codex runs a new or changed hook only after you trust it: open Codex and run /hooks once (automation may pass --dangerously-bypass-hook-trust).
+  ✓ OpenCode plugin — /home/user/.config/opencode/plugins/aioson.js
+  ⚠ OpenCode loads plugins at startup: restart it to pick the plugin up.
 ```
 
 ---

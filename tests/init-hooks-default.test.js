@@ -66,7 +66,7 @@ test('init installs hooks by default and forwards the project dir and tool', asy
   }
 });
 
-test('a prompt-only tool falls back to auto-detection instead of an unsupported hooks target', async () => {
+test('every init tool has its own hooks installer now; a tool without one falls back to auto-detection', async () => {
   const tempDir = await makeTempDir();
   const originalCwd = process.cwd();
   process.chdir(tempDir);
@@ -79,16 +79,20 @@ test('a prompt-only tool falls back to auto-detection instead of an unsupported 
 
   try {
     const { t } = createTranslator('en');
-    // opencode is a valid --tool for prompts but has no hook installer.
+    // opencode used to be prompt-only; its plugin adapter makes it a hooks target.
     await runInit({
       args: ['demo-detect'],
       options: { tool: 'opencode' },
       logger: createCollectLogger(),
       t
     });
-
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].options.tool, 'all');
+    assert.equal(calls[0].options.tool, 'opencode');
+
+    // A prompt-only host still resolves to machine auto-detection.
+    await hooksInstall.installDefaultHooks({ targetDir: tempDir, options: { tool: 'cursor' }, logger: createCollectLogger(), t });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].options.tool, 'all');
   } finally {
     restore();
     process.chdir(originalCwd);
