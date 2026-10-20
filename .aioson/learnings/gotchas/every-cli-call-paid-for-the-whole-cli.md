@@ -17,9 +17,9 @@ Cada agente do ciclo roda ~60 chamadas do CLI por feature, e todo hook (`hooks:e
 
 ## O que impede agora
 
-- Cada binding vira `lazy(() => require('./commands/x'), [names])`: o módulo carrega na primeira chamada. O `require` literal fica (o grafo da análise estática e os testes que leem o `cli.js` continuam vendo). Medido: `--version` 601 → 159 ms, `context:validate` 482 → 80 ms.
+- Cada binding vira `lazy(() => { const { runX } = require('./commands/x'); return { runX }; })`: o módulo carrega na primeira chamada e a destruturação no `require` deixa o fallow e o `audit:code` verem quais exports estão em uso — a primeira forma, `lazy(() => require(x), [names])`, lia como "todos os exports usados" e escondeu 104 exports mortos do gate estático (revisão do mesmo dia). `quality.js` também carrega cada módulo só na própria chamada: `isQualityCommand` roda para 237 comandos. Medido: `--version` 601 → 159 ms, `context:validate` 482 → 80 ms.
 - `op:list --titles-only` sai compacto, sem campos vazios, datas em dia: −36,7% (522 itens: 180 → 114 KB).
 
 ## Regra de bolso
 
-Comando novo entra no `cli.js` pelo `lazy(...)`, nunca por `require` no topo. Saída que todo agente lê no início da sessão é orçamento: meça bytes no store real (não no de teste) e trate crescimento sem teto como bug. Ainda aberto (decisão do dono): limitar quantas decisões o recall de início de sessão lista.
+Comando novo entra no `cli.js` pelo `lazy(...)` com destruturação no `require`, nunca por `require` no topo nem por `() => require(x)` nu; `tests/cli-lazy-command-modules.test.js` pina o que `--version` e `observation:list` carregam. Saída que todo agente lê no início da sessão é orçamento: meça bytes no store real (não no de teste) e trate crescimento sem teto como bug — o recall virou uma cabeça de 40 (este projeto, proibições antes de permissões, frescor), com `total`/`omitted` e `--match` para o resto.
