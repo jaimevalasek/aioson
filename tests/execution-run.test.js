@@ -137,6 +137,10 @@ function fakeAdapter(host, { script = {}, delayMs = 25, log = [] } = {}) {
         await fs.mkdir(path.dirname(file), { recursive: true });
         await fs.appendFile(file, `// ${key} early ${crypto.randomUUID()}\n`, 'utf8');
       }
+      // `until`: the role lasts until another unit reaches a point (capped),
+      // then its usual delay — an overlap asserted by event, never by a delay
+      // a loaded machine outruns.
+      if (behaviour.until) await Promise.race([behaviour.until, new Promise((resolve) => setTimeout(resolve, behaviour.until_cap_ms ?? 10000))]);
       await new Promise((resolve) => setTimeout(resolve, behaviour.delay_ms ?? delayMs));
       if (behaviour.silence_ms) await new Promise((resolve) => setTimeout(resolve, behaviour.silence_ms));
       for (const rel of behaviour.touch || []) {
@@ -1111,7 +1115,14 @@ const entry = (fakes, key) => fakes.log.find(item => item.key === key);
 
 test('lanes scheduling: a slow review in one lane never holds the next unit of the other lane', async (t) => {
   const ctx = await setup(t, { plan: LANES_PLAN, roles: lanesRoles({ scheduling: 'lanes' }) });
-  const fakes = adapters({ 'qa:phase-1a-frontend': { delay_ms: 600 } });
+  // The frontend review lasts until backend wave 2 starts (10 s cap): a fixed
+  // 600 ms let the backend's own pipeline outlast it on a loaded 4-CPU runner.
+  let backendStarted;
+  const started = new Promise((resolve) => { backendStarted = resolve; });
+  const fakes = adapters({
+    'dev:phase-2a-backend': () => { backendStarted(); return {}; },
+    'qa:phase-1a-frontend': { until: started }
+  });
   const result = await run(ctx, { registry: fakes.registry });
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.status, 'completed');

@@ -6,5 +6,6 @@ module.exports = [
   'tests/quality-audit-regressions.test.js',
   'tests/quality-pipeline.test.js',
   'tests/quality-evals.test.js',
-  'tests/quality-agent.test.js'
+  'tests/quality-agent.test.js',
+  'tests/quality-bench.test.js'
 ];

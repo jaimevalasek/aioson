@@ -967,8 +967,10 @@ async function collectGitSnapshot(targetDir) {
 function formatDuration(startedAt, closedAt) {
   if (!startedAt || !closedAt) return null;
   const ms = Date.parse(closedAt) - Date.parse(startedAt);
-  if (!Number.isFinite(ms) || ms < 0) return null;
-  const seconds = Math.floor(ms / 1000);
+  if (!Number.isFinite(ms)) return null;
+  // A clock stepped back between start and close (NTP, a VM resync) is a
+  // zero-length session, not a session without a duration.
+  const seconds = Math.floor(Math.max(0, ms) / 1000);
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;

@@ -2747,16 +2747,21 @@ async function runExecution({
     };
     const writing = (id) => {
       const u = state.units[id];
-      if (!u || !running.has(id)) return false;
-      return u.status === 'pending' || u.status === 'running' || u.qa?.status === 'running';
+      if (!u || !(running.has(id) || launching.has(id))) return false;
+      // A review whose DEV just passed is still a writer until it claims its
+      // slot or parks: between the two, nothing released the files it may fix.
+      return u.status === 'pending' || u.status === 'running' || u.qa?.status === 'running'
+        || (u.status === 'passed' && u.qa?.status === 'pending' && !u.waiting);
     };
+    const writersSharing = (unitId) => [...new Set([...running.keys(), ...launching])]
+      .filter((other) => other !== unitId && writing(other) && sharesFiles(other, unitId));
     // The check and the claim run in one synchronous step, so two reviews (or a
     // review and a launch) can never both see the slot free.
     const claimWriteSlot = async (unitId, claim) => {
       let announced = false;
-      while (!monitor.lost && [...running.keys()].some((other) => other !== unitId && writing(other) && sharesFiles(other, unitId))) {
+      while (!monitor.lost && writersSharing(unitId).length > 0) {
         if (!announced) {
-          const holders = [...running.keys()].filter((other) => other !== unitId && writing(other) && sharesFiles(other, unitId));
+          const holders = writersSharing(unitId);
           markWaiting(unitId, { stage: 'qa', reason: 'write_lock', holders });
           emit({ type: 'unit', role: 'qa', status: 'waiting', unit: unitId, lane: state.units[unitId].lane, wave: state.units[unitId].wave, reason: `write_lock:${holders.join(',')}` });
           await persist();
@@ -2837,6 +2842,9 @@ async function runExecution({
     };
 
     const running = new Map();
+    // Units the scheduler admitted whose launch is still awaiting the shared
+    // baseline: writers from the moment they are chosen, not from `running`.
+    const launching = new Set();
     const startedWaves = new Set();
     const completedWaves = new Set();
     const launch = async (unitId, sharedBaseline) => {
@@ -2913,8 +2921,13 @@ async function runExecution({
             starting.push(next);
           }
           if (starting.length > 0) {
-            const sharedBaseline = await gitBaseline(projectDir).catch(() => null);
-            for (const id of starting) await launch(id, sharedBaseline);
+            for (const id of starting) launching.add(id);
+            try {
+              const sharedBaseline = await gitBaseline(projectDir).catch(() => null);
+              for (const id of starting) await launch(id, sharedBaseline);
+            } finally {
+              for (const id of starting) launching.delete(id);
+            }
           }
         }
         if (running.size === 0) break;
