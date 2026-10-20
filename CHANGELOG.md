@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.74.0] - 2026-10-20
+
 ### Changed
 
 - **Every CLI call and every hook event loads only the command it runs.** `src/cli.js` required all 215 command modules up front, so `aioson --version`, each `context:brief`/`workflow:next` an agent runs (about 60 per feature) and each `hooks:emit` (one per tool call) paid for the whole CLI first — 697 of 796 ms of a hook call. Command modules now load on first call; the literal `require` stays for static analysis. Median on Windows: `--version` 601 → 159 ms, `context:validate` 482 → 80 ms, `observation:list` 550 → 179 ms, `op:list --json --titles-only` 605 → 323 ms. The whole test suite, which spawns the CLI thousands of times, went from 280 s to 123 s on a 4-CPU Linux runner.
