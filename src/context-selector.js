@@ -101,6 +101,104 @@ const SEMANTIC_SYNONYMS = new Map([
   ['sql', ['query', 'database']]
 ]);
 
+// The feature cycle in pt-BR. The routed docs carry English task types and
+// triggers, so a task phrased in pt-BR ("revisar o PRD", "planejar as fases",
+// "testar o fluxo no navegador") reached the expected doc 1 time in 10 against
+// 6 in English. Each word lends its English term to the keyword lookup; an
+// English task is untouched. Stop words never enter.
+const PT_CYCLE_TERMS = new Map([
+  ['comecar', ['start']],
+  ['iniciar', ['start']],
+  ['refinar', ['refine', 'refinement']],
+  ['refinamento', ['refinement']],
+  ['revisar', ['review']],
+  ['revisao', ['review']],
+  // `plan`, never `planning`: that word is the retrieval intent many UI rules
+  // declare, and a pt-BR planning task woke them where its English twin did not.
+  ['planejar', ['plan']],
+  ['planejamento', ['plan']],
+  ['retomar', ['resume']],
+  ['parou', ['stopped']],
+  ['medir', ['measure']],
+  ['analisar', ['analyze']],
+  ['analise', ['analysis']],
+  ['escrever', ['write']],
+  ['corrigir', ['fix']],
+  ['correcao', ['fix']],
+  ['validar', ['validate', 'validation']],
+  ['validacao', ['validation']],
+  ['aprovar', ['approve', 'approval']],
+  ['aprovacao', ['approval']],
+  ['entregar', ['deliver', 'delivery']],
+  ['entrega', ['delivery']],
+  ['fechar', ['close']],
+  ['publicar', ['publish']],
+  ['implantar', ['deploy']],
+  ['implantacao', ['deployment']],
+  ['fase', ['phase']],
+  ['plano', ['plan']],
+  ['proxima', ['next']],
+  ['proximo', ['next']],
+  ['fluxo', ['flow']],
+  ['navegador', ['browser']],
+  ['evidencia', ['evidence']],
+  ['cobertura', ['coverage']],
+  ['qualidade', ['quality']],
+  ['relatorio', ['report']],
+  ['achado', ['finding', 'findings']],
+  ['seguranca', ['security']],
+  ['vulnerabilidade', ['vulnerability']],
+  ['tamanho', ['size']],
+  ['arquivo', ['file', 'files']],
+  ['acoplamento', ['coupling']],
+  ['criterio', ['criteria']],
+  ['aceite', ['acceptance']],
+  ['aceitacao', ['acceptance']],
+  ['resposta', ['answer', 'answers']],
+  ['pergunta', ['question']],
+  ['ideia', ['idea']],
+  ['usuario', ['user']],
+  ['requisito', ['requirement']],
+  ['escopo', ['scope']],
+  ['regra', ['rule']],
+  ['tela', ['screen']],
+  ['formulario', ['form']],
+  ['rota', ['route']],
+  ['desempenho', ['performance']],
+  ['erro', ['error']],
+  ['falha', ['failure']],
+  ['dependencia', ['dependency']],
+  ['servidor', ['server']],
+  ['execucao', ['execution']],
+  ['orquestrada', ['orchestrated', 'orchestration']],
+  ['orquestracao', ['orchestration']],
+  ['conversacional', ['conversational']],
+  ['prototipo', ['prototype']],
+  ['pagamento', ['payment']],
+  ['autenticacao', ['authentication']],
+  ['permissao', ['permission']],
+  ['tabela', ['table']],
+  ['integracao', ['integration']],
+  ['documentacao', ['documentation']],
+  ['sessao', ['session']],
+  ['memoria', ['memory']],
+  ['contexto', ['context']]
+]);
+
+// `fases`, `achados`, `critérios` reach the entry of their singular.
+function cycleTermsOf(part) {
+  return PT_CYCLE_TERMS.get(part) || (part.endsWith('s') && PT_CYCLE_TERMS.get(part.slice(0, -1))) || [];
+}
+
+// `revisar o prd` also reads `review` for the task-type and trigger lookup.
+// Only the lookup: as semantic terms the same words counted twice toward a
+// doc's minimum and woke rules no English task would (measured on the corpus).
+function expandLookup(lookup) {
+  const extra = new Set();
+  for (const part of lookup.split(/\s+/)) for (const term of cycleTermsOf(part)) extra.add(term);
+  return extra.size > 0 ? `${lookup} ${[...extra].join(' ')}` : lookup;
+}
+
 const SURFACES = [
   { key: 'rules', dir: path.join('.aioson', 'rules'), recursive: true, defaultTier: 'trigger' },
   { key: 'docs', dir: path.join('.aioson', 'docs'), recursive: true, defaultTier: 'trigger' },
@@ -865,7 +963,7 @@ async function selectContext(targetDir, options = {}) {
   // like `.github/workflows/pipeline.yml` matched `workflow`/`pipeline`
   // triggers of the status-flow rule. Both still feed feature binding,
   // `paths:` globs, direct path hits and the semantic terms.
-  const lookup = normalizeToken(task);
+  const lookup = expandLookup(normalizeToken(task));
 
   const candidates = await collectCandidates(targetDir);
   const semanticEnabled = semanticSearchEnabled(options) && !activationOnly;

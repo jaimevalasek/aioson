@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "pt-BR: briefing starts from a loose idea",
+      "agent": "briefing",
+      "mode": "planning",
+      "task": "começar um briefing conversacional a partir de uma ideia solta do usuário",
+      "expect": [{ "path": ".aioson/docs/briefing/activation-and-intake.md", "in": "selected" }]
+    },
+    {
+      "name": "pt-BR: sheldon reviews the PRD before implementation",
+      "agent": "sheldon",
+      "mode": "planning",
+      "task": "revisar o PRD da feature de checkout antes de implementar",
+      "expect": [{ "path": ".aioson/docs/sheldon/quality-lens.md", "in": "selected" }]
+    },
+    {
+      "name": "pt-BR: planner cuts phases for orchestrated execution",
+      "agent": "planner",
+      "mode": "planning",
+      "task": "planejar as fases da feature para a execução orquestrada",
+      "expect": [{ "path": ".aioson/docs/planner/orchestrated-execution.md", "in": "selected" }]
+    },
+    {
+      "name": "pt-BR: tester measures test coverage quality",
+      "agent": "tester",
+      "mode": "executing",
+      "task": "medir a qualidade da cobertura de testes do app",
+      "expect": [{ "path": ".aioson/docs/tester/coverage-quality.md", "in": "selected" }]
+    },
+    {
+      "name": "pt-BR: pentester writes the findings report",
+      "agent": "pentester",
+      "mode": "planning",
+      "task": "escrever o relatório dos achados de segurança",
+      "expect": [{ "path": ".aioson/docs/pentester/reporting.md", "in": "selected" }]
+    },
+    {
+      "name": "pt-BR: a database fix in dev stays quiet on UI rules",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "corrigir o erro de conexão com o banco de dados na migração",
+      "absent": [
+        { "path": ".aioson/rules/form-fields-masks-and-validation.md", "in": "must_load" },
+        { "path": ".aioson/rules/status-flow-drag-and-drop.md", "in": "must_load" }
+      ]
+    }
+  ]
+}
