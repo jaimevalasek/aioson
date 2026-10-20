@@ -37,7 +37,7 @@ module.exports = {
     help_observation_list: 'aioson observation:list [path] [--kind=<defect|idea|process|risk|question>] [--feature=<slug>|project] [--all] [--resolved] [--json] [--locale=es]',
     help_observation_resolve: 'aioson observation:resolve [path] --id=OBS-xxxxxx --as=<fixed|planned|promoted|answered|dismissed> [--ref=<ruta del plan|slug de la feature>] [--why="..."] [--by=<quién>] [--json] [--locale=es]',
     help_hooks_recap: 'aioson hooks:recap [path] [--when=compact|always] [--agent=<agent>] [--source=claude|codex|opencode] [--session=<id>] [--max-chars=<n>] [--json] [--locale=es]',
-    help_op_list: 'aioson op:list [path] [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--titles-only] [--format=table|json] [--json] [--locale=es]',
+    help_op_list: 'aioson op:list [path] [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--match=<words>] [--limit=<n>] [--titles-only] [--format=table|json] [--json] [--locale=es]',
     help_doctor: 'aioson doctor [path] [--fix] [--dry-run] [--json] [--locale=es]',
     help_hygiene_scan: 'aioson hygiene:scan [path] [--json] [--locale=es]',
     help_evidence_prune: 'aioson evidence:prune [path] [--slug=<feature>] [--all] [--dry-run] [--json] [--locale=es]',

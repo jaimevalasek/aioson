@@ -1242,6 +1242,8 @@ aioson op:forget <slug>
 
 Every `op:*` command takes an optional `[path]` first (`aioson op:list ../client-app --json --titles-only`): the project a decision is scoped to is resolved from that path, and from the working directory only when no path is given. A decision binds the project it was said in (`scope: project`) and widens to every project when the same signal is detected in a second distinct project or when the user's own quote names every project; `op:list` lists what applies in the current project, `--all` lists every project's.
 
+`op:list --json --titles-only` is the recall every agent runs at activation, so it lists the 40 decisions ranked first — this project's, then the freshest by the decay model (reinforcements raise a decision, its category's half-life lowers it with age) — and reports `total`, `omitted` and how to reach the rest: `--match="<words>"` keeps only the decisions whose title or body shares a word, `--limit=<n>` sets the head (`0` = all).
+
 See [Operator memory](./operator-memory.md).
 
 ---

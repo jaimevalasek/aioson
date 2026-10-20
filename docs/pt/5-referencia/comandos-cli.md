@@ -118,7 +118,7 @@ O mesmo resolver é usado por `verification:plan`; nomes como `GPT 5.6 Terra`, `
 |---|---|---|
 | `op:identity show` / `set <id>` | Inspeciona ou define a identidade local do operador | Em CI, máquinas compartilhadas ou após trocar o e-mail Git |
 | `op:capture` | Registra um sinal e promove uma decisão conforme o tipo | Quando uma preferência explícita deve sobreviver às sessões |
-| `op:list` / `op:show` | Lista ou exibe decisões/proposals | Para conferir o que será carregado pelo agente |
+| `op:list` / `op:show` | Lista ou exibe decisões/proposals (`--titles-only`, o recall de cada ativação, traz as 40 mais bem ranqueadas e conta o resto; `--match="<palavras>"` e `--limit=<n>`, `0` = todas) | Para conferir o que será carregado pelo agente |
 | `op:reinforce <slug>` | Atualiza `last_reinforced` sem reescrever o corpo | Quando uma decisão arquivada continua válida |
 | `op:forget <slug>` | Move decisão ou proposal para `history/` | Para retirar uma preferência da memória ativa |
 

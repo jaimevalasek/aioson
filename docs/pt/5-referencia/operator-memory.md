@@ -83,6 +83,8 @@ aioson op:list --include-archived
 aioson op:show <slug> --json
 ```
 
+O recall de início de sessão (`aioson op:list --json --titles-only`) lista as 40 decisões mais bem ranqueadas — as deste projeto, depois as mais frescas pela meia-vida da categoria e pelos reforços — com `total` e `omitted`; `--match="<palavras da tarefa>"` encontra o resto, `--limit=0` lista todas.
+
 `MEMORY.md` é um índice pequeno; o corpo da decisão vive em `decisions/{slug}.md`. O arquivo `MEMORY-archive.md` contém decisões fora do tier ativo, e `history/` recebe itens esquecidos.
 
 ## Privacidade e limites

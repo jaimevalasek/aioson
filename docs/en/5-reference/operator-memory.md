@@ -83,6 +83,8 @@ aioson op:list --include-archived
 aioson op:show <slug> --json
 ```
 
+The session-start recall (`aioson op:list --json --titles-only`) lists the 40 decisions ranked first — this project's, then the freshest by category half-life and reinforcements — with `total` and `omitted`; `--match="<task words>"` finds the rest, `--limit=0` lists all.
+
 `MEMORY.md` is a small index; the decision body lives in `decisions/{slug}.md`. `MEMORY-archive.md` holds decisions outside the active tier, and `history/` receives forgotten items.
 
 ## Privacy and limits
