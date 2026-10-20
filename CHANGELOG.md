@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.75.0] - 2026-10-20
+
 ### Fixed
 
 - **The CLI's lazy loading no longer drags the quality subsystem into two thirds of the commands, and the static gate sees dead exports in the command modules again.** `isQualityCommand` was itself a lazy binding over a module that required `quality-audit`, `quality-run`, `quality-evals` and `quality-bench` at load, so the 237 commands dispatched after that branch — every `hooks:emit`, `agent:done`, `op:list`, `observe`/`observation:*`, `feature:*` and every unknown command — loaded about 30 modules before their own, and a quality module that failed to load broke all of them, against the 1.74.0 claim that a broken module breaks only its own command (`hooks:emit` median 153 → 136 ms). Each quality handler now requires its module on its own call. The `lazy(() => require(x), [names])` shape also read as "every export used" to fallow and to `audit:code`'s dead-import scan: 104 unused exports in `src/commands/*` vanished from the static gate and the 1.74.0 baseline counted them as resolved. Every loader now destructures the names it binds at the `require`, the baseline is re-recorded with those findings as debt, and a spawn test pins that `--version` loads no command module and `observation:list` no quality module.
