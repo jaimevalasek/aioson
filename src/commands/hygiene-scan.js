@@ -11,7 +11,7 @@ const { heavyEvidenceArtifacts } = require('../lib/evidence-artifacts');
 const { triageFeatures, findingsOf } = require('../lib/feature-lifecycle');
 const { canonicalStatus } = require('../lib/feature-registry');
 const { storageHygieneItems } = require('../lib/storage-footprint');
-const { staleObservations } = require('../lib/observations');
+const { staleObservations, unreadableStore } = require('../lib/observations');
 
 const REVIEW_PREFIXES = new Set(['qa-report', 'security-findings']);
 const GLOBAL_REVIEW_SLUGS = new Set(['project', 'test-coverage']);
@@ -497,6 +497,8 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
   // Observations nobody settled: a cracked tile reported a month ago and
   // still open is the owner's to plan or dismiss, not the hub's to keep.
   const staleObservationItems = await staleObservations(targetDir).catch(() => []);
+  // A store no surface can read shows "no observation" everywhere: name it.
+  const unreadableObservationStore = await unreadableStore(targetDir).catch(() => []);
 
   const buckets = {
     pending_chain_noises: chainNoises.pending,
@@ -512,7 +514,8 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
     orphan_slug_artifacts: orphanSlugArtifacts,
     heavy_evidence_artifacts: evidenceArtifacts,
     disk_footprint: diskFootprint,
-    stale_observations: staleObservationItems
+    stale_observations: staleObservationItems,
+    unreadable_observations: unreadableObservationStore
   };
   const result = {
     ok: true,

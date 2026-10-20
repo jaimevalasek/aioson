@@ -31,18 +31,18 @@ One call, from any agent, the moment it is noticed:
 aioson observe . --kind=<defect|idea|process|risk|question> --summary="<one line, domain words>" [--paths=a,b] [--detail="..."] [--feature=<slug>] [--agent=<self>]
 ```
 
-The feature defaults to the active one, the agent to the active one. The same summary observed again raises its `seen` count instead of duplicating; a settled item observed again reopens, with the earlier outcome kept as history. Secrets are redacted on write. Then continue the current work: do not fix it, do not widen the scope, do not ask the owner mid-task unless it blocks you.
+The feature defaults to the active one (an explicit `--feature` must be a slug; a done or abandoned feature binds nothing), the agent to the active one. The same summary observed again raises its `seen` count instead of duplicating (and never binds it to a feature: only the first record does); a settled item observed again reopens, with the earlier outcome kept as history. An open item of the same kind on the same paths, or in near-identical words, is named as `possibly already on record: OBS-x` — if it is the same thing, record it again with that item's exact summary. Secrets are redacted on write. Then continue the current work: do not fix it, do not widen the scope, do not ask the owner mid-task unless it blocks you.
 
 ## Where it surfaces
 
 - `aioson workflow:status .` → `Open observations: N (defect 2, idea 1), 1 stale` and `openObservations` in `--json`; @neo prints the same line in its dashboard. This is the owner's triage fan.
-- `aioson context:brief . --agent=<you>` → `Open observations for you (N)`: the open items whose kind addresses your agent (defect/risk → dev, qa, tester, planner, pentester; idea → product, briefing, refiner, sheldon; question → the feature chain) and that belong to your feature, to no feature, or to the paths you passed.
-- `aioson workflow:next .` → `[Observations] N open for @<next>` on the handoff, so the next stage inherits them.
-- `aioson feature:close .` → open items bound to the closed feature are carried to the project hub (`origin_feature` kept), never deleted; `--preflight` lists what would be carried.
-- `aioson hygiene:scan .` → `stale_observations`: open for 30 days or more.
-- After `/compact`, the session recap lists the observations touched in the last 24 hours, so you neither re-report nor "fix from memory".
+- `aioson context:brief . --agent=<you>` (and `context:select`, where @briefing and @refiner start) → `Open observations for you (N)`: the open items whose kind addresses your agent (defect → dev, qa, tester, quality, planner; risk → the same plus pentester and sheldon; idea → product, briefing, refiner, sheldon; question → refiner, product, sheldon, planner, dev, qa, tester) and that belong to your feature (the active one when you pass none), to the paths you passed, or to no feature — in that order, newest first, at most five, with `+N more` when there are others. An item bound to a done or abandoned feature counts as project-wide. The feature's answered questions follow, labelled `answered` with their answer, until the feature closes.
+- `aioson workflow:next .` → `[Observations] N open for @<next>` on the handoff, so the next stage inherits them; `agent:done` prints the same block when it advances the stage, and `agent:prompt` carries the agent's share inside the prompt it hands an external client.
+- `aioson feature:close .` → on an accepting verdict, open items bound to the closed feature are carried to the project hub (`origin_feature` kept), never deleted; a FAIL close leaves them bound while the feature is corrected. `--preflight` lists what would be carried, or says the store is unreadable.
+- `aioson hygiene:scan .` → `stale_observations`: open for 30 days or more; `unreadable_observations`: the store itself when no surface can read it.
+- After `/compact`, the session recap lists the observations touched in the last 24 hours — open ones first, then the settled ones — so you neither re-report nor "fix from memory".
 
-`aioson observation:list . [--kind=<kind>] [--feature=<slug>|project] [--all]` prints the whole fan grouped by kind, each with its next step.
+`aioson observation:list . [--kind=<kind>] [--feature=<slug>|project] [--all|--resolved]` prints the whole fan grouped by kind, each with its next step; it exits 1 when the store is unreadable — repair the file or rename it aside (the next `observe` starts a fresh store), never delete it.
 
 ## How it is settled
 
@@ -56,7 +56,7 @@ aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answer
 - `answered` — the question has its answer in `--why`, where the stage that needs it reads it.
 - `dismissed` — `--why` records the reason; a dismissed item that is observed again reopens.
 
-The owner settles; an agent settles only what it was authorized to fix or plan. A reference that does not exist is refused: an outcome recorded against nothing is how an item gets lost while "handled".
+The owner settles; an agent settles only what it was authorized to fix or plan. `--by` defaults to `AIOSON_AGENT`, else `owner`. A reference that does not exist is refused — a feature slug is a registry row or the feature's briefing, folder or PRD, never a word that merely appears in `features.md`: an outcome recorded against nothing is how an item gets lost while "handled".
 
 ## Authority boundary
 

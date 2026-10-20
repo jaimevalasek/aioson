@@ -16,7 +16,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { contextDir, readFileSafe, parseFrontmatter, parseFeaturesMap } = require('../preflight-engine');
-const { resolveTargetDir } = require('../lib/project-root');
+const { resolveTargetDir, resolveProjectRootOrSelf } = require('../lib/project-root');
 const { isNone } = require('./feature-current');
 
 function nowDate() {
@@ -83,7 +83,8 @@ async function moveActiveFeature(targetDir, slug, options, logger) {
 }
 
 async function runPulseUpdate({ args, options = {}, logger }) {
-  const targetDir = resolveTargetDir(args);
+  // Run from a subfolder, `.` is the shell's cwd: update the project's pulse.
+  const targetDir = resolveProjectRootOrSelf(resolveTargetDir(args));
   const agent = options.agent ? String(options.agent) : null;
   const slug = options.feature ? String(options.feature) : null;
   const gate = options.gate ? String(options.gate) : null;

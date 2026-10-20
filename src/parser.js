@@ -77,6 +77,8 @@ const BOOLEAN_FLAGS = new Set([
   'no-jev',
   // decide — records the choice instead of consulting; pure boolean.
   'record',
+  // observation:list — `--resolved ../proj` listed the cwd's store.
+  'resolved',
   // update downgrade-guard escape hatch — pure boolean; `--allow-downgrade .`
   // must not swallow the path positional.
   'allow-downgrade',

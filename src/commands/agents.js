@@ -23,6 +23,8 @@ const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const { buildChainActivationContext } = require('../neural-chain-activation');
 const { buildAgentContextActivation } = require('../agent-context-activation');
 const { resolveTargetDir } = require('../lib/project-root');
+const { sessionFan, fanLines } = require('../lib/observations');
+const { defaultFeature } = require('./observe');
 
 const WORKFLOW_AGENT_IDS = new Set([
   'setup',
@@ -198,6 +200,10 @@ async function runAgentPrompt({ args, options, logger, t }) {
       instructionPath = workflowResult.instructionPath;
       prompt = workflowResult.prompt;
       effectiveMode = workflowResult.effectiveMode || null;
+      // The handoff block went to the silenced logger above; an external
+      // client or the Cockpit hands the agent this prompt and nothing else.
+      const observationLines = fanLines(workflowResult.observations, workflowResult.observations_total, workflowResult.observations_answered);
+      if (prompt && observationLines.length > 0) prompt = `${prompt}\n\n${observationLines.join('\n')}`;
     }
   }
 
@@ -222,7 +228,12 @@ async function runAgentPrompt({ args, options, logger, t }) {
       agent: promptAgent.id,
       featureSlug: options.feature ? String(options.feature).trim() : null
     });
-    activationContext = [activationContext, generatedContext, chainActivationContext].filter(Boolean).join('\n\n');
+    // What earlier stages noticed for this agent (@briefing and @refiner are
+    // no workflow stage: this prompt is their only handoff).
+    const fan = await sessionFan(targetDir, promptAgent.id, {
+      feature: options.feature || options.slug || await defaultFeature(targetDir)
+    });
+    activationContext = [activationContext, generatedContext, chainActivationContext, fanLines(fan.items, fan.total, fan.answered).join('\n')].filter(Boolean).join('\n\n');
     const autonomyProtocol = await readAutonomyProtocol(targetDir);
     const manifest = await readAgentManifest(targetDir, promptAgent.id);
     effectiveMode = resolveEffectiveMode({

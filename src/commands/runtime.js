@@ -1623,6 +1623,9 @@ async function maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options = 
     if (drift && ((drift.advisories || []).length > 0 || (drift.upstream || []).length > 0)) {
       logger.log(`[Scope Drift] advisory for @${drift.stage} — ${drift.advisories.length} drift warning(s), ${drift.upstream.length} upstream error(s); full report: ${drift.report}`);
     }
+    // What earlier stages noticed for the next one: the handoff block.
+    const { handoffLines } = require('../lib/observations');
+    for (const line of handoffLines(result.observations, result.observations_total, result.agent || nextStage, result.observations_answered)) logger.log(line);
   }
 
   return { advanced: true, result };

@@ -30,7 +30,20 @@ const { PATTERNS } = require('./security/secrets-regex');
 // Assignment-shaped detectors in secrets-regex match `password = '…'` including
 // the key name; telemetry keeps the key and blanks only the value, so those
 // are covered by the key-preserving regexes below and skipped here.
-const VALUE_PATTERNS = PATTERNS.filter((entry) => !String(entry.id).startsWith('generic-'));
+//
+// Bare provider tokens the commit guard does not block on are blanked here
+// only: a redacted look-alike costs one word of a log line, a blocked commit
+// costs the owner's trust in the guard. Shapes are anchored on their fixed
+// prefixes and full lengths, so `ghp_short`, `sk-proj-card` or a dotted
+// identifier never match; a JWT needs both its header and payload as base64
+// JSON (`eyJ`).
+const TOKEN_PATTERNS = [
+  { id: 'github-token', pattern: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})\b/g },
+  { id: 'slack-token', pattern: /\bxox[abeoprs]-[A-Za-z0-9-]{10,}\b/g },
+  { id: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
+  { id: 'openai-api-key', pattern: /\bsk-(?:proj|svcacct|admin)-[A-Za-z0-9_-]{20,}/g }
+];
+const VALUE_PATTERNS = [...PATTERNS.filter((entry) => !String(entry.id).startsWith('generic-')), ...TOKEN_PATTERNS];
 
 // A key block without its END marker (truncated by a log limit) still carries
 // the key body: blank to the end of the text in that case.

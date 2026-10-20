@@ -29,9 +29,15 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { redactTelemetryText } = require('./telemetry-redaction');
+const { withRegistryLock, writeAtomically } = require('./feature-registry-storage');
+const { parseFeatureRegistry } = require('./feature-registry');
+const { canonicalAgentId } = require('../agents');
 
 const SCHEMA_VERSION = 'project-observations/v1';
 const RELATIVE_PATH = '.aioson/context/observations.json';
+// Lane workers and parallel terminals each run their own `aioson observe`:
+// every read-modify-write holds this lock, or the last writer drops the rest.
+const LOCK_NAME = '.observations.lock';
 const KINDS = ['defect', 'idea', 'process', 'risk', 'question'];
 const RESOLUTIONS = ['fixed', 'planned', 'promoted', 'answered', 'dismissed'];
 const STALE_DAYS = 30;
@@ -41,15 +47,27 @@ const MAX_DETAIL_CHARS = 1200;
 const MAX_PATHS = 12;
 const DEFAULT_LIMIT = 5;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// A binding means something while its feature is live: an item bound to a
+// done or abandoned feature (abandoned without a close, or closed while the
+// store was unreadable) reads as project-wide.
+const CLOSED_FEATURE_STATUSES = new Set(['done', 'abandoned']);
+// A feature slug as the registry writes it (dots allowed: `checkout-v2.0`).
+const FEATURE_SLUG = /^[a-z0-9][a-z0-9._-]*$/;
+const CASE_INSENSITIVE_FS = process.platform === 'win32' || process.platform === 'darwin';
+const REPAIR_HINT = 'repair it, or rename it aside and the next observe starts a fresh store; never delete it — it holds the open items';
 
 // Which agents hear about an open item at session start and at handoff. A
 // `process` item is the owner's (status, @neo, hygiene), never an agent's.
 const AUDIENCE = {
-  defect: ['dev', 'qa', 'tester', 'planner'],
-  risk: ['dev', 'qa', 'tester', 'pentester', 'planner', 'sheldon'],
+  // @quality owns static analysis and performance: a defect or a risk beside
+  // the work is input to its assessment, as it is to the other reviewers.
+  defect: ['dev', 'qa', 'tester', 'quality', 'planner'],
+  risk: ['dev', 'qa', 'tester', 'pentester', 'quality', 'planner', 'sheldon'],
   idea: ['product', 'briefing', 'refiner', 'sheldon'],
   process: [],
-  question: ['product', 'sheldon', 'planner', 'dev', 'qa']
+  // @refiner settles scope questions before a PRD exists; @tester the
+  // test-strategy ones.
+  question: ['refiner', 'product', 'sheldon', 'planner', 'dev', 'qa', 'tester']
 };
 
 // A defect, a risk or a question concerns the feature (or paths) it was seen
@@ -88,27 +106,68 @@ function normalizeSummary(text) {
     .trim();
 }
 
-function observationId(kind, summary) {
+function observationId(kind, summary, length = 6) {
   const digest = crypto.createHash('sha1').update(`${kind}|${normalizeSummary(summary)}`).digest('hex');
-  return `OBS-${digest.slice(0, 6)}`;
+  return `OBS-${digest.slice(0, length)}`;
 }
 
+/**
+ * The record a (kind, summary) pair maps to. Six hex digits keep ids short
+ * enough to type; when one is already held by a different item — a hash
+ * collision, not a repeat — the id widens instead of merging the two.
+ */
+function slotFor(items, kind, summary) {
+  const key = normalizeSummary(summary);
+  for (const length of [6, 10, 40]) {
+    const id = observationId(kind, summary, length);
+    const existing = items.find((item) => item && item.id === id);
+    if (!existing) return { id, existing: null };
+    // A hand-edited summary no longer hashes to its own id: still the same item.
+    const selfConsistent = observationId(existing.kind, existing.summary, length) === existing.id;
+    if (!selfConsistent || (existing.kind === kind && normalizeSummary(existing.summary) === key)) return { id, existing };
+  }
+  return { id: observationId(kind, summary, 40), existing: null };
+}
+
+// `@Dev`, retired `deyvin`, legacy `briefing-refiner`: one id per agent.
 function normalizeAgent(value) {
-  const agent = String(value == null ? '' : value).trim().replace(/^@/, '').toLowerCase();
-  return agent || null;
+  return canonicalAgentId(String(value == null ? '' : value)) || null;
 }
 
 function normalizeFeature(value) {
-  const slug = String(value == null ? '' : value).trim();
-  if (!slug || ['none', '(none)', 'null', '-', 'n/a'].includes(slug.toLowerCase())) return null;
+  const slug = String(value == null ? '' : value).trim().toLowerCase();
+  if (!slug || ['none', '(none)', 'null', '-', 'n/a'].includes(slug)) return null;
   return slug;
 }
 
-function normalizePaths(value) {
+/** An explicit binding must be a slug: `Checkout` binds as `checkout`, `{slug}` binds nothing. */
+function validateFeature(value) {
+  const slug = normalizeFeature(value);
+  if (slug && !FEATURE_SLUG.test(slug)) {
+    throw new Error(`--feature='${value}' is not a feature slug (kebab-case, e.g. checkout); pass the real slug, or omit it for the active feature`);
+  }
+  return slug;
+}
+
+/** The project-relative path of `target`, or null when it lies outside the project. */
+function insideProject(targetDir, target) {
+  const rel = path.relative(targetDir, path.resolve(targetDir, target));
+  // Another drive comes back absolute from path.relative on Windows.
+  return rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel) ? null : rel;
+}
+
+/**
+ * Forward-slash, project-relative paths: tools hand agents absolute paths
+ * while the brief passes relative ones, and `src/` must overlap `src/a.js`.
+ */
+function normalizePaths(value, targetDir) {
+  if (value === true) return []; // a bare flag names no path
   const raw = Array.isArray(value) ? value : String(value == null ? '' : value).split(/[,\n]/);
   const out = [];
   for (const entry of raw) {
-    const rel = String(entry || '').trim().replace(/\\/g, '/').replace(/^\.\//, '');
+    let rel = String(entry == null ? '' : entry).trim();
+    if (targetDir && rel && path.isAbsolute(rel)) rel = insideProject(targetDir, rel) ?? rel;
+    rel = rel.replace(/\\/g, '/').replace(/^(?:\.\/)+/, '').replace(/\/+$/, '');
     if (!rel || out.includes(rel)) continue;
     out.push(rel);
     if (out.length >= MAX_PATHS) break;
@@ -121,10 +180,35 @@ function oneLine(text, max) {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 
+// Redact first, cut second: a secret crossing the cut reaches the redactor
+// whole, not as a prefix its pattern no longer recognizes.
+function cleanText(text, max) {
+  return oneLine(redactTelemetryText(String(text == null ? '' : text).replace(/\s+/g, ' ').trim()), max);
+}
+
 function ageDays(item, now) {
   const created = Date.parse(item.created_at || '');
   if (!Number.isFinite(created)) return null;
   return Math.max(0, Math.floor(((now == null ? Date.now() : now) - created) / DAY_MS));
+}
+
+/**
+ * One shape for every surface, whatever a hand edit or a git merge left: the
+ * file is meant to be read and edited without the CLI. Nothing is dropped.
+ */
+function normalizeItem(item, targetDir) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+  item.kind = String(item.kind == null ? '' : item.kind).trim().toLowerCase();
+  item.summary = String(item.summary == null ? '' : item.summary);
+  item.paths = normalizePaths(item.paths, targetDir);
+  item.feature = normalizeFeature(item.feature);
+  item.origin_feature = normalizeFeature(item.origin_feature);
+  item.seen = Math.max(1, Math.floor(Number(item.seen)) || 1);
+  if (item.history != null && !Array.isArray(item.history)) item.history = [item.history];
+  if (item.status !== 'open' && item.status !== 'resolved') {
+    item.status = item.resolution && typeof item.resolution === 'object' ? 'resolved' : 'open';
+  }
+  return item;
 }
 
 /**
@@ -144,6 +228,7 @@ async function readStore(targetDir) {
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.items)) {
       return { store: emptyStore(), exists: true, error: 'observations.json must hold { schema_version, items[] }' };
     }
+    for (const item of parsed.items) normalizeItem(item, targetDir);
     return { store: parsed, exists: true, error: null };
   } catch (error) {
     return { store: emptyStore(), exists: true, error: `invalid JSON: ${error.message}` };
@@ -153,28 +238,22 @@ async function readStore(targetDir) {
 /** Writers refuse to overwrite a store they could not read: a corrupt file is the owner's to look at. */
 async function readStoreForWrite(targetDir) {
   const current = await readStore(targetDir);
-  if (current.error) throw new Error(`${RELATIVE_PATH} is unreadable (${current.error}); repair or remove it before writing`);
+  if (current.error) throw new Error(`${RELATIVE_PATH} is unreadable (${current.error}); nothing was written — ${REPAIR_HINT}`);
   return current.store;
 }
 
 async function writeStore(targetDir, store) {
   const file = observationsPath(targetDir);
   await fs.mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, `${JSON.stringify(store, null, 2)}\n`, 'utf8');
-  let lastError = null;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    try {
-      await fs.rename(tmp, file);
-      return file;
-    } catch (error) {
-      lastError = error;
-      if (!['EPERM', 'EBUSY', 'EACCES'].includes(error && error.code)) break;
-      await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
-    }
-  }
-  try { await fs.rm(tmp, { force: true }); } catch { /* best-effort */ }
-  throw lastError;
+  // A unique temp per write: two writers never share (and corrupt) one file.
+  await writeAtomically(file, `${JSON.stringify(store, null, 2)}\n`);
+  return file;
+}
+
+/** One read-modify-write of the store at a time, across processes. */
+async function withStoreLock(targetDir, action) {
+  const dir = path.dirname(observationsPath(targetDir));
+  return withRegistryLock(dir, action, { name: LOCK_NAME });
 }
 
 function validateKind(kind) {
@@ -184,9 +263,37 @@ function validateKind(kind) {
 }
 
 function validateSummary(summary) {
-  const value = oneLine(summary, MAX_SUMMARY_CHARS);
+  const value = cleanText(summary, MAX_SUMMARY_CHARS);
   if (value.length < MIN_SUMMARY_CHARS) throw new Error(`--summary needs at least ${MIN_SUMMARY_CHARS} characters, one line, in domain words`);
-  return redactTelemetryText(value);
+  return value;
+}
+
+// Words too common to say two summaries name the same thing.
+const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'when', 'after', 'into', 'are', 'was', 'not', 'but', 'que', 'com', 'para', 'uma', 'dos', 'das', 'por', 'nao', 'los', 'las', 'del', 'con']);
+
+function summaryWords(summary) {
+  return new Set(normalizeSummary(summary).split(' ').filter((word) => word.length >= 3 && !STOPWORDS.has(word)));
+}
+
+/**
+ * Open items of the same kind that may be the one just recorded in other
+ * words — the identity hash only joins identical wording, and agents
+ * paraphrase. Advisory, computed on the store already in memory.
+ */
+function similarOpen(items, item) {
+  const words = summaryWords(item.summary);
+  const hits = [];
+  for (const other of items) {
+    if (!other || other === item || other.status !== 'open' || other.kind !== item.kind) continue;
+    const otherWords = summaryWords(other.summary);
+    let shared = 0;
+    for (const word of words) if (otherWords.has(word)) shared += 1;
+    const overlap = shared / Math.max(1, Math.min(words.size, otherWords.size));
+    const byWords = shared >= 3 && overlap >= 0.75;
+    const byPaths = pathOverlap(other.paths, item.paths);
+    if (byWords || byPaths) hits.push({ id: other.id, summary: other.summary, score: (byWords ? overlap : 0) + (byPaths ? 1 : 0) });
+  }
+  return hits.sort((a, b) => b.score - a.score).slice(0, 2).map(({ id, summary }) => ({ id, summary }));
 }
 
 /**
@@ -197,55 +304,60 @@ function validateSummary(summary) {
 async function addObservation(targetDir, input = {}, { now } = {}) {
   const kind = validateKind(input.kind);
   const summary = validateSummary(input.summary);
-  const detail = input.detail ? redactTelemetryText(oneLine(input.detail, MAX_DETAIL_CHARS)) : null;
-  const paths = normalizePaths(input.paths);
-  const feature = normalizeFeature(input.feature);
+  const detail = input.detail ? cleanText(input.detail, MAX_DETAIL_CHARS) : null;
+  const paths = normalizePaths(input.paths, targetDir);
+  const feature = validateFeature(input.feature);
   const agent = normalizeAgent(input.agent);
   const at = nowIso(now);
-  const id = observationId(kind, summary);
 
-  const store = await readStoreForWrite(targetDir);
-  const existing = store.items.find((item) => item && item.id === id);
-  let created = false;
-  let reopened = false;
-  let item;
-  if (!existing) {
-    created = true;
-    item = {
-      id,
-      kind,
-      summary,
-      detail,
-      paths,
-      feature,
-      origin_feature: null,
-      agent,
-      status: 'open',
-      seen: 1,
-      created_at: at,
-      updated_at: at,
-      resolution: null
-    };
-    store.items.push(item);
-  } else {
-    item = existing;
-    item.seen = (Number(item.seen) || 1) + 1;
-    item.updated_at = at;
-    if (detail && !item.detail) item.detail = detail;
-    for (const rel of paths) if (!item.paths.includes(rel) && item.paths.length < MAX_PATHS) item.paths.push(rel);
-    if (feature && !item.feature && !item.origin_feature) item.feature = feature;
-    if (agent && !item.agent) item.agent = agent;
-    if (item.status !== 'open') {
-      reopened = true;
-      item.history = Array.isArray(item.history) ? item.history : [];
-      item.history.push({ ...item.resolution, reopened_at: at });
-      item.resolution = null;
-      item.status = 'open';
-      item.created_at = at;
+  return withStoreLock(targetDir, async () => {
+    const store = await readStoreForWrite(targetDir);
+    const { id, existing } = slotFor(store.items, kind, summary);
+    let created = false;
+    let reopened = false;
+    let item;
+    if (!existing) {
+      created = true;
+      item = {
+        id,
+        kind,
+        summary,
+        detail,
+        paths,
+        feature,
+        origin_feature: null,
+        agent,
+        status: 'open',
+        seen: 1,
+        created_at: at,
+        updated_at: at,
+        resolution: null
+      };
+      store.items.push(item);
+    } else {
+      item = existing;
+      item.seen = (Number(item.seen) || 1) + 1;
+      item.updated_at = at;
+      if (detail && !item.detail) item.detail = detail;
+      // The file is readable and editable by hand: never trust its shapes.
+      item.paths = normalizePaths(item.paths, targetDir);
+      for (const rel of paths) if (!item.paths.includes(rel) && item.paths.length < MAX_PATHS) item.paths.push(rel);
+      // Only creation binds a feature: a project-wide item re-seen during a
+      // feature would otherwise be carried at its close with an origin it never had.
+      if (agent && !item.agent) item.agent = agent;
+      if (item.status !== 'open') {
+        reopened = true;
+        item.history = Array.isArray(item.history) ? item.history : [];
+        item.history.push({ ...(item.resolution || {}), reopened_at: at });
+        item.resolution = null;
+        item.status = 'open';
+        item.created_at = at;
+      }
     }
-  }
-  const file = await writeStore(targetDir, store);
-  return { item, created, reopened, path: path.relative(targetDir, file).replace(/\\/g, '/') };
+    const file = await writeStore(targetDir, store);
+    const similar = created ? similarOpen(store.items, item) : [];
+    return { item, created, reopened, similar, path: path.relative(targetDir, file).replace(/\\/g, '/') };
+  });
 }
 
 function decorate(item, now) {
@@ -267,12 +379,13 @@ async function listObservations(targetDir, filter = {}, { now } = {}) {
   const current = await readStore(targetDir);
   const status = filter.status || 'open';
   const kind = filter.kind ? String(filter.kind).trim().toLowerCase() : null;
-  const feature = filter.feature ? String(filter.feature).trim() : null;
+  const feature = filter.feature ? String(filter.feature).trim().toLowerCase() : null;
+  const unbound = feature === 'project' || feature === 'none';
   const items = current.store.items
     .filter((item) => item && typeof item === 'object' && item.id)
     .filter((item) => status === 'all' || item.status === status)
     .filter((item) => !kind || item.kind === kind)
-    .filter((item) => !feature || (feature === 'project' ? !item.feature : item.feature === feature))
+    .filter((item) => !feature || (unbound ? !item.feature : item.feature === feature))
     .sort(sortOpenFirstNewest)
     .map((item) => decorate(item, now));
   return { items, exists: current.exists, error: current.error, path: RELATIVE_PATH };
@@ -291,31 +404,47 @@ async function readTextSafe(file) {
 }
 
 /**
+ * A feature the project knows: the slug cell of a registry row (never a
+ * header word, a status or a date), or its briefing, feature or done folder,
+ * or its PRD file.
+ */
+async function knownFeature(targetDir, slug) {
+  if (!FEATURE_SLUG.test(slug.toLowerCase())) return false;
+  const ctx = path.join(targetDir, '.aioson', 'context');
+  const { rows } = parseFeatureRegistry(await readTextSafe(path.join(ctx, 'features.md')));
+  if (rows.some((row) => String(row.slug).toLowerCase() === slug.toLowerCase())) return true;
+  for (const [candidate, folder] of [
+    [path.join(targetDir, '.aioson', 'briefings', slug), true],
+    [path.join(ctx, 'features', slug), true],
+    [path.join(ctx, 'done', slug), true],
+    [path.join(ctx, `prd-${slug}.md`), false]
+  ]) {
+    try {
+      const stat = await fs.stat(candidate);
+      if (folder ? stat.isDirectory() : stat.isFile()) return true;
+    } catch { /* absent */ }
+  }
+  return false;
+}
+
+/**
  * A promotion/plan reference must point at something that exists: a path in
- * the project, or a feature known to the registry, a briefing, or the archive.
+ * the project (never the store itself), or a feature the project knows.
  * An outcome recorded against nothing is how an item gets lost while "handled".
  */
 async function refExists(targetDir, ref) {
   const value = String(ref || '').trim();
   if (!value) return { ok: false, reason: 'empty' };
   if (looksLikePath(value)) {
-    const resolved = path.resolve(targetDir, value);
-    const inside = !path.relative(targetDir, resolved).startsWith('..');
-    if (!inside) return { ok: false, reason: 'outside the project' };
-    return (await fileExists(resolved)) ? { ok: true, kind: 'path' } : { ok: false, reason: 'path does not exist' };
+    const rel = insideProject(targetDir, value);
+    if (rel === null) return { ok: false, reason: 'outside the project' };
+    const store = path.relative(targetDir, observationsPath(targetDir));
+    if (CASE_INSENSITIVE_FS ? rel.toLowerCase() === store.toLowerCase() : rel === store) return { ok: false, reason: 'the observations store itself' };
+    if (await fileExists(path.resolve(targetDir, value))) return { ok: true, kind: 'path' };
+    // `checkout-v2.0` reads like a file name and may still be a feature slug.
+    if (/[\\/]/.test(value)) return { ok: false, reason: 'path does not exist' };
   }
-  const slug = value;
-  const features = await readTextSafe(path.join(targetDir, '.aioson', 'context', 'features.md'));
-  const slugRe = new RegExp(`(^|[|\\s\`])${slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([|\\s\`]|$)`, 'm');
-  if (slugRe.test(features)) return { ok: true, kind: 'feature' };
-  for (const candidate of [
-    path.join(targetDir, '.aioson', 'briefings', slug),
-    path.join(targetDir, '.aioson', 'context', 'features', slug),
-    path.join(targetDir, '.aioson', 'context', 'done', slug),
-    path.join(targetDir, '.aioson', 'context', `prd-${slug}.md`)
-  ]) {
-    if (await fileExists(candidate)) return { ok: true, kind: 'feature' };
-  }
+  if (await knownFeature(targetDir, value)) return { ok: true, kind: 'feature' };
   return { ok: false, reason: 'neither an existing path nor a known feature slug' };
 }
 
@@ -330,7 +459,7 @@ async function resolveObservation(targetDir, input = {}, { now } = {}) {
   const as = String(input.as == null ? '' : input.as).trim().toLowerCase();
   if (!RESOLUTIONS.includes(as)) throw new Error(`--as must be one of: ${RESOLUTIONS.join(', ')} (got '${input.as == null ? '' : input.as}')`);
   const ref = input.ref ? String(input.ref).trim() : null;
-  const why = input.why ? redactTelemetryText(oneLine(input.why, MAX_DETAIL_CHARS)) : null;
+  const why = input.why ? cleanText(input.why, MAX_DETAIL_CHARS) : null;
   if ((as === 'dismissed' || as === 'answered') && !why) throw new Error(`--as=${as} needs --why="<reason or answer>"`);
   if ((as === 'planned' || as === 'promoted') && !ref) throw new Error(`--as=${as} needs --ref=<existing plan path or feature slug>`);
   if (ref) {
@@ -338,20 +467,22 @@ async function resolveObservation(targetDir, input = {}, { now } = {}) {
     if (!check.ok) throw new Error(`--ref='${ref}' is ${check.reason} — record the outcome against something that exists`);
   }
 
-  const store = await readStoreForWrite(targetDir);
-  const item = store.items.find((entry) => entry && entry.id === id);
-  if (!item) throw new Error(`${id} is not on record (aioson observation:list . --all)`);
-  const at = nowIso(now);
-  const previous = item.status === 'resolved' ? item.resolution : null;
-  if (previous) {
-    item.history = Array.isArray(item.history) ? item.history : [];
-    item.history.push({ ...previous, superseded_at: at });
-  }
-  item.status = 'resolved';
-  item.updated_at = at;
-  item.resolution = { as, ref, why, by: normalizeAgent(input.by) || 'owner', at };
-  await writeStore(targetDir, store);
-  return { item: decorate(item, now), superseded: Boolean(previous), path: RELATIVE_PATH };
+  return withStoreLock(targetDir, async () => {
+    const store = await readStoreForWrite(targetDir);
+    const item = store.items.find((entry) => entry && entry.id === id);
+    if (!item) throw new Error(`${id} is not on record (aioson observation:list . --all)`);
+    const at = nowIso(now);
+    const previous = item.status === 'resolved' ? item.resolution : null;
+    if (previous) {
+      item.history = Array.isArray(item.history) ? item.history : [];
+      item.history.push({ ...previous, superseded_at: at });
+    }
+    item.status = 'resolved';
+    item.updated_at = at;
+    item.resolution = { as, ref, why, by: normalizeAgent(input.by) || 'owner', at };
+    await writeStore(targetDir, store);
+    return { item: decorate(item, now), superseded: Boolean(previous), path: RELATIVE_PATH };
+  });
 }
 
 /** What the owner's cockpit shows: counts by kind, stale count, the head. */
@@ -376,25 +507,126 @@ function describeByKind(byKind) {
 }
 
 function pathOverlap(itemPaths, paths) {
-  if (!Array.isArray(itemPaths) || itemPaths.length === 0 || paths.length === 0) return false;
-  return itemPaths.some((a) => paths.some((b) => a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)));
+  if (!Array.isArray(itemPaths) || itemPaths.length === 0 || !Array.isArray(paths) || paths.length === 0) return false;
+  const fold = (value) => (CASE_INSENSITIVE_FS ? String(value).toLowerCase() : String(value));
+  return itemPaths.some((x) => paths.some((y) => {
+    const a = fold(x);
+    const b = fold(y);
+    return a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
+  }));
+}
+
+/** Slugs the registry marks done or abandoned; empty without a registry. */
+async function closedFeatures(targetDir) {
+  const content = await readTextSafe(path.join(targetDir, '.aioson', 'context', 'features.md'));
+  if (!content) return new Set();
+  return new Set(parseFeatureRegistry(content).rows
+    .filter((row) => CLOSED_FEATURE_STATUSES.has(row.status))
+    .map((row) => String(row.slug).toLowerCase()));
 }
 
 /**
  * The fan one agent sees at session start and at handoff: open items whose
- * kind addresses it and that belong to its feature, to no feature, or to the
- * paths it is about to touch.
+ * kind addresses it and that belong to its feature, to the paths it is about
+ * to touch, or to no feature — ranked in that order, newest first within a
+ * tier, so project-wide leftovers never push the feature's own items out of
+ * the first `limit`. `total` counts every open item that matched; `answered`
+ * holds the feature's answered questions, which the stage that needs the
+ * answer reads until the feature closes.
  */
-async function observationsForAgent(targetDir, agent, { feature, paths, limit = DEFAULT_LIMIT, now } = {}) {
+async function fanFor(targetDir, agent, { feature, paths, limit = DEFAULT_LIMIT, now } = {}) {
   const who = normalizeAgent(agent);
-  if (!who) return [];
+  if (!who) return { items: [], total: 0, answered: [] };
   const slug = normalizeFeature(feature);
-  const touched = normalizePaths(paths);
-  const listed = await listObservations(targetDir, { status: 'open' }, { now });
-  return listed.items
-    .filter((item) => (AUDIENCE[item.kind] || []).includes(who))
-    .filter((item) => !FEATURE_BOUND_KINDS.has(item.kind) || !item.feature || item.feature === slug || pathOverlap(item.paths, touched))
-    .slice(0, limit);
+  const touched = normalizePaths(paths, targetDir);
+  const listed = await listObservations(targetDir, { status: 'all' }, { now });
+  let closed = null;
+  const isClosed = async (value) => (closed || (closed = await closedFeatures(targetDir))).has(value);
+  const ranked = [];
+  const answered = [];
+  for (const item of listed.items) {
+    if (!(AUDIENCE[item.kind] || []).includes(who)) continue;
+    if (item.status !== 'open') {
+      const answer = item.resolution && item.resolution.as === 'answered';
+      if (answer && item.kind === 'question' && slug && item.feature === slug && !(await isClosed(slug))) {
+        answered.push({ ...item, answer: item.resolution.why || '' });
+      }
+      continue;
+    }
+    const bound = item.feature && item.feature !== slug && (await isClosed(item.feature)) ? null : item.feature;
+    let tier;
+    if (bound && bound === slug) tier = 0;
+    else if (pathOverlap(item.paths, touched)) tier = 1;
+    else if (!bound || !FEATURE_BOUND_KINDS.has(item.kind)) tier = 2;
+    else continue; // bound to another live feature
+    ranked.push({ item, tier });
+  }
+  ranked.sort((a, b) => a.tier - b.tier || String(b.item.updated_at || '').localeCompare(String(a.item.updated_at || '')));
+  return { items: ranked.slice(0, limit).map((entry) => entry.item), total: ranked.length, answered: answered.slice(0, limit) };
+}
+
+async function observationsForAgent(targetDir, agent, options = {}) {
+  return (await fanFor(targetDir, agent, options)).items;
+}
+
+/**
+ * The fan a session-start surface attaches (context:brief, and context:select
+ * for the agents whose kernels start there: @briefing, @refiner). Advisory:
+ * a broken store never blocks the session.
+ */
+async function sessionFan(targetDir, agent, { feature, paths } = {}) {
+  try {
+    return await fanFor(targetDir, agent, { feature, paths });
+  } catch {
+    return { items: [], total: 0, answered: [] };
+  }
+}
+
+function itemPathsSuffix(item) {
+  return Array.isArray(item.paths) && item.paths.length > 0 ? ` [${item.paths.join(', ')}]` : '';
+}
+
+function answerOf(item) {
+  return item.answer || (item.resolution && item.resolution.why) || '';
+}
+
+/** The lines those surfaces print for the fan; none when it is empty. */
+function fanLines(observations, total, answered = []) {
+  const open = Array.isArray(observations) ? observations : [];
+  const settled = Array.isArray(answered) ? answered : [];
+  const lines = [];
+  if (open.length > 0) {
+    const count = Math.max(open.length, Number(total) || 0);
+    lines.push(`Open observations for you (${count}) — settle or carry them, never fix in passing (aioson observation:list .):`);
+    for (const item of open) {
+      const age = item.age_days != null ? `, ${item.age_days}d` : '';
+      lines.push(`- ${item.id} (${item.kind}${age}) ${item.summary}${itemPathsSuffix(item)} → ${item.next_step || NEXT_STEP[item.kind] || ''}`);
+    }
+    if (count > open.length) lines.push(`- +${count - open.length} more — aioson observation:list .`);
+  }
+  if (settled.length > 0) {
+    lines.push(`Answered questions on this feature (${settled.length}) — the answer stands, do not ask again:`);
+    for (const item of settled) lines.push(`- ${item.id} (question, answered) ${item.summary} → answer: ${answerOf(item)}`);
+  }
+  return lines;
+}
+
+/** The handoff block (workflow:next, agent:done): a line for every item it counts. */
+function handoffLines(observations, total, agent, answered = []) {
+  const open = Array.isArray(observations) ? observations : [];
+  const settled = Array.isArray(answered) ? answered : [];
+  const lines = [];
+  if (open.length > 0) {
+    const count = Math.max(open.length, Number(total) || 0);
+    lines.push(`[Observations] ${count} open for @${agent} — settle or carry, never fix in passing (aioson observation:list .):`);
+    for (const item of open) lines.push(`  - ${item.id} (${item.kind}${item.age_days != null ? `, ${item.age_days}d` : ''}) ${item.summary}${itemPathsSuffix(item)}`);
+    if (count > open.length) lines.push(`  - +${count - open.length} more — aioson observation:list .`);
+  }
+  if (settled.length > 0) {
+    lines.push(`[Observations] ${settled.length} answered question(s) on this feature for @${agent} — the answer stands:`);
+    for (const item of settled) lines.push(`  - ${item.id} (question, answered) ${item.summary} — answer: ${answerOf(item)}`);
+  }
+  return lines;
 }
 
 /** Open items bound to a feature — what a close would carry. */
@@ -402,6 +634,23 @@ async function openForFeature(targetDir, slug, { now } = {}) {
   const feature = normalizeFeature(slug);
   if (!feature) return [];
   return (await listObservations(targetDir, { status: 'open', feature }, { now })).items;
+}
+
+/** The line feature:close --preflight prints about the hub, or null when nothing would move. */
+async function carryPreview(targetDir, slug) {
+  const feature = normalizeFeature(slug);
+  if (!feature) return null;
+  const listed = await listObservations(targetDir, { status: 'open', feature });
+  if (listed.error) return `${RELATIVE_PATH} is unreadable (${listed.error}): nothing bound to ${feature} can be carried at close — ${REPAIR_HINT}`;
+  if (listed.items.length === 0) return null;
+  return `${listed.items.length} open observation(s) bound to ${feature} would be carried to the project hub at close, never deleted: ${listed.items.map((o) => `${o.id} (${o.kind})`).join(', ')} — aioson observation:list . --feature=${feature}`;
+}
+
+/** The store itself when no surface can read it — hygiene names it. */
+async function unreadableStore(targetDir) {
+  const current = await readStore(targetDir);
+  if (!current.error) return [];
+  return [{ path: RELATIVE_PATH, reason: `unreadable (${current.error}): every surface shows no observation until it is fixed — ${REPAIR_HINT}` }];
 }
 
 /**
@@ -412,19 +661,24 @@ async function openForFeature(targetDir, slug, { now } = {}) {
 async function carryFeatureObservations(targetDir, slug, { now } = {}) {
   const feature = normalizeFeature(slug);
   if (!feature) return { carried: [] };
-  const current = await readStore(targetDir);
-  if (current.error || !current.exists) return { carried: [], error: current.error };
-  const at = nowIso(now);
-  const carried = [];
-  for (const item of current.store.items) {
-    if (!item || item.status !== 'open' || item.feature !== feature) continue;
-    item.origin_feature = feature;
-    item.feature = null;
-    item.updated_at = at;
-    carried.push({ id: item.id, kind: item.kind, summary: item.summary });
-  }
-  if (carried.length > 0) await writeStore(targetDir, current.store);
-  return { carried, path: RELATIVE_PATH };
+  if (!(await fileExists(observationsPath(targetDir)))) return { carried: [], path: RELATIVE_PATH };
+  return withStoreLock(targetDir, async () => {
+    const current = await readStore(targetDir);
+    if (current.error || !current.exists) return { carried: [], error: current.error };
+    const at = nowIso(now);
+    const carried = [];
+    for (const item of current.store.items) {
+      if (!item || item.status !== 'open' || item.feature !== feature) continue;
+      item.origin_feature = feature;
+      item.feature = null;
+      // Not `updated_at`: a carried item keeps its place in every fan instead
+      // of jumping above the next feature's own items.
+      item.carried_at = at;
+      carried.push({ id: item.id, kind: item.kind, summary: item.summary });
+    }
+    if (carried.length > 0) await writeStore(targetDir, current.store);
+    return { carried, path: RELATIVE_PATH };
+  });
 }
 
 /** Open items older than STALE_DAYS — hygiene, not a verdict. */
@@ -441,14 +695,32 @@ async function staleObservations(targetDir, { now, days = STALE_DAYS } = {}) {
     }));
 }
 
-/** Items touched in the last `hours` — the compaction recap's "you recorded". */
-async function recentObservations(targetDir, { hours = 24, limit = DEFAULT_LIMIT, now } = {}) {
+// The recap prints its items on one line capped at 480 chars
+// (lib/compaction-recap.js): five summaries of this size fit whole.
+const RECAP_SUMMARY_CHARS = 48;
+
+/** Shortened at a word boundary: a summary cut mid-word reads as another thing. */
+function shortSummary(text, max) {
+  const flat = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const head = flat.slice(0, max - 1);
+  const boundary = flat[max - 1] === ' ' ? head.length : head.lastIndexOf(' ');
+  const kept = boundary >= Math.floor(max / 2) ? head.slice(0, boundary) : head;
+  return `${kept.replace(/[\s,;:]+$/, '')}…`;
+}
+
+/**
+ * Items touched in the last `hours` — the compaction recap's "you recorded":
+ * open ones first (settled ones never push them out), then the settled ones,
+ * newest first within each, summaries shortened at a word boundary.
+ */
+async function recentObservations(targetDir, { hours = 24, limit = DEFAULT_LIMIT, now, summaryChars = RECAP_SUMMARY_CHARS } = {}) {
   const listed = await listObservations(targetDir, { status: 'all' }, { now });
   const since = (now == null ? Date.now() : now) - hours * 60 * 60 * 1000;
   return listed.items
     .filter((item) => Date.parse(item.updated_at || '') >= since)
-    .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
-    .slice(0, limit);
+    .slice(0, limit)
+    .map((item) => ({ ...item, summary: shortSummary(item.summary, summaryChars) }));
 }
 
 module.exports = {
@@ -459,9 +731,13 @@ module.exports = {
   STALE_DAYS,
   AUDIENCE,
   NEXT_STEP,
+  REPAIR_HINT,
   observationsPath,
   observationId,
   normalizeSummary,
+  normalizePaths,
+  validateFeature,
+  closedFeatures,
   readStore,
   addObservation,
   listObservations,
@@ -469,8 +745,14 @@ module.exports = {
   refExists,
   summarizeOpen,
   describeByKind,
+  fanFor,
   observationsForAgent,
+  sessionFan,
+  fanLines,
+  handoffLines,
   openForFeature,
+  carryPreview,
+  unreadableStore,
   carryFeatureObservations,
   staleObservations,
   recentObservations

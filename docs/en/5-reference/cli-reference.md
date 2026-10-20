@@ -395,16 +395,16 @@ aioson observe . --kind=idea --summary="Order history could offer a reorder butt
 aioson observe . --kind=process --summary="Seed the test database before the walkthrough next time"
 ```
 
-Kinds: `defect` · `idea` · `process` · `risk` · `question`. The feature defaults to the active one and the agent to the active one; the same summary observed again raises its `seen` count, a settled one observed again reopens. Secrets are redacted on write. The store is `.aioson/context/observations.json`, written only by the CLI.
+Kinds: `defect` · `idea` · `process` · `risk` · `question`. The feature defaults to the active one (an explicit `--feature` must be a slug) and the agent to the active one; the same summary observed again raises its `seen` count, a settled one observed again reopens, and an open item of the same kind on the same paths or in near-identical words is named as `possibly already on record`. Secrets are redacted on write. Absolute paths inside the project are stored relative. Run from a subfolder, the command walks up to the project root; outside any project it writes nothing. The store is `.aioson/context/observations.json`, written only by the CLI.
 
-Where it surfaces: `workflow:status` (`Open observations: N (defect 2, idea 1), 1 stale`, and `openObservations` in `--json` — @neo's dashboard reads it), `context:brief` (`Open observations for you (N)`: the items whose kind addresses the agent and that belong to its feature, to no feature, or to the paths it passed), the `workflow:next` handoff (`[Observations] N open for @<next>`), `feature:close` (open items bound to the closed feature are carried to the project hub with `origin_feature` kept, never deleted; `--preflight` lists them), `hygiene:scan` (`stale_observations`: open for 30 days or more) and the post-compaction recap (items touched in the last 24 hours).
+Where it surfaces: `workflow:status` (`Open observations: N (defect 2, idea 1), 1 stale`, and `openObservations` in `--json` — @neo's dashboard reads it), `context:brief` and `context:select` (`Open observations for you (N)`: the items whose kind addresses the agent, ranked by its feature, then the paths it passed, then project-wide — at most five, with `+N more`; the feature's answered questions follow with their answer until it closes), the handoff (`[Observations] N open for @<next>` from `workflow:next` and `agent:done`; inside the prompt from `agent:prompt`), `feature:close` (on an accepting verdict, open items bound to the closed feature are carried to the project hub with `origin_feature` kept, never deleted; `--preflight` lists them or names an unreadable store), `hygiene:scan` (`stale_observations`: open for 30 days or more; `unreadable_observations`) and the post-compaction recap (items touched in the last 24 hours, open ones first).
 
 ```bash
-aioson observation:list . [--kind=<kind>] [--feature=<slug>|project] [--all] [--json]
+aioson observation:list . [--kind=<kind>] [--feature=<slug>|project] [--all|--resolved] [--json]
 aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answered|dismissed> [--ref=<plan path|feature slug>] [--why="..."] [--by=<who>]
 ```
 
-`planned`/`promoted` need an existing `--ref` (a Simple Plan path, a feature slug, a rule or learning path) — an outcome recorded against nothing is refused; `dismissed`/`answered` need `--why`. Observations are noncanonical memory: never scope, never approval, never a gate. The routed `.aioson/docs/observations.md` carries the full protocol.
+`planned`/`promoted` need an existing `--ref` (a Simple Plan path, a registered feature slug or its briefing/feature folder or PRD, a rule or learning path) — an outcome recorded against nothing is refused; `dismissed`/`answered` need `--why`; `--by` defaults to `AIOSON_AGENT`, else `owner`. `observation:list` exits 1 when the store is unreadable: repair it or rename it aside, never delete it. Observations are noncanonical memory: never scope, never approval, never a gate. The routed `.aioson/docs/observations.md` carries the full protocol.
 
 ---
 

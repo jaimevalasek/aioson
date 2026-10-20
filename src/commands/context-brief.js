@@ -143,7 +143,7 @@ async function runContextBrief({ args, options = {}, logger }) {
     logger.log('Related (recall — history/archive select cannot see):');
     for (const item of result.related) logger.log(`- ${item.path} [${item.source_type}] ${item.reason || ''}`);
   }
-  printObservations(logger, result.observations);
+  printObservations(logger, result);
 
   return result;
 }
@@ -151,26 +151,21 @@ async function runContextBrief({ args, options = {}, logger }) {
 // The fan this agent gets at session start: open observations whose kind
 // addresses it and that belong to its feature, to no feature, or to the
 // paths it is about to touch. Recorded data with a next step, never a gate.
+// @tester, @pentester and @quality brief without --feature: the active one binds.
 async function attachObservations(targetDir, result, options) {
-  try {
-    const { observationsForAgent } = require('../lib/observations');
-    result.observations = await observationsForAgent(targetDir, result.agent, {
-      feature: options.feature || options.slug || '',
-      paths: options.paths || options.path || ''
-    });
-  } catch {
-    result.observations = [];
-  }
+  const { sessionFan } = require('../lib/observations');
+  const fan = await sessionFan(targetDir, result.agent, {
+    feature: options.feature || options.slug || result.active_feature || '',
+    paths: options.paths || options.path || ''
+  });
+  result.observations = fan.items;
+  result.observations_total = fan.total;
+  result.observations_answered = fan.answered;
 }
 
-function printObservations(logger, observations) {
-  if (!Array.isArray(observations) || observations.length === 0) return;
-  logger.log(`Open observations for you (${observations.length}) — settle or carry them, never fix in passing (aioson observation:list .):`);
-  for (const item of observations) {
-    const age = item.age_days != null ? `, ${item.age_days}d` : '';
-    const paths = item.paths && item.paths.length > 0 ? ` [${item.paths.join(', ')}]` : '';
-    logger.log(`- ${item.id} (${item.kind}${age}) ${item.summary}${paths} → ${item.next_step}`);
-  }
+function printObservations(logger, result) {
+  const { fanLines } = require('../lib/observations');
+  for (const line of fanLines(result.observations, result.observations_total, result.observations_answered)) logger.log(line);
 }
 
 module.exports = { runContextBrief };

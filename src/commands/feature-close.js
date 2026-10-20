@@ -670,9 +670,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
           'nothing was executed or mutated (RG-* runtime checks were NOT run in preflight)',
           ...(visualLine ? [visualLine] : []),
           ...(ownerLine ? [ownerLine] : []),
-          ...(await require('../lib/observations').openForFeature(targetDir, slug).then((open) => (open.length > 0
-            ? [`${open.length} open observation(s) bound to ${slug} would be carried to the project hub at close, never deleted: ${open.map((o) => `${o.id} (${o.kind})`).join(', ')} — aioson observation:list . --feature=${slug}`]
-            : [])).catch(() => [])),
+          ...(await require('../lib/observations').carryPreview(targetDir, slug).then((line) => (line ? [line] : [])).catch(() => [])),
           ...(blockers.length === 0 ? [] : [unforceable.length === 0
             ? 'all blockers are forceable: re-run with --force (the bypass is recorded in done/{slug}/force-bypass-findings.json)'
             : 'the publish gate requires human approval (aioson harness:approve) and is never bypassed by --force'])
@@ -1078,17 +1076,21 @@ async function runFeatureClose({ args, options = {}, logger }) {
   // 7. Observations bound to the feature outlive it: open items move to the
   // project hub (origin kept) so a defect noticed beside this feature is still
   // on the owner's list after the feature's folder is archived. Best-effort.
+  // A FAIL close leaves the feature qa_failed and @dev still working it: its
+  // items stay bound until the accepting close.
   let observationsCarried = [];
-  try {
-    const carry = await require('../lib/observations').carryFeatureObservations(targetDir, slug);
-    observationsCarried = carry.carried || [];
-    if (observationsCarried.length > 0) {
-      updates.push(`observations: ${observationsCarried.length} open item(s) carried to the project hub (${observationsCarried.map((o) => `${o.id} ${o.kind}`).join(', ')}) — aioson observation:list .`);
-    } else if (carry.error) {
-      updates.push(`observations: store unreadable, nothing carried (${carry.error})`);
+  if (isAcceptedVerdict(verdict)) {
+    try {
+      const carry = await require('../lib/observations').carryFeatureObservations(targetDir, slug);
+      observationsCarried = carry.carried || [];
+      if (observationsCarried.length > 0) {
+        updates.push(`observations: ${observationsCarried.length} open item(s) carried to the project hub (${observationsCarried.map((o) => `${o.id} ${o.kind}`).join(', ')}) — aioson observation:list .`);
+      } else if (carry.error) {
+        updates.push(`observations: store unreadable, nothing carried (${carry.error})`);
+      }
+    } catch (err) {
+      updates.push(`observations: carry-over skipped (${(err && err.message) || err})`);
     }
-  } catch (err) {
-    updates.push(`observations: carry-over skipped (${(err && err.message) || err})`);
   }
 
   const result = {

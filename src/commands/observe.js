@@ -13,13 +13,14 @@
  * `observe` is one call and never blocks: the feature defaults to the active
  * one (pulse → features.md), the agent to the active one (AIOSON_AGENT → last
  * brief). The owner sees the fan in workflow:status / @neo; the next agent
- * sees its share in context:brief and at the workflow:next handoff.
+ * sees its share in context:brief and at the handoff (workflow:next,
+ * agent:done, agent:prompt).
  */
 
-const { resolveTargetDir } = require('../lib/project-root');
+const { resolveTargetDir, resolveProjectRootOrSelf, isProjectRoot } = require('../lib/project-root');
 const {
-  KINDS, RESOLUTIONS, STALE_DAYS, NEXT_STEP, RELATIVE_PATH,
-  addObservation, listObservations, resolveObservation, describeByKind
+  KINDS, RESOLUTIONS, STALE_DAYS, NEXT_STEP, RELATIVE_PATH, REPAIR_HINT,
+  addObservation, listObservations, resolveObservation, describeByKind, validateFeature, closedFeatures
 } = require('../lib/observations');
 
 const KIND_LIST = KINDS.join('|');
@@ -34,15 +35,36 @@ function fail(logger, options, message) {
   return { ok: false, exitCode: 1, error: message };
 }
 
+// The shell may sit in a subfolder (`cd web && npm test`): walk up to the
+// project, as context:guard does, instead of scaffolding `web/.aioson/`.
+function projectDir(args) {
+  return resolveProjectRootOrSelf(resolveTargetDir(args));
+}
+
+function outsideProject(logger, options, command, targetDir) {
+  return fail(logger, options, `${command} — ${targetDir} is not inside an AIOSON project (no .aioson/ here or above); nothing was written`);
+}
+
 async function defaultFeature(targetDir) {
   try {
     const { resolveActiveFeature } = require('./feature-current');
     const active = await resolveActiveFeature(targetDir);
-    return active && !active.ambiguous && active.slug ? active.slug : null;
+    const slug = active && !active.ambiguous && active.slug ? validateFeature(active.slug) : null;
+    // A pulse still naming a done or abandoned feature binds nothing.
+    return slug && !(await closedFeatures(targetDir)).has(slug) ? slug : null;
   } catch {
     return null;
   }
 }
+
+// An owner settling from a terminal is the owner; an agent session says
+// who it is through AIOSON_AGENT (the latest brief is a guess, not an author).
+function envAgent() {
+  const value = String(process.env.AIOSON_AGENT || '').trim();
+  return value && value.toLowerCase() !== 'auto' ? value : null;
+}
+
+const given = (value) => (value != null && value !== true ? String(value) : null);
 
 async function defaultAgent(targetDir) {
   try {
@@ -75,15 +97,19 @@ async function runObserve({ args = [], options = {}, logger }) {
 Usage:
   aioson observe [path] --kind=<${KIND_LIST}> --summary="<one line>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--json]
 Kinds: defect (something broken, not yours to fix now) · idea (a product/design improvement) · process (how the work could run better next time) · risk (may break later) · question (a choice a later stage will need).
-Defaults: --feature = the active feature, --agent = the active agent. Repeating the same summary raises its seen count; a resolved one reopens.
+Defaults: --feature = the active feature (a slug; a done or abandoned one binds nothing), --agent = the active agent. Repeating the same summary raises its seen count; a resolved one reopens. An open item of the same kind on the same paths or in near-identical words is named as "possibly already on record".
 Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}>`;
     if (options.json) return { ok: true, help: true, kinds: KINDS, resolutions: RESOLUTIONS };
     if (logger) logger.log(text);
     return { ok: true, help: true };
   }
-  const targetDir = resolveTargetDir(args);
-  const feature = options.feature != null && options.feature !== true ? String(options.feature) : await defaultFeature(targetDir);
-  const agent = options.agent != null && options.agent !== true ? String(options.agent) : await defaultAgent(targetDir);
+  const targetDir = projectDir(args);
+  if (!isProjectRoot(targetDir)) return outsideProject(logger, options, 'observe', targetDir);
+  // A bare flag parses as `true`: it would be recorded as the path or detail "true".
+  if (options.paths === true || options.path === true) return fail(logger, options, 'observe — --paths needs a value: --paths=src/a.js,src/b.js');
+  if (options.detail === true) return fail(logger, options, 'observe — --detail needs a value: --detail="..."');
+  const feature = given(options.feature) || await defaultFeature(targetDir);
+  const agent = given(options.agent) || await defaultAgent(targetDir);
   let result;
   try {
     result = await addObservation(targetDir, {
@@ -97,12 +123,14 @@ Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}
   } catch (error) {
     return fail(logger, options, `observe — ${error.message}`);
   }
-  const { item, created, reopened } = result;
-  const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: NEXT_STEP[item.kind] };
+  const { item, created, reopened, similar = [] } = result;
+  const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: NEXT_STEP[item.kind], similar };
   if (options.json) return payload;
   const scope = item.feature ? `feature ${item.feature}` : 'project';
   const verb = reopened ? 'REOPENED (it came back after being settled)' : created ? 'recorded' : `already on record (seen ${item.seen}×)`;
   logger.log(`observe — ${item.id} (${item.kind}) ${verb} · ${scope}${item.agent ? ` · @${item.agent}` : ''}`);
+  // Agents paraphrase: the same thing in other words would be a twin.
+  for (const other of similar) logger.log(`  possibly already on record: ${other.id} — ${other.summary}`);
   logger.log(`  next: ${NEXT_STEP[item.kind]}`);
   logger.log(`  settle: aioson observation:resolve . --id=${item.id} --as=<${RESOLUTION_LIST}>`);
   return payload;
@@ -113,26 +141,27 @@ async function runObservationList({ args = [], options = {}, logger }) {
     const text = `observation:list — the fan of open observations, grouped by kind with the next step each one offers.
 Usage:
   aioson observation:list [path] [--kind=<${KIND_LIST}>] [--feature=<slug>|project] [--all] [--resolved] [--json]
-Open items older than ${STALE_DAYS} days are stale (hygiene:scan names them).`;
+Open items older than ${STALE_DAYS} days are stale (hygiene:scan names them). An unreadable store exits 1.`;
     if (options.json) return { ok: true, help: true };
     if (logger) logger.log(text);
     return { ok: true, help: true };
   }
-  const targetDir = resolveTargetDir(args);
+  const targetDir = projectDir(args);
   const status = options.resolved ? 'resolved' : (options.all ? 'all' : 'open');
   const kind = options.kind != null && options.kind !== true ? String(options.kind).trim().toLowerCase() : null;
   if (kind && !KINDS.includes(kind)) return fail(logger, options, `observation:list — --kind must be one of: ${KINDS.join(', ')}`);
-  const feature = options.feature != null && options.feature !== true ? String(options.feature) : null;
+  const feature = given(options.feature);
   const listed = await listObservations(targetDir, { status, kind, feature });
+  // "Nothing open" over a file nobody can read would be a lie.
+  if (listed.error) return fail(logger, options, `observation:list — ${RELATIVE_PATH} is unreadable (${listed.error}): ${REPAIR_HINT}`);
   const open = listed.items.filter((item) => item.status === 'open');
   const resolved = listed.items.filter((item) => item.status === 'resolved');
   const byKind = {};
   for (const item of open) byKind[item.kind] = (byKind[item.kind] || 0) + 1;
   const stale = open.filter((item) => item.age_days != null && item.age_days >= STALE_DAYS).length;
-  const payload = { ok: true, status, path: listed.path, exists: listed.exists, error: listed.error || undefined, open: open.length, resolved: resolved.length, stale, by_kind: byKind, items: listed.items };
+  const payload = { ok: true, status, path: listed.path, exists: listed.exists, open: open.length, resolved: resolved.length, stale, by_kind: byKind, items: listed.items };
   if (options.json) return payload;
 
-  if (listed.error) logger.log(`observations — ${RELATIVE_PATH} unreadable: ${listed.error}`);
   if (listed.items.length === 0) {
     logger.log(`observations — nothing ${status === 'all' ? 'on record' : status}${kind ? ` of kind ${kind}` : ''}${feature ? ` for ${feature}` : ''}.`);
     if (status !== 'resolved') logger.log(`  record one: aioson observe . --kind=<${KIND_LIST}> --summary="<one line>"`);
@@ -161,20 +190,21 @@ async function runObservationResolve({ args = [], options = {}, logger }) {
     const text = `observation:resolve — settle one observation with the outcome the next reader needs.
 Usage:
   aioson observation:resolve [path] --id=OBS-xxxxxx --as=<${RESOLUTION_LIST}> [--ref=<plan path|feature slug>] [--why="..."] [--by=<who>] [--json]
-planned/promoted need an existing --ref (a Simple Plan path, a feature slug); dismissed/answered need --why. A settled item that is observed again reopens.`;
+planned/promoted need an existing --ref (a Simple Plan path, a feature slug); dismissed/answered need --why. --by defaults to AIOSON_AGENT, else owner. A settled item that is observed again reopens.`;
     if (options.json) return { ok: true, help: true };
     if (logger) logger.log(text);
     return { ok: true, help: true };
   }
-  const targetDir = resolveTargetDir(args);
+  const targetDir = projectDir(args);
+  if (!isProjectRoot(targetDir)) return outsideProject(logger, options, 'observation:resolve', targetDir);
   let result;
   try {
     result = await resolveObservation(targetDir, {
       id: options.id,
       as: options.as,
-      ref: options.ref != null && options.ref !== true ? String(options.ref) : null,
-      why: options.why != null && options.why !== true ? String(options.why) : null,
-      by: options.by != null && options.by !== true ? String(options.by) : (options.agent != null && options.agent !== true ? String(options.agent) : await defaultAgent(targetDir))
+      ref: given(options.ref),
+      why: given(options.why),
+      by: given(options.by) || given(options.agent) || envAgent() || 'owner'
     });
   } catch (error) {
     return fail(logger, options, `observation:resolve — ${error.message}`);
@@ -187,4 +217,4 @@ planned/promoted need an existing --ref (a Simple Plan path, a feature slug); di
   return payload;
 }
 
-module.exports = { runObserve, runObservationList, runObservationResolve };
+module.exports = { runObserve, runObservationList, runObservationResolve, defaultFeature };

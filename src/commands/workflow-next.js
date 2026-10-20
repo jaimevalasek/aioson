@@ -2624,12 +2624,14 @@ async function runWorkflowNext({ args, options, logger, t }) {
     // feature for @dev/@qa, an idea for @product — travels with the handoff
     // instead of staying in the session that saw it. Advisory, never a gate.
     try {
-      const { observationsForAgent } = require('../lib/observations');
-      const open = await observationsForAgent(targetDir, activation.agent, { feature: state.featureSlug });
-      if (open.length > 0) {
-        payload.observations = open.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, paths: item.paths }));
-        logger.log(`[Observations] ${open.length} open for @${activation.agent} — settle or carry, never fix in passing (aioson observation:list .):`);
-        for (const item of open) logger.log(`  - ${item.id} (${item.kind}${item.age_days != null ? `, ${item.age_days}d` : ''}) ${item.summary}${item.paths.length ? ` [${item.paths.join(', ')}]` : ''}`);
+      const { fanFor, handoffLines } = require('../lib/observations');
+      const fan = await fanFor(targetDir, activation.agent, { feature: state.featureSlug });
+      if (fan.items.length > 0 || fan.answered.length > 0) {
+        // agent:done runs this silenced and re-prints the block from the payload.
+        payload.observations = fan.items.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, paths: item.paths, age_days: item.age_days }));
+        payload.observations_total = fan.total;
+        payload.observations_answered = fan.answered.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary, feature: item.feature, answer: item.answer }));
+        for (const line of handoffLines(fan.items, fan.total, activation.agent, fan.answered)) logger.log(line);
       }
     } catch { /* the hub is advisory; a broken store never blocks the handoff */ }
     logger.log(activation.prompt);

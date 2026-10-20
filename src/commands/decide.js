@@ -11,7 +11,7 @@
  * proven at birth to reach the next agent who asks the same question.
  */
 
-const { resolveTargetDir } = require('../lib/project-root');
+const { resolveTargetDir, resolveProjectRootOrSelf } = require('../lib/project-root');
 const { findPrecedent, recommendChoice, recordDecision } = require('../lib/decision-precedent');
 const { birthScenarios, proveBirth, recordBirthScenarios } = require('../lib/knowledge-birth');
 
@@ -60,7 +60,8 @@ function logConsultation(logger, input, found, recommendation) {
 }
 
 async function runDecide({ args, options = {}, logger }) {
-  const targetDir = resolveTargetDir(args);
+  // Run from a subfolder, `.` is the shell's cwd: decide for the project.
+  const targetDir = resolveProjectRootOrSelf(resolveTargetDir(args));
   const input = decideInput(options);
   if (!input.question) {
     if (!options.json) logger.error('decide needs --question="<the decision to make>".');
