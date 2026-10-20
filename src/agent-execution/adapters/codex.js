@@ -13,11 +13,16 @@ const { createAdapter } = require('./base');
 // but `host:signature` probes in an empty temporary directory on purpose. The
 // declared write paths and the run's measured scope findings are what bound a
 // lane worker; the repo check only bounds where.
+//
+// hook_trust_args: the registry's hook-trust flag, passed by createAdapter's
+// execute() once the installed binary is known to list it (src/lib/hook-trust.js);
+// absent in build() alone, so the pinned argv stays the same.
 module.exports=createAdapter('codex',i=>({args:[
   'exec',
   '--skip-git-repo-check',
   ...(i.captureUsage ? ['--json'] : []),
   ...(i.sandbox_args||[]),
+  ...(i.hook_trust_args||[]),
   ...(i.model==='configured-default'?[]:['--model',i.model]),
   ...(i.reasoning_effort?['-c',`model_reasoning_effort="${i.reasoning_effort}"`]:[]),
   ...(i.writable_roots||[]).flatMap(root=>['--add-dir',root]),

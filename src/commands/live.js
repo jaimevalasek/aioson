@@ -20,6 +20,7 @@ const { ensureDir, exists } = require('../utils');
 const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
 const { getToolCapabilities, resolveResumeArgs, resolveLaunchPermission } = require('../lib/tool-capabilities');
+const { resolveHookTrustArgs } = require('../lib/hook-trust');
 const { resolveTargetDir } = require('../lib/project-root');
 const { resolveNpmCmdShim } = require('../agent-execution/executable-resolver');
 
@@ -155,7 +156,7 @@ function buildLaunchArgs(options, tool, { onWarning = null } = {}) {
 function describeLaunch(launch) {
   if (!launch) return null;
   const p = launch.permission;
-  return { binary: p.binary, host: p.host, permission_mode: p.mode, permission_args: p.args, permission_source: p.source, permission_flag: p.flag, warning: p.warning, args: launch.args };
+  return { binary: p.binary, host: p.host, permission_mode: p.mode, permission_args: p.args, permission_source: p.source, permission_flag: p.flag, hook_trust: launch.hookTrust || null, warning: p.warning, args: launch.args };
 }
 
 function parseToolArgs(value) {
@@ -1435,11 +1436,21 @@ async function runLiveStart({ args, options = {}, logger, t }) {
   // tmux reattach never does): every path launches the same argv, and a flag
   // AIOSON could not add (a binary the registry does not know) is said here
   // and in the result's `launch` block instead of the session silently asking.
+  // The hooks AIOSON installed run in an unattended session only under the
+  // host's hook-trust flag (src/lib/hook-trust.js): added here for the binary
+  // actually launched, and reported as `launch.hook_trust`.
   let launch = null;
-  const launchArgs = () => {
+  const launchArgs = async () => {
     if (!launch) {
       launch = resolveLaunch(options, tool);
       if (launch.permission.warning && !options.json) logger.log(`⚠ ${launch.permission.warning}`);
+      const trust = await resolveHookTrustArgs(launch.permission.host, {
+        unattended: launch.permission.mode === 'yolo',
+        existingArgs: launch.args,
+        probe: await resolveToolSpawn(binaryPath, ['--help'])
+      });
+      launch.hookTrust = trust.reason;
+      if (trust.args.length > 0) launch.args = [...launch.args, ...trust.args];
     }
     return launch.args;
   };
@@ -1562,7 +1573,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           let attachResult = null;
 
           if (attach && !noLaunch) {
-            attachChild = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir, existing.sessionKey));
+            attachChild = trackChild(await spawnTool(binaryPath, await launchArgs(), targetDir, existing.sessionKey));
             state.child_pid = attachChild.pid || null;
             if (existing.task?.task_key) {
               const taskMeta = parseTaskMeta(existing.task);
@@ -1668,11 +1679,11 @@ async function runLiveStart({ args, options = {}, logger, t }) {
             agentName,
             tool,
             binaryPath,
-            toolArgs: launchArgs()
+            toolArgs: await launchArgs()
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir, sessionKey));
+          child = trackChild(await spawnTool(binaryPath, await launchArgs(), targetDir, sessionKey));
           taskMeta.child_pid = child.pid || null;
           updateTask(db, {
             taskKey,
@@ -1680,7 +1691,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = trackChild(await spawnTool(binaryPath, launchArgs(), targetDir, sessionKey));
+        child = trackChild(await spawnTool(binaryPath, await launchArgs(), targetDir, sessionKey));
         taskMeta.child_pid = child.pid || null;
         updateTask(db, {
           taskKey,

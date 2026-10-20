@@ -4,6 +4,7 @@ const { spawn } = require('node:child_process');
 const { capabilities, requiredCapability } = require('../capabilities');
 const { resolveExecutable } = require('../executable-resolver');
 const { resolveSandboxArgs } = require('../../lib/tool-capabilities');
+const { resolveHookTrustArgs } = require('../../lib/hook-trust');
 const { createUsageCollector } = require('../execution-usage');
 
 function redact(text) {
@@ -141,10 +142,21 @@ function createAdapter(host, buildArgs) {
         };
       }
 
+      // The hooks AIOSON installed run in this unattended process only under
+      // the host's hook-trust flag (src/lib/hook-trust.js): added here, at the
+      // spawn, so build() stays the argv the tests and host:signature pin.
+      const trust = await resolveHookTrustArgs(host, {
+        unattended: true,
+        existingArgs: built.args,
+        probe: { command: resolved.executable, args: [...resolved.prefixArgs, '--help'] }
+      });
+      const trusted = trust.args.length > 0 ? this.build({ ...input, hook_trust_args: trust.args }) : null;
+      const args = trusted && trusted.ok ? trusted.args : built.args;
+
       return new Promise((resolve) => {
         const child = spawn(
           resolved.executable,
-          [...resolved.prefixArgs, ...built.args],
+          [...resolved.prefixArgs, ...args],
           built.options
         );
         input.onSpawn?.(child.pid, new Date().toISOString());

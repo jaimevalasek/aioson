@@ -87,6 +87,12 @@ const TOOL_CAPS = {
     // `--yolo` is the CLI's own alias of the bypass; `-s`/`-a` are the short
     // forms of `--sandbox`/`--ask-for-approval`.
     permission_flags: ['--dangerously-bypass-approvals-and-sandbox', '--yolo', '--sandbox', '-s', '--ask-for-approval', '-a', '--full-auto'],
+    // Codex runs a hook nobody trusted in its TUI (`/hooks`) only under this
+    // flag, which it documents for automation that vets its hook sources.
+    // AIOSON vets the hooks it installs: src/lib/hook-trust.js adds the flag
+    // at the spawn of the sessions AIOSON launches unattended, once the
+    // installed binary lists it — never through yolo_args.
+    hook_trust_args: ['--dangerously-bypass-hook-trust'],
     // Never `--sandbox workspace-write` for a lane worker: measured on the
     // operator's machine, the Windows sandbox setup fails to load and the
     // model reports DONE without writing (see the header note).

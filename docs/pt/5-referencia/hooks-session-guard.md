@@ -404,6 +404,8 @@ Hooks Install — agent: @dev
 
 O Codex só executa um hook novo ou alterado depois que você o revisa: a confiança é gravada pelo hash da definição. Abra o Codex, rode `/hooks`, confira as entradas `aioson …` e confirme. Ao reinstalar com outro agente o hash muda e a revisão volta a ser pedida; automação que já valida o arquivo pode usar `codex --dangerously-bypass-hook-trust`.
 
+As sessões que o próprio AIOSON abre sem ninguém no terminal não têm como passar pelo `/hooks`, e o AIOSON responde pelos hooks que ele mesmo instalou: um lane worker (`execution:run`) e uma sessão `live:start` sem `--permission-mode=default` recebem `--dangerously-bypass-hook-trust` automaticamente, desde que os hooks do AIOSON estejam em `~/.codex/hooks.json` e o `codex --help` instalado liste a flag (um Codex antigo não a conhece e recusaria o argumento; a sondagem acontece uma vez por processo). A flag vale só para aquela invocação e nunca é acrescentada por cima de uma passada em `--tool-args`; a sua sessão interativa continua passando pela revisão. O `live:start --json` diz o que foi decidido em `launch.hook_trust`: `added`, `attended`, `hooks_not_installed`, `flag_unknown`, `caller_flag` ou `no_hook_trust`.
+
 ### 3. O que é configurado
 
 ```json
