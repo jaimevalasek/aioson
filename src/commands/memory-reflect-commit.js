@@ -8,9 +8,8 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { openRuntimeDb, logAgentEvent } = require('../runtime-store');
 const { validate, readBootstrapSnapshot } = require('../memory-reflect-engine');
-const { REFLECT_PROMPT_RELATIVE } = require('./memory-reflect-prepare');
+const { REFLECT_PROMPT_RELATIVE, emitReflectEvent: emitEvent } = require('./memory-reflect-prepare');
 const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
 const { resolveTargetDir } = require('../lib/project-root');
 
@@ -41,24 +40,6 @@ async function loadAgentOutput(options) {
   const stdinData = await readStdin();
   if (stdinData.trim()) return JSON.parse(stdinData);
   throw new Error('memory:reflect-commit requires --output=<path> or JSON on stdin');
-}
-
-async function emitEvent(targetDir, agent, type, message, payload) {
-  try {
-    const { db, runtimeDir } = await openRuntimeDb(targetDir);
-    try {
-      await logAgentEvent(db, runtimeDir, {
-        agentName: agent,
-        message,
-        type,
-        meta: payload || undefined
-      });
-    } finally {
-      db.close();
-    }
-  } catch {
-    // best-effort
-  }
 }
 
 async function runMemoryReflectCommit({ args, options = {}, logger }) {

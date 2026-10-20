@@ -85,6 +85,23 @@ function withIdColumn(table, columns, name, aliases, idRe) {
   return columns;
 }
 
+// A `Promise` column that is not the id column carries the promise text.
+function promiseMapColumns(table) {
+  const columns = withIdColumn(table, mapColumns(table, {
+    source: ['Source', 'SRC', 'Fonte'],
+    intent: ['Approved intent', 'Intent', 'Intencao aprovada', 'Intencao'],
+    state: ['State', 'Decision', 'Estado', 'Decisao']
+  }), 'promise', ['Promise', 'PROM', 'Promise ID', 'Promessa', 'ID da promessa', 'ID'], PROM_ID_EXACT_RE);
+  if (columns.indexes.intent !== -1) return columns;
+  const text = table.normalizedHeaders.findIndex((header, index) => index !== columns.indexes.promise
+    && ['promise', 'promessa'].includes(header));
+  if (text !== -1) {
+    columns.indexes.intent = text;
+    columns.missing = columns.missing.filter((name) => name !== 'intent');
+  }
+  return columns;
+}
+
 async function validateSourceLineage({
   targetDir,
   slug,
@@ -92,10 +109,7 @@ async function validateSourceLineage({
   prd,
   productMap,
   acceptance,
-  lifecycle = {},
-  // Before a PRD exists Source Coverage is not due yet: the inventory and the
-  // promise map are still checked where the lineage is born.
-  requireCoverage = true
+  lifecycle = {}
 }) {
   const briefingArtifact = `.aioson/briefings/${slug}/briefings.md`;
   const prdArtifact = `.aioson/context/prd-${slug}.md`;
@@ -204,20 +218,7 @@ async function validateSourceLineage({
     if (!table) {
       findings.push(finding('product', 'source_promise_map_invalid', 'Source Promise Map must contain a Markdown table', briefingArtifact));
     } else {
-      const columns = withIdColumn(table, mapColumns(table, {
-        source: ['Source', 'SRC', 'Fonte'],
-        intent: ['Approved intent', 'Intent', 'Intencao aprovada', 'Intencao'],
-        state: ['State', 'Decision', 'Estado', 'Decisao']
-      }), 'promise', ['Promise', 'PROM', 'Promise ID', 'Promessa', 'ID da promessa', 'ID'], PROM_ID_EXACT_RE);
-      // A `Promise` column that is not the id column carries the promise text.
-      if (columns.indexes.intent === -1) {
-        const text = table.normalizedHeaders.findIndex((header, index) => index !== columns.indexes.promise
-          && ['promise', 'promessa'].includes(header));
-        if (text !== -1) {
-          columns.indexes.intent = text;
-          columns.missing = columns.missing.filter((name) => name !== 'intent');
-        }
-      }
+      const columns = promiseMapColumns(table);
       if (columns.missing.length > 0) {
         findings.push(finding('product', 'source_promise_map_columns', `Source Promise Map missing column(s): ${columns.missing.join(', ')}`, briefingArtifact));
       } else {
@@ -261,10 +262,10 @@ async function validateSourceLineage({
 
   const coverage = [];
   const validCoveragePromises = new Set();
-  const coverageSection = requireCoverage ? extractSection(prd, ['Source Coverage', 'Cobertura das Fontes']) : null;
-  if (requireCoverage && !coverageSection) {
+  const coverageSection = extractSection(prd, ['Source Coverage', 'Cobertura das Fontes']);
+  if (!coverageSection) {
     findings.push(missingSection('product', 'source_coverage_missing', 'Source Coverage in the PRD', prdArtifact));
-  } else if (requireCoverage) {
+  } else {
     const table = parseFirstMarkdownTable(coverageSection);
     if (!table) {
       findings.push(finding('product', 'source_coverage_invalid', 'Source Coverage must contain a Markdown table', prdArtifact));
@@ -391,7 +392,7 @@ async function validateSourceLineage({
     inventory,
     promises,
     coverage,
-    coverage_checked: requireCoverage,
+    coverage_checked: true,
     lifecycle: {
       stage: lifecycleStage,
       absorbed,

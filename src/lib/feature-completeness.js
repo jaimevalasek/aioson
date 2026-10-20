@@ -832,6 +832,30 @@ function validatePrdAcceptanceCriteria(content, artifact, productMap) {
   };
 }
 
+// Lineage at birth: before any PRD makes the feature applicable, a briefing
+// that pins sources is still re-hashed and parsed, so @briefing and @refiner see
+// a stale source or a broken map while the CLI can still rewrite the briefing.
+// Advisory to the gates: its findings stay off `findings`, and Source Coverage
+// is not due before a PRD exists. An applicable feature starts from the empty
+// lineage that the full check replaces.
+async function initialSourceLineage({ applicable, targetDir, slug, inputs, artifacts, registryEntry }) {
+  const empty = { applicable: false, findings: [], inventory: [], promises: [], coverage: [] };
+  if (applicable) return empty;
+  if (!pinsSources(inputs.briefing)) return { ...empty, reason: inputs.briefing ? 'no_pinned_sources' : 'no_briefing' };
+  const lineage = await validateSourceLineage({
+    targetDir,
+    slug,
+    briefing: inputs.briefing,
+    prd: inputs.prd,
+    productMap: { findings: [], rows: [], requiredCaps: [], allCaps: [] },
+    acceptance: { findings: [], rows: [], capToAcs: {} },
+    lifecycle: { registry_entry: registryEntry, prd_exists: Boolean(artifacts.prd.exists) }
+  });
+  const prdWritten = Boolean(String(inputs.prd || '').trim());
+  const findings = prdWritten ? lineage.findings : lineage.findings.filter((item) => item.check !== 'source_coverage_missing');
+  return { ...lineage, findings, coverage_checked: prdWritten, at_birth: true };
+}
+
 async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
   const artifacts = options.artifacts || await scanArtifacts(targetDir, slug);
   const classification = String(options.classification || await detectClassification(targetDir, slug) || '').toUpperCase();
@@ -860,7 +884,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
 
   const stageFindings = { product: [], specification: [], plan: [], execution: [] };
   let productMap = { findings: [], rows: [], requiredCaps: [], allCaps: [] };
-  let sourceLineage = { applicable: false, findings: [], inventory: [], promises: [], coverage: [] };
+  let sourceLineage = await initialSourceLineage({ applicable, targetDir, slug, inputs, artifacts, registryEntry: briefingRegistryEntry });
   let currentSystemFit = { findings: [], rows: [] };
   let acceptance = { findings: [], rows: [], capToAcs: {} };
   let delivery = { findings: [], rows: [] };
@@ -985,27 +1009,6 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
       execution = { findings: structural.findings, ledger: null, coveredCaps: [] };
       stageFindings.execution.push(...structural.findings);
     }
-  } else if (pinsSources(inputs.briefing)) {
-    // Lineage at birth: before any PRD makes the feature applicable, a
-    // briefing that pins sources is still re-hashed and parsed, so @briefing
-    // and @refiner see a stale source or a broken map while the CLI can still
-    // rewrite the briefing. Advisory to the gates: findings stay off `findings`.
-    sourceLineage = await validateSourceLineage({
-      targetDir,
-      slug,
-      briefing: inputs.briefing,
-      prd: inputs.prd,
-      productMap,
-      acceptance,
-      lifecycle: {
-        registry_entry: briefingRegistryEntry,
-        prd_exists: Boolean(artifacts.prd.exists)
-      },
-      requireCoverage: Boolean(String(inputs.prd || '').trim())
-    });
-    sourceLineage.at_birth = true;
-  } else {
-    sourceLineage.reason = inputs.briefing ? 'no_pinned_sources' : 'no_briefing';
   }
 
   const findings = Object.values(stageFindings).flat();

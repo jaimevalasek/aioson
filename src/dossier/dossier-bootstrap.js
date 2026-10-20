@@ -101,6 +101,22 @@ function buildBootstrapDossier({ slug, classification, createdAt, artifacts, why
   return fm + body;
 }
 
+// The feature's PRD (classify --apply writes it) before the project's tier,
+// which describes the project, not this feature.
+function resolveClassification(explicit, sources) {
+  if (explicit) return explicit;
+  for (const raw of sources) {
+    const m = raw ? raw.match(/^classification:\s*"?([A-Z]+)"?\s*$/m) : null;
+    if (m && ALLOWED_CLASSIFICATIONS.has(m[1])) return m[1];
+  }
+  return 'MEDIUM';
+}
+
+// Placeholders follow the project's interaction_language (LANGUAGE BOUNDARY).
+function placeholderTranslator(projectContext) {
+  return createTranslator(projectContext ? getInteractionLanguage(parseYamlFrontmatter(projectContext).data, 'en') : 'en').t;
+}
+
 async function initFromExisting({ slug, contextDir, classification, targetDir, now = () => new Date() } = {}) {
   if (!isValidSlug(slug)) {
     const err = new Error(`invalid slug (must be kebab-case): ${JSON.stringify(slug)}`);
@@ -140,16 +156,9 @@ async function initFromExisting({ slug, contextDir, classification, targetDir, n
     throw err;
   }
 
-  // Resolve classification: the feature's PRD (classify --apply writes it)
-  // before the project's tier, which describes the project, not this feature.
-  let cls = classification;
+  // Resolve classification
   const projectContext = await readText(path.join(contextDir, 'project.context.md'));
-  for (const raw of [artifacts.prd, projectContext]) {
-    if (cls || !raw) continue;
-    const m = raw.match(/^classification:\s*"?([A-Z]+)"?\s*$/m);
-    if (m && ALLOWED_CLASSIFICATIONS.has(m[1])) cls = m[1];
-  }
-  cls = cls || 'MEDIUM';
+  const cls = resolveClassification(classification, [artifacts.prd, projectContext]);
 
   // Extract Why/What
   const prdContent = artifacts.prd || artifacts.prdGlobal;
@@ -177,9 +186,7 @@ async function initFromExisting({ slug, contextDir, classification, targetDir, n
     throw err;
   }
 
-  // Placeholders follow the project's interaction_language (LANGUAGE BOUNDARY).
-  const language = projectContext ? getInteractionLanguage(parseYamlFrontmatter(projectContext).data, 'en') : 'en';
-  const markdown = buildBootstrapDossier({ slug, classification: cls, createdAt, artifacts, why, what, agentTrail, t: createTranslator(language).t });
+  const markdown = buildBootstrapDossier({ slug, classification: cls, createdAt, artifacts, why, what, agentTrail, t: placeholderTranslator(projectContext) });
 
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(p, markdown, 'utf8');

@@ -38,9 +38,12 @@ const SOURCE_REF_RE = /\bSRC(?:-[A-Za-z0-9]+)+\b/gi;
 // past Git for Windows' 260-char path limit on a modest root.
 const NAME_DIGEST_CHARS = 16;
 
-function reportRelativePath(migrationRelative, before, after, { legacy = false } = {}) {
-  const name = legacy ? `${before}-${after}` : `${before.slice(0, NAME_DIGEST_CHARS)}-${after.slice(0, NAME_DIGEST_CHARS)}`;
-  return `${migrationRelative}/reports/${name}.json`;
+// A report a pre-1.74 run already wrote under the full-digest name is reused, never duplicated.
+async function prepareReportPath(plan, migrationRelative) {
+  await ensureSecureDirectory(plan.projectDir, `${migrationRelative}/reports`);
+  const legacy = `${migrationRelative}/reports/${plan.before_sha256}-${plan.after_sha256}.json`;
+  const short = `${migrationRelative}/reports/${plan.before_sha256.slice(0, NAME_DIGEST_CHARS)}-${plan.after_sha256.slice(0, NAME_DIGEST_CHARS)}.json`;
+  return fs.access(path.join(plan.projectDir, legacy)).then(() => legacy, () => short);
 }
 
 function migrationError(code, message, details = {}) {
@@ -550,12 +553,9 @@ async function applyBriefingLineageMigration(plan, options = {}) {
   const migrationRelative = `.aioson/briefings/${plan.slug}/lineage-migration`;
   const migrationDir = await ensureSecureDirectory(plan.projectDir, migrationRelative);
   const backupRelative = `${migrationRelative}/backups/${plan.before_sha256}.md`;
-  // A report a pre-1.74 run already wrote under the full-digest name is reused, never duplicated.
-  const legacyReport = reportRelativePath(migrationRelative, plan.before_sha256, plan.after_sha256, { legacy: true });
-  const reportRelative = await fs.access(path.join(plan.projectDir, legacyReport)).then(() => legacyReport, () => reportRelativePath(migrationRelative, plan.before_sha256, plan.after_sha256));
   const markerPath = path.join(migrationDir, 'transaction.json');
   await ensureSecureDirectory(plan.projectDir, `${migrationRelative}/backups`);
-  await ensureSecureDirectory(plan.projectDir, `${migrationRelative}/reports`);
+  const reportRelative = await prepareReportPath(plan, migrationRelative);
   await writeImmutable(path.join(plan.projectDir, backupRelative), plan.beforeContent);
 
   const report = {
@@ -601,8 +601,6 @@ async function applyBriefingLineageMigration(plan, options = {}) {
     }
     throw error;
   }
-  // The migration is the audited canonicalization of the same approval (its
-  // report keeps both hashes): a pinned approval follows the migrated text.
   await repinApproval(plan.projectDir, plan.slug, plan.beforeContent, plan.afterContent).catch(() => {});
 
   return {

@@ -265,9 +265,7 @@ async function prepareReview({ rootDir, featureSlug, agent, artifactPath, now = 
   let created = false;
 
   try {
-    const existing = await readPacketFile(rootDir, input.feature_slug, input.agent, packetId);
-    packetPath = existing.path;
-    packet = existing.loaded.value;
+    ({ path: packetPath, loaded: { value: packet } } = await readPacketFile(rootDir, input.feature_slug, input.agent, packetId));
     assertPacketContract(packet, packetPath);
     if (!equalJson(packetIdentity(packet), identity)) throw engineError('immutable_packet_conflict');
   } catch (error) {

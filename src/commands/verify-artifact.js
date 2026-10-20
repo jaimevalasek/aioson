@@ -753,6 +753,33 @@ async function approvalDriftWarnings(targetDir, slug) {
   }
 }
 
+// Lineage at birth for kind=briefing. Legacy and conversational briefings
+// without an inventory are legal, so inapplicability and analyzer failure
+// degrade to warnings — the structural lint remains the verdict's backbone.
+async function addBriefingLineage(ctx, { issues, warnings, metrics }) {
+  try {
+    const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
+    const analysis = await analyzeFeatureCompleteness(ctx.targetDir, ctx.slug, {});
+    const lineage = analysis.source_lineage || { applicable: false, findings: [] };
+    if (lineage.applicable) {
+      const verdict = lineageVerdict(lineage, ctx.slug);
+      issues.push(...verdict.issues);
+      warnings.push(...verdict.warnings);
+      metrics.lineage = {
+        sources_total: (lineage.inventory || []).length,
+        promises_total: (lineage.promises || []).length,
+        lifecycle_stage: lineage.lifecycle ? lineage.lifecycle.stage : null
+      };
+    } else {
+      warnings.push(lineageNotApplicable(lineage));
+      metrics.lineage = { applicable: false };
+    }
+  } catch (error) {
+    warnings.push(`source lineage analysis failed: ${error.message}`);
+  }
+  warnings.push(...await approvalDriftWarnings(ctx.targetDir, ctx.slug));
+}
+
 const ADAPTERS = {
   // setup — project.context.md is the root artifact every session reads first.
   'project-context': async (ctx) => {
@@ -1079,30 +1106,7 @@ const ADAPTERS = {
     const warnings = [...result.warnings];
     const metrics = { ...result.metrics, file: rel };
 
-    // Lineage at birth. Legacy and conversational briefings without an
-    // inventory are legal, so inapplicability and analyzer failure degrade to
-    // warnings — the structural lint above remains the verdict's backbone.
-    try {
-      const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
-      const analysis = await analyzeFeatureCompleteness(ctx.targetDir, ctx.slug, {});
-      const lineage = analysis.source_lineage || { applicable: false, findings: [] };
-      if (lineage.applicable) {
-        const verdict = lineageVerdict(lineage, ctx.slug);
-        issues.push(...verdict.issues);
-        warnings.push(...verdict.warnings);
-        metrics.lineage = {
-          sources_total: (lineage.inventory || []).length,
-          promises_total: (lineage.promises || []).length,
-          lifecycle_stage: lineage.lifecycle ? lineage.lifecycle.stage : null
-        };
-      } else {
-        warnings.push(lineageNotApplicable(lineage));
-        metrics.lineage = { applicable: false };
-      }
-    } catch (error) {
-      warnings.push(`source lineage analysis failed: ${error.message}`);
-    }
-    warnings.push(...await approvalDriftWarnings(ctx.targetDir, ctx.slug));
+    await addBriefingLineage(ctx, { issues, warnings, metrics });
 
     // Prototype resolution is advisory here — a draft briefing may legitimately
     // not have built it yet — but briefing:approve refuses while it is missing,

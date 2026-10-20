@@ -40,6 +40,8 @@ async function readJsonOrNull(filePath) {
   }
 }
 
+// First match wins, so callers list sources by authority: the PRD carries the
+// feature's tier (classify --apply); the dossier holds a bootstrap-time copy.
 function readClassificationFromFrontmatters(rawList) {
   for (const raw of rawList) {
     if (!raw) continue;
@@ -155,7 +157,6 @@ async function buildDevResumeData(projectPath) {
 
   const prdRaw = await readFileOrNull(path.join(ctxDir, `prd-${featureSlug}.md`));
   const specRaw = await readFileOrNull(path.join(ctxDir, `spec-${featureSlug}.md`));
-  // The PRD carries the feature's tier (classify --apply); the dossier holds a bootstrap-time copy.
   const classification = readClassificationFromFrontmatters([prdRaw, specRaw, dossierRaw]);
 
   const devStateRaw = await readFileOrNull(path.join(ctxDir, 'dev-state.md'));

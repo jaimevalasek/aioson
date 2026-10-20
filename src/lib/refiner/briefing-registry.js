@@ -215,7 +215,11 @@ async function approvalDrift(projectDir, slug) {
   return { approved_sha256: entry.approved_sha256, current_sha256: current, drifted: current !== entry.approved_sha256 };
 }
 
-/** A mechanical rewrite of an approved briefing (lineage migration) keeps the approval pinned to the new text. */
+/**
+ * A mechanical rewrite of an approved briefing keeps the approval pinned to the
+ * new text: the lineage migration is the audited canonicalization of the same
+ * approval (its report keeps both hashes), so the pin follows the migrated text.
+ */
 async function repinApproval(projectDir, slug, beforeText, afterText) {
   const data = await readBriefingRegistry(projectDir);
   const entry = findBriefing(data, slug);

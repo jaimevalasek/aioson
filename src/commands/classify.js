@@ -322,6 +322,32 @@ async function runInteractive(logger) {
   }
 }
 
+// Auto-detect from the canonical PRD; legacy sources remain fallbacks. Before a
+// PRD exists the briefing is the feature's source: @refiner asks classify for
+// recommend_prototype while refining, never after Product.
+async function findClassifySource(targetDir, slug) {
+  const dir = contextDir(targetDir);
+  const candidates = slug
+    ? [
+        path.join(dir, `prd-${slug}.md`),
+        path.join(dir, `requirements-${slug}.md`),
+        path.join(dir, `sheldon-enrichment-${slug}.md`),
+        ...(SAFE_SLUG.test(slug) ? [resolveBriefingPath(targetDir, slug, 'briefings.md')] : [])
+      ]
+    : [path.join(dir, 'requirements.md'), path.join(dir, 'prd.md')];
+  for (const candidate of candidates) {
+    const content = await readFileSafe(candidate);
+    if (content) return { sourceFile: path.relative(targetDir, candidate), content };
+  }
+  return {
+    sourceFile: null,
+    content: null,
+    message: slug
+      ? `No PRD, requirements or briefing found for "${slug}". Use --interactive.`
+      : 'No prd or requirements file found. Use --interactive or --feature=<slug>.'
+  };
+}
+
 async function runClassify({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const slug = options.feature ? String(options.feature) : null;
@@ -336,36 +362,15 @@ async function runClassify({ args, options = {}, logger }) {
   if (interactive) {
     ({ userTypeCount, integrationCount, complexityLevel } = await runInteractive(logger));
   } else {
-    // Auto-detect from the canonical PRD; legacy sources remain fallbacks.
     const dir = contextDir(targetDir);
-    // Before a PRD exists the briefing is the feature's source: @refiner asks
-    // classify for recommend_prototype while refining, never after Product.
-    const candidates = slug
-      ? [
-          path.join(dir, `prd-${slug}.md`),
-          path.join(dir, `requirements-${slug}.md`),
-          path.join(dir, `sheldon-enrichment-${slug}.md`),
-          ...(SAFE_SLUG.test(slug) ? [resolveBriefingPath(targetDir, slug, 'briefings.md')] : [])
-        ]
-      : [path.join(dir, 'requirements.md'), path.join(dir, 'prd.md')];
-
-    for (const candidate of candidates) {
-      content = await readFileSafe(candidate);
-      if (content) {
-        sourceFile = path.relative(targetDir, candidate);
-        scopeSourceFiles.push(sourceFile);
-        break;
-      }
-    }
-
-    if (!content) {
-      const message = slug
-        ? `No PRD, requirements or briefing found for "${slug}". Use --interactive.`
-        : 'No prd or requirements file found. Use --interactive or --feature=<slug>.';
-      if (options.json) return { ok: false, reason: 'no_source', message };
-      logger.log(message);
+    const found = await findClassifySource(targetDir, slug);
+    if (!found.content) {
+      if (options.json) return { ok: false, reason: 'no_source', message: found.message };
+      logger.log(found.message);
       return { ok: false };
     }
+    ({ sourceFile, content } = found);
+    scopeSourceFiles.push(sourceFile);
 
     ({ userTypeCount, integrationCount, complexityLevel } = analyzeContent(content));
     scopeContent = content;

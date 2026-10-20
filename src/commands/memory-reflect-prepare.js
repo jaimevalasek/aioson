@@ -7,7 +7,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { openRuntimeDb, logAgentEvent } = require('../runtime-store');
+const { openRuntimeDb, logAgentEvent, logTrailingAgentEvent } = require('../runtime-store');
 const { evaluate, buildPrompt } = require('../memory-reflect-engine');
 const { resolveTargetDir } = require('../lib/project-root');
 
@@ -17,25 +17,25 @@ async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
 }
 
-async function emitEvent(targetDir, agent, type, message, payload) {
+// Shared with memory:reflect-commit (which keeps the default).
+async function emitReflectEvent(targetDir, agent, type, message, payload, { trailing = false } = {}) {
   try {
     const { db, runtimeDir } = await openRuntimeDb(targetDir);
     try {
-      // agent:done runs reflection after closing the agent's run: the event
-      // joins that run instead of opening a "running" one nobody finishes.
-      await logAgentEvent(db, runtimeDir, {
-        agentName: agent,
-        message,
-        type,
-        meta: payload || undefined,
-        startIfIdle: false
-      });
+      const log = trailing ? logTrailingAgentEvent : logAgentEvent;
+      await log(db, runtimeDir, { agentName: agent, message, type, meta: payload || undefined });
     } finally {
       db.close();
     }
   } catch {
     // telemetry is best-effort; never fail prepare/commit due to event emission
   }
+}
+
+// agent:done runs reflection after closing the agent's run: the event joins
+// that run instead of opening a "running" one nobody finishes.
+function emitEvent(targetDir, agent, type, message, payload) {
+  return emitReflectEvent(targetDir, agent, type, message, payload, { trailing: true });
 }
 
 async function runMemoryReflectPrepare({ args, options = {}, logger }) {
@@ -97,5 +97,6 @@ async function runMemoryReflectPrepare({ args, options = {}, logger }) {
 
 module.exports = {
   REFLECT_PROMPT_RELATIVE,
+  emitReflectEvent,
   runMemoryReflectPrepare
 };

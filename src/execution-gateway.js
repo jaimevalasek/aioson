@@ -83,6 +83,11 @@ function makeWorkflowTaskGoal(state, t) {
     : t('workflow_runtime.task_goal_project');
 }
 
+function makeWorkflowTaskText(targetDir, state) {
+  const t = projectTranslator(targetDir);
+  return { title: makeWorkflowTaskTitle(state, t), goal: makeWorkflowTaskGoal(state, t) };
+}
+
 function makeWorkflowControllerTitle(state) {
   return state.featureSlug
     ? `Workflow controller (${state.featureSlug})`
@@ -244,12 +249,10 @@ async function syncWorkflowRuntime(targetDir, input) {
 
     let task = findTaskBySession(db, sessionKey);
     if (!task) {
-      const t = projectTranslator(targetDir);
       task = {
         task_key: startTask(db, {
           sessionKey,
-          title: makeWorkflowTaskTitle(state, t),
-          goal: makeWorkflowTaskGoal(state, t),
+          ...makeWorkflowTaskText(targetDir, state),
           createdBy: '@workflow',
           status: activationAgent ? 'running' : 'queued'
         }),

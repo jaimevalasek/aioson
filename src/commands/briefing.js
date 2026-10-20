@@ -21,7 +21,6 @@ const { parseYamlFrontmatter, getInteractionLanguage } = require('../context');
 const { createTranslator } = require('../i18n');
 const {
   approvalHash,
-  configPath: registryConfigPath,
   markRefinementState,
   readBriefingRegistry,
   writeBriefingRegistry
@@ -335,24 +334,23 @@ function logPrototypeGateError(logger, slug, failure, t) {
 
 // ─── briefing:approve ─────────────────────────────────────────────────────────
 
-async function runBriefingApprove({ args, options = {}, logger }) {
+// Both approval commands start alike: the project's translator, the slug and
+// the registry — or the refusal the owner can act on.
+async function openApprovalRegistry(args, options, logger) {
   const projectDir = resolveTargetDir(args);
-  const slugOpt = String(options.slug || '').trim() || null;
-  const configFile = registryConfigPath(projectDir);
   const t = await resolveProjectGateTranslator(projectDir);
-
-  // ── Read config ────────────────────────────────────────────────────────────
-  let data;
   try {
-    data = await readBriefingRegistry(projectDir);
+    return { projectDir, t, slugOpt: String(options.slug || '').trim() || null, data: await readBriefingRegistry(projectDir) };
   } catch (error) {
-    if (error && error.code === 'invalid_frontmatter') {
-      logger.error(t('briefing_approval.invalid_frontmatter'));
-      return { ok: false, error: 'invalid_frontmatter' };
-    }
-    logger.error(t('briefing_approval.no_registry'));
-    return { ok: false, error: 'no_config' };
+    const invalid = Boolean(error && error.code === 'invalid_frontmatter');
+    logger.error(t(invalid ? 'briefing_approval.invalid_frontmatter' : 'briefing_approval.no_registry'));
+    return { failure: { ok: false, error: invalid ? 'invalid_frontmatter' : 'no_config' } };
   }
+}
+
+async function runBriefingApprove({ args, options = {}, logger }) {
+  const { projectDir, t, slugOpt, data, failure } = await openApprovalRegistry(args, options, logger);
+  if (failure) return failure;
 
   const drafts = data.briefings.filter((b) => b.status === 'draft');
 
@@ -424,23 +422,8 @@ async function runBriefingApprove({ args, options = {}, logger }) {
 // ─── briefing:unapprove ───────────────────────────────────────────────────────
 
 async function runBriefingUnapprove({ args, options = {}, logger }) {
-  const projectDir = resolveTargetDir(args);
-  const slugOpt = String(options.slug || '').trim() || null;
-  const configFile = registryConfigPath(projectDir);
-  const t = await resolveProjectGateTranslator(projectDir);
-
-  // ── Read config ────────────────────────────────────────────────────────────
-  let data;
-  try {
-    data = await readBriefingRegistry(projectDir);
-  } catch (error) {
-    if (error && error.code === 'invalid_frontmatter') {
-      logger.error(t('briefing_approval.invalid_frontmatter'));
-      return { ok: false, error: 'invalid_frontmatter' };
-    }
-    logger.error(t('briefing_approval.no_registry'));
-    return { ok: false, error: 'no_config' };
-  }
+  const { projectDir, t, slugOpt, data, failure } = await openApprovalRegistry(args, options, logger);
+  if (failure) return failure;
 
   // Only approved briefings that have NOT yet generated a PRD can be unapproved.
   // Reverting a prd_generated briefing would desync it from its downstream PRD,
