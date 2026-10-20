@@ -2,66 +2,23 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { exists, ensureDir } = require('../utils');
-const { readConfig, requireSite } = require('./config');
+const { exists } = require('../utils');
+const { readConfig } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { resolveTargetDir } = require('../lib/project-root');
-const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
+const { assertInstallSlug, installTarget, textFiles, writeInstallTargets } = require('../lib/store/install-containment');
+const { reviewInstallPackage } = require('../lib/store/install-review');
+const { defaultStoreSite, resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
+const { storeGet, storePostJson } = require('../lib/store/http');
 
-const DEFAULT_BASE_URL = 'https://aioson.com';
 const SQUADS_DIR = '.aioson/squads';
 const INSTALLED_SKILLS_DIR = '.aioson/installed-skills';
 const GENOMES_DIR = '.aioson/genomes';
 const BACKUPS_DIR = '.aioson/.backups';
 
-function resolveBaseUrl(config) {
-  return String(config.aiosonBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
-}
-
-function requireToken(config, t) {
-  const token = config.aiosonToken;
-  if (!token) throw new Error(t('store.error_not_authenticated'));
-  return token;
-}
-
-async function storeGet(url, token) {
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
-    signal: AbortSignal.timeout(15000)
-  });
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-  return parsed;
-}
-
-async function storePost(url, payload, token) {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-      accept: 'application/json'
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(60000)
-  });
-
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-
-  return parsed;
+function storePost(url, payload, token) {
+  return storePostJson(url, payload, token, 60000);
 }
 
 /**
@@ -115,13 +72,7 @@ function parseBundledDeps(content) {
 // ── squad:publish ───────────────────────────────────────────────────────────
 
 async function runSquadPublish({ args, options, logger, t }) {
-  const config = await readConfig();
-  // Mesmo site do system:publish: --base-url > AIOSON_BASE_URL > padrão, com o
-  // token daquele site (sem login nele, recusa).
-  const { token, baseUrl } = requireSite(config, options, t);
-  const projectDir = await findProjectRoot(resolveTargetDir(args));
-  const slug = String(options.slug || '').trim();
-  if (!slug) throw new Error(t('store.error_missing_slug'));
+  const { token, baseUrl, projectDir, slug } = await resolvePublishContext(await readConfig(), { args, options, t });
 
   const squadDir = path.join(projectDir, SQUADS_DIR, slug);
   if (!(await exists(squadDir))) {
@@ -243,54 +194,12 @@ async function runSquadPublish({ args, options, logger, t }) {
 
 // ── squad:install ───────────────────────────────────────────────────────────
 
-async function runSquadInstall({ args, options, logger, t }) {
-  const config = await readConfig();
-  const token = requireToken(config, t);
-  const projectDir = await findProjectRoot(resolveTargetDir(args));
-  const baseUrl = resolveBaseUrl(config);
-
-  const ref = String(options.slug || options.code || args[1] || args[0] || '').trim();
-  const grantEmail = String(options.email || args[2] || '').trim();
-  if (!ref) throw new Error(t('store.error_missing_code_or_slug'));
-
-  const ws = await readWorkspace(projectDir);
-  logger.log(t('store.install_squad_fetching', { ref }));
-
-  const response = await storePost(`${baseUrl}/api/store/squads/install`, {
-    ref,
-    email: grantEmail || null,
-    workspaceSlug: ws?.slug || null
-  }, token);
-
-  const slug = response.manifest?.slug || response.slug;
-  if (!slug || !response.files) throw new Error(t('store.error_invalid_response'));
-  const squadDir = path.join(projectDir, SQUADS_DIR, assertInstallSlug(slug, t));
-
-  // Install-side preview and scan
-  const publisher = response.publisher || 'unknown';
-  const version = response.manifest?.version || response.version || '?';
-  const serverHash = response.hash || null;
-  const trusted = Boolean(response.trusted);
-  const downloads = response.downloads != null ? response.downloads : null;
-  const rating = response.rating != null ? `${Number(response.rating).toFixed(1)}/5` : null;
-
-  logger.log(t('store.install_preview_header', { slug, publisher, version }));
-  if (trusted) logger.log(t('store.install_preview_trusted'));
-  else logger.log(t('store.install_preview_unverified'));
-  if (downloads != null) logger.log(t('store.install_preview_downloads', { count: downloads }));
-  if (rating) logger.log(t('store.install_preview_rating', { rating }));
-  if (serverHash) logger.log(t('store.install_preview_hash', { hash: serverHash.slice(0, 12) }));
-
-  // Scan files received from server — squads are the highest-risk package type
-  logger.log(t('store.install_scanning'));
-  const stringFiles = Object.fromEntries(
-    Object.entries(response.files).filter(([, v]) => typeof v === 'string')
-  );
-  // Destino de cada arquivo conferido antes de qualquer remoção, cópia ou
-  // escrita (caminhos vêm do servidor): squad/ e agents/ na pasta do squad,
-  // skills/<slug>/ na pasta da skill, genomes/ em .aioson/genomes.
+// Destino de cada arquivo do squad (caminhos vêm do servidor), conferido antes
+// de qualquer remoção, cópia ou escrita: squad/ e agents/ na pasta do squad,
+// skills/<slug>/ na pasta da skill, genomes/ em .aioson/genomes.
+function planSquadInstall(projectDir, squadDir, files, t) {
   const plan = [];
-  for (const [relPath, content] of Object.entries(stringFiles)) {
+  for (const [relPath, content] of Object.entries(files)) {
     if (relPath.startsWith('skills/')) {
       // skills/{skill-slug}/... → .aioson/installed-skills/{skill-slug}/...
       const [skillSlug, ...parts] = relPath.slice('skills/'.length).split('/');
@@ -306,23 +215,50 @@ async function runSquadInstall({ args, options, logger, t }) {
       plan.push({ destPath: installTarget(squadDir, rest, t), content, dep: null });
     }
   }
-  const scan = scanPackage(stringFiles, 'squad');
-  formatScanReport(scan, logger);
-  if (!scan.ok) throw new Error(t('store.error_install_scan_failed', { slug }));
+  return plan;
+}
 
-  if (serverHash && scan.hash !== serverHash) {
-    throw new Error(t('store.error_hash_mismatch', { slug }));
+// Skill/genome já instalados ficam como estão (sem --force), conferido uma vez
+// por dependência ANTES de gravar: conferido arquivo a arquivo, o 1º arquivo de
+// uma skill nova criava a pasta e os outros eram pulados.
+async function writeSquadPlan(plan, options, logger, t) {
+  const installedDeps = new Set();
+  const checked = new Set();
+  for (const { dep } of options.force ? [] : plan) {
+    if (!dep || checked.has(dep.path)) continue;
+    checked.add(dep.path);
+    if (await exists(dep.path)) {
+      installedDeps.add(dep.path);
+      logger.log(t('store.install_squad_dep_skip', { type: dep.type, slug: dep.slug }));
+    }
   }
+  await writeInstallTargets(plan
+    .filter(({ dep }) => !dep || !installedDeps.has(dep.path))
+    .map(({ destPath, content }) => [destPath, content]));
+}
 
-  if (options.inspect) {
-    logger.log(t('store.install_inspect_files', { count: Object.keys(stringFiles).length }));
-    for (const f of Object.keys(stringFiles).sort()) logger.log(`  ${f}`);
-    logger.log(t('store.install_inspect_hint'));
-    return { ok: true, slug, inspect: true, files: Object.keys(stringFiles) };
-  }
+async function runSquadInstall({ args, options, logger, t }) {
+  const { token, baseUrl, projectDir, ref } = await resolveInstallContext(await readConfig(), { args, options, t });
+  const grantEmail = String(options.email || args[2] || '').trim();
 
-  if (!trusted && !options.force) {
-    logger.log(t('store.install_unverified_hint', { slug }));
+  const ws = await readWorkspace(projectDir);
+  logger.log(t('store.install_squad_fetching', { ref }));
+
+  const response = await storePost(`${baseUrl}/api/store/squads/install`, {
+    ref,
+    email: grantEmail || null,
+    workspaceSlug: ws?.slug || null
+  }, token);
+
+  const slug = response.manifest?.slug || response.slug;
+  if (!slug || !response.files) throw new Error(t('store.error_invalid_response'));
+  const squadDir = path.join(projectDir, SQUADS_DIR, assertInstallSlug(slug, t));
+  const files = textFiles(response.files);
+  const plan = planSquadInstall(projectDir, squadDir, files, t);
+  // Squads are the highest-risk package type: preview, scan and hash before anything.
+  const version = response.manifest?.version || response.version || '?';
+  if (reviewInstallPackage({ response, slug, version, files, type: 'squad', options, logger, t, announceScan: true })) {
+    return { ok: true, slug, inspect: true, files: Object.keys(files) };
   }
 
   // Handle existing squad
@@ -336,26 +272,7 @@ async function runSquadInstall({ args, options, logger, t }) {
 
   // Write squad files
   logger.log(t('store.install_squad_writing'));
-  // Skill/genome já instalados ficam como estão (sem --force), conferido uma vez
-  // por dependência ANTES de gravar: conferido arquivo a arquivo, o 1º arquivo de
-  // uma skill nova criava a pasta e os outros eram pulados.
-  const installedDeps = new Set();
-  if (!options.force) {
-    const checked = new Set();
-    for (const { dep } of plan) {
-      if (!dep || checked.has(dep.path)) continue;
-      checked.add(dep.path);
-      if (await exists(dep.path)) {
-        installedDeps.add(dep.path);
-        logger.log(t('store.install_squad_dep_skip', { type: dep.type, slug: dep.slug }));
-      }
-    }
-  }
-  for (const { destPath, content, dep } of plan) {
-    if (dep && installedDeps.has(dep.path)) continue;
-    await ensureDir(path.dirname(destPath));
-    await fs.writeFile(destPath, content, 'utf8');
-  }
+  await writeSquadPlan(plan, options, logger, t);
 
   logger.log(t('store.install_squad_done', { slug, path: squadDir }));
   return { ok: true, slug, path: squadDir, manifest: response.manifest };
@@ -364,9 +281,7 @@ async function runSquadInstall({ args, options, logger, t }) {
 // ── squad:grant ─────────────────────────────────────────────────────────────
 
 async function runSquadGrant({ args, options, logger, t }) {
-  const config = await readConfig();
-  const token = requireToken(config, t);
-  const baseUrl = resolveBaseUrl(config);
+  const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
 
   const code = String(options.code || args[0] || '').trim();
   const email = String(options.email || args[1] || '').trim();
@@ -390,9 +305,7 @@ async function runSquadGrant({ args, options, logger, t }) {
 async function runSquadList({ args, options, logger, t }) {
   // --remote: list squads published on aioson.com
   if (options.remote) {
-    const config = await readConfig();
-    const token = requireToken(config, t);
-    const baseUrl = resolveBaseUrl(config);
+    const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
     logger.log(t('store.list_remote_fetching', { type: 'squads' }));
     const response = await storeGet(`${baseUrl}/api/store/squads`, token);
     const squads = response.squads || [];

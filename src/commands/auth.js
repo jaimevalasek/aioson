@@ -241,11 +241,16 @@ async function runAuthLogin({ args, options, logger, t }) {
     return { ok: false, error: { code: 'token_rejected' } };
   }
 
-  // Cada site guarda o próprio token, e login nunca apaga outro login: antes de
-  // outro site virar o padrão, o token do padrão anterior fica sob o site dele.
-  // Login num site local não vira o padrão quando já existe login em outro site
-  // — senão o próximo publish "normal" iria para o site de desenvolvimento.
-  const defaultBaseUrl = site.defaultBaseUrl;
+  await saveLogin(config, site, token, user, logger, t);
+  return { ok: true, username: user?.username || null };
+}
+
+// Cada site guarda o próprio token, e login nunca apaga outro login: antes de
+// outro site virar o padrão, o token do padrão anterior fica sob o site dele.
+// Login num site local não vira o padrão quando já existe login em outro site
+// — senão o próximo publish "normal" iria para o site de desenvolvimento.
+async function saveLogin(config, site, token, user, logger, t) {
+  const { baseUrl, defaultBaseUrl } = site;
   const tokens = { ...(config.aiosonTokens && typeof config.aiosonTokens === 'object' ? config.aiosonTokens : {}) };
   if (config.aiosonToken && !tokens[defaultBaseUrl]) tokens[defaultBaseUrl] = config.aiosonToken;
   tokens[baseUrl] = token;
@@ -259,14 +264,9 @@ async function runAuthLogin({ args, options, logger, t }) {
   }
   await writeConfig(config);
   if (sideSite) logger.log(t('auth.login_side_site', { url: baseUrl, default: defaultBaseUrl }));
-
-  if (user?.username) {
-    logger.log(t('auth.login_ok', { username: user.username, path: CONFIG_DIR }));
-  } else {
-    logger.log(t('auth.login_saved', { path: CONFIG_DIR }));
-  }
-
-  return { ok: true, username: user?.username || null };
+  logger.log(user?.username
+    ? t('auth.login_ok', { username: user.username, path: CONFIG_DIR })
+    : t('auth.login_saved', { path: CONFIG_DIR }));
 }
 
 async function runAuthLogout({ args, options, logger, t }) {

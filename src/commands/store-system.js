@@ -8,7 +8,8 @@ const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { resolveTargetDir } = require('../lib/project-root');
 const { readListingImages, sendListingImages, LISTING_GALLERY_MAX } = require('./store-listing-images');
-const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
+const { assertInstallSlug, installTargets, writeInstallTargets } = require('../lib/store/install-containment');
+const { storeGet, storePostJson } = require('../lib/store/http');
 const { collectStagedSecretFindings } = require('../lib/security/staged-secret-detector');
 
 let _terser = null;
@@ -422,43 +423,9 @@ function parseInviteEmails(cliInvite, manifestEmails) {
   ));
 }
 
-async function storePost(url, payload, token) {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(120000),
-  });
-
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-
-  return parsed;
-}
-
-async function storeGet(url, token) {
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
-    signal: AbortSignal.timeout(15000),
-  });
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-  return parsed;
+// O pacote (ZIP em base64) pode demorar: 2 min para o POST.
+function storePost(url, payload, token) {
+  return storePostJson(url, payload, token, 120000);
 }
 
 /**
@@ -1092,10 +1059,7 @@ async function runSystemInstall({ args, options, logger, t }) {
   // Slug e caminhos vêm do servidor (e `--base-url` aponta para qualquer site):
   // nada é apagado, copiado ou gravado antes de tudo cair dentro da pasta do pacote.
   const pkgDir = path.join(projectDir, SYSTEM_PACKAGES_DIR, assertInstallSlug(slug, t));
-  const writes = [];
-  for (const [relPath, content] of Object.entries(response.files)) {
-    if (typeof content === 'string') writes.push([installTarget(pkgDir, relPath, t), content]);
-  }
+  const writes = installTargets(pkgDir, response.files, t);
 
   const version = response.manifest?.version || '?';
   const publisher = response.publisher || 'unknown';
@@ -1118,10 +1082,7 @@ async function runSystemInstall({ args, options, logger, t }) {
 
   // Write files
   logger.log(t('system.install_writing'));
-  for (const [destPath, content] of writes) {
-    await ensureDir(path.dirname(destPath));
-    await fs.writeFile(destPath, content, 'utf8');
-  }
+  await writeInstallTargets(writes);
 
   logger.log(t('system.install_done', { slug, path: pkgDir }));
   return { ok: true, slug, path: pkgDir, manifest: response.manifest };

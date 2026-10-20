@@ -3,62 +3,18 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig, requireSite } = require('./config');
-const { readWorkspace, findProjectRoot } = require('./workspace');
+const { readConfig } = require('./config');
+const { readWorkspace } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
-const { resolveTargetDir } = require('../lib/project-root');
-const { assertInstallSlug, installTarget } = require('../lib/store/install-containment');
+const { assertInstallSlug, textFiles, installTargets, writeInstallTargets } = require('../lib/store/install-containment');
+const { reviewInstallPackage } = require('../lib/store/install-review');
+const { defaultStoreSite, resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
+const { storeGet, storePostJson } = require('../lib/store/http');
 
-const DEFAULT_BASE_URL = 'https://aioson.com';
 const SKILLS_DIRS = ['.aioson/skills', '.aioson/installed-skills'];
 
-function resolveBaseUrl(config) {
-  return String(config.aiosonBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
-}
-
-function requireToken(config, t) {
-  const token = config.aiosonToken;
-  if (!token) throw new Error(t('store.error_not_authenticated'));
-  return token;
-}
-
-async function storeGet(url, token) {
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
-    signal: AbortSignal.timeout(15000)
-  });
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-  return parsed;
-}
-
-async function storePost(url, payload, token) {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-      accept: 'application/json'
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(30000)
-  });
-
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-
-  return parsed;
+function storePost(url, payload, token) {
+  return storePostJson(url, payload, token, 30000);
 }
 
 /**
@@ -100,13 +56,7 @@ async function findSkillDir(projectDir, slug) {
 // ── skill:publish ───────────────────────────────────────────────────────────
 
 async function runSkillPublish({ args, options, logger, t }) {
-  const config = await readConfig();
-  // Mesmo site do system:publish: --base-url > AIOSON_BASE_URL > padrão, com o
-  // token daquele site (sem login nele, recusa).
-  const { token, baseUrl } = requireSite(config, options, t);
-  const projectDir = await findProjectRoot(resolveTargetDir(args));
-  const slug = String(options.slug || '').trim();
-  if (!slug) throw new Error(t('store.error_missing_slug'));
+  const { token, baseUrl, projectDir, slug } = await resolvePublishContext(await readConfig(), { args, options, t });
 
   const skillDir = await findSkillDir(projectDir, slug);
   if (!skillDir) {
@@ -159,13 +109,7 @@ async function runSkillPublish({ args, options, logger, t }) {
 // ── skill:install:store ─────────────────────────────────────────────────────
 
 async function runSkillInstallStore({ args, options, logger, t }) {
-  const config = await readConfig();
-  const token = requireToken(config, t);
-  const projectDir = await findProjectRoot(resolveTargetDir(args));
-  const baseUrl = resolveBaseUrl(config);
-
-  const ref = String(options.slug || options.code || args[1] || args[0] || '').trim();
-  if (!ref) throw new Error(t('store.error_missing_code_or_slug'));
+  const { token, baseUrl, projectDir, ref } = await resolveInstallContext(await readConfig(), { args, options, t });
 
   logger.log(t('store.install_skill_fetching', { ref }));
   const response = await storePost(`${baseUrl}/api/store/skills/install`, { ref }, token);
@@ -175,56 +119,16 @@ async function runSkillInstallStore({ args, options, logger, t }) {
     throw new Error(t('store.error_invalid_response'));
   }
   // Slug e caminhos vêm do servidor: tudo dentro de installed-skills/<slug>/
-  // antes de criar pasta ou gravar arquivo.
+  // antes de criar pasta ou gravar arquivo. Prévia, scan e hash antes também.
   const destDir = path.join(projectDir, '.aioson', 'installed-skills', assertInstallSlug(slug, t));
-
-  // Install-side preview and scan
-  const publisher = response.publisher || 'unknown';
-  const version = response.version || '?';
-  const serverHash = response.hash || null;
-  const trusted = Boolean(response.trusted);
-  const downloads = response.downloads != null ? response.downloads : null;
-  const rating = response.rating != null ? `${Number(response.rating).toFixed(1)}/5` : null;
-
-  logger.log(t('store.install_preview_header', { slug, publisher, version }));
-  if (trusted) logger.log(t('store.install_preview_trusted'));
-  else logger.log(t('store.install_preview_unverified'));
-  if (downloads != null) logger.log(t('store.install_preview_downloads', { count: downloads }));
-  if (rating) logger.log(t('store.install_preview_rating', { rating }));
-  if (serverHash) logger.log(t('store.install_preview_hash', { hash: serverHash.slice(0, 12) }));
-
-  // Scan files received from server before writing
-  const stringFiles = Object.fromEntries(
-    Object.entries(response.files).filter(([, v]) => typeof v === 'string')
-  );
-  const targets = Object.entries(stringFiles).map(([relPath, content]) => [installTarget(destDir, relPath, t), content]);
-  const scan = scanPackage(stringFiles, 'skill');
-  formatScanReport(scan, logger);
-  if (!scan.ok) throw new Error(t('store.error_install_scan_failed', { slug }));
-
-  // Verify hash integrity if server sent one
-  if (serverHash && scan.hash !== serverHash) {
-    throw new Error(t('store.error_hash_mismatch', { slug }));
-  }
-
-  if (options.inspect) {
-    logger.log(t('store.install_inspect_files', { count: Object.keys(stringFiles).length }));
-    for (const f of Object.keys(stringFiles).sort()) logger.log(`  ${f}`);
-    logger.log(t('store.install_inspect_hint'));
-    return { ok: true, slug, inspect: true, files: Object.keys(stringFiles) };
-  }
-
-  if (!trusted && !options.force) {
-    logger.log(t('store.install_unverified_hint', { slug }));
+  const files = textFiles(response.files);
+  const targets = installTargets(destDir, files, t);
+  if (reviewInstallPackage({ response, slug, version: response.version || '?', files, type: 'skill', options, logger, t })) {
+    return { ok: true, slug, inspect: true, files: Object.keys(files) };
   }
 
   await fs.mkdir(destDir, { recursive: true });
-
-  for (const [filePath, content] of targets) {
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, content, 'utf8');
-  }
-
+  await writeInstallTargets(targets);
   logger.log(t('store.install_skill_done', { slug, path: destDir }));
   return { ok: true, slug, path: destDir };
 }
@@ -232,9 +136,7 @@ async function runSkillInstallStore({ args, options, logger, t }) {
 // ── skill:list --remote ──────────────────────────────────────────────────────
 
 async function runSkillListRemote({ args, options, logger, t }) {
-  const config = await readConfig();
-  const token = requireToken(config, t);
-  const baseUrl = resolveBaseUrl(config);
+  const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
   logger.log(t('store.list_remote_fetching', { type: 'skills' }));
   const response = await storeGet(`${baseUrl}/api/store/skills`, token);
   const skills = response.skills || [];

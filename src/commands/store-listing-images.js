@@ -8,6 +8,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { isInside } = require('../lib/store/install-containment');
+const { storeRequest } = require('../lib/store/http');
 
 const LISTING_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 const LISTING_GALLERY_MAX = 10;
@@ -88,10 +89,65 @@ function declaredListingImages(manifest) {
   return declared;
 }
 
+// Caminho real de uma imagem declarada: dentro da pasta do app (atalho/link
+// dentro da pasta apontando para fora conta como fora) e ainda não usado por
+// outra entrada — o mesmo arquivo duas vezes (ou a capa repetida na galeria)
+// apareceria repetido na Loja.
+async function realListingPath(root, file, seen, t) {
+  const resolved = path.resolve(root, file);
+  if (!isInside(root, resolved)) throw new Error(t('system.error_listing_image_outside', { file }));
+  let real;
+  try {
+    real = await fs.realpath(resolved);
+  } catch {
+    throw new Error(t('system.error_listing_image_missing', { file }));
+  }
+  if (!isInside(root, real)) throw new Error(t('system.error_listing_image_outside', { file }));
+  const realKey = process.platform === 'win32' ? real.toLowerCase() : real;
+  if (seen.has(realKey)) throw new Error(t('system.error_listing_image_duplicate', { file, first: seen.get(realKey) }));
+  seen.set(realKey, file);
+  return real;
+}
+
+// Bytes e tipo: arquivo comum, jpg/png/webp pela extensão e pelo conteúdo, até 2 MB.
+async function readListingImageBytes(real, file, t) {
+  const stat = await fs.stat(real);
+  if (!stat.isFile()) throw new Error(t('system.error_listing_image_missing', { file }));
+  const declaredMime = MIME_BY_EXT[path.extname(real).toLowerCase()];
+  if (!declaredMime) throw new Error(t('system.error_listing_image_format', { file }));
+  if (stat.size > LISTING_IMAGE_MAX_BYTES) {
+    throw new Error(t('system.error_listing_image_too_large', {
+      file, mb: (stat.size / 1024 / 1024).toFixed(2), max: LISTING_IMAGE_MAX_BYTES / 1024 / 1024,
+    }));
+  }
+  const bytes = await fs.readFile(real);
+  const mime = sniffMime(bytes);
+  if (mime !== declaredMime) throw new Error(t('system.error_listing_image_format', { file }));
+  return { bytes, mime };
+}
+
+// Dimensão fora do recomendado só vira aviso; `size` null (cabeçalho mudo) não avisa.
+function dimensionWarnings(role, file, size, t) {
+  const warnings = [];
+  if (size && role === 'cover') {
+    if (Math.abs(size.width / size.height - 16 / 9) > 0.02) {
+      warnings.push(t('system.warn_listing_cover_ratio', { file, width: size.width, height: size.height }));
+    }
+    if (size.width < COVER_MIN.width || size.height < COVER_MIN.height) {
+      warnings.push(t('system.warn_listing_cover_small', { file, width: size.width, height: size.height }));
+    }
+  }
+  if (size && role === 'gallery' && size.width > GALLERY_MAX_WIDTH) {
+    warnings.push(t('system.warn_listing_gallery_wide', { file, width: size.width, max: GALLERY_MAX_WIDTH }));
+  }
+  return warnings;
+}
+
 /**
  * Lê e valida capa + galeria declaradas. Recusa (lança) nomeando o arquivo:
  * fora da pasta do app, inexistente, formato fora de jpg/png/webp, acima de
- * 2 MB, galeria com mais de 10. Dimensão fora do recomendado só vira aviso.
+ * 2 MB, galeria com mais de 10, a mesma imagem duas vezes. Dimensão fora do
+ * recomendado só vira aviso.
  */
 async function readListingImages(dir, manifest, t) {
   const declared = declaredListingImages(manifest);
@@ -107,52 +163,9 @@ async function readListingImages(dir, manifest, t) {
   const root = await fs.realpath(dir);
   const seen = new Map(); // caminho real → arquivo como declarado
   for (const { role, file } of declared) {
-    const resolved = path.resolve(root, file);
-    if (!isInside(root, resolved)) throw new Error(t('system.error_listing_image_outside', { file }));
-
-    let real;
-    try {
-      real = await fs.realpath(resolved);
-    } catch {
-      throw new Error(t('system.error_listing_image_missing', { file }));
-    }
-    // Atalho/link dentro da pasta apontando para fora conta como fora.
-    if (!isInside(root, real)) throw new Error(t('system.error_listing_image_outside', { file }));
-    // O mesmo arquivo duas vezes (ou a capa repetida na galeria) apareceria
-    // repetido na Loja: recusado antes do publish.
-    const realKey = process.platform === 'win32' ? real.toLowerCase() : real;
-    if (seen.has(realKey)) {
-      throw new Error(t('system.error_listing_image_duplicate', { file, first: seen.get(realKey) }));
-    }
-    seen.set(realKey, file);
-
-    const stat = await fs.stat(real);
-    if (!stat.isFile()) throw new Error(t('system.error_listing_image_missing', { file }));
-    const declaredMime = MIME_BY_EXT[path.extname(real).toLowerCase()];
-    if (!declaredMime) throw new Error(t('system.error_listing_image_format', { file }));
-    if (stat.size > LISTING_IMAGE_MAX_BYTES) {
-      throw new Error(t('system.error_listing_image_too_large', {
-        file, mb: (stat.size / 1024 / 1024).toFixed(2), max: LISTING_IMAGE_MAX_BYTES / 1024 / 1024,
-      }));
-    }
-
-    const bytes = await fs.readFile(real);
-    const mime = sniffMime(bytes);
-    if (mime !== declaredMime) throw new Error(t('system.error_listing_image_format', { file }));
-
-    const size = readImageSize(bytes, mime);
-    if (size && role === 'cover') {
-      const ratio = size.width / size.height;
-      if (Math.abs(ratio - 16 / 9) > 0.02) {
-        warnings.push(t('system.warn_listing_cover_ratio', { file, width: size.width, height: size.height }));
-      }
-      if (size.width < COVER_MIN.width || size.height < COVER_MIN.height) {
-        warnings.push(t('system.warn_listing_cover_small', { file, width: size.width, height: size.height }));
-      }
-    }
-    if (size && role === 'gallery' && size.width > GALLERY_MAX_WIDTH) {
-      warnings.push(t('system.warn_listing_gallery_wide', { file, width: size.width, max: GALLERY_MAX_WIDTH }));
-    }
+    const real = await realListingPath(root, file, seen, t);
+    const { bytes, mime } = await readListingImageBytes(real, file, t);
+    warnings.push(...dimensionWarnings(role, file, readImageSize(bytes, mime), t));
     images.push({ role, file, bytes, mime });
   }
   // O commit troca capa + galeria juntas: declarar só uma deixa a outra vazia na Loja.
@@ -163,21 +176,9 @@ async function readListingImages(dir, manifest, t) {
   return { images, warnings };
 }
 
-async function postStore(url, token, init) {
-  const response = await fetch(url, {
-    method: 'POST',
-    ...init,
-    headers: { authorization: `Bearer ${token}`, accept: 'application/json', ...init.headers },
-    signal: AbortSignal.timeout(120000),
-  });
-  const text = await response.text();
-  let parsed = null;
-  try { parsed = JSON.parse(text); } catch { /* */ }
-  if (!response.ok) {
-    const detail = (parsed && parsed.error) ? String(parsed.error) : `${response.status} ${response.statusText}`;
-    throw new Error(`HTTP ${response.status}: ${detail}`);
-  }
-  return parsed;
+// Imagem crua ou o commit em JSON: 2 min por pedido.
+function postStore(url, token, init) {
+  return storeRequest(url, token, { method: 'POST', ...init }, 120000);
 }
 
 function imagesOnlyCommand(dir, site) {
@@ -226,7 +227,6 @@ async function sendListingImages({ dir, site, slug, images, logger, t }) {
 }
 
 module.exports = {
-  LISTING_IMAGE_MAX_BYTES,
   LISTING_GALLERY_MAX,
   readImageSize,
   readListingImages,

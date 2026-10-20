@@ -4,6 +4,7 @@
 // qualquer site. Slug e caminhos são conferidos antes de qualquer remoção,
 // cópia ou escrita: tudo cai dentro da pasta de instalação.
 
+const fs = require('node:fs/promises');
 const path = require('node:path');
 
 // Começa por letra/número e não tem separador: `.`, `..` e `a/b` nunca viram pasta.
@@ -30,4 +31,22 @@ function installTarget(root, relPath, t) {
   return target;
 }
 
-module.exports = { SAFE_INSTALL_SLUG_RE, isInside, assertInstallSlug, installTarget };
+// Só os arquivos de texto do pacote — os que o scan vê são os que se gravam.
+function textFiles(files) {
+  return Object.fromEntries(Object.entries(files).filter(([, content]) => typeof content === 'string'));
+}
+
+// Pares [destino, conteúdo] de cada arquivo de texto, destino conferido dentro
+// de `root` antes de qualquer remoção, cópia ou escrita.
+function installTargets(root, files, t) {
+  return Object.entries(textFiles(files)).map(([relPath, content]) => [installTarget(root, relPath, t), content]);
+}
+
+async function writeInstallTargets(targets) {
+  for (const [target, content] of targets) {
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, content, 'utf8');
+  }
+}
+
+module.exports = { isInside, assertInstallSlug, installTarget, textFiles, installTargets, writeInstallTargets };

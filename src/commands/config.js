@@ -57,33 +57,41 @@ function isSecureSite(url) {
   return normalized.startsWith('https://') || isLoopbackSite(normalized) || isPrivateSite(normalized);
 }
 
-// Qual aioson.com o comando usa e o login dele. O padrão é o site do último
-// `auth:login` (ou aioson.com); `--base-url` / AIOSON_BASE_URL apontam para outro
-// (ex.: o site local na porta 3000) sem trocar o padrão. Cada site guarda o
-// próprio token em `aiosonTokens`, porque um token não vale no site do lado.
+// URL pedida no comando: `--base-url` ou AIOSON_BASE_URL ('' = nenhuma).
 // `--base-url` presente mas vazio é erro de uso: um `--base-url=$VAR` com a
-// variável vazia publicaria no site padrão. `requireSecure: false` só no logout,
-// que não manda nada pela rede (tira até o token de um login antigo em http://).
-function resolveSite(config, options = {}, t = null, { requireSecure = true } = {}) {
-  const say = (key, params) => (t ? t(key, params) : key);
+// variável vazia publicaria no site padrão.
+function explicitSiteUrl(options, say) {
   const flag = options['base-url'];
   if (flag !== undefined && (typeof flag !== 'string' || !flag.trim())) {
     throw new Error(say('auth.error_base_url_blank'));
   }
-  // Padrão gravado fora do formato (ex.: `localhost:3000` de um login antigo)
-  // segue como chave do token dele; o envio abaixo recusa.
-  const storedDefault = String(config.aiosonBaseUrl || DEFAULT_SITE_URL).trim();
-  const defaultBaseUrl = normalizeSiteUrl(storedDefault) || storedDefault.replace(/\/+$/, '');
-  const explicit = flag !== undefined ? flag.trim() : String(process.env.AIOSON_BASE_URL || '').trim();
-  let baseUrl = defaultBaseUrl;
-  if (explicit) {
-    baseUrl = normalizeSiteUrl(explicit);
-    if (!baseUrl) throw new Error(say('auth.error_base_url_invalid', { url: explicit }));
-  }
-  if (requireSecure && !normalizeSiteUrl(baseUrl)) throw new Error(say('auth.error_base_url_invalid', { url: baseUrl }));
-  if (requireSecure && !isSecureSite(baseUrl)) {
+  return flag !== undefined ? flag.trim() : String(process.env.AIOSON_BASE_URL || '').trim();
+}
+
+// Antes de o token sair: endereço de site válido e cifrado (ou máquina/rede local).
+function assertSendableSite(baseUrl, say) {
+  if (!normalizeSiteUrl(baseUrl)) throw new Error(say('auth.error_base_url_invalid', { url: baseUrl }));
+  if (!isSecureSite(baseUrl)) {
     throw new Error(say('auth.error_base_url_insecure', { url: baseUrl, https: baseUrl.replace(/^http:/, 'https:') }));
   }
+}
+
+// Qual aioson.com o comando usa e o login dele. O padrão é o site do último
+// `auth:login` (ou aioson.com); `--base-url` / AIOSON_BASE_URL apontam para outro
+// (ex.: o site local na porta 3000) sem trocar o padrão. Cada site guarda o
+// próprio token em `aiosonTokens`, porque um token não vale no site do lado.
+// `requireSecure: false` só no logout, que não manda nada pela rede (tira até o
+// token de um login antigo em http://).
+function resolveSite(config, options = {}, t = null, { requireSecure = true } = {}) {
+  const say = (key, params) => (t ? t(key, params) : key);
+  const explicit = explicitSiteUrl(options, say);
+  // Padrão gravado fora do formato (ex.: `localhost:3000` de um login antigo)
+  // segue como chave do token dele; o envio recusa.
+  const storedDefault = String(config.aiosonBaseUrl || DEFAULT_SITE_URL).trim();
+  const defaultBaseUrl = normalizeSiteUrl(storedDefault) || storedDefault.replace(/\/+$/, '');
+  const baseUrl = explicit ? normalizeSiteUrl(explicit) : defaultBaseUrl;
+  if (explicit && !baseUrl) throw new Error(say('auth.error_base_url_invalid', { url: explicit }));
+  if (requireSecure) assertSendableSite(baseUrl, say);
   const isDefault = baseUrl === defaultBaseUrl;
   const tokens = config.aiosonTokens && typeof config.aiosonTokens === 'object' ? config.aiosonTokens : {};
   const token = tokens[baseUrl] || (isDefault ? config.aiosonToken : null) || null;
@@ -117,6 +125,27 @@ async function writeConfig(data) {
   await fs.mkdir(CONFIG_DIR, { recursive: true, mode: 0o700 });
   await fs.writeFile(CONFIG_FILE, `${JSON.stringify(data, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   await fs.chmod(CONFIG_FILE, 0o600).catch(() => {});
+}
+
+// `config show`: uma linha por chave; chave de segredo (key/secret/token) sai
+// mascarada. O `--json` leva o mesmo valor mascarado da saída humana: agentes e
+// CI guardam o que ele imprime, então um token nunca sai inteiro.
+async function showConfig(logger, t) {
+  const config = await readConfig();
+  const keys = Object.keys(config);
+  const shown = { ...config };
+  logger.log(t('config.show_header', { path: CONFIG_FILE }));
+  if (keys.length === 0) logger.log(t('config.show_empty'));
+  for (const key of keys) {
+    const value = config[key];
+    const raw = value && typeof value === 'object' ? JSON.stringify(value) : String(value);
+    const lower = key.toLowerCase();
+    const secret = lower.includes('key') || lower.includes('secret') || lower.includes('token');
+    const masked = secret ? `${raw.slice(0, 6)}${'*'.repeat(Math.max(0, raw.length - 6))}` : raw;
+    if (secret) shown[key] = masked;
+    logger.log(t('config.show_line', { key, value: masked }));
+  }
+  return { ok: true, config: shown };
 }
 
 async function runConfig({ args, options, logger, t }) {
@@ -157,28 +186,7 @@ async function runConfig({ args, options, logger, t }) {
     return { ok: true, key, value: config[key] };
   }
 
-  if (!subcommand || subcommand === 'show') {
-    const config = await readConfig();
-    const keys = Object.keys(config);
-    // O `--json` leva o mesmo valor mascarado da saída humana: agentes e CI
-    // guardam o que ele imprime, então um token nunca sai inteiro.
-    const shown = { ...config };
-    logger.log(t('config.show_header', { path: CONFIG_FILE }));
-    if (keys.length === 0) {
-      logger.log(t('config.show_empty'));
-    } else {
-      for (const key of keys) {
-        const value = config[key];
-        const raw = value && typeof value === 'object' ? JSON.stringify(value) : String(value);
-        const lower = key.toLowerCase();
-        const secret = lower.includes('key') || lower.includes('secret') || lower.includes('token');
-        const masked = secret ? `${raw.slice(0, 6)}${'*'.repeat(Math.max(0, raw.length - 6))}` : raw;
-        if (secret) shown[key] = masked;
-        logger.log(t('config.show_line', { key, value: masked }));
-      }
-    }
-    return { ok: true, config: shown };
-  }
+  if (!subcommand || subcommand === 'show') return showConfig(logger, t);
 
   logger.error(t('config.usage_error'));
   return { ok: false, error: { code: 'usage_error' } };
