@@ -3,13 +3,13 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { resolveTargetDir } = require('../lib/project-root');
 const { assertInstallSlug, installTarget, textFiles, installTargets, writeInstallTargets } = require('../lib/store/install-containment');
 const { reviewInstallPackage } = require('../lib/store/install-review');
-const { defaultStoreSite, resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
+const { resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
 const { storeGet, storePostJson } = require('../lib/store/http');
 
 const GENOMES_DIR = '.aioson/genomes';
@@ -367,19 +367,33 @@ async function installFolderGenome({ projectDir, slug, response, options, logger
   return { ok: true, slug, path: destDir, format: 'folder', fileCount: Object.keys(stringFiles).length };
 }
 
+// O pacote de um genome de arquivo único com as chaves que o publish usou
+// (`<slug>.md`, `<slug>.meta.json`, `refs/<nome>`): prévia, scan (só .md/.json)
+// e --inspect antes de qualquer escrita, como no formato pasta. O hash não é
+// comparado: o servidor guarda `meta` numa coluna JSON que reordena as chaves,
+// e o hash do publish cobre o texto original — um pacote íntegro seria
+// recusado como adulterado. Devolve os arquivos quando é --inspect.
+function reviewSingleFileGenome({ response, slug, refFiles, options, logger, t }) {
+  const files = { [`${slug}.md`]: response.content, [`${slug}.meta.json`]: JSON.stringify(response.meta || {}) };
+  for (const [name, content] of Object.entries(refFiles || {})) files[`refs/${name}`] = content;
+  const inspect = reviewInstallPackage({ response: { ...response, hash: null }, slug, version: response.version || '?', files, type: 'genome', options, logger, t });
+  return inspect ? Object.keys(files) : null;
+}
+
 async function installSingleFileGenome({ projectDir, slug, response, options, logger, t }) {
-  if (!response.content) {
+  if (typeof response.content !== 'string' || !response.content) {
     throw new Error(t('store.error_invalid_response'));
   }
 
   const destPath = path.join(projectDir, GENOMES_DIR, `${slug}.md`);
   const metaDestPath = path.join(projectDir, GENOMES_DIR, `${slug}.meta.json`);
   // Nomes das refs vêm do servidor: dentro de <slug>.refs/ antes do backup e
-  // de qualquer escrita.
+  // de qualquer escrita; só as refs de texto, as que a revisão confere.
   const refsDir = path.join(projectDir, GENOMES_DIR, `${slug}.refs`);
-  const refs = response.refs && typeof response.refs === 'object'
-    ? Object.entries(response.refs).map(([name, content]) => [installTarget(refsDir, name, t), content])
-    : null;
+  const refFiles = response.refs && typeof response.refs === 'object' ? textFiles(response.refs) : null;
+  const refs = refFiles ? Object.entries(refFiles).map(([name, content]) => [installTarget(refsDir, name, t), content]) : null;
+  const inspected = reviewSingleFileGenome({ response, slug, refFiles, options, logger, t });
+  if (inspected) return { ok: true, slug, format: 'single-file', inspect: true, files: inspected };
 
   // Backup existing version if present
   if ((await exists(destPath)) && !options.force) {
@@ -395,12 +409,10 @@ async function installSingleFileGenome({ projectDir, slug, response, options, lo
     await fs.writeFile(metaDestPath, `${JSON.stringify(response.meta, null, 2)}\n`, 'utf8');
   }
 
-  // Write refs if present (legacy {slug}.refs/ flat dir)
+  // Write refs if present (legacy {slug}.refs/ dir)
   if (refs) {
     await fs.mkdir(refsDir, { recursive: true });
-    for (const [refPath, content] of refs) {
-      await fs.writeFile(refPath, content, 'utf8');
-    }
+    await writeInstallTargets(refs);
   }
 
   logger.log(t('store.install_genome_done', { slug, path: destPath }));
@@ -421,7 +433,7 @@ async function runGenomeInstall({ args, options, logger, t }) {
 async function runGenomeList({ args, options, logger, t }) {
   // --remote: list published genomes on aioson.com
   if (options.remote) {
-    const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
+    const { token, baseUrl } = requireSite(await readConfig(), options, t);
     logger.log(t('store.list_remote_fetching', { type: 'genomes' }));
     const response = await storeGet(`${baseUrl}/api/store/genomes`, token);
     const genomes = response.genomes || [];

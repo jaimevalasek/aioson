@@ -54,7 +54,8 @@ async function makeProject({ activeFeature = 'checkout' } = {}) {
     'framework_installed: true', 'classification: "SMALL"', 'conversation_language: "en"', 'aioson_version: "1.72.1"', '---', '', '# Context'
   ].join('\n'));
   await write(dir, '.aioson/context/project-pulse.md', `---\nlast_updated: 2026-10-20\nactive_feature: ${activeFeature}\n---\n\n# Project Pulse\n`);
-  await write(dir, '.aioson/context/features.md', '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-10-01 | — |\n');
+  // `facade` is the other live feature the fan tests bind items to: a binding counts only while its row is live.
+  await write(dir, '.aioson/context/features.md', '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-10-01 | — |\n| facade | in_progress | 2026-10-05 | — |\n');
   await write(dir, 'src/hall.js', 'module.exports = 1;\n');
   return dir;
 }

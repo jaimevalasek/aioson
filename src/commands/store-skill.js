@@ -3,12 +3,12 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { assertInstallSlug, textFiles, installTargets, writeInstallTargets } = require('../lib/store/install-containment');
 const { reviewInstallPackage } = require('../lib/store/install-review');
-const { defaultStoreSite, resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
+const { resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
 const { storeGet, storePostJson } = require('../lib/store/http');
 
 const SKILLS_DIRS = ['.aioson/skills', '.aioson/installed-skills'];
@@ -136,7 +136,7 @@ async function runSkillInstallStore({ args, options, logger, t }) {
 // ── skill:list --remote ──────────────────────────────────────────────────────
 
 async function runSkillListRemote({ args, options, logger, t }) {
-  const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
+  const { token, baseUrl } = requireSite(await readConfig(), options, t);
   logger.log(t('store.list_remote_fetching', { type: 'skills' }));
   const response = await storeGet(`${baseUrl}/api/store/skills`, token);
   const skills = response.skills || [];

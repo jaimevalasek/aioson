@@ -28,8 +28,9 @@ aioson auth status
 Depois do login, o token fica salvo localmente. Todos os comandos de store usam automaticamente.
 
 Outro site (ex.: o aioson-com local na porta 3000): `aioson auth login --base-url=http://localhost:3000`
-guarda um token só para ele, e os comandos `system:publish`, `system:list --remote`,
-`system:install`, `skill:publish`, `squad:publish` e `genome:publish` vão para lá com
+guarda um token só para ele, e todo comando de store que fala com o site — `system:publish`,
+`system:list --remote`, `system:install`, `skill:publish`, `squad:publish`, `genome:publish`,
+os `*:install`, os `*:list --remote`, `squad:grant` e `workspace:init` — vai para lá com
 `--base-url=...` ou a variável `AIOSON_BASE_URL`. Sem isso, continuam no site padrão.
 `--base-url` vazio é erro de uso, e `http://` só é aceito para a própria máquina ou a rede
 local (site público exige `https://`).

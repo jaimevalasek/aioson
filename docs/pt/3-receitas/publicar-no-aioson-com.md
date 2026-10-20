@@ -259,7 +259,9 @@ Sem `--base-url` (e sem `AIOSON_BASE_URL`) o publish continua indo para o site
 padrão. Cada site tem o próprio login (`aiosonTokens` em `~/.aioson/config.json`):
 publicar num site sem login nele recusa e diz o `auth:login` exato que falta, em
 vez de mandar o token do outro site. `system:list --remote`, `system:install`,
-`skill:publish`, `squad:publish` e `genome:publish` aceitam o mesmo `--base-url`.
+`skill:publish`, `squad:publish`, `genome:publish` e também os `*:install`, os
+`*:list --remote`, `squad:grant` e `workspace:init` aceitam o mesmo `--base-url`
+(e a variável) — nenhum comando de store manda o token para um site não verificado.
 
 - `--base-url` vazio (ex.: `--base-url=$VAR` com a variável vazia) é erro de uso,
   nunca "vai para o site padrão".

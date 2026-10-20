@@ -47,10 +47,13 @@ const MAX_DETAIL_CHARS = 1200;
 const MAX_PATHS = 12;
 const DEFAULT_LIMIT = 5;
 const DAY_MS = 24 * 60 * 60 * 1000;
-// A binding means something while its feature is live: an item bound to a
-// done or abandoned feature (abandoned without a close, or closed while the
-// store was unreadable) reads as project-wide.
+// A binding means something while its feature is live in the registry. An item
+// bound to anything else reads as project-wide: a done or abandoned feature
+// (abandoned without a close, or closed while the store was unreadable), a
+// slug with no row (a typo, `project`, a briefing not yet registered), a row
+// in a delivery spelling (`completed`, `shipped`), a folder only under done/.
 const CLOSED_FEATURE_STATUSES = new Set(['done', 'abandoned']);
+const LIVE_FEATURE_STATUSES = new Set(['planning', 'in_progress', 'paused', 'qa_failed', 'qa_blocked']);
 // A feature slug as the registry writes it (dots allowed: `checkout-v2.0`).
 const FEATURE_SLUG = /^[a-z0-9][a-z0-9._-]*$/;
 const CASE_INSENSITIVE_FS = process.platform === 'win32' || process.platform === 'darwin';
@@ -306,32 +309,59 @@ function similarOpen(items, item) {
 
 /**
  * A settled item seen again is news only when its outcome said the thing was
- * gone: `fixed`, or `planned`/`promoted` into a feature that has since closed.
- * A dismissal or an answer is the owner's word: it stands, and the observer
- * reads it instead of reopening the item for the owner to settle again.
+ * gone: `fixed`, or `planned`/`promoted` into something that no longer holds
+ * it — a plan or artifact path that is gone, a feature that has since closed.
+ * A dismissal or an answer is the owner's word: it stands in any feature, and
+ * the observer reads it instead of reopening the item for the owner to settle again.
  */
-function staysSettled(resolution, closed) {
+async function staysSettled(targetDir, resolution) {
   const as = resolution && resolution.as;
   if (as === 'dismissed' || as === 'answered') return true;
   if (as !== 'planned' && as !== 'promoted') return false;
-  return !closed.has(String(resolution.ref || '').trim().toLowerCase());
+  return refStands(targetDir, String(resolution.ref || '').trim());
+}
+
+/** A plan or a promotion stands while its ref does: the path is still there, or the feature has not closed. */
+async function refStands(targetDir, ref) {
+  if (!ref) return false;
+  const pathLike = looksLikePath(ref);
+  if (pathLike && await fileExists(path.resolve(targetDir, ref))) return true;
+  // A gone path is a plan carried out; `checkout-v2.0` reads like a file name and may still be a slug.
+  if (pathLike && (/[\\/]/.test(ref) || !(await knownFeature(targetDir, ref)))) return false;
+  return !(await closedFeatures(targetDir)).has(ref.toLowerCase());
+}
+
+/**
+ * A repeat keeps the first detail; a reopen keeps it too and appends the new
+ * evidence after it, trimming the earlier text when both do not fit.
+ */
+function mergeDetail(item, detail, reopening) {
+  if (!detail || item.detail === detail) return;
+  if (!item.detail) {
+    item.detail = detail;
+    return;
+  }
+  if (!reopening) return;
+  const room = MAX_DETAIL_CHARS - detail.length - 3;
+  item.detail = room > 1 ? `${oneLine(item.detail, room)} · ${detail}` : detail;
 }
 
 /** A repeat: count it, merge what it adds, reopen it when it came back. True when it reopened. */
-function reobserve(item, { detail, paths, agent, at, targetDir, reopen, closed }) {
+function reobserve(item, { detail, paths, agent, at, targetDir, stays }) {
+  const reopening = item.status !== 'open' && !stays;
   item.seen = (Number(item.seen) || 1) + 1;
   item.updated_at = at;
-  if (detail && !item.detail) item.detail = detail;
+  mergeDetail(item, detail, reopening);
   // The file is readable and editable by hand: never trust its shapes.
   item.paths = normalizePaths(item.paths, targetDir);
   for (const rel of paths) if (!item.paths.includes(rel) && item.paths.length < MAX_PATHS) item.paths.push(rel);
   // Only creation binds a feature: a project-wide item re-seen during a
   // feature would otherwise be carried at its close with an origin it never had.
   if (agent && !item.agent) item.agent = agent;
-  if (item.status === 'open') return false;
-  if (!reopen && staysSettled(item.resolution, closed)) return false;
+  if (!reopening) return false;
   item.history = Array.isArray(item.history) ? item.history : [];
-  item.history.push({ ...(item.resolution || {}), reopened_at: at });
+  // The evidence that brought it back is kept with the outcome it overturned.
+  item.history.push({ ...(item.resolution || {}), reopened_at: at, ...(detail ? { detail } : {}) });
   item.resolution = null;
   item.status = 'open';
   item.created_at = at;
@@ -359,9 +389,9 @@ async function addObservation(targetDir, input = {}, { now } = {}) {
     const store = await readStoreForWrite(targetDir);
     const { id, existing } = slotFor(store.items, kind, summary);
     const created = !existing;
-    // The registry is read only when a settled item comes back.
-    const closed = existing && existing.status === 'resolved' ? await closedFeatures(targetDir) : new Set();
-    const reopened = existing ? reobserve(existing, { detail, paths, agent, at, targetDir, reopen, closed }) : false;
+    // The registry and the ref are read only when a settled item comes back.
+    const stays = Boolean(existing) && existing.status === 'resolved' && !reopen && await staysSettled(targetDir, existing.resolution);
+    const reopened = existing ? reobserve(existing, { detail, paths, agent, at, targetDir, stays }) : false;
     const item = existing || {
       id,
       kind,
@@ -393,23 +423,31 @@ function sortOpenFirstNewest(a, b) {
   return String(b.updated_at || '').localeCompare(String(a.updated_at || ''));
 }
 
+// `project` (or `none`) lists what no live feature owns: unbound items and
+// items bound to a slug the registry does not list as live.
+async function featureFilter(targetDir, feature) {
+  if (!feature) return () => true;
+  if (feature !== 'project' && feature !== 'none') return (item) => item.feature === feature;
+  const { live } = await registryFeatureStates(targetDir);
+  return (item) => !live.has(item.feature);
+}
+
 /**
  * @param {object} [filter]
  * @param {'open'|'resolved'|'all'} [filter.status='open']
  * @param {string} [filter.kind]
- * @param {string} [filter.feature]  exact feature, or `project` for unbound items
+ * @param {string} [filter.feature]  exact feature, or `project` for what no live feature owns
  */
 async function listObservations(targetDir, filter = {}, { now } = {}) {
   const current = await readStore(targetDir);
   const status = filter.status || 'open';
   const kind = filter.kind ? String(filter.kind).trim().toLowerCase() : null;
-  const feature = filter.feature ? String(filter.feature).trim().toLowerCase() : null;
-  const unbound = feature === 'project' || feature === 'none';
+  const ofFeature = await featureFilter(targetDir, filter.feature ? String(filter.feature).trim().toLowerCase() : null);
   const items = current.store.items
     .filter((item) => item && typeof item === 'object' && item.id)
     .filter((item) => status === 'all' || item.status === status)
     .filter((item) => !kind || item.kind === kind)
-    .filter((item) => !feature || (unbound ? !item.feature : item.feature === feature))
+    .filter(ofFeature)
     .sort(sortOpenFirstNewest)
     .map((item) => decorate(item, now));
   return { items, exists: current.exists, error: current.error, path: RELATIVE_PATH };
@@ -546,13 +584,17 @@ function pathOverlap(itemPaths, paths) {
   }));
 }
 
+/** The registry's live and closed slugs, from one read; both empty without a registry. */
+async function registryFeatureStates(targetDir) {
+  const content = await readTextSafe(path.join(targetDir, '.aioson', 'context', 'features.md'));
+  const rows = content ? parseFeatureRegistry(content).rows : [];
+  const slugs = (statuses) => new Set(rows.filter((row) => statuses.has(row.status)).map((row) => String(row.slug).toLowerCase()));
+  return { live: slugs(LIVE_FEATURE_STATUSES), closed: slugs(CLOSED_FEATURE_STATUSES) };
+}
+
 /** Slugs the registry marks done or abandoned; empty without a registry. */
 async function closedFeatures(targetDir) {
-  const content = await readTextSafe(path.join(targetDir, '.aioson', 'context', 'features.md'));
-  if (!content) return new Set();
-  return new Set(parseFeatureRegistry(content).rows
-    .filter((row) => CLOSED_FEATURE_STATUSES.has(row.status))
-    .map((row) => String(row.slug).toLowerCase()));
+  return (await registryFeatureStates(targetDir)).closed;
 }
 
 /**
@@ -575,18 +617,19 @@ async function fanFor(targetDir, agent, { feature, paths, limit = DEFAULT_LIMIT,
   const answers = addressed.filter((item) => item.status !== 'open' && isFeatureAnswer(item, slug));
   // The registry is read only when a binding has to be judged.
   const judged = answers.length > 0 || open.some((item) => item.feature && item.feature !== slug);
-  const closed = judged ? await closedFeatures(targetDir) : new Set();
+  const registry = judged ? await registryFeatureStates(targetDir) : { live: new Set(), closed: new Set() };
   const ranked = open
-    .map((item) => ({ item, tier: fanTier(item, slug, touched, closed) }))
+    .map((item) => ({ item, tier: fanTier(item, slug, touched, registry.live) }))
     .filter((entry) => entry.tier !== null)
     .sort((a, b) => a.tier - b.tier || String(b.item.updated_at || '').localeCompare(String(a.item.updated_at || '')));
-  const answered = closed.has(slug) ? [] : answers.slice(0, limit).map((item) => ({ ...item, answer: item.resolution.why || '' }));
+  const answered = registry.closed.has(slug) ? [] : answers.slice(0, limit).map((item) => ({ ...item, answer: item.resolution.why || '' }));
   return { items: ranked.slice(0, limit).map((entry) => entry.item), total: ranked.length, answered };
 }
 
 /** Where an open item ranks in an agent's fan; null when it belongs to another live feature. */
-function fanTier(item, slug, touched, closed) {
-  const bound = item.feature && item.feature !== slug && closed.has(item.feature) ? null : item.feature;
+function fanTier(item, slug, touched, live) {
+  // Bound to a slug the registry does not list as live: project-wide (see LIVE_FEATURE_STATUSES).
+  const bound = item.feature && item.feature !== slug && !live.has(item.feature) ? null : item.feature;
   if (bound && bound === slug) return 0;
   if (pathOverlap(item.paths, touched)) return 1;
   if (!bound || !FEATURE_BOUND_KINDS.has(item.kind)) return 2;
@@ -792,40 +835,9 @@ async function recentObservations(targetDir, { hours = 24, limit = DEFAULT_LIMIT
 }
 
 module.exports = {
-  SCHEMA_VERSION,
-  RELATIVE_PATH,
-  KINDS,
-  RESOLUTIONS,
-  STALE_DAYS,
-  AUDIENCE,
-  NEXT_STEP,
-  REPAIR_HINT,
-  observationsPath,
-  observationId,
-  normalizeSummary,
-  normalizePaths,
-  validateFeature,
-  closedFeatures,
-  readStore,
-  addObservation,
-  listObservations,
-  resolveObservation,
-  refExists,
-  summarizeOpen,
-  describeByKind,
-  fanFor,
-  observationsForAgent,
-  sessionFan,
-  fanLines,
-  handoffLines,
-  attachFan,
-  printFan,
-  handoffFields,
-  printHandoff,
-  openForFeature,
-  carryPreview,
-  unreadableStore,
-  carryFeatureObservations,
-  staleObservations,
-  recentObservations
+  SCHEMA_VERSION, RELATIVE_PATH, KINDS, RESOLUTIONS, STALE_DAYS, AUDIENCE, NEXT_STEP, REPAIR_HINT,
+  observationsPath, observationId, normalizeSummary, normalizePaths, validateFeature, closedFeatures, registryFeatureStates,
+  readStore, addObservation, listObservations, resolveObservation, refExists, summarizeOpen, describeByKind,
+  fanFor, observationsForAgent, sessionFan, fanLines, handoffLines, attachFan, printFan, handoffFields, printHandoff,
+  openForFeature, carryPreview, unreadableStore, carryFeatureObservations, staleObservations, recentObservations
 };

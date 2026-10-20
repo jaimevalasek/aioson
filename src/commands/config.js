@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { redactTelemetryText } = require('../lib/telemetry-redaction');
 
 const CONFIG_DIR = path.join(os.homedir(), '.aioson');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -127,23 +128,44 @@ async function writeConfig(data) {
   await fs.chmod(CONFIG_FILE, 0o600).catch(() => {});
 }
 
-// `config show`: uma linha por chave; chave de segredo (key/secret/token) sai
-// mascarada. O `--json` leva o mesmo valor mascarado da saída humana: agentes e
-// CI guardam o que ele imprime, então um token nunca sai inteiro.
+// Nome que guarda credencial: os trechos key/secret/token e os de senha ou
+// credencial, mais as palavras inteiras pat, pass, auth, cookie, session e bearer
+// (`githubPat`, `authHeader`, `sessionId` — nunca `path` nem `author`).
+const SECRET_KEY_PARTS = /key|secret|token|passw|pwd|credential/;
+const SECRET_KEY_WORDS = new Set(['pat', 'pass', 'auth', 'authorization', 'cookie', 'session', 'bearer']);
+
+function isSecretKey(name) {
+  const text = String(name);
+  if (SECRET_KEY_PARTS.test(text.toLowerCase())) return true;
+  return text.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).some((word) => SECRET_KEY_WORDS.has(word));
+}
+
+// Mascarado pelo nome da chave (ou de quem a contém) ou pela forma do valor (um
+// token de provedor, uma URL com senha — o mesmo detector da telemetria).
+// Objetos e listas mantêm a forma: só as folhas viram `abcdef****`.
+function maskConfigValue(value, secret) {
+  if (value && typeof value === 'object') {
+    if (Array.isArray(value)) return value.map((entry) => maskConfigValue(entry, secret));
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, maskConfigValue(entry, secret || isSecretKey(key))]));
+  }
+  const raw = String(value);
+  if (!secret && redactTelemetryText(raw) === raw) return value;
+  return `${raw.slice(0, 6)}${'*'.repeat(Math.max(0, raw.length - 6))}`;
+}
+
+// `config show`: uma linha por chave, segredo mascarado. O `--json` leva os
+// mesmos valores mascarados da saída humana (agentes e CI guardam o que ele
+// imprime, então um token nunca sai inteiro), cada objeto com a sua forma.
 async function showConfig(logger, t) {
   const config = await readConfig();
   const keys = Object.keys(config);
-  const shown = { ...config };
+  const shown = {};
   logger.log(t('config.show_header', { path: CONFIG_FILE }));
   if (keys.length === 0) logger.log(t('config.show_empty'));
   for (const key of keys) {
-    const value = config[key];
-    const raw = value && typeof value === 'object' ? JSON.stringify(value) : String(value);
-    const lower = key.toLowerCase();
-    const secret = lower.includes('key') || lower.includes('secret') || lower.includes('token');
-    const masked = secret ? `${raw.slice(0, 6)}${'*'.repeat(Math.max(0, raw.length - 6))}` : raw;
-    if (secret) shown[key] = masked;
-    logger.log(t('config.show_line', { key, value: masked }));
+    shown[key] = maskConfigValue(config[key], isSecretKey(key));
+    const value = shown[key] && typeof shown[key] === 'object' ? JSON.stringify(shown[key]) : String(shown[key]);
+    logger.log(t('config.show_line', { key, value }));
   }
   return { ok: true, config: shown };
 }

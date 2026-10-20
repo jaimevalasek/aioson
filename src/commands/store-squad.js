@@ -3,13 +3,13 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, requireSite } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 const { scanPackage, formatScanReport } = require('../lib/store/security-scan');
 const { resolveTargetDir } = require('../lib/project-root');
 const { assertInstallSlug, installTarget, textFiles, writeInstallTargets } = require('../lib/store/install-containment');
 const { reviewInstallPackage } = require('../lib/store/install-review');
-const { defaultStoreSite, resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
+const { resolvePublishContext, resolveInstallContext } = require('../lib/store/command-context');
 const { storeGet, storePostJson } = require('../lib/store/http');
 
 const SQUADS_DIR = '.aioson/squads';
@@ -281,7 +281,7 @@ async function runSquadInstall({ args, options, logger, t }) {
 // ── squad:grant ─────────────────────────────────────────────────────────────
 
 async function runSquadGrant({ args, options, logger, t }) {
-  const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
+  const { token, baseUrl } = requireSite(await readConfig(), options, t);
 
   const code = String(options.code || args[0] || '').trim();
   const email = String(options.email || args[1] || '').trim();
@@ -305,7 +305,7 @@ async function runSquadGrant({ args, options, logger, t }) {
 async function runSquadList({ args, options, logger, t }) {
   // --remote: list squads published on aioson.com
   if (options.remote) {
-    const { token, baseUrl } = defaultStoreSite(await readConfig(), t);
+    const { token, baseUrl } = requireSite(await readConfig(), options, t);
     logger.log(t('store.list_remote_fetching', { type: 'squads' }));
     const response = await storeGet(`${baseUrl}/api/store/squads`, token);
     const squads = response.squads || [];

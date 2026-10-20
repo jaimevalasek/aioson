@@ -20,6 +20,7 @@ const COMMANDS = {
   skill: 'store-skill',
   squad: 'store-squad',
   genome: 'store-genome',
+  workspace: 'workspace',
 };
 
 // Instâncias novas dos comandos com um HOME temporário (o config.json mora
@@ -306,20 +307,33 @@ test('ST-2: skill:publish, squad:publish and genome:publish go to the site chose
 
 // ── ST-3: config show --json ────────────────────────────────────────────────
 
-test('ST-3: config show --json carries the same masked tokens as the human output', async (ctx) => {
+test('ST-3: config show --json masks every credential by name and by shape, keeps each object\'s shape, and matches the human output', async (ctx) => {
+  const githubToken = 'gh' + 'p_' + 'A'.repeat(36);
   const env = await loadCommands(ctx, {
     aiosonToken: 'PROD-SECRET-TOKEN-123456',
     aiosonTokens: { 'https://aioson.com': 'PROD-SECRET-TOKEN-123456', 'http://localhost:3000': 'LOCAL-SECRET-TOKEN-999' },
     aiosonUsername: 'jaime',
+    aiosonBaseUrl: 'https://aioson.com',
+    dbPassword: 'hunter2-plain-password',
+    githubPat: 'plain-pat-value-123',
+    sessionCookie: 'cookie-value-xyz',
+    deployHook: githubToken,
+    projectPath: '/home/u/proj',
   });
   const lines = [];
 
   const result = await env.config.runConfig({ args: ['show'], options: { json: true }, logger: { log: (line) => lines.push(line) }, t });
 
-  assert.ok(!JSON.stringify(result).includes('SECRET-TOKEN'), JSON.stringify(result));
+  const text = JSON.stringify(result);
+  for (const secret of ['SECRET-TOKEN', 'hunter2-plain', 'pat-value', 'cookie-value', githubToken]) assert.ok(!text.includes(secret), secret);
+  assert.deepEqual(Object.keys(result.config.aiosonTokens), ['https://aioson.com', 'http://localhost:3000'], 'the token map keeps its shape');
+  assert.match(result.config.aiosonTokens['https://aioson.com'], /^PROD-S\*+$/);
   assert.equal(result.config.aiosonUsername, 'jaime');
-  for (const key of ['aiosonToken', 'aiosonTokens']) {
-    assert.ok(lines.includes(t('config.show_line', { key, value: result.config[key] })), key);
+  assert.equal(result.config.aiosonBaseUrl, 'https://aioson.com');
+  assert.equal(result.config.projectPath, '/home/u/proj', 'a `path` is no `pat`');
+  for (const [key, value] of Object.entries(result.config)) {
+    const shown = value && typeof value === 'object' ? JSON.stringify(value) : String(value);
+    assert.ok(lines.includes(t('config.show_line', { key, value: shown })), key);
   }
 });
 
@@ -423,4 +437,133 @@ test('ST-7: config.json is written 0600 in a new 0700 folder, and an old 0644 fi
   await fs.chmod(old.configFile, 0o644);
   await old.config.writeConfig({ aiosonToken: 'prod-token' });
   assert.equal((await fs.stat(old.configFile)).mode & 0o777, 0o600);
+});
+
+// ── ST-16/17: todo comando que manda o token escolhe o site como o publish ──
+
+test('ST-16: installs, lists, grant and workspace:init refuse a plain http:// default site before any request', async (ctx) => {
+  // config.json de um login antigo em http:// (a 1.73 gravava qualquer --base-url como padrão).
+  const env = await loadCommands(ctx, { aiosonToken: 'LEGACY-TOKEN', aiosonBaseUrl: 'http://aioson.com' });
+  const project = await writeTree(ctx, 'aioson-insecure-default-', { '.aioson/config.md': '# p\n' });
+  env.answer(() => ({ body: { slug: 'demo', files: { 'SKILL.md': '# s' } } }));
+  const call = (run, options = {}, args = [project]) => run({ args, options, logger: quiet, t });
+  const commands = {
+    'skill:install:store': () => call(env.skill.runSkillInstallStore, { slug: 'demo' }),
+    'squad:install': () => call(env.squad.runSquadInstall, { slug: 'demo' }),
+    'genome:install:store': () => call(env.genome.runGenomeInstallStore, { slug: 'demo' }),
+    'skill:list --remote': () => call(env.skill.runSkillListRemote, { remote: true }),
+    'squad:list --remote': () => call(env.squad.runSquadList, { remote: true }),
+    'genome:list --remote': () => call(env.genome.runGenomeList, { remote: true }),
+    'squad:grant': () => call(env.squad.runSquadGrant, {}, ['CODE', 'friend@example.com']),
+    'workspace:init': () => call(env.workspace.runWorkspaceInit),
+  };
+  for (const [name, run] of Object.entries(commands)) {
+    await assert.rejects(run(), /auth\.error_base_url_insecure \{"url":"http:\/\/aioson\.com"/, name);
+  }
+  assert.deepEqual(env.requests, [], 'the token never left');
+  await assert.rejects(fs.access(path.join(project, '.aioson', 'workspace.json')));
+});
+
+test('ST-17: installs and lists honor --base-url and AIOSON_BASE_URL with that site\'s token; a blank flag is a usage error', async (ctx) => {
+  const env = await loadCommands(ctx, { aiosonToken: 'PROD', aiosonTokens: { 'https://aioson.com': 'PROD', 'http://localhost:3000': 'LOCAL' } });
+  const project = await writeTree(ctx, 'aioson-install-site-', { '.aioson/config.md': '# p\n' });
+  env.answer((url) => ({ body: url.endsWith('/genomes') ? { genomes: [] } : { slug: 'demo', files: { 'SKILL.md': '# s' } } }));
+  const install = (options) => env.skill.runSkillInstallStore({ args: [project], options: { slug: 'demo', ...options }, logger: quiet, t });
+  const sent = () => env.requests.map((r) => `${r.authorization} ${r.url}`);
+
+  await install({ 'base-url': 'http://localhost:3000/' });
+  process.env.AIOSON_BASE_URL = 'http://localhost:3000';
+  try {
+    await env.genome.runGenomeList({ args: [project], options: { remote: true }, logger: quiet, t });
+  } finally {
+    delete process.env.AIOSON_BASE_URL;
+  }
+  await install({});
+  assert.deepEqual(sent(), [
+    'Bearer LOCAL http://localhost:3000/api/store/skills/install',
+    'Bearer LOCAL http://localhost:3000/api/store/genomes',
+    'Bearer PROD https://aioson.com/api/store/skills/install',
+  ]);
+
+  env.requests.length = 0;
+  await assert.rejects(install({ 'base-url': '' }), /auth\.error_base_url_blank/);
+  await assert.rejects(install({ 'base-url': 'http://localhost:4000' }), /store\.error_not_authenticated_site \{"url":"http:\/\/localhost:4000"\}/);
+  assert.equal(env.requests.length, 0, 'a blank flag and a site without its own login get nothing');
+});
+
+// ── ST-18: genome de arquivo único passa pela mesma revisão do formato pasta ─
+
+test('ST-18: a single-file genome install is previewed and scanned like the folder format, and --inspect writes nothing', async (ctx) => {
+  const env = await loadCommands(ctx, { aiosonToken: 'prod-token' });
+  const project = await writeTree(ctx, 'aioson-genome-single-', { '.aioson/config.md': '# p\n' });
+  const genomes = path.join(project, '.aioson', 'genomes');
+  const install = (body, options = {}) => {
+    env.answer(() => ({ body }));
+    const lines = [];
+    return env.genome.runGenomeInstallStore({ args: [project], options: { slug: 'solo', ...options }, logger: { log: (line) => lines.push(line) }, t })
+      .then((result) => ({ result, lines }));
+  };
+
+  // The folder format refuses a .js file; the single-file refs used to write it unscanned.
+  await assert.rejects(install({ slug: 'solo', format: 'single-file', content: '# g', refs: { 'payload.js': 'require("child_process").execSync("x")' } }), /store\.error_install_scan_failed/);
+  await assert.rejects(fs.access(genomes), 'a refused package writes nothing');
+
+  const body = { slug: 'solo', format: 'single-file', content: '# g', meta: { version: '1.0.0', name: 'Solo' }, refs: { 'a.md': 'x' }, hash: 'f'.repeat(64), publisher: 'jaime' };
+  const inspected = await install(body, { inspect: true });
+  assert.equal(inspected.result.inspect, true);
+  assert.deepEqual(inspected.result.files.sort(), ['refs/a.md', 'solo.md', 'solo.meta.json']);
+  assert.ok(inspected.lines.some((line) => line.startsWith('store.install_preview_header')), inspected.lines.join('\n'));
+  await assert.rejects(fs.access(genomes), '--inspect lists and stops');
+
+  // The server returns `meta` with its keys reordered (JSON column): the publish hash is not comparable, so it never blocks.
+  const installed = await install(body);
+  assert.equal(installed.result.format, 'single-file');
+  assert.equal(await fs.readFile(path.join(genomes, 'solo.refs', 'a.md'), 'utf8'), 'x');
+});
+
+// ── ST-19/20: contenção no disco e nomes que o Windows reescreve ────────────
+
+test('ST-19: a link or junction already inside the install folder never carries a write outside it', async (ctx) => {
+  const env = await loadCommands(ctx, { aiosonToken: 'prod-token' });
+  const base = await writeTree(ctx, 'aioson-install-link-', {
+    'proj/.aioson/installed-skills/demo/SKILL.md': '# old',
+    'proj/.aioson/system-packages/app/system.json': '{}',
+    'outside/keep.md': 'keep',
+    'shared/SKILL.md': '# shared',
+  });
+  const project = path.join(base, 'proj');
+  const outside = path.join(base, 'outside');
+  try {
+    await fs.symlink(outside, path.join(project, '.aioson', 'installed-skills', 'demo', 'refs'), 'junction');
+    await fs.symlink(outside, path.join(project, '.aioson', 'system-packages', 'app', 'node_modules'), 'junction');
+    await fs.symlink(path.join(base, 'shared'), path.join(project, '.aioson', 'installed-skills', 'shared'), 'junction');
+  } catch (error) {
+    ctx.skip(`links cannot be created here (${error.code})`);
+    return;
+  }
+
+  env.answer(() => ({ body: { slug: 'demo', files: { 'SKILL.md': '# new', 'refs/escaped.md': 'x' } } }));
+  await assert.rejects(env.skill.runSkillInstallStore({ args: [project], options: { slug: 'demo' }, logger: quiet, t }), /store\.error_install_unsafe_path \{"path":"refs\/escaped\.md"\}/);
+  env.answer(() => ({ body: { manifest: { slug: 'app', version: '2.0.0' }, files: { 'system.json': '{}', 'node_modules/escaped.js': 'x' } } }));
+  await assert.rejects(env.system.runSystemInstall({ args: [project], options: { slug: 'app', force: true }, logger: quiet, t }), /store\.error_install_unsafe_path/);
+  assert.deepEqual(await fs.readdir(outside), ['keep.md']);
+  assert.equal(await fs.readFile(path.join(project, '.aioson', 'installed-skills', 'demo', 'SKILL.md'), 'utf8'), '# old', 'a refused install writes nothing');
+
+  // The install folder itself may be the owner's link (a skill shared across projects): writes follow it.
+  env.answer(() => ({ body: { slug: 'shared', files: { 'SKILL.md': '# shared v2', 'refs/a.md': 'a' } } }));
+  await env.skill.runSkillInstallStore({ args: [project], options: { slug: 'shared' }, logger: quiet, t });
+  assert.equal(await fs.readFile(path.join(base, 'shared', 'refs', 'a.md'), 'utf8'), 'a');
+});
+
+test('ST-20: on Windows a name the system rewrites or reserves is refused — trailing dot or space, a device name, a colon', { skip: process.platform !== 'win32' && 'Windows file names' }, () => {
+  const { installTarget, assertInstallSlug } = require('../src/lib/store/install-containment');
+  const root = path.join(os.tmpdir(), 'aioson-win32-names', 'root');
+  for (const name of ['x.', 'x ', 'a/b./c.md', '.. /x', '... /x', 'CON', 'con.txt', 'NUL.md', 'aux', 'PRN.json', 'COM1', 'com9.md', 'LPT1.txt', 'lpt9', 'ab:stream', 'file.txt::$DATA', 'C:x']) {
+    assert.throws(() => installTarget(root, name, t), /store\.error_install_unsafe_path/, name);
+  }
+  for (const name of ['console.md', 'com10.md', 'lpt.md', 'connect/x.md', 'a/./b.md', 'notes.v2.md']) {
+    assert.doesNotThrow(() => installTarget(root, name, t), name);
+  }
+  for (const slug of ['demo.', 'CON', 'nul.md']) assert.throws(() => assertInstallSlug(slug, t), /store\.error_install_unsafe_slug/, slug);
+  assert.equal(assertInstallSlug('demo.v2', t), 'demo.v2');
 });

@@ -9,6 +9,14 @@ const LOCK_NAME = '.features.lock';
 // Windows refuses a readdir/rmdir/unlink for a moment while another process
 // renames or scans the same lock directory. Never a reason to fail the lock.
 const TRANSIENT = ['EPERM', 'EBUSY', 'EACCES'];
+const OWNER_MARKER = /^(\d+)-[a-f0-9-]+\.owner$/;
+// A holder reads and writes in milliseconds: a marker this old belongs to a
+// process that died or hung, whatever its PID names now (Windows reuses PIDs
+// within minutes; a process inside WSL is invisible from Windows).
+const STALE_OWNER_MS = 30_000;
+// Readers, antivirus and sync clients hold a file open for a moment on
+// Windows: a refused replacement is retried for about 2 s, the pause doubling.
+const RENAME_RETRY_MS = 2_000;
 
 async function retryTransient(operation, attempts = 6) {
   for (let attempt = 0; ; attempt += 1) {
@@ -51,6 +59,29 @@ async function removeEmptyDirectory(directory) {
   }
 }
 
+/** True when `entry` holds no live lock: a stray file, a dead owner, or a marker older than STALE_OWNER_MS. */
+async function isStaleEntry(directory, entry) {
+  const match = OWNER_MARKER.exec(entry);
+  if (!match || !isAlive(Number(match[1]))) return true;
+  try {
+    return Date.now() - (await fs.stat(path.join(directory, entry))).mtimeMs > STALE_OWNER_MS;
+  } catch (error) {
+    if (TRANSIENT.includes(error.code)) return false;
+    // Released between the listing and now: no live holder either.
+    if (error.code === 'ENOENT') return true;
+    throw error;
+  }
+}
+
+async function removeEntry(entry) {
+  try {
+    await retryTransient(() => fs.unlink(entry));
+  } catch (error) {
+    // A stray folder: removed only when empty, like the lock itself.
+    if (error.code !== 'ENOENT') await fs.rmdir(entry).catch(() => {});
+  }
+}
+
 async function reapDeadOwner(directory) {
   let entries;
   try {
@@ -59,11 +90,27 @@ async function reapDeadOwner(directory) {
     if (error.code === 'ENOENT' || TRANSIENT.includes(error.code)) return;
     throw error;
   }
-  // A process may have died between unlinking its owner marker and rmdir.
-  if (entries.length === 0) return removeEmptyDirectory(directory);
-  if (entries.length !== 1) return;
-  const match = /^(\d+)-[a-f0-9-]+\.owner$/.exec(entries[0]);
-  if (match && !isAlive(Number(match[1]))) await removeOwner(directory, entries[0]);
+  for (const entry of entries) {
+    if (!(await isStaleEntry(directory, entry))) return; // a live holder keeps its lock
+  }
+  // A process may have died between unlinking its owner marker and rmdir, or a
+  // tool dropped a file beside it (desktop.ini, Thumbs.db): each listed entry
+  // goes one by one — never recursively — and then the empty folder.
+  for (const entry of entries) await removeEntry(path.join(directory, entry));
+  await removeEmptyDirectory(directory);
+}
+
+function lockTimeout(name, directory) {
+  const label = name === LOCK_NAME ? 'feature registry' : name;
+  const locked = new Error(`Timed out waiting for ${label} lock: ${directory} — another aioson command is writing; if none is running, delete that folder and retry`);
+  locked.code = 'EFEATURELOCK';
+  return locked;
+}
+
+/** A marker that waited for the lock is as fresh as the attempt, never as old as the wait. */
+async function touch(file) {
+  const now = new Date();
+  await fs.utimes(file, now, now).catch(() => {});
 }
 
 /**
@@ -84,16 +131,13 @@ async function withRegistryLock(ctxDir, action, { timeoutMs = 10_000, pollMs = 2
     // ownerless acquisition, and an old reaper cannot rmdir a new owner's lock.
     while (!acquired) {
       try {
+        await touch(path.join(candidate, owner));
         await fs.rename(candidate, directory);
         acquired = true;
       } catch (error) {
         if (!['EEXIST', 'ENOTEMPTY', ...TRANSIENT].includes(error.code)) throw error;
         await reapDeadOwner(directory);
-        if (Date.now() >= deadline) {
-          const locked = new Error(`Timed out waiting for ${name === LOCK_NAME ? 'feature registry' : name} lock: ${directory}`);
-          locked.code = 'EFEATURELOCK';
-          throw locked;
-        }
+        if (Date.now() >= deadline) throw lockTimeout(name, directory);
         await delay(pollMs);
       }
     }
@@ -103,21 +147,26 @@ async function withRegistryLock(ctxDir, action, { timeoutMs = 10_000, pollMs = 2
   }
 }
 
+/** Replace `file` with `temp`, waiting out a reader that holds it open for up to RENAME_RETRY_MS. */
+async function renameWithRetry(temp, file) {
+  for (let attempt = 0, waited = 0; ; attempt += 1) {
+    try {
+      return await fs.rename(temp, file);
+    } catch (error) {
+      if (!TRANSIENT.includes(error.code) || waited >= RENAME_RETRY_MS) throw error;
+      const pause = Math.min(25 * 2 ** attempt, 400, RENAME_RETRY_MS - waited);
+      await delay(pause);
+      waited += pause;
+    }
+  }
+}
+
 /** Readers see either complete version; a failed replacement keeps the old one. */
 async function writeAtomically(file, content) {
   const temp = `${file}.${randomUUID()}.tmp`;
   try {
     await fs.writeFile(temp, content, { encoding: 'utf8', flag: 'wx' });
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        await fs.rename(temp, file);
-        return;
-      } catch (error) {
-        // Windows readers/antivirus can briefly refuse replacement.
-        if (!['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || attempt >= 5) throw error;
-        await delay(25 * (attempt + 1));
-      }
-    }
+    await renameWithRetry(temp, file);
   } finally {
     await fs.rm(temp, { force: true });
   }

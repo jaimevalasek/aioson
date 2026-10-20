@@ -17,10 +17,12 @@
  * agent:done, agent:prompt).
  */
 
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const { resolveTargetDir, resolveProjectRootOrSelf, isProjectRoot } = require('../lib/project-root');
 const {
   KINDS, RESOLUTIONS, STALE_DAYS, NEXT_STEP, RELATIVE_PATH, REPAIR_HINT,
-  addObservation, listObservations, resolveObservation, describeByKind, validateFeature, closedFeatures
+  addObservation, listObservations, resolveObservation, describeByKind, validateFeature, closedFeatures, registryFeatureStates
 } = require('../lib/observations');
 
 const KIND_LIST = KINDS.join('|');
@@ -75,6 +77,7 @@ function printRecorded(logger, result) {
   const { item, similar } = result;
   const scope = item.feature ? `feature ${item.feature}` : 'project';
   logger.log(`observe — ${item.id} (${item.kind}) ${recordedVerb(result)} · ${scope}${item.agent ? ` · @${item.agent}` : ''}`);
+  if (result.note) logger.log(`  ${result.note}`);
   // Agents paraphrase: the same thing in other words would be a twin.
   for (const other of similar) logger.log(`  possibly already on record: ${other.id} — ${other.summary}`);
   // A dismissal or an answer stands: the observer reads it instead of a next step.
@@ -105,6 +108,38 @@ function envAgent() {
 
 const given = (value) => (value != null && value !== true ? String(value) : null);
 
+// From a subfolder, `--paths=src/a.js` names `<subfolder>/src/a.js`: relative
+// paths are anchored at the directory the command was given, then the store
+// keeps them relative to the project root.
+function anchoredPaths(value, invocationDir) {
+  if (!value || value === true) return value;
+  const entries = Array.isArray(value) ? value : String(value).split(/[,\n]/);
+  return entries.map((entry) => {
+    const raw = String(entry == null ? '' : entry).trim();
+    return raw && !path.isAbsolute(raw) ? path.resolve(invocationDir, raw) : raw;
+  });
+}
+
+// The same for `--ref`: a relative path is read from the directory the command
+// was given, then kept relative to the root. A bare word stays as typed unless
+// it names a file there — it may be a feature slug (`checkout-v2.0` included).
+async function anchoredRef(ref, invocationDir, root) {
+  if (!ref || path.isAbsolute(ref) || path.resolve(invocationDir) === path.resolve(root)) return ref;
+  const anchored = path.resolve(invocationDir, ref);
+  if (!/[\\/]/.test(ref) && !(await fs.access(anchored).then(() => true, () => false))) return ref;
+  return path.relative(root, anchored).split(path.sep).join('/');
+}
+
+// An explicit --feature the registry does not list as live still binds the new
+// item, but it counts as project-wide (its kind's whole audience hears it)
+// until that feature is registered: the observer is told once.
+async function projectWideNote(targetDir, { item, created }, options) {
+  if (!created || !given(options.feature) || !item.feature) return null;
+  if ((await registryFeatureStates(targetDir)).live.has(item.feature)) return null;
+  const { t } = require('../i18n').createTranslator(options.locale || process.env.AIOS_LITE_LOCALE || 'en');
+  return t('observe.feature_not_live', { feature: item.feature });
+}
+
 async function defaultAgent(targetDir) {
   try {
     const { resolveActiveAgent } = require('../lib/active-agent');
@@ -121,7 +156,8 @@ function formatItem(item) {
   const seen = item.seen > 1 ? ` · seen ${item.seen}×` : '';
   const paths = item.paths && item.paths.length > 0 ? ` · ${item.paths.join(', ')}` : '';
   const by = item.agent ? ` · @${item.agent}` : '';
-  if (item.status === 'resolved' && item.resolution) return `  ◼ ${item.id} ${item.summary} → ${outcomeText(item.resolution)}`;
+  // A settled item that keeps coming back says so: the triage sees the dismissal may be wrong.
+  if (item.status === 'resolved' && item.resolution) return `  ◼ ${item.id} ${item.summary} → ${outcomeText(item.resolution)}${seen}`;
   return `  ◻ ${item.id}${age} ${item.summary} (${scope}${by}${paths}${seen})`;
 }
 
@@ -131,7 +167,7 @@ async function runObserve({ args = [], options = {}, logger }) {
 Usage:
   aioson observe [path] --kind=<${KIND_LIST}> --summary="<one line>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--reopen] [--json]
 Kinds: defect (something broken, not yours to fix now) · idea (a product/design improvement) · process (how the work could run better next time) · risk (may break later) · question (a choice a later stage will need).
-Defaults: --feature = the active feature (a slug; a done or abandoned one binds nothing), --agent = the active agent. Repeating the same summary raises its seen count. A settled item seen again reopens when it was fixed, or planned/promoted into a feature that has since closed; a dismissed or answered one stays settled and prints its outcome (--reopen reopens it for new evidence). An open item of the same kind on the same paths or in near-identical words is named as "possibly already on record".
+Defaults: --feature = the active feature (a slug; a done or abandoned one binds nothing; a slug that is not live in features.md binds the item, which counts as project-wide until that feature is registered), --agent = the active agent; relative --paths are read from the directory the command runs in. Repeating the same summary raises its seen count. A settled item seen again reopens when it was fixed, or planned/promoted against a plan path that is gone or a feature that has since closed; a dismissed or answered one stays settled in any feature — the answer stands — and prints its outcome (--reopen reopens it for new evidence; its --detail is appended to the earlier one). An open item of the same kind on the same paths or in near-identical words is named as "possibly already on record".
 Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}>`;
     if (options.json) return { ok: true, help: true, kinds: KINDS, resolutions: RESOLUTIONS };
     if (logger) logger.log(text);
@@ -148,7 +184,7 @@ Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}
       kind: options.kind,
       summary: options.summary,
       detail: options.detail,
-      paths: options.paths || options.path || '',
+      paths: anchoredPaths(options.paths || options.path || '', resolveTargetDir(args)),
       feature,
       agent,
       reopen: options.reopen === true
@@ -157,8 +193,9 @@ Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}
     return fail(logger, options, `observe — ${error.message}`);
   }
   const { item, created, reopened, settled, similar = [] } = result;
-  const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, settled, resolution: item.resolution, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: settled ? STAYS_SETTLED : NEXT_STEP[item.kind], similar };
-  if (!options.json) printRecorded(logger, result);
+  const note = await projectWideNote(targetDir, result, options);
+  const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, settled, resolution: item.resolution, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: settled ? STAYS_SETTLED : NEXT_STEP[item.kind], similar, note };
+  if (!options.json) printRecorded(logger, { ...result, note });
   return payload;
 }
 
@@ -216,7 +253,7 @@ async function runObservationResolve({ args = [], options = {}, logger }) {
     const text = `observation:resolve — settle one observation with the outcome the next reader needs.
 Usage:
   aioson observation:resolve [path] --id=OBS-xxxxxx --as=<${RESOLUTION_LIST}> [--ref=<plan path|feature slug>] [--why="..."] [--by=<who>] [--json]
-planned/promoted need an existing --ref (a Simple Plan path, a feature slug); dismissed/answered need --why. --by defaults to AIOSON_AGENT, else owner. A settled item that is observed again reopens.`;
+planned/promoted need an existing --ref (a Simple Plan path, a feature slug); dismissed/answered need --why. --by defaults to AIOSON_AGENT, else owner. Observed again, a fixed item reopens, a planned/promoted one reopens once its plan path is gone or its feature has closed, and a dismissed or answered one stays settled in any feature — the answer stands (aioson observe --reopen brings it back for new evidence).`;
     if (options.json) return { ok: true, help: true };
     if (logger) logger.log(text);
     return { ok: true, help: true };
@@ -229,7 +266,7 @@ planned/promoted need an existing --ref (a Simple Plan path, a feature slug); di
     result = await resolveObservation(targetDir, {
       id: options.id,
       as: options.as,
-      ref: given(options.ref),
+      ref: await anchoredRef(given(options.ref), resolveTargetDir(args), targetDir),
       why: given(options.why),
       by: given(options.by) || given(options.agent) || envAgent() || 'owner'
     });

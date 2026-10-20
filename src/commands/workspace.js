@@ -3,7 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('../utils');
-const { readConfig } = require('./config');
+const { readConfig, resolveSite } = require('./config');
 const { resolveTargetDir } = require('../lib/project-root');
 
 const WORKSPACE_FILE = '.aioson/workspace.json';
@@ -48,6 +48,14 @@ async function writeWorkspace(projectDir, data) {
   return wsPath;
 }
 
+// The site workspace:init registers on is the one the Store commands use
+// (--base-url, AIOSON_BASE_URL, the login default), and with a token to send it
+// must be https:// or this machine / the local network — checked before the request.
+function workspaceSite(config, options, t) {
+  const site = resolveSite(config, options, t, { requireSecure: false });
+  return site.token ? resolveSite(config, options, t) : site;
+}
+
 async function runWorkspaceInit({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const projectDir = await findProjectRoot(targetDir);
@@ -62,11 +70,10 @@ async function runWorkspaceInit({ args, options, logger, t }) {
   }
 
   const config = await readConfig();
-  const baseUrl = String(config.aiosonBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
+  const { baseUrl, token } = workspaceSite(config, options, t);
   const username = slugify(config.aiosonUsername || 'local');
   const projectName = slugify(options.name || path.basename(projectDir));
   const baseSlug = `${username}-${projectName}`;
-  const token = config.aiosonToken;
 
   let workspaceId = `wks_local_${Date.now()}`;
   let finalSlug = baseSlug;
