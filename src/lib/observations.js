@@ -304,8 +304,21 @@ function similarOpen(items, item) {
     .map(({ id, summary }) => ({ id, summary }));
 }
 
-/** A repeat: count it, merge what it adds, reopen it when it was settled. True when it reopened. */
-function reobserve(item, { detail, paths, agent, at, targetDir }) {
+/**
+ * A settled item seen again is news only when its outcome said the thing was
+ * gone: `fixed`, or `planned`/`promoted` into a feature that has since closed.
+ * A dismissal or an answer is the owner's word: it stands, and the observer
+ * reads it instead of reopening the item for the owner to settle again.
+ */
+function staysSettled(resolution, closed) {
+  const as = resolution && resolution.as;
+  if (as === 'dismissed' || as === 'answered') return true;
+  if (as !== 'planned' && as !== 'promoted') return false;
+  return !closed.has(String(resolution.ref || '').trim().toLowerCase());
+}
+
+/** A repeat: count it, merge what it adds, reopen it when it came back. True when it reopened. */
+function reobserve(item, { detail, paths, agent, at, targetDir, reopen, closed }) {
   item.seen = (Number(item.seen) || 1) + 1;
   item.updated_at = at;
   if (detail && !item.detail) item.detail = detail;
@@ -316,6 +329,7 @@ function reobserve(item, { detail, paths, agent, at, targetDir }) {
   // feature would otherwise be carried at its close with an origin it never had.
   if (agent && !item.agent) item.agent = agent;
   if (item.status === 'open') return false;
+  if (!reopen && staysSettled(item.resolution, closed)) return false;
   item.history = Array.isArray(item.history) ? item.history : [];
   item.history.push({ ...(item.resolution || {}), reopened_at: at });
   item.resolution = null;
@@ -326,8 +340,10 @@ function reobserve(item, { detail, paths, agent, at, targetDir }) {
 
 /**
  * Record one thing noticed. Idempotent on (kind, summary): a repeat raises
- * `seen` instead of duplicating; a repeat of a resolved item reopens it and
- * keeps the earlier outcome as history — something that came back is news.
+ * `seen` instead of duplicating. A repeat of a settled item reopens it, the
+ * earlier outcome kept as history, when it came back (see staysSettled) or
+ * when the caller says so (`reopen`); otherwise it stays settled and the
+ * result carries `settled` with the outcome the observer should read.
  */
 async function addObservation(targetDir, input = {}, { now } = {}) {
   const kind = validateKind(input.kind);
@@ -336,13 +352,16 @@ async function addObservation(targetDir, input = {}, { now } = {}) {
   const paths = normalizePaths(input.paths, targetDir);
   const feature = validateFeature(input.feature);
   const agent = normalizeAgent(input.agent);
+  const reopen = input.reopen === true;
   const at = nowIso(now);
 
   return withStoreLock(targetDir, async () => {
     const store = await readStoreForWrite(targetDir);
     const { id, existing } = slotFor(store.items, kind, summary);
     const created = !existing;
-    const reopened = existing ? reobserve(existing, { detail, paths, agent, at, targetDir }) : false;
+    // The registry is read only when a settled item comes back.
+    const closed = existing && existing.status === 'resolved' ? await closedFeatures(targetDir) : new Set();
+    const reopened = existing ? reobserve(existing, { detail, paths, agent, at, targetDir, reopen, closed }) : false;
     const item = existing || {
       id,
       kind,
@@ -361,7 +380,7 @@ async function addObservation(targetDir, input = {}, { now } = {}) {
     if (created) store.items.push(item);
     const file = await writeStore(targetDir, store);
     const similar = created ? similarOpen(store.items, item) : [];
-    return { item, created, reopened, similar, path: path.relative(targetDir, file).replace(/\\/g, '/') };
+    return { item, created, reopened, settled: item.status === 'resolved', similar, path: path.relative(targetDir, file).replace(/\\/g, '/') };
   });
 }
 

@@ -55,14 +55,33 @@ function observeRefusal(targetDir, options) {
   return null;
 }
 
-function printRecorded(logger, { item, created, reopened, similar }) {
+// What the observer of an item that stays settled does next.
+const STAYS_SETTLED = 'it stays settled: continue the current work; record it again with --reopen only for new evidence';
+
+/** `dismissed — cosmetic (owner, 2026-10-20)`: a settled item's outcome. */
+function outcomeText(resolution) {
+  const ref = resolution.ref ? ` ${resolution.ref}` : '';
+  const why = resolution.why ? ` — ${resolution.why}` : '';
+  return `${resolution.as}${ref}${why} (${resolution.by}, ${String(resolution.at).slice(0, 10)})`;
+}
+
+function recordedVerb({ item, created, reopened, settled }) {
+  if (reopened) return 'REOPENED (it came back after being settled)';
+  if (created) return 'recorded';
+  return `${settled ? 'already settled' : 'already on record'} (seen ${item.seen}×)`;
+}
+
+function printRecorded(logger, result) {
+  const { item, similar } = result;
   const scope = item.feature ? `feature ${item.feature}` : 'project';
-  const verb = reopened ? 'REOPENED (it came back after being settled)' : created ? 'recorded' : `already on record (seen ${item.seen}×)`;
-  logger.log(`observe — ${item.id} (${item.kind}) ${verb} · ${scope}${item.agent ? ` · @${item.agent}` : ''}`);
+  logger.log(`observe — ${item.id} (${item.kind}) ${recordedVerb(result)} · ${scope}${item.agent ? ` · @${item.agent}` : ''}`);
   // Agents paraphrase: the same thing in other words would be a twin.
   for (const other of similar) logger.log(`  possibly already on record: ${other.id} — ${other.summary}`);
-  logger.log(`  next: ${NEXT_STEP[item.kind]}`);
-  logger.log(`  settle: aioson observation:resolve . --id=${item.id} --as=<${RESOLUTION_LIST}>`);
+  // A dismissal or an answer stands: the observer reads it instead of a next step.
+  const tail = result.settled
+    ? [`  outcome: ${outcomeText(item.resolution)}`, `  ${STAYS_SETTLED}`]
+    : [`  next: ${NEXT_STEP[item.kind]}`, `  settle: aioson observation:resolve . --id=${item.id} --as=<${RESOLUTION_LIST}>`];
+  for (const line of tail) logger.log(line);
 }
 
 async function defaultFeature(targetDir) {
@@ -102,12 +121,7 @@ function formatItem(item) {
   const seen = item.seen > 1 ? ` · seen ${item.seen}×` : '';
   const paths = item.paths && item.paths.length > 0 ? ` · ${item.paths.join(', ')}` : '';
   const by = item.agent ? ` · @${item.agent}` : '';
-  if (item.status === 'resolved' && item.resolution) {
-    const r = item.resolution;
-    const ref = r.ref ? ` ${r.ref}` : '';
-    const why = r.why ? ` — ${r.why}` : '';
-    return `  ◼ ${item.id} ${item.summary} → ${r.as}${ref}${why} (${r.by}, ${String(r.at).slice(0, 10)})`;
-  }
+  if (item.status === 'resolved' && item.resolution) return `  ◼ ${item.id} ${item.summary} → ${outcomeText(item.resolution)}`;
   return `  ◻ ${item.id}${age} ${item.summary} (${scope}${by}${paths}${seen})`;
 }
 
@@ -115,9 +129,9 @@ async function runObserve({ args = [], options = {}, logger }) {
   if (wantsHelp(args, options)) {
     const text = `observe — record something noticed outside the current scope; never fix it in passing, never drop it.
 Usage:
-  aioson observe [path] --kind=<${KIND_LIST}> --summary="<one line>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--json]
+  aioson observe [path] --kind=<${KIND_LIST}> --summary="<one line>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--reopen] [--json]
 Kinds: defect (something broken, not yours to fix now) · idea (a product/design improvement) · process (how the work could run better next time) · risk (may break later) · question (a choice a later stage will need).
-Defaults: --feature = the active feature (a slug; a done or abandoned one binds nothing), --agent = the active agent. Repeating the same summary raises its seen count; a resolved one reopens. An open item of the same kind on the same paths or in near-identical words is named as "possibly already on record".
+Defaults: --feature = the active feature (a slug; a done or abandoned one binds nothing), --agent = the active agent. Repeating the same summary raises its seen count. A settled item seen again reopens when it was fixed, or planned/promoted into a feature that has since closed; a dismissed or answered one stays settled and prints its outcome (--reopen reopens it for new evidence). An open item of the same kind on the same paths or in near-identical words is named as "possibly already on record".
 Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}>`;
     if (options.json) return { ok: true, help: true, kinds: KINDS, resolutions: RESOLUTIONS };
     if (logger) logger.log(text);
@@ -136,14 +150,15 @@ Settle it later: aioson observation:resolve . --id=<id> --as=<${RESOLUTION_LIST}
       detail: options.detail,
       paths: options.paths || options.path || '',
       feature,
-      agent
+      agent,
+      reopen: options.reopen === true
     });
   } catch (error) {
     return fail(logger, options, `observe — ${error.message}`);
   }
-  const { item, created, reopened, similar = [] } = result;
-  const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: NEXT_STEP[item.kind], similar };
-  if (!options.json) printRecorded(logger, { item, created, reopened, similar });
+  const { item, created, reopened, settled, similar = [] } = result;
+  const payload = { ok: true, id: item.id, kind: item.kind, created, reopened, settled, resolution: item.resolution, seen: item.seen, feature: item.feature, agent: item.agent, path: result.path, next_step: settled ? STAYS_SETTLED : NEXT_STEP[item.kind], similar };
+  if (!options.json) printRecorded(logger, result);
   return payload;
 }
 

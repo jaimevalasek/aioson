@@ -33,7 +33,7 @@ module.exports = {
     help_update:
       'aioson update [path] [--dry-run] [--allow-downgrade] [--lang=<bcp47-tag>] [--locale=fr]',
     help_info: 'aioson info [path] [--json] [--locale=fr]',
-    help_observe: 'aioson observe [path] --kind=<defect|idea|process|risk|question> --summary="<une ligne>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--json] [--locale=fr]',
+    help_observe: 'aioson observe [path] --kind=<defect|idea|process|risk|question> --summary="<une ligne>" [--detail="..."] [--paths=a,b] [--feature=<slug>] [--agent=<self>] [--reopen] [--json] [--locale=fr]',
     help_observation_list: 'aioson observation:list [path] [--kind=<defect|idea|process|risk|question>] [--feature=<slug>|project] [--all] [--resolved] [--json] [--locale=fr]',
     help_observation_resolve: 'aioson observation:resolve [path] --id=OBS-xxxxxx --as=<fixed|planned|promoted|answered|dismissed> [--ref=<chemin du plan|slug de la feature>] [--why="..."] [--by=<qui>] [--json] [--locale=fr]',
     help_hooks_recap: 'aioson hooks:recap [path] [--when=compact|always] [--agent=<agent>] [--source=claude|codex|opencode] [--session=<id>] [--max-chars=<n>] [--json] [--locale=fr]',

@@ -28,10 +28,10 @@ Not an observation: the user's standing preference (`aioson op:capture`), a tech
 One call, from any agent, the moment it is noticed:
 
 ```bash
-aioson observe . --kind=<defect|idea|process|risk|question> --summary="<one line, domain words>" [--paths=a,b] [--detail="..."] [--feature=<slug>] [--agent=<self>]
+aioson observe . --kind=<defect|idea|process|risk|question> --summary="<one line, domain words>" [--paths=a,b] [--detail="..."] [--feature=<slug>] [--agent=<self>] [--reopen]
 ```
 
-The feature defaults to the active one (an explicit `--feature` must be a slug; a done or abandoned feature binds nothing), the agent to the active one. The same summary observed again raises its `seen` count instead of duplicating (and never binds it to a feature: only the first record does); a settled item observed again reopens, with the earlier outcome kept as history. An open item of the same kind on the same paths, or in near-identical words, is named as `possibly already on record: OBS-x` — if it is the same thing, record it again with that item's exact summary. Secrets are redacted on write. Then continue the current work: do not fix it, do not widen the scope, do not ask the owner mid-task unless it blocks you.
+The feature defaults to the active one (an explicit `--feature` must be a slug; a done or abandoned feature binds nothing), the agent to the active one. The same summary observed again raises its `seen` count instead of duplicating (and never binds it to a feature: only the first record does). A settled item observed again reopens, the earlier outcome kept as history, when it was `fixed` or `planned`/`promoted` into a feature that has since closed; a `dismissed` or `answered` one stays settled and prints its outcome — read it and continue (`--reopen` only for new evidence). An open item of the same kind on the same paths, or in near-identical words, is named as `possibly already on record: OBS-x` — if it is the same thing, record it again with that item's exact summary. Secrets are redacted on write. Then continue the current work: do not fix it, do not widen the scope, do not ask the owner mid-task unless it blocks you.
 
 ## Where it surfaces
 
@@ -54,7 +54,7 @@ aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answer
 - `planned` — a Simple Plan exists for it: `--ref` must be its existing path.
 - `promoted` — it became a feature, a rule, a learning or an operator decision: `--ref` must be the existing feature slug or artifact path.
 - `answered` — the question has its answer in `--why`, where the stage that needs it reads it.
-- `dismissed` — `--why` records the reason; a dismissed item that is observed again reopens.
+- `dismissed` — `--why` records the reason; observed again, it stays dismissed and the observer reads the reason.
 
 The owner settles; an agent settles only what it was authorized to fix or plan. `--by` defaults to `AIOSON_AGENT`, else `owner`. A reference that does not exist is refused — a feature slug is a registry row or the feature's briefing, folder or PRD, never a word that merely appears in `features.md`: an outcome recorded against nothing is how an item gets lost while "handled".
 

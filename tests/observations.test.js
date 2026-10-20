@@ -65,7 +65,7 @@ function cleanup(dir) {
 
 // ── the store ───────────────────────────────────────────────────────────────
 
-test('observe records one typed line; a repeat raises seen, a settled one reopens with its history kept', async (t2) => {
+test('observe records one typed line; a repeat raises seen, a dismissed one stays settled, a fixed one reopens with its history kept', async (t2) => {
   const dir = await makeProject();
   t2.after(() => cleanup(dir));
   const first = await obs.addObservation(dir, { kind: 'defect', summary: 'Tile in the hall cracked after the floor was laid', paths: 'src/hall.js, src\\floor.js', feature: 'checkout', agent: '@dev' });
@@ -86,12 +86,23 @@ test('observe records one typed line; a repeat raises seen, a settled one reopen
   assert.equal(settled.item.status, 'resolved');
   assert.equal(settled.item.resolution.as, 'dismissed');
 
+  // The owner's dismissal stands: seeing it again is counted, never reopened
+  // for the owner to dismiss once more.
+  const repeat = await obs.addObservation(dir, { kind: 'defect', summary: 'Tile in the hall cracked after the floor was laid' });
+  assert.equal(repeat.reopened, false);
+  assert.equal(repeat.settled, true);
+  assert.equal(repeat.item.status, 'resolved');
+  assert.equal(repeat.item.resolution.why, 'cosmetic, owner accepted it');
+  assert.equal(repeat.item.seen, 3);
+
+  // A fix that did not hold is news: it reopens, every outcome kept as history.
+  await obs.resolveObservation(dir, { id: first.item.id, as: 'fixed', by: 'dev' });
   const back = await obs.addObservation(dir, { kind: 'defect', summary: 'Tile in the hall cracked after the floor was laid' });
   assert.equal(back.reopened, true);
+  assert.equal(back.settled, false);
   assert.equal(back.item.status, 'open');
   assert.equal(back.item.resolution, null);
-  assert.equal(back.item.history.length, 1);
-  assert.equal(back.item.history[0].as, 'dismissed');
+  assert.deepEqual(back.item.history.map((entry) => entry.as), ['dismissed', 'fixed']);
 
   const raw = JSON.parse(await fs.readFile(path.join(dir, obs.RELATIVE_PATH), 'utf8'));
   assert.equal(raw.schema_version, obs.SCHEMA_VERSION);
@@ -141,6 +152,62 @@ test('resolve needs a real outcome: dismissed/answered carry a why, planned/prom
   const promoted = await obs.resolveObservation(dir, { id: item.id, as: 'promoted', ref: 'checkout' });
   assert.equal(promoted.superseded, true);
   assert.equal(promoted.item.history[0].as, 'planned');
+});
+
+test('an answered question asked again stays answered: the asker reads the answer and the stage keeps it', async (t2) => {
+  const dir = await makeProject();
+  t2.after(() => cleanup(dir));
+  const summary = 'Phase 4 must pick mixer or floor for the mortar';
+  const { item } = await obs.addObservation(dir, { kind: 'question', summary, feature: 'checkout' });
+  await obs.resolveObservation(dir, { id: item.id, as: 'answered', why: 'mixer, the floor cracks under load' });
+
+  const out = logger();
+  const again = await runObserve({ args: [dir], options: { kind: 'question', summary, agent: 'dev' }, logger: out });
+  assert.equal(again.reopened, false);
+  assert.equal(again.settled, true);
+  assert.equal(again.resolution.why, 'mixer, the floor cracks under load');
+  assert.match(again.next_step, /stays settled/);
+  assert.match(out.lines[0], /\(question\) already settled \(seen 2×\)/);
+  assert.match(out.lines[1], /outcome: answered — mixer, the floor cracks under load \(owner, \d{4}-\d{2}-\d{2}\)/);
+  assert.match(out.lines[2], /--reopen only for new evidence/);
+
+  // Reopening would have taken the answer out of the fan that says "do not ask again".
+  const fan = await obs.fanFor(dir, 'dev', { feature: 'checkout' });
+  assert.deepEqual(fan.answered.map((entry) => entry.answer), ['mixer, the floor cracks under load']);
+  assert.equal(fan.items.length, 0, 'nothing reopened for the owner to settle again');
+});
+
+test('a planned item stays settled while its feature is live and comes back as news once that feature closed', async (t2) => {
+  const dir = await makeProject();
+  t2.after(() => cleanup(dir));
+  const summary = 'Avatar upload fails after the storage change';
+  const { item } = await obs.addObservation(dir, { kind: 'defect', summary });
+  await obs.resolveObservation(dir, { id: item.id, as: 'planned', ref: 'checkout' });
+
+  const during = await obs.addObservation(dir, { kind: 'defect', summary });
+  assert.equal(during.reopened, false, 'checkout is still in progress: the plan holds');
+  assert.equal(during.settled, true);
+
+  await write(dir, '.aioson/context/features.md', '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | done | 2026-10-01 | 2026-10-19 |\n');
+  const after = await obs.addObservation(dir, { kind: 'defect', summary });
+  assert.equal(after.reopened, true, 'checkout closed and the defect is still seen');
+  assert.equal(after.item.history.at(-1).as, 'planned');
+});
+
+test('--reopen reopens a dismissed item when the observer brings new evidence', async (t2) => {
+  const dir = await makeProject();
+  t2.after(() => cleanup(dir));
+  const summary = 'Tile in the hall cracked after the floor was laid';
+  const { item } = await obs.addObservation(dir, { kind: 'defect', summary });
+  await obs.resolveObservation(dir, { id: item.id, as: 'dismissed', why: 'cosmetic' });
+
+  const out = logger();
+  const forced = await runObserve({ args: [dir], options: { kind: 'defect', summary, detail: 'now it trips people', reopen: true }, logger: out });
+  assert.equal(forced.reopened, true);
+  assert.equal(forced.settled, false);
+  assert.equal(forced.resolution, null);
+  assert.match(out.lines[0], /REOPENED/);
+  assert.match(out.lines[1], /next: fix it through a Simple Plan/);
 });
 
 test('the fan: counts by kind, stale after 30 days, each agent sees the kinds that address it on its feature or paths', async (t2) => {

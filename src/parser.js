@@ -77,8 +77,9 @@ const BOOLEAN_FLAGS = new Set([
   'no-jev',
   // decide — records the choice instead of consulting; pure boolean.
   'record',
-  // observation:list — `--resolved ../proj` listed the cwd's store.
-  'resolved',
+  // observation:list — `--resolved ../proj` listed the cwd's store; observe
+  // `--reopen .` must not swallow the path either.
+  'resolved', 'reopen',
   // op:list — `--proposals ../proj` (the [path] op:* commands take now) must
   // not swallow the path positional.
   'proposals',
