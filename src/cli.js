@@ -1452,8 +1452,8 @@ function commandSupportsJson(command) {
   return JSON_SUPPORTED_COMMANDS.has(command);
 }
 
-function writeJson(payload) {
-  const text = `${JSON.stringify(payload, null, 2)}\n`;
+function writeJson(payload, { compact = false } = {}) {
+  const text = `${compact ? JSON.stringify(payload) : JSON.stringify(payload, null, 2)}\n`;
   writeThrough(process.stdout, 1, text);
 }
 
@@ -2419,7 +2419,9 @@ async function main() {
     }
 
     if (jsonMode && commandSupportsJson(command)) {
-      writeJson(result || { ok: true });
+      // The session-start recall (`op:list --titles-only`) is read on every agent activation: compact.
+      const compact = (command === 'op:list' || command === 'op-list') && Boolean(options['titles-only']);
+      writeJson(result || { ok: true }, { compact });
     }
 
     // A failed command must fail the process in both human and JSON modes.

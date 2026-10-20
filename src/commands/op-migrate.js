@@ -22,7 +22,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { resolveIdentity } = require('../operator-memory/identity');
+const { commandProject, positionalArgs, identityFor } = require('../operator-memory/command-context');
 const { ensureStorageTree } = require('../operator-memory/storage');
 const { captureSignal } = require('../operator-memory/proposal');
 const { readDecision, promoteProposal } = require('../operator-memory/decision');
@@ -70,14 +70,66 @@ function rewriteUserProfileWithDeprecation(filePath, fm) {
   return true;
 }
 
-async function runOpMigrate({ args = [], options = {}, logger }) {
-  const targetDir = process.cwd();
-  const profilePath = path.join(targetDir, '.aioson', 'context', 'user-profile.md');
+// Each known field becomes a decision (captured and promoted at once); unknown
+// fields stay in user-profile.md, and an existing decision is never redone.
+async function migrateKnownFields(identity, fm, targetDir) {
+  let migrated = 0;
+  let skipped = 0;
+  const results = [];
 
+  for (const [field, value] of Object.entries(fm)) {
+    if (!KNOWN_FIELDS[field]) continue; // unknown field — preserve in user-profile.md
+    if (!value || value === 'null' || value === '') { skipped += 1; continue; }
+    const config = KNOWN_FIELDS[field];
+    const proposalText = `${field}: ${value}`;
+    const slug = deriveSlug(proposalText);
+
+    const existing = readDecision(identity, slug);
+    if (existing) {
+      skipped += 1;
+      results.push({ field, slug, action: 'skipped_existing' });
+      continue;
+    }
+
+    // Capture + immediately promote (one-shot, skip 2x threshold)
+    const cap = captureSignal({
+      identity,
+      slug,
+      signal_type: config.signal_type,
+      quote: `(migrated from user-profile.md: ${field})`,
+      proposal: proposalText,
+      source_agent: 'migrate'
+    });
+    promoteProposal({ identity, proposal: { ...cap.proposal, detected_count: 2 } });
+    migrated += 1;
+    results.push({ field, slug, action: 'migrated', category: config.category });
+
+    await emitDossierEvent(targetDir, {
+      agent: 'op-migrate',
+      type: 'op_migrate',
+      summary: `migrated ${field} → ${slug}`,
+      meta: { identity_prefix: identity.slice(0, 8), field, slug, category: config.category }
+    });
+  }
+  return { migrated, skipped, results };
+}
+
+async function runOpMigrate({ args = [], options = {}, logger }) {
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
-    if (logger) logger.log('op:migrate — explicit one-shot import from .aioson/context/user-profile.md into operator-memory. Idempotent.');
+    if (logger) logger.log('op:migrate [path] — explicit one-shot import from .aioson/context/user-profile.md into operator-memory. Idempotent.');
     return { ok: true };
   }
+
+  // The project is the `[path]` argument's, the working directory only without one.
+  const where = commandProject(positionalArgs(args)[0]);
+  if (where.error) {
+    const err = `op:migrate — ${where.error}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger && logger.error) logger.error(err);
+    return { ok: false, exitCode: 1, error: err };
+  }
+  const targetDir = where.dir;
+  const profilePath = path.join(targetDir, '.aioson', 'context', 'user-profile.md');
 
   if (!fs.existsSync(profilePath)) {
     const msg = 'op:migrate — no .aioson/context/user-profile.md to migrate (skipped).';
@@ -101,47 +153,10 @@ async function runOpMigrate({ args = [], options = {}, logger }) {
     return { ok: true, migrated: 0, idempotent: true };
   }
 
-  const resolved = resolveIdentity();
+  const resolved = identityFor(targetDir);
   ensureStorageTree(resolved.identity);
 
-  let migrated = 0;
-  let skipped = 0;
-  const results = [];
-
-  for (const [field, value] of Object.entries(fm)) {
-    if (!KNOWN_FIELDS[field]) continue; // unknown field — preserve in user-profile.md
-    if (!value || value === 'null' || value === '') { skipped += 1; continue; }
-    const config = KNOWN_FIELDS[field];
-    const proposalText = `${field}: ${value}`;
-    const slug = deriveSlug(proposalText);
-
-    const existing = readDecision(resolved.identity, slug);
-    if (existing) {
-      skipped += 1;
-      results.push({ field, slug, action: 'skipped_existing' });
-      continue;
-    }
-
-    // Capture + immediately promote (one-shot, skip 2x threshold)
-    const cap = captureSignal({
-      identity: resolved.identity,
-      slug,
-      signal_type: config.signal_type,
-      quote: `(migrated from user-profile.md: ${field})`,
-      proposal: proposalText,
-      source_agent: 'migrate'
-    });
-    promoteProposal({ identity: resolved.identity, proposal: { ...cap.proposal, detected_count: 2 } });
-    migrated += 1;
-    results.push({ field, slug, action: 'migrated', category: config.category });
-
-    await emitDossierEvent(targetDir, {
-      agent: 'op-migrate',
-      type: 'op_migrate',
-      summary: `migrated ${field} → ${slug}`,
-      meta: { identity_prefix: resolved.identity.slice(0, 8), field, slug, category: config.category }
-    });
-  }
+  const { migrated, skipped, results } = await migrateKnownFields(resolved.identity, fm, targetDir);
 
   rewriteUserProfileWithDeprecation(profilePath, fm);
 

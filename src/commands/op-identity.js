@@ -15,10 +15,10 @@
  */
 
 const {
-  resolveIdentity,
   validateOverride,
   OVERRIDE_REGEX
 } = require('../operator-memory/identity');
+const { commandProject, positionalArgs, identityFor } = require('../operator-memory/command-context');
 const {
   ensureStorageTree,
   openIndexDb,
@@ -28,18 +28,17 @@ const {
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 function parseSubcommand(args) {
-  // parser.js strips the command name, so args contains positional args only.
-  // Filter out a leading '.' (legacy convention from other AIOSON commands that
-  // take a project path; op:* commands are machine-local so '.' is ignored).
-  const positional = (args || []).filter((a) => typeof a === 'string' && !a.startsWith('-') && a !== '.');
+  // parser.js strips the command name, so args contains positional args only:
+  // `[path] [show|set <id>]`. The identity is read from the project's git
+  // config (a per-repo user.email wins), so the path matters.
+  const positional = positionalArgs(args);
+  const rawPath = positional.length > 0 && positional[0] !== 'show' && positional[0] !== 'set' ? positional.shift() : null;
   const sub = positional[0] || 'show';
   const setValue = sub === 'set' ? positional[1] : null;
-  return { sub, setValue };
+  return { rawPath, sub, setValue };
 }
 
 async function runOpIdentity({ args = [], options = {}, logger }) {
-  const targetDir = process.cwd();
-
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
     const help = [
       'op:identity [show] — resolve the active operator-memory identity.',
@@ -51,7 +50,15 @@ async function runOpIdentity({ args = [], options = {}, logger }) {
     return { ok: true, help: true };
   }
 
-  const { sub, setValue } = parseSubcommand(args);
+  const { rawPath, sub, setValue } = parseSubcommand(args);
+  const where = commandProject(rawPath);
+  if (where.error) {
+    const err = `op:identity — ${where.error}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger) logger.error(err);
+    return { ok: false, error: err, exitCode: 1 };
+  }
+  const targetDir = where.dir;
 
   if (sub !== 'show' && sub !== 'set') {
     const err = `op:identity — unknown subcommand '${sub}'. Use: show | set <id>`;
@@ -103,7 +110,7 @@ async function runOpIdentity({ args = [], options = {}, logger }) {
   }
 
   // sub === 'show'
-  const resolved = resolveIdentity();
+  const resolved = identityFor(targetDir);
   ensureStorageTree(resolved.identity);
 
   let db;

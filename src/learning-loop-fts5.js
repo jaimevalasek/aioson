@@ -28,15 +28,24 @@ function sanitizeFtsQuery(raw) {
   // surviving token is quoted. The literal phrase-only default in the architect's
   // guardrail was too tight (≤7/10 precision in the canonical fixture); this token-AND
   // form preserves the same security envelope and unblocks AC-ALL-205.
-  // An operator char inside a token becomes a space, never a deletion: the tokenizer
-  // splits `context-search` into adjacent `context` + `search`, so the phrase
-  // "context search" finds it while the glued "contextsearch" matched nothing.
-  return text
+  // An operator char between two words is searched both ways: the tokenizer
+  // splits `context-search` into adjacent `context` + `search` (the phrase
+  // "context search"), while a text that spells it `email`/`rerun` holds one
+  // glued token — so `e-mail` asks for ("e mail" OR "email"). FTS5 needs an
+  // explicit AND next to a group.
+  const terms = text
     .split(/\s+/)
-    .map((tok) => tok.replace(/"/g, '').replace(/[*()^:+\-]/g, ' ').replace(/\s+/g, ' ').trim())
-    .filter((tok) => tok.length > 0)
-    .map((tok) => `"${tok}"`)
-    .join(' ');
+    .map(ftsTerm)
+    .filter(Boolean);
+  return terms.join(terms.some((term) => term.startsWith('(')) ? ' AND ' : ' ');
+}
+
+function ftsTerm(token) {
+  const unquoted = String(token).replace(/"/g, '');
+  const spaced = unquoted.replace(/[*()^:+-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!spaced) return '';
+  const glued = spaced.replace(/ /g, '');
+  return spaced.includes(' ') ? `("${spaced}" OR "${glued}")` : `"${spaced}"`;
 }
 
 function validateQuery(raw) {
@@ -58,6 +67,7 @@ function normalizeSurface(value) {
 function buildSearchSql(options = {}) {
   const surface = options.surface || 'all';
   const includeArchived = Boolean(options.includeArchived);
+  const textColumns = options.withText ? ',\n      pl.title AS match_title,\n      pl.evidence AS match_evidence' : '';
 
   let surfaceClause = '';
   if (surface === 'rules') {
@@ -83,7 +93,7 @@ function buildSearchSql(options = {}) {
       pl.feature_slug,
       pl.status,
       snippet(project_learnings_fts, -1, '«', '»', '…', 24) AS snippet,
-      project_learnings_fts.rank AS score
+      project_learnings_fts.rank AS score${textColumns}
     FROM project_learnings_fts
     JOIN project_learnings AS pl ON pl.rowid = project_learnings_fts.rowid
     WHERE project_learnings_fts MATCH ?
@@ -124,6 +134,52 @@ function searchProjectLearnings(db, options = {}) {
   return { ok: true, query: String(options.query), surface, limit, results: rows };
 }
 
+function wordsOf(text) {
+  return new Set(String(text || '').normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean));
+}
+
+/**
+ * Any-term search for recall lanes: OR across term groups (a group is one word
+ * and its variants, e.g. `charges` + `charge`), in bm25 order, keeping only the
+ * learnings that carry at least `minMatches` different groups — a task
+ * sentence never holds every word of a learning, so all-terms matched nothing,
+ * while one shared word is noise. `memory:search` stays all-terms.
+ */
+function searchAnyProjectLearnings(db, options = {}) {
+  const surface = normalizeSurface(options.surface);
+  if (surface === null) {
+    return { ok: false, reason: 'invalid_surface', value: options.surface };
+  }
+  const groups = (options.groups || [])
+    .map((group) => [...new Set((Array.isArray(group) ? group : [group])
+      .map((term) => String(term).replace(/"/g, '').replace(/[*()^:+-]/g, ' ').replace(/\s+/g, ' ').trim())
+      .filter(Boolean))])
+    .filter((group) => group.length > 0);
+  if (groups.length === 0) {
+    return { ok: false, reason: 'query_unparseable', value: '' };
+  }
+  const limit = Math.max(1, Math.min(Number(options.limit) || 5, 50));
+  const minMatches = Math.max(1, Number(options.minMatches) || 2);
+  const query = [...new Set(groups.flat())].map((term) => `"${term}"`).join(' OR ');
+
+  const sql = buildSearchSql({ surface, includeArchived: Boolean(options.includeArchived), withText: true });
+  const bindings = [query];
+  if (!options.includeArchived) bindings.push(...STATUS_DEFAULT_FILTER);
+  bindings.push(Math.min(limit * 8, 50));
+
+  const results = [];
+  for (const row of db.prepare(sql).all(...bindings)) {
+    const words = wordsOf(`${row.match_title || ''} ${row.match_evidence || ''}`);
+    const matched = groups.filter((group) => group.some((term) => [...wordsOf(term)].every((word) => words.has(word)))).length;
+    const result = { ...row, matched_terms: matched };
+    delete result.match_title;
+    delete result.match_evidence;
+    if (matched >= minMatches) results.push(result);
+    if (results.length >= limit) break;
+  }
+  return { ok: true, query, surface, limit, results };
+}
+
 module.exports = {
   QUERY_MAX_CHARS,
   SURFACE_VALUES,
@@ -131,5 +187,6 @@ module.exports = {
   validateQuery,
   normalizeSurface,
   buildSearchSql,
-  searchProjectLearnings
+  searchProjectLearnings,
+  searchAnyProjectLearnings
 };

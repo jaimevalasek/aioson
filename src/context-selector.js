@@ -14,7 +14,7 @@ const {
   readDevState
 } = require('./preflight-engine');
 const { openRuntimeDb } = require('./runtime-store');
-const { searchProjectLearnings } = require('./learning-loop-fts5');
+const { searchAnyProjectLearnings } = require('./learning-loop-fts5');
 const { classifyDesignDocSeed } = require('./lib/design-doc-seed');
 
 const VALID_MODES = new Set(['planning', 'executing']);
@@ -675,17 +675,42 @@ function buildSemanticMatches(candidates, terms) {
   }
 }
 
+// One group per word with the singular `addSemanticTerm` added for it
+// (`charges` + `charge`), so a learning is counted by different words.
+function memoryTermGroups(terms) {
+  const groups = [];
+  const byWord = new Map();
+  for (const term of terms) {
+    const group = byWord.get(term) || byWord.get(term.endsWith('s') && term.length > 4 ? term.slice(0, -1) : term);
+    if (group) {
+      if (!group.includes(term)) group.push(term);
+      byWord.set(term, group);
+      continue;
+    }
+    const fresh = [term];
+    groups.push(fresh);
+    byWord.set(term, fresh);
+    if (term.endsWith('s') && term.length > 4) byWord.set(term.slice(0, -1), fresh);
+  }
+  return groups;
+}
+
+// A task sentence never repeats every word of a learning: the lane ORs the
+// task's words (bm25-ranked) and keeps the learnings that share at least two
+// of them. `memory:search` stays all-terms.
 async function collectMemoryMatches(targetDir, terms) {
   if (terms.length === 0) return [];
-  const query = terms.slice(0, 8).join(' ');
+  const groups = memoryTermGroups(terms).slice(0, 8);
+  const query = groups.map((group) => group[0]).join(' ');
   if (!query) return [];
 
   let handle = null;
   try {
     handle = await openRuntimeDb(targetDir, { mustExist: true });
     if (!handle || !handle.db) return [];
-    const outcome = searchProjectLearnings(handle.db, {
-      query,
+    const outcome = searchAnyProjectLearnings(handle.db, {
+      groups,
+      minMatches: 2,
       limit: MEMORY_RESULT_LIMIT,
       surface: 'all',
       includeArchived: false

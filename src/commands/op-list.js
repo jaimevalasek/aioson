@@ -17,16 +17,33 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { resolveIdentity } = require('../operator-memory/identity');
+const { commandProject, positionalArgs, identityFor } = require('../operator-memory/command-context');
 const { ensureStorageTree, getStorageRoot } = require('../operator-memory/storage');
 const { loadMemoryIndex } = require('../operator-memory/index-md');
 const { readDecision } = require('../operator-memory/decision');
 const { resolveProjectScope, appliesInProject, parseList, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 
+function dayOf(value) {
+  return value ? String(value).slice(0, 10) : null;
+}
+
+function leanTitle(fields) {
+  return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== ''));
+}
+
 async function runOpList({ args = [], options = {}, logger }) {
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
-    if (logger) logger.log('op:list [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--titles-only] [--format=table|json] — list active decisions that apply in this project (--all: every project).');
+    if (logger) logger.log('op:list [path] [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--titles-only] [--format=table|json] — list active decisions that apply in this project (--all: every project).');
     return { ok: true };
+  }
+
+  // The project is the `[path]` argument's, the working directory only without one.
+  const where = commandProject(positionalArgs(args)[0]);
+  if (where.error) {
+    const err = `op:list — ${where.error}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger && logger.error) logger.error(err);
+    return { ok: false, exitCode: 1, error: err };
   }
 
   const format = options.format || 'table';
@@ -35,7 +52,7 @@ async function runOpList({ args = [], options = {}, logger }) {
   const filterFeature = options.feature ? String(options.feature) : null;
   const filterAgent = options.agent ? String(options.agent) : null;
 
-  const resolved = resolveIdentity();
+  const resolved = identityFor(where.dir);
   ensureStorageTree(resolved.identity);
   const root = getStorageRoot(resolved.identity);
 
@@ -76,8 +93,8 @@ async function runOpList({ args = [], options = {}, logger }) {
   // project's. Unscoped (pre-scope) decisions stay operator-wide.
   let currentProject = null;
   if (!showProposals && !options.all && items.some((item) => item.scope === SCOPE_PROJECT)) {
-    try { currentProject = resolveProjectScope(process.cwd()); } catch { currentProject = null; }
-    items = items.filter((item) => appliesInProject(item, currentProject ? currentProject.key : null));
+    try { currentProject = resolveProjectScope(where.dir); } catch { currentProject = null; }
+    items = items.filter((item) => appliesInProject(item, currentProject));
   }
 
   // M3: apply --feature and --agent filters (BR-AO-07: AND-composable)
@@ -90,19 +107,20 @@ async function runOpList({ args = [], options = {}, logger }) {
 
   // --titles-only: the cheap session-start recall shape — index fields without
   // bodies/quotes, so a large operator memory costs one small JSON instead of
-  // every decision body. Load a matching body with op:show <slug>.
+  // every decision body. Load a matching body with op:show <slug>. It is read
+  // on every agent activation: empty fields are left out and dates are days.
   if (options['titles-only']) {
-    items = items.map((item) => ({
+    items = items.map((item) => leanTitle({
       slug: item.slug,
-      title: item.title || null,
-      signal_type: item.signal_type || null,
-      category: item.category || null,
-      feature_slug: item.feature_slug || null,
-      source_agent: item.source_agent || null,
-      last_detected: item.last_detected || null,
-      last_reinforced: item.last_reinforced || null,
-      ...(item.scope ? { scope: item.scope } : {}),
-      ...(item.tier ? { tier: item.tier } : {})
+      title: item.title,
+      signal_type: item.signal_type,
+      category: item.category,
+      feature_slug: item.feature_slug,
+      source_agent: item.source_agent,
+      last_detected: dayOf(item.last_detected),
+      last_reinforced: dayOf(item.last_reinforced),
+      scope: item.scope,
+      tier: item.tier
     }));
   }
 
@@ -140,7 +158,7 @@ async function runOpList({ args = [], options = {}, logger }) {
     if (options.json) {
       return result;
     }
-    if (logger) logger.log(JSON.stringify(result, null, 2));
+    if (logger) logger.log(options['titles-only'] ? JSON.stringify(result) : JSON.stringify(result, null, 2));
     return result;
   }
 

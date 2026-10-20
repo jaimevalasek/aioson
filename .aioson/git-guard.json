@@ -138,6 +138,13 @@
         "generic_secret_assignment"
       ],
       "reason": "Store login tests seed a throwaway config with literal fake tokens (prod-token, PROD-SECRET-TOKEN-123456) to prove config show --json masks them and that each site keeps its own login; no credential value is present."
+    },
+    {
+      "path": "tests/operator-memory-project-scope.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Project-identity tests put a fake GitLab token query parameter in a sandbox remote URL to prove a token in the URL never reaches the stored project name; no credential value is present."
     }
   ],
   "blockPaths": [

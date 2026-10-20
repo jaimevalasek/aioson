@@ -5,6 +5,8 @@ const path = require('node:path');
 const { fetchPage, scrapePage, normalizeUrl } = require('./web');
 const {
   stripInjectionChars,
+  stripSmugglingChars,
+  neutralizeUntrustedText,
   scanInjectionPayloads,
   wrapAsExternalContent
 } = require('./lib/llm-content-sanitizer');
@@ -85,8 +87,10 @@ function fold(text) {
     .toLowerCase();
 }
 
+// Entities are decoded first, so a `&#8203;` or `&#x202E;` comes back as the
+// invisible character it hides; the smuggling carriers are stripped after that.
 function cleanText(value) {
-  return String(value || '')
+  return stripSmugglingChars(String(value || '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
@@ -97,13 +101,16 @@ function cleanText(value) {
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+    .replace(/&gt;/gi, '>'))
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+// Titles, descriptions and excerpts are third-party text rendered inside the
+// untrusted fence and around it (Findings, headings, links.md, the article
+// heading), so they leave here neutralized: no `<` survives to forge a tag.
 function clip(value, max) {
-  const text = cleanText(value);
+  const text = neutralizeUntrustedText(cleanText(value));
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).trim()}…`;
 }
@@ -645,7 +652,7 @@ async function collectNews({
     const prior = metadataByUrl.get(url) || {};
     try {
       const page = await scrapeImpl(url);
-      const body = stripInjectionChars(String(page.markdown || page.text || '')).slice(0, MAX_ARTICLE_CHARS);
+      const body = stripSmugglingChars(stripInjectionChars(String(page.markdown || page.text || ''))).slice(0, MAX_ARTICLE_CHARS);
       const scan = scanInjectionPayloads(body, { maxSamples: 3 });
       const title = clip(page.title || prior.title || url, 240);
       const description = clip(page.description || prior.description || '', MAX_DESCRIPTION_CHARS);

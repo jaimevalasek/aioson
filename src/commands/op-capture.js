@@ -20,12 +20,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { resolveIdentity } = require('../operator-memory/identity');
+const { commandProject, positionalArgs, identityFor, projectTranslator } = require('../operator-memory/command-context');
 const { ensureStorageTree, recordIdentityActivity, openIndexDb, getStorageRoot } = require('../operator-memory/storage');
 const { deriveSlug, fingerprintProposal } = require('../operator-memory/slug');
 const { captureSignal, readProposal, deleteProposal, VALID_SIGNAL_TYPES } = require('../operator-memory/proposal');
 const { promoteProposal, readDecision, reinforceDecision, applyProjectScope } = require('../operator-memory/decision');
-const { resolveProjectScope, VALID_SCOPES, SCOPE_PROJECT } = require('../operator-memory/project-scope');
+const { resolveProjectScope, VALID_SCOPES, SCOPE_OPERATOR, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
@@ -53,13 +53,12 @@ function existsCheckFactory(identity) {
   };
 }
 
-async function runOpCapture({ args = [], options = {}, logger }) {
-  const targetDir = process.cwd();
+async function runOpCapture({ args = [], options = {}, logger, t = null }) {
   const helpRequested = options.help === true || args.includes('--help') || args.includes('-h');
   if (helpRequested) {
     const msg = `op:capture — capture a standing-decision signal into the proposals queue.
 Usage:
-  aioson op:capture --signal=<type> --quote=<verbatim> --proposal=<paraphrase> --source-agent=<agent> [--scope=operator|project]
+  aioson op:capture [path] --signal=<type> --quote=<verbatim> --proposal=<paraphrase> --source-agent=<agent> [--scope=operator|project]
 Signal types: ${VALID_SIGNAL_TYPES.join(', ')}
 Authorization, exclusion, and correction promote immediately. Confirmation promotes on its second detection.
 A decision applies only in the project it was said in until it is detected in a second project or its quote says it covers every project; --scope sets it explicitly.`;
@@ -67,6 +66,16 @@ A decision applies only in the project it was said in until it is detected in a 
     if (logger) logger.log(msg);
     return { ok: true };
   }
+
+  // The project is the `[path]` argument's, the working directory only without one.
+  const where = commandProject(positionalArgs(args)[0]);
+  if (where.error) {
+    const err = `op:capture — ${where.error}.`;
+    if (options.json) return { ok: false, error: err };
+    if (logger && logger.error) logger.error(err);
+    return { ok: false, exitCode: 1, error: err };
+  }
+  const targetDir = where.dir;
 
   const signal = options.signal;
   const quote = options.quote;
@@ -96,16 +105,17 @@ A decision applies only in the project it was said in until it is detected in a 
   }
   let project;
   try { project = resolveProjectScope(targetDir); } catch { project = null; }
-  // A project scope needs a project to bind to; falling back to operator-wide
-  // would widen exactly the memory the caller asked to keep local.
-  if (requestedScope === SCOPE_PROJECT && !project) {
-    const err = `op:capture — --scope=project needs a project, and none could be identified from ${targetDir}.`;
+  // A project scope needs a project to bind to — an AIOSON root or a git
+  // checkout, never whatever folder the shell stands in; falling back to
+  // operator-wide would widen exactly the memory the caller asked to keep local.
+  if (requestedScope === SCOPE_PROJECT && !(project && project.anchored)) {
+    const err = `op:capture — --scope=project needs a project (an AIOSON root or a git checkout), and none could be identified from ${targetDir}.`;
     if (options.json) return { ok: false, error: err };
     if (logger && logger.error) logger.error(err);
     return { ok: false, exitCode: 1, error: err };
   }
 
-  const resolved = resolveIdentity();
+  const resolved = identityFor(targetDir);
   ensureStorageTree(resolved.identity);
   const db = openIndexDb();
   try {
@@ -191,8 +201,9 @@ A decision applies only in the project it was said in until it is detected in a 
     try { deleteProposal(resolved.identity, slug); } catch { /* best-effort */ }
     let scoped = null;
     try { scoped = applyProjectScope(resolved.identity, slug, { project, quote, requested: requestedScope }); } catch { /* best-effort */ }
-    const widened = Boolean(scoped && scoped.changed && scoped.scope !== SCOPE_PROJECT);
-    const auditLine = `✔ Memory reforçada: '${proposal}'${widened ? ' — agora vale em todos os projetos' : ''}. aioson op:forget ${slug} p/ desfazer.`;
+    // Only a real move from one project to every project is news; an
+    // operator-wide decision seen in one more project is not.
+    const widened = Boolean(scoped && scoped.changed && scoped.previous === SCOPE_PROJECT && scoped.scope === SCOPE_OPERATOR);
     if (options.json) {
       return {
         ok: true,
@@ -204,7 +215,8 @@ A decision applies only in the project it was said in until it is detected in a 
         scope: scoped ? scoped.scope : undefined
       };
     }
-    if (logger) logger.log(auditLine);
+    // The line a person reads, in the project's language.
+    if (logger) logger.log((t || projectTranslator(targetDir))(`cli.operator_memory.${widened ? 'reinforced_widened' : 'reinforced'}`, { proposal, slug }));
     return { ok: true, promoted: false, reinforced: true, slug };
   }
 
@@ -227,12 +239,13 @@ A decision applies only in the project it was said in until it is detected in a 
       meta: { identity_prefix: resolved.identity.slice(0, 8), slug, signal_type: signal, category: decision.category }
     });
 
-    const onlyHere = decision.scope === SCOPE_PROJECT && project ? ` (só no projeto ${project.name})` : '';
-    const auditLine = `✔ Memory: '${proposal}'${onlyHere}. aioson op:forget ${slug} p/ desfazer.`;
     if (options.json) {
       return { ok: true, promoted: true, slug, identity: resolved.identity, category: decision.category, scope: decision.scope || 'operator' };
     }
-    if (logger) logger.log(auditLine);
+    const onlyHere = decision.scope === SCOPE_PROJECT && project;
+    if (logger) {
+      logger.log((t || projectTranslator(targetDir))(`cli.operator_memory.${onlyHere ? 'saved_here' : 'saved'}`, { proposal, slug, project: onlyHere ? project.name : '' }));
+    }
     return { ok: true, promoted: true, slug };
   }
 

@@ -49,9 +49,12 @@ function hashEmail(email) {
   return raw;
 }
 
-function readGitEmail() {
+// `cwd` reads the email a repository's own config sets (a per-repo
+// `user.email` wins over the global one), as git does inside it.
+function readGitEmail(cwd) {
   try {
     const out = execFileSync('git', ['config', '--get', 'user.email'], {
+      cwd: cwd || undefined,
       stdio: ['ignore', 'pipe', 'ignore'],
       encoding: 'utf8',
       timeout: 2000

@@ -91,6 +91,7 @@ aioson op:capture \
 - `--quote` — the EXACT user words (verbatim) that triggered detection. Used for audit; trimmed automatically.
 - `--proposal` — your one-sentence paraphrase in user-facing language. This becomes the slug seed + the decision body. Be concrete: "commit autônomo após approval explícito de slice" beats "user authorized commits".
 - `--source-agent` — your own agent name (`dev`, `deyvin`, `pm`, etc.) so the audit trail knows which agent observed the signal.
+- Scope — a decision binds the project it was said in; it widens to every project on its own when repeated in a second project or when the user's own words name every project. Keep `--proposal` scope-neutral (only the quote decides the scope; "in any repo" there changes nothing). Pass `--scope=operator` only when the user says it covers everything in words the quote does not carry, and `--scope=project` to narrow a decision the user says belongs to this project only.
 
 ## When NOT to capture (anti-patterns)
 

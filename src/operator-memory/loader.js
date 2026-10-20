@@ -62,25 +62,25 @@ function matchDecisions(memoryIndex, taskDescription, options = {}) {
     .slice(0, max);
 }
 
-/** The project a preflight runs for: an explicit key, else the root's identity. */
-function projectKeyFor(options) {
+/** The project a preflight runs for: an explicit key, else every identity of the root. */
+function projectFor(options) {
   if (options.projectKey) return String(options.projectKey);
   if (!options.projectRoot) return null;
-  try { return resolveProjectScope(options.projectRoot).key; } catch { return null; }
+  try { return resolveProjectScope(options.projectRoot); } catch { return null; }
 }
 
 /**
- * Keep the entries that apply in `projectKey`: a project-scoped decision only
- * where it was said, an unscoped one everywhere. The index line does not carry
- * the scope, so each entry's decision file is read — the same rule `op:list`
- * applies at session start.
+ * Keep the entries that apply in `project` (a key or a resolveProjectScope
+ * result): a project-scoped decision only where it was said, an unscoped one
+ * everywhere. The index line does not carry the scope, so each entry's
+ * decision file is read — the same rule `op:list` applies at session start.
  */
-function scopeIndexToProject(identity, index, projectKey) {
-  if (!index || !Array.isArray(index.entries) || !projectKey) return index;
+function scopeIndexToProject(identity, index, project) {
+  if (!index || !Array.isArray(index.entries) || !project) return index;
   const entries = index.entries.filter((entry) => {
     let decision;
     try { decision = readDecision(identity, entry.slug); } catch { decision = null; }
-    return appliesInProject(decision, projectKey);
+    return appliesInProject(decision, project);
   });
   return { ...index, entries };
 }
@@ -98,7 +98,7 @@ function scopeIndexToProject(identity, index, projectKey) {
 function preflightLoad(identity, taskDescription, options = {}) {
   const loaded = loadMemoryIndex(identity, 'active');
   if (!loaded) return { index: null, matches: [], conflicts: [] };
-  const index = scopeIndexToProject(identity, loaded, projectKeyFor(options));
+  const index = scopeIndexToProject(identity, loaded, projectFor(options));
   const matches = matchDecisions(index, taskDescription, options);
 
   let conflicts = [];

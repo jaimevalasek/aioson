@@ -18,6 +18,7 @@ const {
   validateQuery,
   normalizeSurface,
   searchProjectLearnings,
+  searchAnyProjectLearnings,
   QUERY_MAX_CHARS
 } = require('../src/learning-loop-fts5');
 
@@ -326,9 +327,49 @@ test('sanitizeFtsQuery tokenizes on whitespace and wraps each term as a phrase (
   assert.equal(sanitizeFtsQuery('hello (world)'), '"hello" "world"');
 });
 
-test('sanitizeFtsQuery splits an operator char inside a term instead of gluing its halves', () => {
-  assert.equal(sanitizeFtsQuery('context-search'), '"context search"');
-  assert.equal(sanitizeFtsQuery('auth:uid +x'), '"auth uid" "x"');
+test('sanitizeFtsQuery searches a term split by an operator char both ways: split and glued', () => {
+  assert.equal(sanitizeFtsQuery('context-search'), '("context search" OR "contextsearch")');
+  assert.equal(sanitizeFtsQuery('auth:uid +x'), '("auth uid" OR "authuid") AND "x"');
+  assert.equal(sanitizeFtsQuery('-x- (world)'), '"x" "world"', 'an operator char at the edge splits nothing');
+});
+
+test('memory:search finds a hyphenated spelling and a glued one with either query', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-ms-forms-'));
+  const { db } = await openRuntimeDb(dir);
+  try {
+    insertProjectLearning(db, { learningId: 'pl-glued', projectName: 'aioson', type: 'process', title: 'Validar o email do cliente', evidence: 'rerun the signup suite', status: 'active' });
+    insertProjectLearning(db, { learningId: 'pl-split', projectName: 'aioson', type: 'process', title: 'Validar o e-mail do cliente', evidence: 're-run the signup suite', status: 'active' });
+  } finally {
+    db.close();
+  }
+  for (const query of ['e-mail', 'email', 'validar e-mail', 're-run']) {
+    const result = await runMemorySearch({ args: [query, dir], options: { json: true }, logger: silentLogger(), t: tFn });
+    assert.equal(result.ok, true, query);
+    if (query === 'email') {
+      assert.deepEqual(result.results.map((r) => r.target_id), ['pl-glued'], 'a glued query keeps its exact meaning');
+    } else {
+      assert.deepEqual(result.results.map((r) => r.target_id).sort(), ['pl-glued', 'pl-split'], query);
+    }
+  }
+});
+
+test('searchAnyProjectLearnings: ranked any-term recall that needs two different words of the task', async () => {
+  const dir = await makeProjectWithSeed();
+  const { db } = await openRuntimeDb(dir);
+  try {
+    const sentence = searchAnyProjectLearnings(db, { groups: [['fix'], ['stripe'], ['retry'], ['charges', 'charge'], ['twice'], ['checkout']], minMatches: 2, limit: 5 });
+    assert.equal(sentence.ok, true);
+    assert.deepEqual(sentence.results.map((r) => r.target_id), ['pl-stripe-idempotency']);
+    assert.ok(sentence.results[0].matched_terms >= 3);
+    assert.ok(!('match_title' in sentence.results[0]) && !('match_evidence' in sentence.results[0]), 'the shape stays the search shape');
+    const oneWord = searchAnyProjectLearnings(db, { groups: [['checkout'], ['dashboard'], ['widgets']], minMatches: 2 });
+    assert.deepEqual(oneWord.results, [], 'one shared word is noise');
+    const variants = searchAnyProjectLearnings(db, { groups: [['charges', 'charge']], minMatches: 2 });
+    assert.deepEqual(variants.results, [], 'a word and its singular are one term');
+    assert.equal(searchAnyProjectLearnings(db, { groups: [['"*']] }).reason, 'query_unparseable');
+  } finally {
+    db.close();
+  }
 });
 
 test('memory:search finds a hyphenated term (the glued form matched nothing)', async () => {

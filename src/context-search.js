@@ -963,14 +963,28 @@ function buildFtsQuery(query) {
   const tokens = [...new Set(tokenizeQuery(query))];
   if (tokens.length === 0) return '';
   const content = tokens.filter((token) => !FTS_STOP_WORDS.has(token));
-  return (content.length > 0 ? content : tokens)
+  // A hyphenated word is also searched glued: `e-mail` finds `email`.
+  const terms = (content.length > 0 ? content : tokens).flatMap((token) => {
+    const glued = token.includes('/') ? '' : token.replace(/-/g, '');
+    return glued !== token && glued.length > 1 ? [token, glued] : [token];
+  });
+  return [...new Set(terms)]
     .slice(0, 32)
     .map((token) => `"${token.replace(/"/g, '')}"`)
     .join(' OR ');
 }
 
+// The full-text query path: `_` splits a word the way the index tokenizer
+// splits it (`feature_slug` is `feature slug` there, never `featureslug`), and
+// any letter or digit survives, so a query in any script is searched.
 function tokenizeQuery(value) {
-  return normalizeToken(value)
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[`*]/g, '')
+    .replace(/[^\p{L}\p{M}\p{N}/-]+/gu, ' ')
     .split(/\s+/)
     .map((token) => token.trim())
     .filter((token) => token.length > 1);

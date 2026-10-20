@@ -667,6 +667,36 @@ test('buildFtsQuery — function words never spend the 32-term budget', () => {
   assert.ok(buildFtsQuery(query).includes('"term31"'));
 });
 
+test('buildFtsQuery — `_` splits like the index splits it, any script is searched, a hyphenated word also glued', () => {
+  assert.equal(buildFtsQuery('auto_handoff'), '"auto" OR "handoff"');
+  assert.equal(buildFtsQuery('上下文 搜索'), '"上下文" OR "搜索"');
+  assert.equal(buildFtsQuery('validar e-mail'), '"validar" OR "e-mail" OR "email"');
+  assert.equal(buildFtsQuery('src/context-search.js'), '"src/context-search" OR "js"', 'a path is never glued');
+});
+
+test('IndexManager — a snake_case or a non-Latin query finds the document that holds it', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    const docsDir = path.join(tmp, 'docs');
+    await fs.mkdir(docsDir);
+    await fs.writeFile(path.join(docsDir, 'handoff.md'), '# Handoff\n\nSet auto_handoff in the workflow state.\n', 'utf8');
+    await fs.writeFile(path.join(docsDir, 'cjk.md'), '# 搜索\n\n上下文 搜索 引擎\n', 'utf8');
+    await fs.writeFile(path.join(docsDir, 'other.md'), '# Other\n\nNothing related here.\n', 'utf8');
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      await idx.indexDirectory(docsDir, { force: true });
+      assert.equal(idx.search('auto_handoff')[0]?.relPath, 'handoff.md');
+      assert.equal(idx.search('上下文')[0]?.relPath, 'cjk.md');
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await removeTmp(tmp);
+  }
+});
+
 test('IndexManager — skips already-indexed files (no force)', async () => {
   const tmp = await makeTmpDir();
   try {

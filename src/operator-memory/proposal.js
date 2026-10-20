@@ -26,7 +26,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ensureStorageTree, getStorageRoot } = require('./storage');
 const { fingerprintProposal, isValidDecisionSlug } = require('./slug');
-const { addProject, parseList } = require('./project-scope');
+const { parseList, projectSets, recordProject, serializeProjectSets } = require('./project-scope');
 
 const MAX_QUOTES = 5;
 const VALID_SIGNAL_TYPES = ['authorization', 'exclusion', 'correction', 'confirmation'];
@@ -39,8 +39,9 @@ function proposalPath(identity, slug) {
 }
 
 function escapeYamlString(value) {
-  const s = String(value || '');
-  // Simple: wrap in single quotes; escape embedded single quotes
+  // One line per scalar (a newline ended the frontmatter early); wrap in single
+  // quotes and escape embedded single quotes.
+  const s = String(value || '').replace(/[\r\n]+/g, ' ');
   return `'${s.replace(/'/g, "''")}'`;
 }
 
@@ -64,9 +65,10 @@ function serializeProposal(data) {
   ];
   if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
   if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
-  const projects = parseList(data.projects);
-  if (projects.length > 0) {
-    lines.push(`projects: ${escapeYamlString(projects.join(','))}`);
+  const sets = projectSets(data);
+  if (sets.length > 0) {
+    lines.push(`projects: ${escapeYamlString([...new Set(sets.flat())].join(','))}`);
+    lines.push(`project_sets: ${escapeYamlString(serializeProjectSets(sets))}`);
     lines.push(`project_names: ${escapeYamlString(parseList(data.project_names).join(','))}`);
   }
   lines.push('---', '');
@@ -142,8 +144,9 @@ function deleteProposal(identity, slug) {
 }
 
 /**
- * `project` ({key, name}, from project-scope.js) records where the signal was
- * detected; the distinct projects decide the scope the decision is promoted with.
+ * `project` (from resolveProjectScope) records where the signal was detected;
+ * the distinct projects decide the scope the decision is promoted with. A
+ * verbatim quote is kept on one line: its whitespace is collapsed.
  */
 function captureSignal({ identity, slug, signal_type, quote, proposal, source_agent, feature_slug, session_id, project = null }) {
   if (!VALID_SIGNAL_TYPES.includes(signal_type)) {
@@ -151,38 +154,40 @@ function captureSignal({ identity, slug, signal_type, quote, proposal, source_ag
   }
   const now = new Date().toISOString();
   const existing = readProposal(identity, slug);
+  const trimmedQuote = String(quote || '').replace(/\s+/g, ' ').trim();
 
   if (existing) {
     existing.detected_count = Number(existing.detected_count || 1) + 1;
     existing.last_detected = now;
-    const trimmedQuote = String(quote || '').trim();
     if (trimmedQuote && !existing.quotes.includes(trimmedQuote)) {
       existing.quotes.push(trimmedQuote);
       if (existing.quotes.length > MAX_QUOTES) {
         existing.quotes = existing.quotes.slice(-MAX_QUOTES);
       }
     }
-    const seen = addProject(existing.projects, existing.project_names, project);
+    const seen = recordProject(existing, project);
     existing.projects = seen.keys;
+    existing.project_sets = seen.sets;
     existing.project_names = seen.names;
     writeProposal(identity, existing);
     return { proposal: existing, isNew: false };
   }
 
-  const seen = addProject([], [], project);
+  const seen = recordProject({}, project);
   const fresh = {
     slug,
     signal_type,
     detected_count: 1,
     first_detected: now,
     last_detected: now,
-    quotes: quote ? [String(quote).trim()].filter(Boolean) : [],
+    quotes: trimmedQuote ? [trimmedQuote] : [],
     proposal,
     source_agent: source_agent || 'unknown',
     proposal_fingerprint: fingerprintProposal(proposal),
     feature_slug: feature_slug || null,
     session_id: session_id || null,
     projects: seen.keys,
+    project_sets: seen.sets,
     project_names: seen.names
   };
   writeProposal(identity, fresh);

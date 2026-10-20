@@ -1,32 +1,32 @@
 'use strict';
 
 /**
- * aioson op:show <slug> — print a single decision body + frontmatter (Phase 3, v1.14.0).
+ * aioson op:show [path] <slug> — print a single decision body + frontmatter (Phase 3, v1.14.0).
  */
 
 const fs = require('node:fs');
-const { resolveIdentity } = require('../operator-memory/identity');
+const { commandProject, pathAndSlug, identityFor } = require('../operator-memory/command-context');
 const { ensureStorageTree } = require('../operator-memory/storage');
 const { readDecision, decisionPath } = require('../operator-memory/decision');
 const { readProposal } = require('../operator-memory/proposal');
 
 async function runOpShow({ args = [], options = {}, logger }) {
-  const positional = (args || []).filter((a) => typeof a === 'string' && !a.startsWith('-') && a !== '.');
-  const slug = positional[0];
+  const { rawPath, slug } = pathAndSlug(args);
 
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
-    if (logger) logger.log('op:show <slug> — print a single decision (frontmatter + body). --json for structured output.');
+    if (logger) logger.log('op:show [path] <slug> — print a single decision (frontmatter + body). --json for structured output.');
     return { ok: true };
   }
 
-  if (!slug) {
-    const err = 'op:show — required argument: <slug>. Usage: aioson op:show <slug>';
+  const where = slug ? commandProject(rawPath) : {};
+  if (!slug || where.error) {
+    const err = where.error ? `op:show — ${where.error}.` : 'op:show — required argument: <slug>. Usage: aioson op:show [path] <slug>';
     if (options.json) return { ok: false, error: err };
     if (logger && logger.error) logger.error(err);
     return { ok: false, exitCode: 1, error: err };
   }
 
-  const resolved = resolveIdentity();
+  const resolved = identityFor(where.dir);
   ensureStorageTree(resolved.identity);
 
   const decision = readDecision(resolved.identity, slug);

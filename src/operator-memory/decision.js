@@ -36,10 +36,12 @@ const { getStorageRoot, openIndexDb } = require('./storage');
 const { deleteProposal, proposalPath } = require('./proposal');
 const { isValidDecisionSlug } = require('./slug');
 const {
-  addProject,
   decideScope,
   namesCrossProjectScope,
   parseList,
+  projectSets,
+  recordProject,
+  serializeProjectSets,
   SCOPE_OPERATOR,
   SCOPE_PROJECT,
   VALID_SCOPES
@@ -80,8 +82,10 @@ function historyPath(identity, slug, isoStamp) {
   return path.join(getStorageRoot(identity), 'history', `${isoStamp.replace(/[:.]/g, '-')}-${slug}.md`);
 }
 
+// One line per scalar: a newline inside a quote ended the frontmatter early
+// (a `---` line closed it), and the decision read back unscoped.
 function escapeYamlString(value) {
-  const s = String(value || '');
+  const s = String(value || '').replace(/[\r\n]+/g, ' ');
   return `'${s.replace(/'/g, "''")}'`;
 }
 
@@ -96,10 +100,13 @@ function deriveTitle(proposal) {
   return text.charAt(0).toUpperCase() + text.slice(1, 100);
 }
 
-function scopeLines({ scope, projects, project_names: projectNames }) {
+// `projects` stays the flat union of every key, so a reader that predates
+// identity sets still matches; `project_sets` groups them, one set per project.
+function scopeLines({ scope, projects, project_sets: sets, project_names: projectNames }) {
   return [
     `scope: ${scope}`,
     `projects: ${escapeYamlString(parseList(projects).join(','))}`,
+    `project_sets: ${escapeYamlString(serializeProjectSets(projectSets({ project_sets: sets, projects })))}`,
     `project_names: ${escapeYamlString(parseList(projectNames).join(','))}`
   ];
 }
@@ -198,10 +205,12 @@ function promoteProposal({ identity, proposal: proposalData, scope: requestedSco
   const now = new Date().toISOString();
   const body = String(proposalData.proposal || '').slice(0, MAX_BODY_CHARS);
   const category = inferCategory(proposalData.signal_type, body);
-  const projects = parseList(proposalData.projects);
+  const sets = projectSets(proposalData);
+  const projects = [...new Set(sets.flat())];
+  // Only the user's words name a scope: the paraphrase is the agent's.
   const scope = decideScope({
-    projectKeys: projects,
-    explicit: namesCrossProjectScope(proposalData.quotes || [], proposalData.proposal),
+    projectKeys: sets.map((set) => set[0]),
+    explicit: namesCrossProjectScope(proposalData.quotes || []),
     requested: requestedScope
   });
   const decision = {
@@ -221,6 +230,7 @@ function promoteProposal({ identity, proposal: proposalData, scope: requestedSco
     session_id: proposalData.session_id || null,
     scope: projects.length > 0 || requestedScope ? scope : null,
     projects,
+    project_sets: sets,
     project_names: parseList(proposalData.project_names)
   };
 
@@ -304,38 +314,39 @@ function reinforceDecision(identity, slug) {
 
 /**
  * Re-detection of a promoted decision in `project`: a project-scoped decision
- * records the project and widens to operator-wide once it has been seen in
- * `WIDEN_AT_PROJECTS` distinct projects or its quote names a cross-project
- * scope. `requested` ('operator' | 'project') is the user's explicit choice and
- * wins. A decision with no scope field predates scoping and stays operator-wide
- * unless the user narrows it. Surgical frontmatter edit, body untouched.
- * Returns { scope, projects, changed } or null when the decision is absent.
+ * records the checkout's identities and widens to operator-wide once it has
+ * been seen in `WIDEN_AT_PROJECTS` distinct projects (disjoint identity sets)
+ * or the user's quote names a cross-project scope. `requested` ('operator' |
+ * 'project') is the user's explicit choice and wins. A decision with no scope
+ * field predates scoping and stays operator-wide unless the user narrows it.
+ * Surgical frontmatter edit, body untouched.
+ * Returns { scope, previous, projects, changed } or null when the decision is absent.
  */
 function applyProjectScope(identity, slug, { project = null, quote = null, requested = null } = {}) {
   const filePath = decisionPath(identity, slug);
   if (!fs.existsSync(filePath)) return null;
   const content = fs.readFileSync(filePath, 'utf8');
   const parsed = parseDecisionFile(content) || {};
-  const currentScope = parsed.scope || SCOPE_OPERATOR;
+  const previous = parsed.scope || SCOPE_OPERATOR;
   if (!parsed.scope && !VALID_SCOPES.includes(requested)) {
-    return { scope: currentScope, projects: [], changed: false };
+    return { scope: previous, previous, projects: [], changed: false };
   }
 
-  const seen = addProject(parsed.projects, parsed.project_names, project);
+  const seen = recordProject(parsed, project);
   const nextScope = VALID_SCOPES.includes(requested)
     ? requested
-    : (currentScope === SCOPE_OPERATOR
+    : (previous === SCOPE_OPERATOR
       ? SCOPE_OPERATOR
-      : decideScope({ projectKeys: seen.keys, explicit: namesCrossProjectScope(quote, parsed.quotes || []) }));
+      : decideScope({ projectKeys: seen.sets.map((set) => set[0]), explicit: namesCrossProjectScope(quote, parsed.quotes || []) }));
   // A project scope with no known project would hide the decision everywhere.
   if (nextScope === SCOPE_PROJECT && seen.keys.length === 0) {
-    return { scope: currentScope, projects: [], changed: false };
+    return { scope: previous, previous, projects: [], changed: false };
   }
   const changed = nextScope !== parsed.scope
-    || seen.keys.join(',') !== parseList(parsed.projects).join(',');
-  if (!changed) return { scope: nextScope, projects: seen.keys, changed: false };
+    || serializeProjectSets(seen.sets) !== serializeProjectSets(projectSets(parsed));
+  if (!changed) return { scope: nextScope, previous, projects: seen.keys, changed: false };
 
-  const updated = setFrontmatterFields(content, scopeLines({ scope: nextScope, projects: seen.keys, project_names: seen.names }));
+  const updated = setFrontmatterFields(content, scopeLines({ scope: nextScope, projects: seen.keys, project_sets: seen.sets, project_names: seen.names }));
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, updated, 'utf8');
   fs.renameSync(tmpPath, filePath);
@@ -343,7 +354,7 @@ function applyProjectScope(identity, slug, { project = null, quote = null, reque
     const { regenerateIndex } = require('./index-md');
     regenerateIndex(identity);
   } catch { /* index regen failure is non-fatal */ }
-  return { scope: nextScope, projects: seen.keys, changed: true };
+  return { scope: nextScope, previous, projects: seen.keys, changed: true };
 }
 
 /** Replace `key: value` lines inside the frontmatter, inserting missing ones before its close. */
