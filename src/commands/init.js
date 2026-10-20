@@ -69,8 +69,7 @@ async function runInit({ args, options, logger, t }) {
     overwrite: true,
     dryRun,
     mode: 'init',
-    installProfile,
-    tool: options.tool,
+    installProfile, tool: options.tool,
     onProgress: isTTY && !dryRun ? renderProgress : null
   });
 
