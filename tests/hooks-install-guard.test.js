@@ -264,6 +264,84 @@ test('settings files are written next to the target and renamed over it: no part
   });
 });
 
+test('a settings file kept elsewhere and linked into place is written through the link, which survives', async (t) => {
+  await withTempHome(async (home) => {
+    const target = path.join(home, 'dotfiles', 'claude-settings.json');
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, JSON.stringify({ theme: 'dark' }), 'utf8');
+    const link = configPaths().claude;
+    await fs.mkdir(path.dirname(link), { recursive: true });
+    try {
+      await fs.symlink(target, link, 'file');
+    } catch (error) {
+      t.skip(`this machine does not allow symlinks (${error.code})`);
+      return;
+    }
+    await runHooksInstall({ args: [home], options: { tool: 'claude', agent: 'dev' }, logger: captureLogger() });
+    assert.equal((await fs.lstat(link)).isSymbolicLink(), true, 'the link is still a link');
+    const written = JSON.parse(await fs.readFile(target, 'utf8'));
+    assert.equal(written.theme, 'dark');
+    assert.ok(written.hooks && written.hooks.PostToolUse, 'the hooks reached the file the link points to');
+    assert.deepEqual((await fs.readdir(path.dirname(target))).filter((name) => name.endsWith('.tmp')), []);
+  });
+});
+
+test('a rewritten settings file keeps its permission bits', { skip: process.platform === 'win32' ? 'Windows keeps no POSIX permission bits' : false }, async () => {
+  await withTempHome(async (home) => {
+    const file = configPaths().claude;
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, JSON.stringify({ env: { SERVICE_TOKEN: 'kept-private' } }), 'utf8');
+    await fs.chmod(file, 0o600);
+    await runHooksInstall({ args: [home], options: { tool: 'claude', agent: 'dev' }, logger: captureLogger() });
+    assert.equal((await fs.stat(file)).mode & 0o777, 0o600, 'a 0600 file holding tokens stays 0600');
+  });
+});
+
+test('Antigravity: its hooks go through hooks:emit, a reinstall is byte-identical, and merge and uninstall work handler by handler', async () => {
+  await withTempHome(async (home) => {
+    const file = configPaths().antigravity;
+    const project = path.join(home, 'project');
+    await fs.mkdir(project, { recursive: true });
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    const userStart = { type: 'command', command: 'npx aioson live:start . --no-launch; ~/notify.sh' };
+    const userLint = { type: 'command', command: 'my-linter' };
+    await fs.writeFile(file, JSON.stringify({ hooks: {
+      SessionStart: [userStart, { type: 'command', command: 'aioson live:start "$PWD" --agent=dev --tool=antigravity --no-launch 2>/dev/null || true' }],
+      PostToolUse: [{ matcher: 'Bash', hooks: [userLint, { type: 'command', command: 'aioson hooks:emit "$PWD" --agent=dev --source=antigravity 2>/dev/null || true' }] }],
+      Stop: [{ type: 'command', command: 'aioson agent:done "$PWD" --agent=dev --summary="Session ended via dev hook" 2>/dev/null || true' }],
+      SessionEnd: [{ type: 'command', command: 'aioson agent:done "$PWD" --agent=dev --summary="Session ended via dev hook" 2>/dev/null || true' }]
+    } }, null, 2), 'utf8');
+
+    const install = () => runHooksInstall({ args: [project], options: { tool: 'antigravity', agent: 'dev' }, logger: captureLogger() });
+    await install();
+    const first = await fs.readFile(file, 'utf8');
+    const workspace = await fs.readFile(path.join(project, '.agents', 'hooks.json'), 'utf8');
+    await install();
+    assert.equal(await fs.readFile(file, 'utf8'), first, 'a second install changes nothing');
+    assert.equal(await fs.readFile(path.join(project, '.agents', 'hooks.json'), 'utf8'), workspace);
+
+    const hooks = JSON.parse(first).hooks;
+    const commands = Object.values(hooks).flat().flatMap((entry) => (entry.hooks || [entry]).map((handler) => handler.command));
+    assert.deepEqual(hooks.SessionStart, [userStart], 'a user hook that merely calls aioson is the user\'s; ours left SessionStart');
+    assert.deepEqual(hooks.PostToolUse[0], { matcher: 'Bash', hooks: [userLint] }, 'ours beside the user\'s in one group goes, the user\'s stays');
+    assert.ok(commands.every((command) => !/^aioson (?:agent:done|live:start) /.test(command)), commands.join(' | '));
+    assert.match(hooks.Stop[0].command, /^aioson hooks:emit "\$PWD" --then=agent:done --agent='dev' --source='antigravity'/);
+    assert.match(hooks.SessionEnd[0].command, /^aioson hooks:emit "\$PWD" --agent='dev' --source='antigravity' --event=SessionEnd/);
+
+    await runHooksUninstall({ args: [project], options: { tool: 'antigravity' }, logger: captureLogger() });
+    assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')).hooks, { SessionStart: [userStart], PostToolUse: [{ matcher: 'Bash', hooks: [userLint] }] }, 'only AIOSON\'s handlers are removed');
+  });
+});
+
+test('the install summary says agent:done only for the tools whose hooks run it', async () => {
+  await withTempHome(async (home) => {
+    const out = captureLogger();
+    await runHooksInstall({ args: [home], options: { tool: 'claude,codex', agent: 'dev' }, logger: out });
+    assert.ok(out.lines.includes('  • End of each turn → logged as agent:done (claude)'), out.lines.join('\n'));
+    assert.ok(!out.lines.some((line) => /Session end → logged as agent:done/.test(line)), 'Codex\'s session end closes the hooks session, it runs no agent:done');
+  });
+});
+
 test('readJsonForMerge flags an existing unparseable file as corrupted', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-hooks-merge-'));
   const file = path.join(dir, 'settings.json');

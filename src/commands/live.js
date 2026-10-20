@@ -725,6 +725,10 @@ function sameDir(a, b) {
   return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
 }
 
+// The value a lane worker's AIOSON_LIVE_SESSION carries (adapters/base.js
+// laneEnv): a session of its own, never the launcher's.
+const NO_LIVE_SESSION = 'none';
+
 /**
  * The open live session that launched the current tool, or null.
  *
@@ -738,9 +742,13 @@ function sameDir(a, b) {
  * session of this project with a live process counts only when it is the only
  * one (`source` narrows it to one tool): two tabs on one project would
  * otherwise swap each other's activity.
+ *
+ * `NO_LIVE_SESSION` (what a lane worker carries) belongs to no launched
+ * session, never even to the only open one — that one is the parent's.
  */
 async function resolveLauncherLiveSession(targetDir, runtimeDir, { source } = {}) {
   const envKey = String(process.env.AIOSON_LIVE_SESSION_KEY || process.env.AIOSON_LIVE_SESSION || '').trim();
+  if (envKey === NO_LIVE_SESSION) return null;
   if (envKey) {
     const handle = await openRuntimeDb(targetDir, { mustExist: true });
     if (!handle) return null;
@@ -1450,7 +1458,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
       if (launch.permission.warning && !options.json) logger.log(`⚠ ${launch.permission.warning}`);
       const trust = await resolveHookTrustArgs(launch.permission.host, {
         unattended: isUnattendedPermission(launch.permission),
-        existingArgs: launch.args,
+        existingArgs: launch.args, cwd: targetDir,
         probe: await resolveToolSpawn(binaryPath, ['--help'])
       });
       launch.hookTrust = trust.reason;

@@ -14,7 +14,10 @@
  * SessionStart payload (Claude Code, Codex), `--session` (the OpenCode
  * plugin), or — on demand with neither — the session that recorded last. The
  * per-agent hooks run is shared by every window, lane and day on the project;
- * reading it whole gave a new session yesterday's files and claims.
+ * reading it whole gave a new session yesterday's files and claims. Rows with
+ * no session_id (written before 1.74, or by a harness that sends none) still
+ * count on the session's own run, from the previous compaction on — a session
+ * whose run carried on across `aioson update` gets its checkpoint back.
  *
  * Codex's SessionStart hook (matcher `compact`) speaks the same payload and
  * envelope. OpenCode has no shell hook: its AIOSON plugin calls
@@ -90,19 +93,33 @@ function latestSessionId(handle, runKey) {
   return row && row.sid ? String(row.sid) : null;
 }
 
+// A row with no session_id was written before 1.74 stamped one — a session that
+// kept running across `aioson update` — or by a harness that sends none. It
+// counts for the session only on the run the session writes to, and only from
+// the previous compaction on: before that it could be any window's.
+function readScopedRows(handle, runKey, sessionId) {
+  const since = new Date(Date.now() - SESSION_LOOKBACK_MS).toISOString();
+  return handle.db.prepare(`
+    SELECT event_type, message, payload_json, sid FROM (
+      SELECT id, event_type, message, payload_json, ${SESSION_ID_SQL} AS sid FROM agent_events
+      WHERE (run_key IN (SELECT run_key FROM agent_runs WHERE source = 'live' AND (status = 'running' OR started_at >= ?))
+          AND ${SESSION_ID_SQL} = ?)
+        OR (run_key = ? AND ${SESSION_ID_SQL} IS NULL)
+      ORDER BY id DESC LIMIT ?
+    ) ORDER BY id ASC
+  `).all(since, sessionId, runKey || null, MAX_EVENTS);
+}
+
+/** The session's own rows, and the unstamped ones from the previous compaction marker on. */
+function withinStretch(rows) {
+  const markers = rows.map((row, index) => (row.event_type === 'compaction' ? index : -1)).filter((index) => index !== -1);
+  const start = markers.length > 1 ? markers[markers.length - 2] : 0;
+  return rows.filter((row, index) => row.sid != null || index >= start);
+}
+
 function readSessionEvents(handle, { runKey, sessionId }) {
   if (!handle) return [];
-  if (sessionId) {
-    const since = new Date(Date.now() - SESSION_LOOKBACK_MS).toISOString();
-    return handle.db.prepare(`
-      SELECT event_type, message, payload_json FROM (
-        SELECT id, event_type, message, payload_json FROM agent_events
-        WHERE run_key IN (SELECT run_key FROM agent_runs WHERE source = 'live' AND (status = 'running' OR started_at >= ?))
-          AND ${SESSION_ID_SQL} = ?
-        ORDER BY id DESC LIMIT ?
-      ) ORDER BY id ASC
-    `).all(since, sessionId, MAX_EVENTS);
-  }
+  if (sessionId) return withinStretch(readScopedRows(handle, runKey, sessionId));
   if (!runKey) return [];
   return handle.db.prepare(`
     SELECT event_type, message, payload_json FROM (

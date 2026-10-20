@@ -183,6 +183,99 @@ test('a hook never holds OpenCode: the telemetry is queued, and a compaction wai
   });
 });
 
+test('an aioson that exits without reading a 70 KB payload never throws into OpenCode', async (t) => {
+  const dir = makeProject();
+  const fake = path.join(dir, 'gone-aioson.js');
+  fs.writeFileSync(fake, 'process.exit(0);\n', 'utf8');
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  await withPluginEnv(async () => {
+    process.env.AIOSON_BIN = `node ${fake}`;
+    const hooks = await (await loadPlugin(dir))({ directory: dir, worktree: dir });
+    // A task list is sent as it comes: 70 KB is past the pipe's buffer, so the
+    // write fails after the child is gone (EPIPE/EOF) — inside the plugin.
+    const todos = Array.from({ length: 700 }, (_, i) => ({ content: `${'x'.repeat(90)} ${i}`, status: 'pending' }));
+    await hooks['tool.execute.after']({ tool: 'todowrite', sessionID: 'g1', callID: 'c1', args: { todos } }, { title: '', output: '', metadata: {} });
+    await hooks['chat.message']({ sessionID: 'g1' }, { parts: [{ type: 'text', text: 'y'.repeat(300000) }] });
+    const compacting = { context: [] };
+    await hooks['experimental.session.compacting']({ sessionID: 'g1' }, compacting);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.deepEqual(compacting.context, [], 'nothing to restore, and nothing thrown');
+  });
+});
+
+test('each payload field is bounded: prompt and reply are cut with a marker, a patch keeps only its file headers', async (t) => {
+  const dir = makeProject();
+  const log = path.join(dir, 'payloads.ndjson');
+  const fake = path.join(dir, 'recording-aioson.js');
+  fs.writeFileSync(fake, [
+    "const fs = require('node:fs');",
+    "if (process.argv[2] === 'hooks:recap') { process.stdout.write('{}'); process.exit(0); }",
+    "let raw = '';",
+    "process.stdin.setEncoding('utf8');",
+    "process.stdin.on('data', (chunk) => { raw += chunk; });",
+    `process.stdin.on('end', () => { fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ length: raw.length, payload: JSON.parse(raw || '{}') }) + '\\n'); });`
+  ].join('\n'), 'utf8');
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  await withPluginEnv(async () => {
+    process.env.AIOSON_BIN = `node ${fake}`;
+    const hooks = await (await loadPlugin(dir))({ directory: dir, worktree: dir });
+    const body = Array.from({ length: 6000 }, (_, i) => `+const line${i} = ${i};`).join('\n');
+    await hooks['chat.message']({ sessionID: 'b1' }, { parts: [{ type: 'text', text: `/dev ${'p'.repeat(300000)}` }] });
+    await hooks['tool.execute.after'](
+      { tool: 'apply_patch', sessionID: 'b1', callID: 'c1', args: { patchText: `*** Begin Patch\n*** Add File: src/big.js\n${body}\n*** Update File: src/other.js\n@@\n-a\n+b\n*** End Patch` } },
+      { title: 'apply_patch', output: 'Success', metadata: {} }
+    );
+    await hooks['experimental.text.complete']({ sessionID: 'b1', messageID: 'm1', partID: 'p1' }, { text: 'r'.repeat(300000) });
+    await hooks['experimental.session.compacting']({ sessionID: 'b1' }, { context: [] });
+
+    const calls = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.ok(calls.every((call) => call.length < 9000), calls.map((call) => call.length).join(', '));
+    const prompt = calls.find((call) => call.payload.hook_event_name === 'UserPromptSubmit').payload.prompt;
+    assert.ok(prompt.startsWith('/dev ') && prompt.endsWith('[truncated by the AIOSON plugin]'), 'the activation stays readable, the cut is marked');
+    assert.ok(calls.find((call) => call.payload.hook_event_name === 'Stop').payload.last_assistant_message.endsWith('[truncated by the AIOSON plugin]'));
+    assert.equal(calls.find((call) => call.payload.tool_name === 'apply_patch').payload.tool_input.command,
+      '*** Begin Patch\n*** Add File: src/big.js\n*** Update File: src/other.js\n*** End Patch', 'the files of the patch, never its body');
+  });
+});
+
+test('a plugin file that cannot be read right now (EACCES) is never written over or removed', async () => {
+  const home = await fsp.mkdtemp(path.join(os.tmpdir(), 'aioson-oc-eacces-'));
+  const saved = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME, CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR };
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  delete process.env.XDG_CONFIG_HOME;
+  delete process.env.CODEX_HOME;
+  delete process.env.CLAUDE_CONFIG_DIR;
+  const original = fsp.readFile;
+  try {
+    const pluginPath = configPaths().opencode;
+    await fsp.mkdir(path.dirname(pluginPath), { recursive: true });
+    const theirs = '// a plugin of their own\nexport const Theirs = async () => ({});\n';
+    await fsp.writeFile(pluginPath, theirs, 'utf8');
+    fsp.readFile = async (target, ...rest) => {
+      if (path.resolve(String(target)) === path.resolve(pluginPath)) {
+        const error = new Error('permission denied');
+        error.code = 'EACCES';
+        throw error;
+      }
+      return original.call(fsp, target, ...rest);
+    };
+    const installed = await runHooksInstall({ args: [home], options: { tool: 'opencode', agent: 'dev' }, logger: captureLogger() });
+    assert.equal(installed.results[0].skipped, 'foreign-file', 'unreadable is not "no plugin"');
+    const removed = await runHooksUninstall({ args: [home], options: { tool: 'opencode' }, logger: captureLogger() });
+    assert.equal(removed.results[0].removed, false);
+    fsp.readFile = original;
+    assert.equal(await fsp.readFile(pluginPath, 'utf8'), theirs, 'the file is exactly what it was');
+  } finally {
+    fsp.readFile = original;
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await fsp.rm(home, { recursive: true, force: true });
+  }
+});
+
 test('a project folder with a cmd metacharacter still gets its events (Windows runs the plugin through cmd.exe)', async (t) => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-oc-meta-'));
   const dir = path.join(parent, 'R&D-app');

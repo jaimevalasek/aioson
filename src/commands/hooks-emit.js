@@ -112,26 +112,49 @@ function responseExitCode(response) {
 const EXIT_LINE = /^(?:Process exited with code|Exit code:?)\s+(\d+)\b/im;
 // A runner's own failure marker: a FAIL line (jest, vitest, go) or a TAP `not ok`.
 const RUNNER_MARKER = /^\s*(?:FAIL\b|not ok\b)/m;
-// A runner summary that says something failed: a non-zero failed/failing
-// count, a FAIL or `not ok` line, node:test's `ℹ fail N`.
-const FAILED_SUMMARY = /\b[1-9]\d*\s+(?:failed|failing|failures?)\b|^\s*(?:FAIL\b|not ok\b)|^[#ℹ]\s*fail\s+[1-9]/m;
+// A runner summary that says something failed: a non-zero failed/failing/error
+// count (pytest counts a broken fixture as an error), a FAIL or `not ok` line,
+// node:test's `ℹ fail N`.
+const FAILED_SUMMARY = /\b[1-9]\d*\s+(?:failed|failing|failures?|errors?)\b|^\s*(?:FAIL\b|not ok\b)|^[#ℹ]\s*fail\s+[1-9]/m;
+// A TAP test marked `# TODO` or `# SKIP` is reported `not ok` and fails nothing.
+const TAP_DIRECTIVE_LINE = /^\s*not ok\b[^\n]*#\s*(?:TODO|SKIP)\b[^\n]*$/gim;
+// The runners whose summaries RESULT_LINE reads (cargo, vitest/jest, pytest,
+// node --test, go, rspec…) and the package scripts that start them, at the
+// start of one command of the line. Their summary is a verdict; any other
+// command (`git log`, `grep`, a `cat` of a log) can print "3 failing" and fail nothing.
+const RUNNER_COMMAND = /^(?:(?:pnpm|yarn|bun)\s+)?(?:jest|vitest|mocha|ava|pytest|py\.test|rspec|phpunit|pest|tox|nox|ctest|playwright\s+test)\b|^(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test\b|^node\s+(?:\S+\s+)*--test\b|^(?:go|deno|dotnet|mix)\s+test\b|^cargo\s+(?:test|nextest)\b|^python[\d.]*\s+-m\s+(?:pytest|unittest)\b|^make\s+(?:test|check)\b|^(?:\.\/)?(?:mvnw?|gradlew?)\b.*\b(?:test|verify|check)\b|^bundle\s+exec\s+rspec\b/i;
+// What may stand before the runner in its own command: variables, `time`, a
+// package runner, the shell a harness wraps the line in.
+const COMMAND_PREFIX = /^(?:[A-Za-z_]\w*=\S*\s+|time\s+|npx\s+(?:-\S+\s+)*|pnpm\s+(?:exec|dlx)\s+|bunx\s+|bun\s+x\s+|(?:ba|z)?sh\s+-\w*c\s+["']?|(?:pwsh|powershell)(?:\.exe)?\s+(?:-\w+\s+)*?-c(?:ommand)?\s+["']?)+/i;
+
+/** Whether one of the commands of a shell line starts a test runner. */
+function isRunnerCommand(command) {
+  return String(command || '').split(/&&|\|\||[;|]/).some((part) => RUNNER_COMMAND.test(part.trim().replace(COMMAND_PREFIX, '')));
+}
+
+function exitVerdict(code, line) {
+  return code === 0 ? { outcome: 'passed', result: line } : { outcome: 'failed', result: line || `Exit code ${code}` };
+}
+
+/** A test runner's verdict from its own summary or failure marker; none when it printed neither. */
+function summaryVerdict(text) {
+  const line = resultLine(text);
+  if (!line && !RUNNER_MARKER.test(text)) return {};
+  return { outcome: FAILED_SUMMARY.test(text) ? 'failed' : 'passed', result: line };
+}
 
 /**
  * Outcome and summary line from a command's raw output alone — what Codex
  * hands over (the model-facing text, no exit code). An exit line decides when
- * present; otherwise only a runner summary does, and with neither there is no
- * verdict: a build that printed an error and no summary is not called passed.
+ * present; otherwise only a test runner's own summary does. Any other command,
+ * or no output at all, gets no verdict: a build that printed an error and no
+ * summary is not called passed, and a `git log` naming "3 failing tests" fails nothing.
  */
-function outputVerdict(output) {
-  const text = stripAnsi(output);
-  const line = resultLine(text);
+function outputVerdict(output, command) {
+  const text = stripAnsi(output).replace(TAP_DIRECTIVE_LINE, '');
   const exit = EXIT_LINE.exec(text);
-  if (exit) {
-    const code = Number(exit[1]);
-    return code === 0 ? { outcome: 'passed', result: line } : { outcome: 'failed', result: line || `Exit code ${code}` };
-  }
-  if (!line && !RUNNER_MARKER.test(text)) return {};
-  return { outcome: FAILED_SUMMARY.test(text) ? 'failed' : 'passed', result: line };
+  if (exit) return exitVerdict(Number(exit[1]), resultLine(text));
+  return isRunnerCommand(command) ? summaryVerdict(text) : {};
 }
 
 /** Claude Code: a non-zero exit fires PostToolUseFailure with `error` ("Exit code N\n…"). */
@@ -152,13 +175,13 @@ function objectOutcome(response) {
 }
 
 /** Outcome and summary line of a shell command, from the hook that reported it. */
-function bashOutcome(hookEvent, payload) {
-  const response = payload.tool_response || {};
+function bashOutcome(hookEvent, payload, command) {
+  const response = payload.tool_response == null ? {} : payload.tool_response;
   let extra = {};
   if (hookEvent === 'PostToolUseFailure') extra = failureOutcome(payload);
   // Codex has no PostToolUseFailure and sends the command's model-facing
   // output as one string, without the exit code: the text has to say.
-  else if (typeof response === 'string') extra = outputVerdict(response);
+  else if (typeof response === 'string') extra = outputVerdict(response, command);
   else if (response && typeof response === 'object') extra = objectOutcome(response);
   if (!extra.result) delete extra.result;
   if (!extra.outcome) delete extra.outcome;
@@ -383,9 +406,15 @@ function fileEditDetails(toolName, input) {
   return { filePath, message: filePath ? `${toolName}: ${path.basename(filePath)}` : `${toolName}` };
 }
 
+/** The shell line a tool call ran: `command` (or `cmd`); an argv array reads as one line. */
+function shellLine(input) {
+  const raw = input.command || input.cmd || '';
+  return Array.isArray(raw) ? raw.join(' ') : String(raw);
+}
+
 function commandDetails(toolName, input, hookEvent, payload) {
   const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
-  return { message: cmd ? `$ ${cmd}` : 'Bash', extra: bashOutcome(hookEvent, payload) };
+  return { message: cmd ? `$ ${cmd}` : 'Bash', extra: bashOutcome(hookEvent, payload, shellLine(input)) };
 }
 
 function todoDetails(toolName, input) {
@@ -471,29 +500,34 @@ async function ensureHooksSession(targetDir, agentName, handle, source, runtimeD
   return { runKey: session.runKey, sessionDir: session.sessionKey ? resolveLivePaths(runtimeDir, session.sessionKey).sessionDir : null, launched: false };
 }
 
-async function appendLiveEventFile(runtimeDir, runKey, event) {
-  // Find the session dir for this runKey
+/** Appends one event to a session dir's events.ndjson and refreshes its state.json; false when the dir holds another run. */
+async function appendToSessionDir(sessionDir, runKey, event) {
+  const statePath = path.join(sessionDir, 'state.json');
+  const state = JSON.parse(await fs.readFile(statePath, 'utf8'));
+  if (state.run_key !== runKey) return false;
+  await fs.appendFile(path.join(sessionDir, 'events.ndjson'), JSON.stringify(event) + '\n', 'utf8');
+  state.updated_at = event.ts;
+  if (event.type === 'session_ended') state.status = 'completed';
+  const lastEvents = state.last_events || [];
+  lastEvents.push({ ts: event.ts, type: event.type, summary: event.summary || event.message });
+  state.last_events = lastEvents.slice(-10); // keep last 10
+  await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
+  return true;
+}
+
+/**
+ * The real-time files of the hooks session a run belongs to: the session dir
+ * the session file already names — never a read of every state.json under
+ * live/, which grows with each session closed there — else the one whose
+ * state.json names the run.
+ */
+async function appendLiveEventFile(runtimeDir, run, event) {
   try {
+    if (run.sessionDir && await appendToSessionDir(run.sessionDir, run.runKey, event).catch(() => false)) return;
     const liveRoot = path.join(runtimeDir, 'live');
     const entries = await fs.readdir(liveRoot).catch(() => []);
     for (const entry of entries) {
-      const statePath = path.join(liveRoot, entry, 'state.json');
-      try {
-        const state = JSON.parse(await fs.readFile(statePath, 'utf8'));
-        if (state.run_key === runKey) {
-          const eventsPath = path.join(liveRoot, entry, 'events.ndjson');
-          await fs.appendFile(eventsPath, JSON.stringify(event) + '\n', 'utf8');
-
-          // Update state.json updated_at + last_events
-          state.updated_at = event.ts;
-          if (event.type === 'session_ended') state.status = 'completed';
-          const lastEvents = state.last_events || [];
-          lastEvents.push({ ts: event.ts, type: event.type, summary: event.summary || event.message });
-          state.last_events = lastEvents.slice(-10); // keep last 10
-          await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
-          break;
-        }
-      } catch { /* skip */ }
+      if (await appendToSessionDir(path.join(liveRoot, entry), run.runKey, event).catch(() => false)) break;
     }
   } catch { /* non-fatal */ }
 }
@@ -507,7 +541,7 @@ async function appendLiveEventFile(runtimeDir, runKey, event) {
 /** events.ndjson for the real-time view of the session the event went to. */
 async function appendLiveRecord(runtimeDir, run, liveEvent) {
   if (!run.launched) {
-    await appendLiveEventFile(runtimeDir, run.runKey, liveEvent);
+    await appendLiveEventFile(runtimeDir, run, liveEvent);
     return;
   }
   // Append only. state.json of a launched session belongs to `live:*`;
@@ -543,7 +577,7 @@ async function endSession(targetDir, runtimeDir, event, message, { handle, liveR
     opened.db.close();
   }
   if (hooksSession) await writeAgentSession(runtimeDir, handle, { ...hooksSession, finished: true, finishedAt: now });
-  const run = liveRun ? { sessionDir: liveRun.sessionDir, launched: true } : { runKey, launched: false };
+  const run = liveRun ? { sessionDir: liveRun.sessionDir, launched: true } : { runKey, sessionDir: resolveLivePaths(runtimeDir, hooksSession.sessionKey).sessionDir, launched: false };
   await appendLiveRecord(runtimeDir, run, { ts: now, type: 'session_ended', message, source: event.extra.source });
   return { ok: true, runKey, event: 'session_ended', closed: Boolean(hooksSession) };
 }

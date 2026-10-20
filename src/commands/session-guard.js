@@ -114,8 +114,9 @@ async function closeSession(targetDir, runtimeDir, agentName, runKey, taskKey, r
       status: 'completed', message: `Session closed by session:guard: ${reason}`,
       createdAt: now
     });
-    updateRun(db, runKey, { status: 'completed', summary: reason, finishedAt: now });
-    if (taskKey) updateTask(db, taskKey, { status: 'completed', finishedAt: now });
+    // The store takes one options object (it stamps finished_at itself).
+    updateRun(db, { runKey, status: 'completed', summary: reason });
+    if (taskKey) updateTask(db, { taskKey, status: 'completed' });
 
     // Update state.json
     const { db: _, ...rest } = await readAgentSession(runtimeDir, sessionHandle(agentName)).catch(() => ({}));

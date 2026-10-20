@@ -139,14 +139,35 @@ async function renameWithRetry(from, to) {
   }
 }
 
-// Written next to the target and renamed over it: a crash or a full disk
+// The file a path really names: a settings file kept in a dotfiles folder and
+// linked into place is written there, so the link survives. A path that does
+// not exist yet (or a dangling link) is its own target.
+async function realTarget(filePath) {
+  try {
+    return await fs.realpath(filePath);
+  } catch {
+    return filePath;
+  }
+}
+
+// The permission bits of the file being replaced (a settings file the user
+// keeps 0600 because it carries tokens stays 0600). Windows keeps no such bits.
+async function keepMode(target, tmp) {
+  if (process.platform === 'win32') return;
+  const stat = await fs.stat(target).catch(() => null);
+  if (stat) await fs.chmod(tmp, stat.mode & 0o7777);
+}
+
+// Written next to the real target and renamed over it: a crash or a full disk
 // mid-write never leaves a truncated settings file behind.
 async function writeFileAtomic(filePath, content) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.aioson-${process.pid}-${Date.now()}.tmp`;
+  const target = await realTarget(filePath);
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  const tmp = `${target}.aioson-${process.pid}-${Date.now()}.tmp`;
   await fs.writeFile(tmp, content, 'utf8');
   try {
-    await renameWithRetry(tmp, filePath);
+    await keepMode(target, tmp);
+    await renameWithRetry(tmp, target);
   } catch (error) {
     await fs.rm(tmp, { force: true }).catch(() => {});
     throw error;
@@ -228,7 +249,6 @@ module.exports = {
   readJsonForMerge,
   unusableConfig,
   writeFileAtomic,
-  writeScrubbed,
   mergeHookEvents,
   aiosonDefinition,
   scrubHookFile

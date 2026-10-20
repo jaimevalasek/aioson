@@ -29,11 +29,15 @@ function normalizeError(error) {
 // spawned it (an orchestrator run from inside a `live:start` session) must not
 // reach the worker's hooks: hooks:emit would record the lane's edits and
 // failures as the parent session's, and the parent's checkpoint after a
-// compaction would speak for work it never did.
+// compaction would speak for work it never did. Unsetting the variables is not
+// enough — without them resolveLauncherLiveSession falls back to "the single
+// open launched session of this project", the parent's — so the lane carries
+// the value that names no session (`none`, src/commands/live.js) under the name
+// Codex passes on (it strips names holding KEY): its hooks open their own.
 function laneEnv(base = process.env) {
   const env = { ...base };
-  delete env.AIOSON_LIVE_SESSION;
   delete env.AIOSON_LIVE_SESSION_KEY;
+  env.AIOSON_LIVE_SESSION = 'none';
   return env;
 }
 
@@ -159,7 +163,7 @@ function createAdapter(host, buildArgs) {
       // spawn, so build() stays the argv the tests and host:signature pin.
       const trust = await resolveHookTrustArgs(host, {
         unattended: true,
-        existingArgs: built.args,
+        existingArgs: built.args, cwd: input.cwd,
         probe: { command: resolved.executable, args: [...resolved.prefixArgs, '--help'] }
       });
       const trusted = trust.args.length > 0 ? this.build({ ...input, hook_trust_args: trust.args }) : null;

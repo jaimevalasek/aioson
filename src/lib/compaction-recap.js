@@ -17,13 +17,13 @@
  * event and hooks:recap reads that session only, so another window, a lane
  * worker or yesterday's session never speaks here. Inside it, the window is
  * the stretch the compaction summarized: events after the previous compaction
- * marker up to the newest one (or the whole session when there is no earlier
- * marker). The window bounds what the summary dropped — files changed, the
- * agent's last message. Where the session stands — the agent working, the
- * plan, commands still failing, the last test result — is read over the whole
- * session: a test that failed before the previous compaction and never ran
- * again still fails. Without a session to scope by, that state stays inside
- * the window too, as the run may hold other sessions.
+ * marker through the newest one, up to the recap (or the whole session when
+ * there is no earlier marker). The window bounds what the summary dropped —
+ * files changed, the agent's last message. Where the session stands — the
+ * agent working, the plan, commands still failing, the last test result — is
+ * read over the whole session: a test that failed before the previous
+ * compaction and never ran again still fails. Without a session to scope by,
+ * that state stays inside the window too, as the run may hold other sessions.
  *
  * Every line carries text recorded from tools, file names and the model, and
  * it comes back at the harness's system level: hidden carriers are stripped,
@@ -94,14 +94,18 @@ function parsePayload(event) {
   }
 }
 
-/** Events the last compaction summarized: after the previous marker, up to the newest. */
+/**
+ * Events the last compaction summarized: after the previous marker, through
+ * the newest one, up to the recap. Telemetry a harness records in the
+ * background (Codex's async hooks) can land after the marker of the stretch it
+ * belongs to.
+ */
 function compactionWindow(events) {
   const list = Array.isArray(events) ? events : [];
   const markers = [];
   list.forEach((event, index) => { if (event && event.event_type === 'compaction') markers.push(index); });
-  const end = markers.length > 0 ? markers[markers.length - 1] : list.length;
   const start = markers.length > 1 ? markers[markers.length - 2] + 1 : 0;
-  return list.slice(start, end).slice(-MAX_WINDOW_EVENTS);
+  return list.slice(start).filter((event) => event && event.event_type !== 'compaction').slice(-MAX_WINDOW_EVENTS);
 }
 
 /** Project-relative path, `''` for a file outside the project, null for none. */

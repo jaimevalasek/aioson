@@ -30,7 +30,6 @@ const {
   readJsonForMerge,
   unusableConfig,
   writeFileAtomic,
-  writeScrubbed,
   mergeHookEvents,
   aiosonDefinition,
   scrubHookFile
@@ -78,10 +77,6 @@ function makeEmitCommand(agentName, source, { then = null, extra = [] } = {}) {
   const thenFlag = then ? ` --then=${then}` : '';
   const extraFlags = extra.length ? ` ${extra.join(' ')}` : '';
   return `aioson hooks:emit "$PWD"${thenFlag} --agent=${shellQuote(agentName)} --source=${shellQuote(source)}${extraFlags} 2>/dev/null || true`;
-}
-
-function makeDoneCommand(agentName) {
-  return `aioson agent:done "$PWD" --agent=${shellQuote(agentName)} --summary=${shellQuote(`Session ended via ${agentName} hook`)} 2>/dev/null || true`;
 }
 
 // SessionStart after a compaction: re-inject the checkpoint rebuilt from the
@@ -187,21 +182,25 @@ async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true
 
 // ─── Antigravity ─────────────────────────────────────────────────────────────
 
+// Antigravity's hooks are user-wide (~/.gemini/antigravity), so every line goes
+// through hooks:emit, which walks up to the project root and is a no-op outside
+// one: the raw `agent:done "$PWD"` and `live:start "$PWD"` lines scaffolded
+// `.aioson/` in whatever directory a session stopped in. The hooks session
+// opens on the first event, so there is no SessionStart line.
 function buildAntigravityHooks(agentName) {
   const safeAgentName = normalizeHookAgentName(agentName);
   const emitCmd = makeEmitCommand(safeAgentName, 'antigravity');
-  const doneCmd = makeDoneCommand(safeAgentName);
-  const startCmd = `aioson live:start "$PWD" --agent=${shellQuote(safeAgentName)} --tool=antigravity --no-launch 2>/dev/null || true`;
 
   return {
-    SessionStart: [{ type: 'command', command: startCmd }],
     PostToolUse: [
-      { matcher: 'Write|Edit|MultiEdit', hooks: [{ type: 'command', command: emitCmd }] },
-      { matcher: 'Bash', hooks: [{ type: 'command', command: emitCmd }] },
-      { matcher: 'Task|TodoWrite', hooks: [{ type: 'command', command: emitCmd }] }
+      commandGroup('Write|Edit|MultiEdit', emitCmd),
+      commandGroup('Bash', emitCmd),
+      commandGroup('Task|TodoWrite', emitCmd)
     ],
-    SessionEnd: [{ type: 'command', command: doneCmd }],
-    Stop: [{ type: 'command', command: doneCmd }]
+    // The turn's final message, then agent:done in the same process.
+    Stop: [{ type: 'command', command: makeEmitCommand(safeAgentName, 'antigravity', { then: 'agent:done' }) }],
+    // Records the end and closes the hooks session it opened.
+    SessionEnd: [{ type: 'command', command: makeEmitCommand(safeAgentName, 'antigravity', { extra: ['--event=SessionEnd'] }) }]
   };
 }
 
@@ -219,7 +218,7 @@ async function installAntigravityHooks(agentName, projectDir, dryRun, logger) {
     if (unusableConfig(globalRead, 'Antigravity global', globalPath, logger)) {
       skipped.push('global');
     } else {
-      const mergedGlobal = mergeAntigravityHooks(globalRead.data, hooks);
+      const mergedGlobal = mergeHookEvents(globalRead.data, hooks);
       await writeFileAtomic(globalPath, JSON.stringify(mergedGlobal, null, 2));
       logger.log(`  ✓ Antigravity global — ${globalPath}`);
     }
@@ -229,7 +228,7 @@ async function installAntigravityHooks(agentName, projectDir, dryRun, logger) {
     if (unusableConfig(wsRead, 'Antigravity workspace', workspacePath, logger)) {
       skipped.push('workspace');
     } else {
-      const mergedWs = mergeAntigravityHooks(wsRead.data, hooks);
+      const mergedWs = mergeHookEvents(wsRead.data, hooks);
       await writeFileAtomic(workspacePath, JSON.stringify(mergedWs, null, 2));
       logger.log(`  ✓ Antigravity workspace — ${workspacePath}`);
     }
@@ -240,51 +239,17 @@ async function installAntigravityHooks(agentName, projectDir, dryRun, logger) {
   } else {
     logger.log(`  [dry-run] Would write: ${globalPath}`);
     logger.log(`  [dry-run] Would write: ${workspacePath}`);
-    logger.log(`  Hooks to add: SessionStart → live:start, PostToolUse → hooks:emit, SessionEnd/Stop → agent:done`);
+    logger.log(`  Hooks to add: PostToolUse → hooks:emit, Stop → hooks:emit (final message) + agent:done, SessionEnd → hooks:emit (closes the hooks session)`);
   }
 
   return { tool: 'antigravity', globalPath, workspacePath, hooks };
 }
 
-function mergeAntigravityHooks(existing, newHooks) {
-  const merged = { ...existing };
-  if (!merged.hooks) merged.hooks = {};
-
-  for (const [event, entries] of Object.entries(newHooks)) {
-    const existingEntries = Array.isArray(merged.hooks[event]) ? merged.hooks[event] : [];
-    // Remove previous AIOSON entries
-    const filtered = existingEntries.filter((e) => {
-      const cmd = (e.command || e.hooks?.[0]?.command || '');
-      return !cmd.includes('aioson');
-    });
-    const newEntries = Array.isArray(entries) ? entries : [entries];
-    merged.hooks[event] = [...filtered, ...newEntries];
-  }
-
-  return merged;
-}
-
-// Scrub AIOSON entries from one Antigravity hooks file, mirroring the
-// `cmd.includes('aioson')` policy the merge uses on install.
+// Scrub AIOSON's handlers from one Antigravity hooks file, handler by handler,
+// the way the merge works on install: a user's hook that merely calls aioson
+// stays, and ours sitting beside the user's in a group goes.
 async function scrubAntigravityHookFile(filePath, dryRun, logger, label) {
-  let existing;
-  try {
-    existing = JSON.parse(await fs.readFile(filePath, 'utf8'));
-  } catch {
-    logger.log(`  ${label} not found — nothing to remove`);
-    return { tool: 'antigravity', path: filePath, removed: false };
-  }
-  if (existing.hooks) {
-    for (const event of Object.keys(existing.hooks)) {
-      existing.hooks[event] = (existing.hooks[event] || []).filter((entry) => {
-        const cmd = entry.command || entry.hooks?.[0]?.command || '';
-        return !cmd.includes('aioson');
-      });
-      if (existing.hooks[event].length === 0) delete existing.hooks[event];
-    }
-    if (Object.keys(existing.hooks).length === 0) delete existing.hooks;
-  }
-  return writeScrubbed('antigravity', filePath, existing, dryRun, logger, label);
+  return scrubHookFile('antigravity', filePath, dryRun, logger, label);
 }
 
 // ─── Codex (OpenAI) ───────────────────────────────────────────────────────────
@@ -415,8 +380,10 @@ async function readOwnedFile(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf8');
     return { exists: true, ours: content.startsWith(OPENCODE_PLUGIN_SIGNATURE) };
-  } catch {
-    return { exists: false, ours: false };
+  } catch (error) {
+    // Only a missing file is "no plugin": one that cannot be read right now
+    // (EACCES, EBUSY) may be someone else's, and is never written over or removed.
+    return { exists: (error && error.code) !== 'ENOENT', ours: false };
   }
 }
 
@@ -483,6 +450,31 @@ async function detectInstalledTools() {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+// The tools whose hooks run agent:done: at the end of each turn (Stop). Codex's
+// SessionEnd only closes the hooks session (its 3 s cap), and OpenCode has no
+// session-end hook.
+const TURN_END_DONE_TOOLS = ['claude', 'antigravity'];
+
+/** What the installed hooks do from now on — each line only for the tools that do it. */
+function logInstalledSummary(logger, tools, includeGuard, agentName) {
+  logger.log('');
+  logger.log('Hooks installed. From now on:');
+  if (includeGuard && tools.includes('claude')) {
+    logger.log('  • Before each file write/edit → context:guard injects salient project-rule constraints');
+  }
+  logger.log('  • Every file write/edit → logged as artifact event');
+  logger.log('  • Every bash command → logged as step_done event');
+  logger.log('  • /aioson:agent:<name> typed in a session → logged as agent_activated');
+  const closing = tools.filter((name) => TURN_END_DONE_TOOLS.includes(name));
+  if (closing.length > 0) logger.log(`  • End of each turn → logged as agent:done (${closing.join(', ')})`);
+  if (tools.some((name) => ['claude', 'codex', 'opencode'].includes(name))) {
+    logger.log('  • After a compaction → the session checkpoint comes back from the recorded events');
+  }
+  logger.log('');
+  logger.log('To verify: aioson live:status . --agent=' + agentName);
+  logger.log('To uninstall: aioson hooks:uninstall --tool=' + tools.join(','));
+}
+
 async function runHooksInstall({ args, options = {}, logger }) {
   const projectDir = resolveTargetDir(args);
   let agentName;
@@ -533,23 +525,7 @@ async function runHooksInstall({ args, options = {}, logger }) {
 
   logger.log('─'.repeat(50));
 
-  if (!dryRun) {
-    logger.log('');
-    logger.log('Hooks installed. From now on:');
-    if (includeGuard && tools.includes('claude')) {
-      logger.log('  • Before each file write/edit → context:guard injects salient project-rule constraints');
-    }
-    logger.log('  • Every file write/edit → logged as artifact event');
-    logger.log('  • Every bash command → logged as step_done event');
-    logger.log('  • /aioson:agent:<name> typed in a session → logged as agent_activated');
-    logger.log('  • Session end → logged as agent:done');
-    if (tools.some((name) => ['claude', 'codex', 'opencode'].includes(name))) {
-      logger.log('  • After a compaction → the session checkpoint comes back from the recorded events');
-    }
-    logger.log('');
-    logger.log('To verify: aioson live:status . --agent=' + agentName);
-    logger.log('To uninstall: aioson hooks:uninstall --tool=' + tools.join(','));
-  }
+  if (!dryRun) logInstalledSummary(logger, tools, includeGuard, agentName);
 
   if (options.json) {
     return { ok: true, results, agentName, dryRun };

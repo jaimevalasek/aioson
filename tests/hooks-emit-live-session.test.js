@@ -153,6 +153,52 @@ test('sem a chave, sessão com processo morto ou duas sessões abertas caem no c
   }
 });
 
+// Um lane worker nasce com AIOSON_LIVE_SESSION=none (adapters/base.js): sem isso,
+// a única sessão aberta do projeto — a de quem abriu o lane — adotava o evento.
+test('com AIOSON_LIVE_SESSION=none (um lane worker) o apply_patch nunca vai para a sessão aberta de quem o abriu', async () => {
+  const dir = makeProject();
+  const patch = { tool_name: 'apply_patch', tool_input: { command: '*** Begin Patch\n*** Update File: src/lane-only.js\n@@\n-a\n+b\n*** End Patch\n' }, tool_response: 'Success.' };
+  try {
+    const parent = await startNoLaunch(dir);
+    setChildPid(dir, parent.sessionKey, process.pid);
+    emitHook(dir, cleanEnv({ AIOSON_LIVE_SESSION: 'none' }), patch);
+    assert.equal((await eventsOf(dir, parent.runKey)).filter((e) => e.event_type === 'artifact').length, 0, 'a sessão do pai não recebe o evento do lane');
+    const own = JSON.parse(fs.readFileSync(hooksSessionFile(dir), 'utf8'));
+    assert.deepEqual((await eventsOf(dir, own.runKey)).filter((e) => e.event_type === 'artifact').map((e) => e.message), ['apply_patch: lane-only.js'], 'o lane grava na própria sessão de hooks');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A sessão de hooks já sabe a pasta dela (arquivo de sessão): o evento não varre
+// todo state.json de live/, que cresce a cada sessão do Codex fechada no SessionEnd.
+test('o evento vai para a pasta que a sessão de hooks já conhece, mesmo com 300 sessões fechadas em live/', async () => {
+  const dir = makeProject();
+  try {
+    emitHook(dir, cleanEnv());
+    const session = JSON.parse(fs.readFileSync(hooksSessionFile(dir), 'utf8'));
+    const live = path.join(dir, '.aioson', 'runtime', 'live');
+    for (let i = 0; i < 300; i += 1) {
+      const key = `hooks-dev-${1000000 + i}`;
+      fs.mkdirSync(path.join(live, key));
+      fs.writeFileSync(path.join(live, key, 'state.json'), JSON.stringify({ session_key: key, run_key: `run-${i}`, status: 'completed', auto_started: true }), 'utf8');
+    }
+    // A stale copy naming the same run, sorted before every other dir: a scan would write there.
+    const decoy = path.join(live, 'hooks-dev-0000000000001');
+    fs.mkdirSync(decoy);
+    fs.writeFileSync(path.join(decoy, 'state.json'), JSON.stringify({ session_key: 'hooks-dev-0000000000001', run_key: session.runKey, status: 'running' }), 'utf8');
+
+    emitHook(dir, cleanEnv(), { tool_name: 'Edit', tool_input: { file_path: 'src/late.js' } });
+    const own = path.join(live, session.sessionKey);
+    const events = fs.readFileSync(path.join(own, 'events.ndjson'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.ok(events.some((event) => event.message === 'Edit: late.js'), 'the event is in the session\'s own events.ndjson');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(own, 'state.json'), 'utf8')).last_events.at(-1).summary, 'Edit: late.js');
+    assert.equal(fs.existsSync(path.join(decoy, 'events.ndjson')), false, 'no other session dir is read for it');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // Ferramenta de mentira aberta pelo `live:start` de verdade: faz o papel do
 // gancho do Claude Code, rodando `hooks:emit` com o ambiente que herdou.
 function writeFakeTool(dir) {

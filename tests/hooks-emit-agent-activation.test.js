@@ -202,6 +202,22 @@ test('sem variável nenhuma, a única sessão aberta do projeto com processo viv
   }
 });
 
+test('context:brief de um lane worker (AIOSON_LIVE_SESSION=none) não troca o agente da sessão aberta de quem o abriu', async () => {
+  const dir = makeProject();
+  try {
+    const start = await startNeutral(dir);
+    const statePath = path.join(dir, '.aioson', 'runtime', 'live', sessionKeyToDirName(start.sessionKey), 'state.json');
+    const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    state.child_pid = process.pid;
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf8');
+
+    brief(dir, envWith({ AIOSON_LIVE_SESSION: 'none' }), 'qa');
+    assert.deepEqual(await activations(dir), [], 'the only open session is the parent\'s: the lane\'s brief never relabels it');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:brief sem --agent não ativa ninguém', async () => {
   const dir = makeProject();
   try {

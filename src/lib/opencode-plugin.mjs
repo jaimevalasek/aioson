@@ -10,8 +10,9 @@
 // injected into the system prompt of the first turn after it (hooks:recap).
 // OpenCode awaits every hook, so the telemetry is queued and never awaited — one
 // aioson process at a time, a bounded queue — while a compaction first waits
-// for the queue, so its marker lands after everything recorded before it.
-// Every call is bounded and best-effort; nothing here can throw into OpenCode.
+// for the queue (15 s at most), so its marker lands after everything recorded
+// before it. Every call and every payload field is bounded and best-effort;
+// nothing here can throw into OpenCode.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
@@ -20,6 +21,7 @@ const AGENT = "__AIOSON_AGENT__";
 const SOURCE = "opencode";
 const TIMEOUT_MS = 15000;
 const TAIL_CHARS = 2000;
+const MAX_FIELD_CHARS = 8000;
 const MAX_QUEUED = 16;
 const TOOLS = { write: "Write", edit: "Edit", multiedit: "MultiEdit", apply_patch: "apply_patch", patch: "apply_patch", bash: "Bash", task: "Task", todowrite: "TodoWrite" };
 
@@ -83,6 +85,9 @@ function aioson(args, payload, cwd) {
     child.stdout.on("data", (chunk) => { out += chunk; });
     child.on("error", () => done(""));
     child.on("close", () => done(out));
+    // An aioson that exits before reading (missing, broken, killed at TIMEOUT_MS)
+    // fails the write asynchronously (EPIPE/EOF): that must stay here, not reach OpenCode.
+    child.stdin.on("error", () => {});
     try { child.stdin.end(payload ? JSON.stringify(payload) : ""); } catch { /* child closed early */ }
   });
 }
@@ -99,6 +104,13 @@ function enqueue(task) {
   tail = tail.then(task).catch(() => {}).then(() => { queued -= 1; });
 }
 
+// A compaction waits for the queued telemetry, so its marker lands after it — TIMEOUT_MS at most in all.
+function drained() {
+  let timer = null;
+  const limit = new Promise((resolve) => { timer = setTimeout(resolve, TIMEOUT_MS); });
+  return Promise.race([tail, limit]).finally(() => clearTimeout(timer));
+}
+
 async function recap(project, sessionID) {
   const session = sessionID ? [`--session=${sessionID}`] : [];
   const out = await aioson(["hooks:recap", project, `--agent=${AGENT}`, `--source=${SOURCE}`, "--when=always", ...session, "--json"], null, project);
@@ -111,6 +123,16 @@ async function recap(project, sessionID) {
 
 const textOf = (parts) => (Array.isArray(parts) ? parts : []).filter((part) => part && part.type === "text" && part.text).map((part) => part.text).join("\n");
 const tail2k = (text) => String(text || "").slice(-TAIL_CHARS);
+// One payload field at a bounded size: hooks:emit reads a prompt's first words
+// and a reply's first 600 characters, and a payload past the pipe's buffer is
+// one an exiting aioson leaves unread.
+const capped = (text) => {
+  const value = String(text || "");
+  return value.length > MAX_FIELD_CHARS ? `${value.slice(0, MAX_FIELD_CHARS)}\n…[truncated by the AIOSON plugin]` : value;
+};
+// A patch reduced to its `*** ` lines (Begin/End, Add/Update/Delete File, Move to):
+// the files are all hooks:emit reads, and a whole-file Add carries the file itself.
+const patchHeaders = (text) => String(text || "").split(/\r?\n/).filter((line) => line.startsWith("*** ")).join("\n");
 
 // The patch text of an apply_patch call, or one rebuilt from the files OpenCode reports changing.
 function patchTextOf(args, output) {
@@ -136,9 +158,9 @@ function bashPayload(payload, args, output) {
 
 // The tool_input of every other recorded tool, in Claude Code's field names.
 function toolInputOf(toolName, args, output) {
-  if (toolName === "apply_patch") return { command: patchTextOf(args, output) };
+  if (toolName === "apply_patch") return { command: capped(patchHeaders(patchTextOf(args, output))) };
   if (toolName === "TodoWrite") return { todos: Array.isArray(args.todos) ? args.todos : [] };
-  if (toolName === "Task") return { description: args.description || "", prompt: args.prompt || "" };
+  if (toolName === "Task") return { description: capped(args.description), prompt: capped(args.prompt) };
   return { file_path: args.filePath || args.file_path || args.path || null };
 }
 
@@ -164,7 +186,7 @@ export const AiosonPlugin = async ({ directory, worktree }) => {
     // The prompt that activates an agent (/dev, @dev) is recorded on the session.
     "chat.message": safe(async (input, output) => {
       const prompt = textOf(output.parts);
-      if (prompt) enqueue(() => emit(project, { hook_event_name: "UserPromptSubmit", prompt, session_id: input.sessionID }));
+      if (prompt) enqueue(() => emit(project, { hook_event_name: "UserPromptSubmit", prompt: capped(prompt), session_id: input.sessionID }));
     }),
     // Writes, edits, patches, commands, task lists and sub-tasks.
     "tool.execute.after": safe(async (input, output) => {
@@ -173,11 +195,11 @@ export const AiosonPlugin = async ({ directory, worktree }) => {
     }),
     // The agent's reply, kept as its own claim.
     "experimental.text.complete": safe(async (input, output) => {
-      if (String(output.text || "").trim()) enqueue(() => emit(project, { hook_event_name: "Stop", last_assistant_message: output.text, session_id: input.sessionID }));
+      if (String(output.text || "").trim()) enqueue(() => emit(project, { hook_event_name: "Stop", last_assistant_message: capped(output.text), session_id: input.sessionID }));
     }),
     // Compaction: everything queued lands first, then the boundary, then the checkpoint for the summarizer.
     "experimental.session.compacting": safe(async (input, output) => {
-      await tail;
+      await drained();
       await emit(project, { hook_event_name: "PreCompact", session_id: input.sessionID });
       const text = await recap(project, input.sessionID);
       if (text && Array.isArray(output.context)) output.context.push(text);

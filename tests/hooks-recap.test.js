@@ -66,9 +66,11 @@ test('PreCompact becomes a compaction marker with its trigger', () => {
   assert.equal(buildEventFromPayload({ hook_event_name: 'PreCompact', trigger: 'weird' }, 'claude').extra.trigger, 'unknown');
 });
 
-test('the window is the stretch between the previous and the newest compaction', () => {
+test('the window is the stretch after the previous compaction, through the newest one, up to the recap', () => {
+  // `after` landed behind the newest marker: Codex records its telemetry in the
+  // background, so the last tool call before a compaction can arrive after it.
   const events = [ev('artifact', 'a'), ev('compaction', 'c1'), ev('artifact', 'b'), ev('compaction', 'c2'), ev('artifact', 'after')];
-  assert.deepEqual(compactionWindow(events).map((e) => e.message), ['b']);
+  assert.deepEqual(compactionWindow(events).map((e) => e.message), ['b', 'after']);
   assert.deepEqual(compactionWindow([ev('artifact', 'x'), ev('artifact', 'y')]).map((e) => e.message), ['x', 'y']);
 });
 

@@ -110,6 +110,7 @@ test('hooks:install --tool=codex merges into ~/.codex/hooks.json, keeps user hoo
     const first = await runHooksInstall({ args: ['.'], options: { tool: 'codex', agent: 'dev' }, logger: out });
     assert.equal(first.ok, true);
     assert.ok(out.lines.some((line) => /\/hooks once — one review covers every AIOSON hook/.test(line)), 'the user is told to trust the hooks once inside Codex');
+    assert.ok(!out.lines.some((line) => /agent:done/.test(line)), `no Codex hook runs agent:done, so the summary never says one does: ${out.lines.join(' | ')}`);
     assert.ok(out.lines.some((line) => /Legacy Codex wrapper retired/.test(line)));
     const wrapper = await fs.readFile(configPaths().codex_wrapper, 'utf8');
     assert.match(wrapper, /exec codex "\$@"/, 'an alias that still points at the wrapper keeps opening Codex');
@@ -274,6 +275,19 @@ test('a Codex command\'s verdict comes from its output text alone: runner summar
   const silent = codexBash('npm run build', "src/app.ts(3,1): error TS2304: Cannot find name 'foo'.\n");
   assert.equal(silent.extra.outcome, undefined, 'no runner summary and no exit line: no verdict');
   assert.equal(silent.extra.result, undefined);
+});
+
+test('a verdict from Codex\'s text needs a test runner: another command, an empty output or a TAP todo fails nothing', () => {
+  const verdict = (event) => [event.extra.outcome, event.extra.result];
+  assert.deepEqual(verdict(codexBash('git log --oneline -3', 'a1b2c3d fix: 3 failing tests in refund\nb2c3d4e feat: refund rounding\n')), [undefined, undefined], 'a commit message is not a test run');
+  assert.deepEqual(verdict(codexBash('grep -c "failed" ci.log', 'ci.log: 2 failed uploads were retried\n')), [undefined, undefined]);
+  assert.deepEqual(verdict(codexBash('test -f dist/app.js', '')), [undefined, undefined], 'an empty output says nothing either way');
+  const todo = 'TAP version 13\n# Subtest: refund rounds\nnot ok 1 - refund rounds # TODO\n  ---\n  duration_ms: 1\n  ...\n1..1\n# tests 1\n# pass 0\n# fail 0\n# todo 1\n';
+  assert.equal(codexBash('node --test', todo).extra.outcome, 'passed', 'a TAP # TODO is reported not ok and fails nothing');
+  assert.equal(codexBash('node --test', 'not ok 2 - flaky # SKIP network\n# fail 0\n').extra.outcome, 'passed', 'nor does a # SKIP');
+  assert.equal(codexBash('pytest -q', '==================== 5 passed, 1 error in 0.55s ====================\n').extra.outcome, 'failed', 'pytest counts a broken fixture as an error');
+  assert.equal(codexBash('cd api && CI=1 npx vitest run', ' Tests  2 failed | 30 passed (32)\n').extra.outcome, 'failed', 'the runner after `cd … &&`, a variable and npx');
+  assert.equal(codexBash('git log --oneline -1', 'Process exited with code 1\n').extra.outcome, 'failed', 'an exit line decides for any command');
 });
 
 test('a harness that reports the exit code inside an object still gets its verdict', () => {

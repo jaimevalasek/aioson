@@ -124,7 +124,8 @@ test('hooks:emit and agent:done meet in one session file', async (t) => {
   try {
     const hooksRun = db.prepare("SELECT run_key FROM agent_runs WHERE agent_name = '@dev' AND source = 'live'").get();
     const types = db.prepare('SELECT event_type FROM agent_events WHERE run_key = ? ORDER BY id').all(hooksRun.run_key).map((row) => row.event_type);
-    assert.deepEqual(types, ['session_started', 'artifact', 'agent_done'], 'the turn closes on the run the hooks write to');
+    assert.deepEqual(types.slice(0, 3), ['session_started', 'artifact', 'agent_done'], 'the turn closes on the run the hooks write to');
+    assert.ok(types.slice(3).every((type) => type.startsWith('memory_reflect')), `only the turn's trailing reflection may follow: ${types.join(', ')}`);
     const standalone = db.prepare("SELECT COUNT(*) AS n FROM agent_runs WHERE agent_name = '@dev' AND source = 'direct'").get().n;
     assert.equal(standalone, 0, 'no standalone "@dev completed" run per call');
   } finally {
@@ -162,8 +163,50 @@ test('a lane worker never inherits the live session of the process that spawned 
   adapter.probe = () => ({ external_process: true, executable: process.execPath, source: 'test' });
   const result = await adapter.execute({ mode: 'external', model: 'x', cwd: dir, prompt_text: 'x', timeout: 20000 });
   assert.equal(result.ok, true, JSON.stringify(result));
-  assert.deepEqual(JSON.parse(fs.readFileSync(out, 'utf8')), { session: null, key: null });
+  // Unset is not enough: without a key, the only open launched session of the
+  // project — the parent's — would be adopted. `none` names no session at all.
+  assert.deepEqual(JSON.parse(fs.readFileSync(out, 'utf8')), { session: 'none', key: null });
   assert.equal(process.env.AIOSON_LIVE_SESSION, 'parent-session', 'the parent keeps its own session');
+});
+
+test('rows recorded before 1.74 stamped the session still come back to it, from the previous compaction on', (t) => {
+  const dir = makeProject(t);
+  // What 1.73 wrote on the run the session kept writing to: no session_id at all.
+  emit(dir, { hook_event_name: 'PostToolUse', tool_name: 'Write', tool_input: { file_path: path.join(dir, 'src', 'refund.js') } });
+  emit(dir, { hook_event_name: 'PostToolUseFailure', tool_name: 'Bash', tool_input: { command: 'npm test' }, error: 'Exit code 1\nTests  1 failed | 12 passed (13)' });
+  emit(dir, { hook_event_name: 'Stop', last_assistant_message: 'Refund rounding half-done; npm test still red.' });
+  // After `aioson update` the same session compacts.
+  emit(dir, { hook_event_name: 'PreCompact', session_id: 'S-inflight', trigger: 'auto' });
+
+  const context = recap(dir, { hook_event_name: 'SessionStart', session_id: 'S-inflight', source: 'compact' });
+  assert.match(context, /Files changed, newest first: src\/refund\.js/, context);
+  assert.match(context, /Still failing \(latest run\): \$ npm test → Tests 1 failed \| 12 passed \(13\)/);
+  assert.match(context, /Agent's last message \(its own claim\): Refund rounding half-done/);
+  const onDemand = cli(['hooks:recap', dir, '--agent=dev', '--source=claude', '--when=always', '--json']);
+  assert.equal(onDemand.status, 0, onDemand.stderr);
+  assert.match(JSON.parse(onDemand.stdout).hookSpecificOutput.additionalContext, /Still failing \(latest run\): \$ npm test/, 'the on-demand door too');
+});
+
+test('rows with no session_id from before the previous compaction never reach another session', (t) => {
+  const dir = makeProject(t);
+  emit(dir, { hook_event_name: 'PostToolUse', tool_name: 'Write', tool_input: { file_path: path.join(dir, 'db', 'migrate', '001_users.sql') } });
+  emit(dir, { hook_event_name: 'Stop', last_assistant_message: 'Migração 001 aplicada; falta rodar o seed de produção.' });
+  emit(dir, { hook_event_name: 'PreCompact', trigger: 'auto' });
+  emit(dir, claudeWrite(dir, 'S2', 'src/ui/button.tsx'));
+  emit(dir, { hook_event_name: 'PreCompact', session_id: 'S2', trigger: 'auto' });
+
+  const context = recap(dir, { hook_event_name: 'SessionStart', session_id: 'S2', source: 'compact' });
+  assert.match(context, /Files changed, newest first: src\/ui\/button\.tsx/);
+  assert.doesNotMatch(context, /001_users|seed de produção/, context);
+});
+
+test('a tool call recorded after the marker of its compaction (async Codex telemetry) is still in that checkpoint', (t) => {
+  const dir = makeProject(t);
+  emit(dir, codexEdit('A1', 'src/a.js'), { source: 'codex' });
+  emit(dir, { hook_event_name: 'PreCompact', session_id: 'A1', trigger: 'auto' }, { source: 'codex' });
+  emit(dir, codexEdit('A1', 'src/late.js'), { source: 'codex' });
+  const context = recap(dir, { hook_event_name: 'SessionStart', session_id: 'A1', source: 'compact' }, { source: 'codex' });
+  assert.match(context, /Files changed, newest first: src\/late\.js, src\/a\.js/, context);
 });
 
 test('outside an AIOSON project every hook entry point exits 0 and creates nothing', (t) => {
@@ -173,6 +216,9 @@ test('outside an AIOSON project every hook entry point exits 0 and creates nothi
     [['hooks:emit', '.', '--agent=dev', '--source=claude'], { hook_event_name: 'PostToolUse', session_id: 'o', tool_name: 'Write', tool_input: { file_path: path.join(outside, 'a.js') } }],
     [['hooks:emit', '.', '--then=agent:done', '--agent=dev', '--source=claude'], { hook_event_name: 'Stop', session_id: 'o', last_assistant_message: 'done' }],
     [['hooks:emit', '.', '--agent=dev', '--source=codex', '--event=SessionEnd'], { hook_event_name: 'SessionEnd', session_id: 'o', reason: 'other' }],
+    // Antigravity's user-wide hooks fire wherever a session stops.
+    [['hooks:emit', '.', '--then=agent:done', '--agent=dev', '--source=antigravity'], { hook_event_name: 'Stop' }],
+    [['hooks:emit', '.', '--agent=dev', '--source=antigravity', '--event=SessionEnd'], { hook_event_name: 'SessionEnd' }],
     [['hooks:recap', '.', '--agent=dev', '--source=codex', '--json'], { hook_event_name: 'SessionStart', session_id: 'o', source: 'compact' }],
     [['context:guard', '.', '--tool=claude', '--agent=auto', '--json'], { tool_name: 'Write', tool_input: { file_path: path.join(outside, 'a.js'), content: 'x' } }]
   ];
