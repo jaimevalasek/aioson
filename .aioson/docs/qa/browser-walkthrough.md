@@ -1,13 +1,13 @@
 ---
 name: browser-walkthrough
-description: Drive the real application in a real browser with a replayable walkthrough script — accessibility-tree-first location, act-then-verify, boundary proof, per-AC/PROM evidence the gates read
+description: Drive the real application in a real browser with a replayable walkthrough script — accessibility-tree-first location, act-then-verify, boundary proof, per-AC/PROM evidence the gates read; paths that start outside the page (webhooks, callbacks) replayed from their entry over fixture cases, with optional Jev judgments
 agents: [qa, tester, shakedown, refiner, dev, pentester, benchmark]
 priority: 10
-version: 1.0.0
+version: 1.1.0
 modes: [executing]
 task_types: [qa, verification, smoke, e2e, browser, prototype, acceptance]
 load_tier: trigger
-triggers: [browser, chrome, walkthrough, production smoke, real application, click, e2e, playwright, cdp, prototype interaction, login wall]
+triggers: [browser, chrome, walkthrough, production smoke, real application, click, e2e, playwright, cdp, prototype interaction, login wall, webhook, simulate external system, fixture cases, data-driven, jev judge, end to end simulation]
 paths: [app/**, src/**, pages/**, components/**, .aioson/briefings/**]
 ---
 
@@ -60,7 +60,7 @@ Keep walkthroughs under `.aioson/qa/walkthroughs/{slug}/<name>.json` (delivery) 
 }
 ```
 
-Top-level: `name`, `feature` (slug), `url` or `file` (a local HTML, opened as `file://`), `scope: "prototype"`, `viewport`, `timeout` (ms per step, default 10000), `boundary_wait` (ms, default 3000), `continue`, `snapshot_lines` (default 80, max 400). Command flags override: `--url`, `--file`, `--slug`, `--prototype`, `--continue`, `--out=<dir>`, `--no-persist`.
+Top-level: `name`, `feature` (slug), `url` or `file` (a local HTML, opened as `file://`), `scope: "prototype"`, `viewport`, `timeout` (ms per step, default 10000), `boundary_wait` (ms, default 3000), `continue`, `snapshot_lines` (default 80, max 400), `vars` (see [Paths that start outside the page](#paths-that-start-outside-the-page)). Command flags override: `--url`, `--file`, `--slug`, `--prototype`, `--continue`, `--out=<dir>`, `--no-persist`.
 
 ### Targets
 
@@ -92,8 +92,43 @@ Append `>>first`, `>>last`, or `>>nth=2` to pick one of several matches.
 | `snapshot` | optional `target`, `max_lines` — writes the aria tree beside the report |
 | `screenshot` | `name`, `full_page` |
 | `eval` | `expression` (page JavaScript), optional `equals` / `contains` |
+| `request` | `url`, `method`, `headers`, `body`, `status`, `contains`, `json`, `save`, `secret`, `poll`, `interval`, `external` — the runner sends the call an outside system would send |
+| `each` | `from` (a JSON file in the project) or `items`, `select`, `where`, `as`, `label`, `limit`, `steps` — the same steps for every case |
+| `judge` | `question`, `type` (`noul`/`score`/`choice`), `criteria`, `min`, `min_score`, `equals`, `min_confidence`, `target`, `context`, `pii`, `soft`, `required` — a Jev judgment of what the page shows |
 
-Any step may carry `ac` (string or array of ids), `boundary` (`"POST /api/orders"`, `"POST /api/orders -> 201"`, or `{ "method", "url", "status" }` — a `/regex/` url is accepted), `boundary_wait`, `timeout`, and `note`.
+Any step may carry `ac` (string or array of ids), `boundary` (`"POST /api/orders"`, `"POST /api/orders -> 201"`, or `{ "method", "url", "status" }` — a `/regex/` url is accepted), `boundary_wait`, `timeout`, and `note`. `optional: true` (not on `each` or `judge`) is for what only sometimes appears — a notes pop-up, a cookie banner: when the step fails it is recorded as skipped, the run goes on, and it proves nothing; give it a short `timeout`.
+
+## Paths that start outside the page
+
+Many production paths begin where no user clicks: a WhatsApp provider calls the webhook, a bank confirms a payment, a worker finishes a job. Seeding the database around that entry skips the part most likely to break. Replay it from the entry instead, then follow it into the screens.
+
+```json
+{
+  "name": "inbound-message-routing",
+  "feature": "inbound-routing",
+  "url": "http://127.0.0.1:3100",
+  "vars": { "channel": "sandbox" },
+  "steps": [
+    { "do": "each", "from": "fixtures/inbound-cases.json", "select": "cases", "where": { "kind": "text" }, "as": "case", "label": "{{case.id}}",
+      "steps": [
+        { "do": "request", "method": "POST", "url": "/api/webhooks/messages?token={{env.WEBHOOK_TOKEN}}",
+          "body": { "channel": "{{channel}}", "from": "{{case.phone}}", "id": "{{run.uid}}", "text": "{{case.message}}" },
+          "status": 200, "save": { "message": "id" }, "ac": "AC-01" },
+        { "do": "request", "url": "/api/messages/{{message}}/route", "headers": { "authorization": "Bearer {{env.SERVICE_TOKEN}}" },
+          "poll": true, "interval": 500, "timeout": 30000, "json": { "status": "classified" }, "ac": "AC-02" },
+        { "do": "goto", "url": "/inbox/{{message}}" },
+        { "do": "expect", "target": "role=log", "contains": "{{case.message}}", "ac": "AC-03" },
+        { "do": "judge", "question": "Does the conversation shown belong to the sector {{case.expected}}?", "target": "role=main", "soft": true }
+      ] }
+  ]
+}
+```
+
+- **Variables** — `{{name}}` works in every field of a step. Names come from `vars`, from a `save` of an earlier `request` (a dotted path into its JSON answer: `id`, `data.items.0.id`), from the loop (`{{case.*}}`, `{{loop.index}}`, `{{loop.count}}`), and from `run`: `{{run.id}}` (one per run), `{{run.uid}}` (fresh on every use — external ids that must not repeat), `{{run.now}}`, `{{run.epoch_ms}}`. A field that is exactly one reference keeps the value's type. An unknown name fails the step.
+- **Secrets** — `{{env.NAME}}` reads the process environment, then the project `.env`; it never lives in the script. The step that read it is masked, and every resolved value is scrubbed (`[env.NAME]`) from the report, the aria artifacts, and whatever a `judge` sends. Request headers are recorded by name only. A screenshot cannot be scrubbed: keep secret inputs in password fields.
+- **`request`** — the runner, not the page, sends it. The default check is a status below 400; `status` (a code or a list), `contains` (text or `/regex/`), and `json` (`path → value`, a value may be `/regex/`) tighten it. `poll: true` repeats it until the checks pass or the step `timeout` ends — the way to wait for background work. `secret: true` makes the values it saves secrets (a session token from a login request): scrubbed like an env value. Only loopback hosts and the walkthrough's own origin are reachable; `"external": true` reaches another host on purpose. A request that answered is recorded as the derived smoke's trigger and real boundary.
+- **`each`** — one record for the loop and one per child step per item, indexed `{loop}.{item}.{child}` and labelled with `label`; a failing item stops the run like any step (`--continue` runs every item). Keep the fixture in the project — a test set with each case's expected outcome is the best one, because the walkthrough can check the outcome per case.
+- **`judge`** — Jev answers one question about the page (the aria tree of `target`, or the whole page) plus an optional `context`. `noul` passes at `min` (the project's Jev threshold by default), `score` at `min_score`, `choice` when the answer is in `equals` (and above `min_confidence`). Personal data — e-mails and digit runs of eight or more — is masked before sending unless `"pii": "keep"`, which is only for synthetic data. A judgment is a critic, never the authority: it never proves or fails an id, a deterministic step must. `soft: true` turns a failed judgment into a warning to review; without Jev configured the step is skipped, never passed, and fails only with `required: true`. See `.aioson/docs/jev-review.md` for when a semantic verdict becomes a finding.
 
 ## Evidence
 

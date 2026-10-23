@@ -19,7 +19,7 @@ const MAX_NETWORK_ROWS = 200;
 const ID_RE = /\b(?:AC|PROM|CAP|REQ)-[A-Za-z0-9][\w.-]*/gi;
 const SENSITIVE_TARGET_RE = /pass|senha|secret|token|pin\b|cvv|otp|mfa|credential|chave|api[-_ ]?key/i;
 const LOGIN_WALL_RE = /(?:^|\/)(?:login|log-in|signin|sign-in|auth|sso|entrar)(?:\/|$|\?)/i;
-const ACTIONS = new Set(['goto', 'reload', 'back', 'click', 'dblclick', 'hover', 'fill', 'type', 'press', 'select', 'check', 'uncheck', 'wait', 'expect', 'snapshot', 'screenshot', 'eval']);
+const ACTIONS = new Set(['goto', 'reload', 'back', 'click', 'dblclick', 'hover', 'fill', 'type', 'press', 'select', 'check', 'uncheck', 'wait', 'expect', 'snapshot', 'screenshot', 'eval', 'request', 'judge', 'each']);
 
 // ---------------------------------------------------------------------------
 // Script
@@ -41,6 +41,52 @@ function idsOf(value) {
  * Validate a parsed script. Returns `{ ok, errors, script }` with defaults
  * applied; never throws.
  */
+function normalizeSteps(steps, errors, nested, label) {
+  // Lazy: the scenario module reads helpers from this one.
+  const { validateRequest, validateJudge, validateEach } = require('./scenario');
+  const normalized = [];
+  (steps || []).forEach((step, index) => {
+    const where = label(index);
+    if (!step || typeof step !== 'object') {
+      errors.push(`${where}: must be an object`);
+      return;
+    }
+    const action = String(step.do || step.action || '').toLowerCase();
+    if (!ACTIONS.has(action)) {
+      errors.push(`${where}: unknown action "${action || '(missing)'}" (known: ${[...ACTIONS].join(', ')})`);
+      return;
+    }
+    if (action === 'goto' && !step.url) errors.push(`${where}: goto needs \`url\``);
+    if (['click', 'dblclick', 'hover', 'fill', 'type', 'select', 'check', 'uncheck'].includes(action) && !step.target) {
+      errors.push(`${where}: ${action} needs \`target\``);
+    }
+    if (['fill', 'type', 'select'].includes(action) && step.value === undefined) errors.push(`${where}: ${action} needs \`value\``);
+    if (action === 'press' && !step.key) errors.push(`${where}: press needs \`key\``);
+    if (action === 'eval' && !step.expression) errors.push(`${where}: eval needs \`expression\``);
+    if (action === 'expect' && !expectKind(step)) errors.push(`${where}: expect needs one of visible|hidden|text|contains|value|url|title|count|min|enabled|disabled|checked`);
+    if (action === 'wait' && !(step.ms || step.target || step.url || step.text || step.idle)) errors.push(`${where}: wait needs ms|target|url|text|idle`);
+    if (step.optional !== undefined && typeof step.optional !== 'boolean') errors.push(`${where}: optional must be true or false`);
+    if (step.optional === true && ['each', 'judge'].includes(action)) errors.push(`${where}: ${action} cannot be optional`);
+    if (action === 'request') errors.push(...validateRequest(step, where));
+    if (action === 'judge') errors.push(...validateJudge(step, where));
+    const ownIds = idsOf([step.ac, step.prom, step.ids, step.proves]);
+    const entry = { ...step, do: action, ids: ownIds, index };
+    if (action === 'each') {
+      errors.push(...validateEach(step, where, nested));
+      const children = Array.isArray(step.steps) && !nested
+        ? normalizeSteps(step.steps, errors, true, (child) => `${where}.steps[${child}]`)
+        : [];
+      entry.steps = children;
+      entry.own_ids = ownIds;
+      // The loop's ids include its children's, so a loop the run never
+      // reached marks every id it would have proved as not reached.
+      entry.ids = [...new Set([...ownIds, ...children.flatMap((child) => child.ids)])];
+    }
+    normalized.push(entry);
+  });
+  return normalized;
+}
+
 function normalizeScript(raw) {
   const errors = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -48,33 +94,8 @@ function normalizeScript(raw) {
   }
   const steps = Array.isArray(raw.steps) ? raw.steps : null;
   if (!steps || steps.length === 0) errors.push('`steps` must be a non-empty array');
-  const normalized = [];
-  (steps || []).forEach((step, index) => {
-    if (!step || typeof step !== 'object') {
-      errors.push(`step ${index}: must be an object`);
-      return;
-    }
-    const action = String(step.do || step.action || '').toLowerCase();
-    if (!ACTIONS.has(action)) {
-      errors.push(`step ${index}: unknown action "${action || '(missing)'}" (known: ${[...ACTIONS].join(', ')})`);
-      return;
-    }
-    if (action === 'goto' && !step.url) errors.push(`step ${index}: goto needs \`url\``);
-    if (['click', 'dblclick', 'hover', 'fill', 'type', 'select', 'check', 'uncheck'].includes(action) && !step.target) {
-      errors.push(`step ${index}: ${action} needs \`target\``);
-    }
-    if (['fill', 'type', 'select'].includes(action) && step.value === undefined) errors.push(`step ${index}: ${action} needs \`value\``);
-    if (action === 'press' && !step.key) errors.push(`step ${index}: press needs \`key\``);
-    if (action === 'eval' && !step.expression) errors.push(`step ${index}: eval needs \`expression\``);
-    if (action === 'expect' && !expectKind(step)) errors.push(`step ${index}: expect needs one of visible|hidden|text|contains|value|url|title|count|min|enabled|disabled|checked`);
-    if (action === 'wait' && !(step.ms || step.target || step.url || step.text || step.idle)) errors.push(`step ${index}: wait needs ms|target|url|text|idle`);
-    normalized.push({
-      ...step,
-      do: action,
-      ids: idsOf([step.ac, step.prom, step.ids, step.proves]),
-      index
-    });
-  });
+  errors.push(...require('./scenario').validateVars(raw.vars));
+  const normalized = normalizeSteps(steps, errors, false, (index) => `step ${index}`);
   const script = {
     // Leading dots are stripped with the dashes: the name becomes the artifact
     // folder that the run clears, and `..` or `.` would name the report dir's
@@ -91,6 +112,7 @@ function normalizeScript(raw) {
     boundary_wait: Number(raw.boundary_wait) > 0 ? Number(raw.boundary_wait) : DEFAULT_BOUNDARY_WAIT_MS,
     continue: Boolean(raw.continue),
     snapshot_lines: clampLines(raw.snapshot_lines),
+    vars: raw.vars && typeof raw.vars === 'object' && !Array.isArray(raw.vars) ? { ...raw.vars } : {},
     steps: normalized
   };
   return { ok: errors.length === 0, errors, script };

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **A browser walkthrough can now replay a path that starts outside the page, over every case of a fixture, and ask Jev about the screen.** `browser:run` only clicked and read: a flow that begins with a provider's webhook or a bank's callback had to be seeded around its entry, so the part most likely to break was never driven. Three steps close that. `request` makes the runner send the call the outside system would send (status, text and JSON-path checks, `poll` for background work, `save` of answer values into variables — `secret: true` for a session token); it reaches loopback hosts and the walkthrough's own origin only, unless the step says `external`. `each` runs the same steps for every case of a JSON fixture inside the project (`select`, `where`, `limit`, a `label` per item), one record per child per item. `judge` asks Jev one question (`noul`, `score` or `choice`) about the aria tree of the page or a target — a critic, never the authority: it never proves or fails an id, a failed `soft` judgment is a warning, and without Jev the step is skipped, never passed. Every step field takes `{{variables}}` — `vars`, saved values, the loop item, `run.id`/`run.uid`/`run.now` — and `{{env.NAME}}` reads a secret from the environment or the project `.env` at run time: the step is masked and the value is scrubbed from the report, the aria artifacts and what Jev receives; e-mails and long digit runs are masked before a judgment unless `pii: "keep"`. Any step can be `optional` for what only sometimes appears (a notes pop-up, a cookie banner): when it does not apply it is recorded as skipped and proves nothing.
+
 ## [1.75.0] - 2026-10-20
 
 ### Fixed

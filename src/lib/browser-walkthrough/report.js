@@ -13,9 +13,17 @@ const { clip } = require('./script');
 // Report
 // ---------------------------------------------------------------------------
 
+// A Jev judgment is a critic, never the authority: it neither proves nor
+// fails an id. The id needs a deterministic step; the judgment stays in the
+// step list and the Semantic judgments section.
+function provesIds(step) {
+  return step.do !== 'judge';
+}
+
 function rollupIds(steps, stoppedAt) {
   const ids = {};
   for (const step of steps) {
+    if (!provesIds(step) || step.skipped) continue;
     for (const id of step.ids || []) {
       if (!ids[id]) ids[id] = { status: 'pass', steps: [], error: null };
       ids[id].steps.push(step.index);
@@ -31,8 +39,11 @@ function rollupIds(steps, stoppedAt) {
 function rollupUnreached(script, executed, ids) {
   const executedIndexes = new Set(executed.map((s) => s.index));
   for (const step of script.steps) {
-    if (executedIndexes.has(step.index)) continue;
-    for (const id of step.ids) {
+    if (executedIndexes.has(step.index) || !provesIds(step)) continue;
+    const loopIds = step.do === 'each'
+      ? [...new Set([...(step.own_ids || []), ...(step.steps || []).filter(provesIds).flatMap((child) => child.ids || [])])]
+      : null;
+    for (const id of loopIds || step.ids) {
       if (!ids[id]) ids[id] = { status: 'not_reached', steps: [step.index], error: null };
       else if (ids[id].status === 'pass') { ids[id].status = 'partial'; ids[id].steps.push(step.index); } else if (!ids[id].steps.includes(step.index)) ids[id].steps.push(step.index);
     }
@@ -40,12 +51,21 @@ function rollupUnreached(script, executed, ids) {
   return ids;
 }
 
-function deriveSmoke(steps) {
+function deriveSmoke(records) {
+  // A skipped step (optional, or a judgment without Jev) did nothing on the path.
+  const steps = records.filter((s) => !s.skipped);
+  // Positions, not step indexes: a loop's records are indexed `{loop}.{item}.{child}`.
   const entry = steps.find((s) => s.do === 'goto' && s.ok);
-  const trigger = steps.find((s) => ['click', 'dblclick', 'fill', 'type', 'press', 'select', 'check', 'uncheck'].includes(s.do) && s.ok);
-  const boundary = steps.filter((s) => s.boundary && s.boundary.hit).map((s) => s.boundary.detail);
+  // A request the runner sends as the outside system (a provider's webhook)
+  // is the trigger of a path that starts outside the page.
+  const triggerAt = steps.findIndex((s) => ['click', 'dblclick', 'fill', 'type', 'press', 'select', 'check', 'uncheck', 'request'].includes(s.do) && s.ok);
+  const trigger = triggerAt >= 0 ? steps[triggerAt] : null;
+  const boundary = [
+    ...steps.filter((s) => s.boundary && s.boundary.hit).map((s) => s.boundary.detail),
+    ...steps.filter((s) => s.do === 'request' && s.ok).slice(0, 5).map((s) => `request ${s.detail}`)
+  ];
   const visible = steps.filter((s) => s.do === 'expect' && s.ok).map((s) => s.expected);
-  const state = steps.filter((s) => s.ok && (s.do === 'eval' || (s.do === 'expect' && steps.some((r) => r.index < s.index && (r.do === 'reload' || r.do === 'goto') && r.index > (trigger ? trigger.index : -1))))).map((s) => s.detail);
+  const state = steps.filter((s, at) => s.ok && (s.do === 'eval' || (s.do === 'expect' && steps.some((r, before) => before < at && (r.do === 'reload' || r.do === 'goto') && before > triggerAt)))).map((s) => s.detail);
   return {
     entry: entry ? entry.url || entry.detail : '',
     trigger: trigger ? trigger.detail : '',
@@ -64,6 +84,11 @@ function buildMarkdown(report) {
   lines.push(`- Browser: ${report.browser.label}${report.browser.version ? ` ${report.browser.version}` : ''}`);
   lines.push(`- Script: ${report.script.path} (sha256 ${report.script.sha256.slice(0, 12)})`);
   lines.push(`- Replay: \`${report.replay}\``);
+  const scenario = report.scenario;
+  if (scenario && (scenario.requests > 0 || scenario.iterations > 0 || Object.values(scenario.judgments || {}).some((n) => n > 0))) {
+    const j = scenario.judgments || {};
+    lines.push(`- Scenario: ${scenario.requests} request(s) sent as the outside system, ${scenario.iterations} loop item(s), Jev judgments ${j.pass || 0} pass / ${j.fail || 0} fail / ${j.concerns || 0} concern / ${j.skipped || 0} skipped`);
+  }
   if (report.superseded_artifacts && report.superseded_artifacts.kept > 0) {
     lines.push(`- Artifacts: ${report.superseded_artifacts.kept} file(s) from the previous run could not be cleared and sit beside this run's (${report.superseded_artifacts.files} cleared) — see Warnings`);
   } else if (report.superseded_artifacts && report.superseded_artifacts.files > 0) {
@@ -96,9 +121,23 @@ function buildMarkdown(report) {
   lines.push('|---|---|---|---|---|---|');
   for (const step of report.steps) {
     const detail = step.ok ? step.detail : `${step.error || step.detail}`;
-    lines.push(`| ${step.index} | ${step.do}${step.target ? ` ${clip(step.target, 60)}` : ''} | ${(step.ids || []).join(', ')} | ${step.ok ? 'ok' : 'FAIL'} | ${clip(detail, 200).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')} | ${step.ms} |`);
+    const result = !step.ok ? 'FAIL' : step.skipped ? 'skipped' : step.warning === 'judge_concern' ? 'concern' : 'ok';
+    lines.push(`| ${step.index}${step.label ? ` [${clip(step.label, 40).replace(/\|/g, '\\|')}]` : ''} | ${step.do}${step.target ? ` ${clip(step.target, 60)}` : ''} | ${(step.ids || []).join(', ')} | ${result} | ${clip(detail, 200).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')} | ${step.ms} |`);
   }
   lines.push('');
+  const judged = report.steps.filter((s) => s.do === 'judge' && s.judge);
+  if (judged.length > 0) {
+    lines.push('## Semantic judgments (Jev — a critic, never the authority: no id is proven or failed by a judgment)');
+    lines.push('');
+    lines.push('| # | Verdict | Question | Rules | Model |');
+    lines.push('|---|---|---|---|---|');
+    for (const step of judged) {
+      const verdict = step.judge.verdict === 'fail' && step.ok ? 'concern' : step.judge.verdict;
+      const question = step.judge.question || step.detail || '';
+      lines.push(`| ${step.index}${step.label ? ` [${clip(step.label, 40).replace(/\|/g, '\\|')}]` : ''} | ${verdict} | ${clip(question, 160).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')} | ${clip(step.judge.rules || step.judge.reason || '', 120).replace(/\|/g, '\\|')} | ${step.judge.model || ''} |`);
+    }
+    lines.push('');
+  }
   if (report.console.errors > 0 || report.console.page_errors > 0) {
     lines.push(`## Console: ${report.console.errors} errors, ${report.console.warnings} warnings, ${report.console.page_errors} page errors`);
     lines.push('');

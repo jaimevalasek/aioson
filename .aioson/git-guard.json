@@ -145,6 +145,13 @@
         "generic_secret_assignment"
       ],
       "reason": "Project-identity tests put a fake GitLab token query parameter in a sandbox remote URL to prove a token in the URL never reaches the stored project name; no credential value is present."
+    },
+    {
+      "path": "tests/browser-walkthrough-scenario.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "The test feeds fake placeholder secrets (env values and a session token named as such) to prove the walkthrough runner scrubs them from reports and Jev requests; no credential."
     }
   ],
   "blockPaths": [

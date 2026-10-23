@@ -18,6 +18,8 @@ aioson jev:review . --profile=qa --dir=<interface-root> --url=<served-entry> --r
 
 A semantic PASS cannot erase an objective issue or missing AC. A semantic FAIL becomes a QA finding only after its concern is tied to evidence or reproduced. If Jev is unavailable, record it as skipped and continue. Do not use `--require-pass` unless project policy or the user explicitly made Jev blocking.
 
+Inside a browser walkthrough, a `judge` step asks Jev one question about the screen at that moment of the path (`.aioson/docs/qa/browser-walkthrough.md`); the same rules hold — it never proves or fails an AC, and an unavailable Jev is a skipped judgment.
+
 ## Refiner route
 
 After deterministic visual evidence, run once per materially changed prototype version:

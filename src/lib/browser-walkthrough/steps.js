@@ -11,6 +11,7 @@ const path = require('node:path');
 const { clampLines, expectKind, sanitizeUrl, maskedValue, clip, until, LOGIN_WALL_RE } = require('./script');
 const { asMatcher, locatorFor, parseBoundary, boundaryHit } = require('./targets');
 const { stripHiddenChars } = require('../llm-content-sanitizer');
+const { resolveStep, scrub, runRequest, runJudge } = require('./scenario');
 
 // ---------------------------------------------------------------------------
 // Step execution
@@ -154,20 +155,34 @@ function previewSnapshot(text, maxLines) {
   return { lines: lines.length, preview: preview.join('\n'), truncated: lines.length > maxLines };
 }
 
-async function executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile }) {
-  const timeout = Number(step.timeout) > 0 ? Number(step.timeout) : script.timeout;
+async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile, scenario = null, scope = {}, index = rawStep.index }) {
   const record = {
-    index: step.index,
-    do: step.do,
-    ids: step.ids,
-    note: step.note ? clip(step.note, 200) : undefined,
-    target: step.target ? String(step.target) : undefined,
+    index,
+    do: rawStep.do,
+    ids: rawStep.ids,
+    note: rawStep.note ? clip(rawStep.note, 200) : undefined,
+    target: rawStep.target ? String(rawStep.target) : undefined,
     ok: false,
     ms: 0,
     detail: '',
     url: '',
     artifacts: []
   };
+  // Variables resolve per execution (an `each` item, a value saved by an
+  // earlier request); the record keeps the step as written, so a secret read
+  // from the environment never lands in it through the template.
+  let step = rawStep;
+  if (scenario) {
+    try {
+      step = resolveStep(rawStep, scenario, scope);
+    } catch (error) {
+      record.error = clip(String(error && error.message || error), 600);
+      try { record.url = sanitizeUrl(page.url()); } catch { record.url = ''; }
+      return record;
+    }
+  }
+  const timeout = Number(step.timeout) > 0 ? Number(step.timeout) : script.timeout;
+  const scrubText = (text) => (scenario ? scrub(text, scenario.secrets) : text);
   const boundary = parseBoundary(step.boundary);
   const networkMark = network.rows.length;
   const boundaryCapture = boundary && network.supportsBoundaryCapture ? { boundary, rows: [] } : null;
@@ -256,7 +271,7 @@ async function executeStep({ page, step, script, baseUrl, artifactDir, artifactP
         break;
       }
       case 'snapshot': {
-        const text = await ariaSnapshot(page, step.target);
+        const text = scrubText(await ariaSnapshot(page, step.target));
         const preview = previewSnapshot(text, clampLines(step.max_lines || script.snapshot_lines));
         record.snapshot = preview;
         record.detail = `aria snapshot: ${preview.lines} lines${preview.truncated ? ` (preview ${clampLines(step.max_lines || script.snapshot_lines)})` : ''}`;
@@ -293,6 +308,16 @@ async function executeStep({ page, step, script, baseUrl, artifactDir, artifactP
         record.detail = `eval → ${clip(text, 120)}`;
         break;
       }
+      case 'request': {
+        if (!scenario) throw new Error('request needs the scenario context');
+        await runRequest({ step, scenario, baseUrl, timeout, record });
+        break;
+      }
+      case 'judge': {
+        if (!scenario) throw new Error('judge needs the scenario context');
+        await runJudge({ step, scenario, page, script, record, readPage: (target) => ariaSnapshot(page, target) });
+        break;
+      }
       default:
         throw new Error(`unsupported action ${step.do}`);
     }
@@ -316,8 +341,18 @@ async function executeStep({ page, step, script, baseUrl, artifactDir, artifactP
 
     record.ok = true;
   } catch (error) {
-    record.ok = false;
-    record.error = clip(String(error && error.message || error), 600).replace(/\s*Call log:[\s\S]*$/, '');
+    const message = clip(String(error && error.message || error), 600).replace(/\s*Call log:[\s\S]*$/, '');
+    if (step.optional === true) {
+      // A step for something that only sometimes appears (a tips pop-up, a
+      // cookie banner): when it does not apply, the run goes on and the step
+      // proves nothing.
+      record.ok = true;
+      record.skipped = true;
+      record.detail = `optional step did not apply: ${message}`;
+    } else {
+      record.ok = false;
+      record.error = message;
+    }
   }
   if (boundaryCapture && network.activeBoundary === boundaryCapture) network.activeBoundary = null;
   record.ms = Math.max(0, clock.now() - started);
