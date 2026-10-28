@@ -21,6 +21,19 @@ function browserOptions(options) {
   };
 }
 
+// `--slow-mo=<ms>`: pace for a person watching a headed run; absent = the script's.
+function slowMoOption(options) {
+  const raw = options['slow-mo'] ?? options.slowMo;
+  return raw === undefined || raw === true ? null : Number(raw);
+}
+
+// `--video` records beside the report; `--video=<file>` records there.
+function videoOption(options) {
+  const raw = options.video;
+  if (raw === undefined || raw === false) return false;
+  return raw === true ? true : String(raw);
+}
+
 // The CLI logger has log/error only; warnings go to stderr without failing.
 function warn(logger, message) {
   if (typeof logger.warn === 'function') logger.warn(message);
@@ -35,7 +48,7 @@ function failure(logger, t, output, message) {
 
 /**
  * `aioson browser:run [path] --script=<walkthrough.json> [--url=] [--file=] [--slug=] [--prototype]
- *   [--cdp=] [--browser=chrome|msedge|chromium] [--headed] [--continue] [--out=<dir>] [--no-persist] [--json]`
+ *   [--cdp=] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--continue] [--out=<dir>] [--no-persist] [--json]`
  */
 async function runBrowserRun({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
@@ -63,6 +76,8 @@ async function runBrowserRun({ args, options = {}, logger, t }) {
     out: String(options.out || ''),
     continueOnFailure: Boolean(options.continue),
     config,
+    slowMo: slowMoOption(options),
+    video: videoOption(options),
     ...browserOptions(options)
   });
 
@@ -97,6 +112,7 @@ async function runBrowserRun({ args, options = {}, logger, t }) {
       planned: loaded.script.steps.length
     }));
     if (report.persisted) logger.log(t('browser_run.report_written', { path: report.report_path }));
+    if (report.video) logger.log(t('browser_run.video_written', { path: report.video }));
     if (report.superseded_artifacts && report.superseded_artifacts.files > 0) {
       logger.log(t('browser_run.superseded', { files: report.superseded_artifacts.files, kb: Math.round(report.superseded_artifacts.bytes / 1024) }));
     }

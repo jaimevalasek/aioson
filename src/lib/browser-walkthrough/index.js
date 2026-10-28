@@ -27,6 +27,7 @@
  */
 
 const fs = require('node:fs/promises');
+const os = require('node:os');
 const path = require('node:path');
 
 const { openBrowser } = require('../browser-session');
@@ -42,7 +43,7 @@ const { isValidSlug } = require('../../dossier/schema');
 const {
   SCHEMA, ACTIONS, DEFAULT_TIMEOUT_MS, DEFAULT_BOUNDARY_WAIT_MS, DEFAULT_SNAPSHOT_LINES,
   MAX_CONSOLE_SAMPLES, MAX_NETWORK_ROWS, LOGIN_WALL_RE,
-  idsOf, normalizeScript, clampLines, loadScript, sanitizeUrl, maskedValue, clip, sha256, sleep, until
+  idsOf, normalizeScript, clampLines, clampSlowMo, loadScript, sanitizeUrl, maskedValue, clip, sha256, sleep, until
 } = scriptContract;
 const { parseTarget, locatorFor, parseBoundary, boundaryHit, urlMatches } = targets;
 const { runExpect, ariaSnapshot, previewSnapshot, executeStep, pad } = steps;
@@ -100,6 +101,9 @@ const defaultJev = {
  * @param {string} [options.slug] feature/briefing slug owning the evidence
  * @param {boolean} [options.prototype] persist beside the briefing (PROM-* scope)
  * @param {boolean} [options.persist=true]
+ * @param {boolean} [options.headed] show the window; captions hold for their `ms` only then
+ * @param {number} [options.slowMo] ms between browser actions (overrides the script's `slow_mo`)
+ * @param {boolean|string} [options.video] record the run: true → beside the report, a path → there; captions hold as for a headed run
  * @param {Function} [options.open] browser opener (openBrowser-compatible), injectable
  * @param {object} [options.clock] { now, wait } injectable
  */
@@ -117,6 +121,8 @@ async function runWalkthrough(options) {
     out = '',
     continueOnFailure = false,
     headed = false,
+    slowMo = null,
+    video = false,
     cdp = '',
     channel = '',
     config = null,
@@ -171,8 +177,15 @@ async function runWalkthrough(options) {
   const artifactDir = dir ? path.join(dir, script.name) : null;
   const startedAt = new Date(clock.now()).toISOString();
 
-  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport });
+  // `--slow-mo` wins over the script's `slow_mo`; both only pace a run.
+  const pace = slowMo === null || slowMo === undefined ? script.slow_mo : clampSlowMo(slowMo);
+  // A recorded run is watched later, so its captions hold as they do for a window.
+  const videoTarget = videoPath({ video, targetDir, artifactDir, name: script.name });
+  const videoTmp = videoTarget ? await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-video-')) : null;
+  const recordVideo = videoTmp ? { recordVideo: { dir: videoTmp, size: script.viewport || DEFAULT_VIDEO_SIZE } } : {};
+  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo });
   if (!session.ok) {
+    if (videoTmp) await fs.rm(videoTmp, { recursive: true, force: true }).catch(() => {});
     return { ok: false, error: session.error, detail: session.detail || '', hint: session.hint || '' };
   }
 
@@ -200,6 +213,7 @@ async function runWalkthrough(options) {
   const ariaSeen = [];
   let stoppedAt = null;
   let page = null;
+  let recording = null;
 
   try {
     // Inside the try: whatever happens here, the session still closes. A
@@ -215,6 +229,7 @@ async function runWalkthrough(options) {
       }
     }
     page = await session.newPage();
+    if (videoTmp && typeof page.video === 'function') recording = page.video();
     if (typeof page.on === 'function') {
       page.on('console', (msg) => {
         const type = typeof msg.type === 'function' ? msg.type() : String(msg.type || '');
@@ -262,7 +277,7 @@ async function runWalkthrough(options) {
     // One executed step → one record: run, diagnose a failure, scrub the
     // secrets the run resolved, collect what the page said.
     const runRecord = async (step, scope, index, extra) => {
-      const record = scrub(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index }), scenario.secrets);
+      const record = scrub(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index, watched: headed || Boolean(videoTarget) }), scenario.secrets);
       Object.assign(record, extra);
       executed.push(record);
       if (record.snapshot && record.snapshot.preview) ariaSeen.push(record.snapshot.preview);
@@ -340,6 +355,8 @@ async function runWalkthrough(options) {
   } finally {
     await session.close().catch(() => {});
   }
+  // The file is complete only once the context closes.
+  const videoSaved = videoTarget ? await keepVideo({ recording, videoTmp, videoTarget, warnings }) : '';
 
   const ids = rollupUnreached(script, executed, rollupIds(executed, stoppedAt));
   const reached = new Set(executed.map((s) => s.index));
@@ -365,6 +382,7 @@ async function runWalkthrough(options) {
     scope,
     target: { url: sanitizeUrl(baseUrl || (executed[0] && executed[0].url) || ''), kind: targetKind },
     browser: { mode: session.mode, label: session.label, version: session.version || '' },
+    video: videoSaved ? reportPath(targetDir, videoSaved) : '',
     started_at: startedAt,
     finished_at: new Date(clock.now()).toISOString(),
     ok,
@@ -401,6 +419,41 @@ async function runWalkthrough(options) {
     report.markdown_path = toRel(targetDir, mdPath);
   }
   return report;
+}
+
+const DEFAULT_VIDEO_SIZE = { width: 1280, height: 720 };
+
+// `--video` lands beside the report (the temp dir when nothing is persisted);
+// `--video=<file>` lands there, relative to the project.
+function videoPath({ video, targetDir, artifactDir, name }) {
+  if (!video) return '';
+  if (typeof video === 'string' && video.trim() && video.trim() !== 'true') return path.resolve(targetDir, video.trim());
+  return path.join(artifactDir || os.tmpdir(), `${name}.webm`);
+}
+
+async function keepVideo({ recording, videoTmp, videoTarget, warnings }) {
+  try {
+    if (!recording) {
+      warnings.push('video not recorded: an attached (--cdp) browser is never filmed — drop --cdp so the run launches its own');
+      return '';
+    }
+    const source = await recording.path();
+    await fs.mkdir(path.dirname(videoTarget), { recursive: true });
+    await fs.copyFile(source, videoTarget);
+    return videoTarget;
+  } catch (error) {
+    warnings.push(`video not saved: ${String(error && error.message || error)}`);
+    return '';
+  } finally {
+    await fs.rm(videoTmp, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+// Inside the project: relative, like every other report path; elsewhere (a
+// Downloads folder): absolute, since `../../..` names nothing a reader can open.
+function reportPath(targetDir, file) {
+  const rel = path.relative(targetDir, file);
+  return rel.startsWith('..') || path.isAbsolute(rel) ? file : toRel(targetDir, file);
 }
 
 /**

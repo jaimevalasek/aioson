@@ -19,7 +19,9 @@ const MAX_NETWORK_ROWS = 200;
 const ID_RE = /\b(?:AC|PROM|CAP|REQ)-[A-Za-z0-9][\w.-]*/gi;
 const SENSITIVE_TARGET_RE = /pass|senha|secret|token|pin\b|cvv|otp|mfa|credential|chave|api[-_ ]?key/i;
 const LOGIN_WALL_RE = /(?:^|\/)(?:login|log-in|signin|sign-in|auth|sso|entrar)(?:\/|$|\?)/i;
-const ACTIONS = new Set(['goto', 'reload', 'back', 'click', 'dblclick', 'hover', 'fill', 'type', 'press', 'select', 'check', 'uncheck', 'wait', 'expect', 'snapshot', 'screenshot', 'eval', 'request', 'judge', 'each']);
+const ACTIONS = new Set(['goto', 'reload', 'back', 'click', 'dblclick', 'hover', 'fill', 'type', 'press', 'select', 'check', 'uncheck', 'wait', 'expect', 'snapshot', 'screenshot', 'eval', 'request', 'judge', 'each', 'caption']);
+const MAX_SLOW_MO_MS = 5000;
+const MAX_HOLD_MS = 60000;
 
 // ---------------------------------------------------------------------------
 // Script
@@ -67,9 +69,15 @@ function normalizeSteps(steps, errors, nested, label) {
     if (action === 'wait' && !(step.ms || step.target || step.url || step.text || step.idle)) errors.push(`${where}: wait needs ms|target|url|text|idle`);
     if (step.optional !== undefined && typeof step.optional !== 'boolean') errors.push(`${where}: optional must be true or false`);
     if (step.optional === true && ['each', 'judge'].includes(action)) errors.push(`${where}: ${action} cannot be optional`);
+    if (action === 'caption') {
+      if (step.text !== undefined && typeof step.text !== 'string') errors.push(`${where}: caption \`text\` must be a string (empty clears the caption)`);
+      if (step.ms !== undefined && !(Number(step.ms) >= 0 && Number(step.ms) <= MAX_HOLD_MS)) errors.push(`${where}: caption \`ms\` must be 0..${MAX_HOLD_MS}`);
+      if (step.position !== undefined && !['top', 'bottom'].includes(step.position)) errors.push(`${where}: caption \`position\` must be top or bottom`);
+    }
     if (action === 'request') errors.push(...validateRequest(step, where));
     if (action === 'judge') errors.push(...validateJudge(step, where));
     const ownIds = idsOf([step.ac, step.prom, step.ids, step.proves]);
+    if (action === 'caption' && ownIds.length > 0) errors.push(`${where}: a caption is narration and proves nothing — move ${ownIds.join(', ')} to the step that checks it`);
     const entry = { ...step, do: action, ids: ownIds, index };
     if (action === 'each') {
       errors.push(...validateEach(step, where, nested));
@@ -112,6 +120,8 @@ function normalizeScript(raw) {
     boundary_wait: Number(raw.boundary_wait) > 0 ? Number(raw.boundary_wait) : DEFAULT_BOUNDARY_WAIT_MS,
     continue: Boolean(raw.continue),
     snapshot_lines: clampLines(raw.snapshot_lines),
+    // Pause between browser actions, for a person watching a headed run.
+    slow_mo: clampSlowMo(raw.slow_mo),
     vars: raw.vars && typeof raw.vars === 'object' && !Array.isArray(raw.vars) ? { ...raw.vars } : {},
     steps: normalized
   };
@@ -122,6 +132,12 @@ function clampLines(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return DEFAULT_SNAPSHOT_LINES;
   return Math.min(Math.floor(n), MAX_SNAPSHOT_LINES);
+}
+
+function clampSlowMo(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(Math.floor(n), MAX_SLOW_MO_MS);
 }
 
 function expectKind(step) {
@@ -209,10 +225,12 @@ module.exports = {
   MAX_SNAPSHOT_LINES,
   MAX_CONSOLE_SAMPLES,
   MAX_NETWORK_ROWS,
+  MAX_HOLD_MS,
   LOGIN_WALL_RE,
   idsOf,
   normalizeScript,
   clampLines,
+  clampSlowMo,
   expectKind,
   loadScript,
   sanitizeUrl,

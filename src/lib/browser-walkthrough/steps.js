@@ -8,7 +8,7 @@
 
 const path = require('node:path');
 
-const { clampLines, expectKind, sanitizeUrl, maskedValue, clip, until, LOGIN_WALL_RE } = require('./script');
+const { clampLines, expectKind, sanitizeUrl, maskedValue, clip, until, LOGIN_WALL_RE, MAX_HOLD_MS } = require('./script');
 const { asMatcher, locatorFor, parseBoundary, boundaryHit } = require('./targets');
 const { stripHiddenChars } = require('../llm-content-sanitizer');
 const { resolveStep, scrub, runRequest, runJudge } = require('./scenario');
@@ -155,7 +155,38 @@ function previewSnapshot(text, maxLines) {
   return { lines: lines.length, preview: preview.join('\n'), truncated: lines.length > maxLines };
 }
 
-async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile, scenario = null, scope = {}, index = rawStep.index }) {
+// Runs in the page. The narration lives in a closed shadow root under an
+// aria-hidden host that lets clicks through: no locator, `text=` match, aria
+// snapshot or Jev judgment can read it, so a caption that quotes the message
+// on screen never makes the expect after it pass on the caption.
+function renderCaption({ text, position }) {
+  /* global document */
+  const id = 'aioson-walkthrough-caption';
+  let host = document.getElementById(id);
+  if (!text) {
+    if (host) host.remove();
+    return 'cleared';
+  }
+  if (!host || !host.__aiosonCaption) {
+    if (host) host.remove();
+    host = document.createElement('div');
+    host.id = id;
+    host.setAttribute('aria-hidden', 'true');
+    host.style.cssText = 'position:fixed;left:0;right:0;z-index:2147483647;display:flex;justify-content:center;pointer-events:none;';
+    const root = host.attachShadow({ mode: 'closed' });
+    const box = document.createElement('div');
+    box.style.cssText = 'max-width:min(92vw,1100px);margin:0 16px;padding:14px 22px;border-radius:12px;background:rgba(17,17,17,.93);color:#fff;font:600 22px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.4);white-space:pre-line;text-align:center;';
+    root.appendChild(box);
+    host.__aiosonCaption = box;
+    document.documentElement.appendChild(host);
+  }
+  host.style.top = position === 'top' ? '16px' : '';
+  host.style.bottom = position === 'top' ? '' : '24px';
+  host.__aiosonCaption.textContent = text;
+  return 'shown';
+}
+
+async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile, scenario = null, scope = {}, index = rawStep.index, watched = false }) {
   const record = {
     index,
     do: rawStep.do,
@@ -308,6 +339,16 @@ async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, 
         record.detail = `eval → ${clip(text, 120)}`;
         break;
       }
+      case 'caption': {
+        const text = String(step.text === undefined ? '' : step.text);
+        await page.evaluate(renderCaption, { text, position: step.position === 'top' ? 'top' : 'bottom' });
+        // The hold is for a person watching — the window now or the video later;
+        // an unwatched run never waits on it.
+        const hold = watched ? Math.min(Math.max(Number(step.ms) || 0, 0), MAX_HOLD_MS) : 0;
+        if (hold > 0) await clock.wait(hold);
+        record.detail = text ? `caption "${clip(text, 160)}"${hold > 0 ? ` (held ${hold}ms)` : ''}` : 'caption cleared';
+        break;
+      }
       case 'request': {
         if (!scenario) throw new Error('request needs the scenario context');
         await runRequest({ step, scenario, baseUrl, timeout, record });
@@ -368,6 +409,7 @@ function pad(n) {
 }
 
 module.exports = {
+  renderCaption,
   resolveUrl,
   runExpect,
   ariaSnapshot,

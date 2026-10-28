@@ -157,6 +157,44 @@ test('openBrowser launches the installed Chrome through the channel when the bun
   assert.equal(session.browser.closed.contexts, 1);
 });
 
+test('openBrowser passes slow motion to a launched or attached browser only when asked', async () => {
+  const launched = fakePlaywright();
+  const exists = (file) => file.replace(/\\/g, '/') === 'C:/pw/chrome.exe';
+  await openBrowser({ playwright: launched, env: NO_ENV, exists, fetchJson: async () => null, headless: false, slowMo: 400 });
+  assert.deepEqual(launched.calls.launch, [{ headless: false, slowMo: 400 }]);
+  await openBrowser({ playwright: launched, env: NO_ENV, exists, fetchJson: async () => null });
+  assert.deepEqual(launched.calls.launch[1], { headless: true }, 'no pace unless asked');
+
+  const attached = fakePlaywright();
+  const connect = [];
+  attached.chromium.connectOverCDP = async (endpoint, options) => {
+    connect.push(options);
+    const browser = attached.makeBrowser(`cdp:${endpoint}`);
+    browser.existing.push({ newPage: async () => ({ close: async () => {}, setViewportSize: async () => {} }), close: async () => {} });
+    return browser;
+  };
+  const session = await openBrowser({ playwright: attached, env: NO_ENV, cdp: '9222', fetchJson: async () => ({ Browser: 'Chrome/140' }), slowMo: 250 });
+  assert.equal(session.ok, true, JSON.stringify(session));
+  assert.deepEqual(connect, [{ slowMo: 250 }]);
+});
+
+test('openBrowser hands the video recording to the context it launches, only when asked', async () => {
+  const contexts = [];
+  const pw = fakePlaywright({
+    launchImpl: async () => ({
+      newContext: async (options) => { contexts.push(options); return { newPage: async () => ({}), close: async () => {} }; },
+      version: () => '140.0',
+      close: async () => {}
+    })
+  });
+  const exists = (file) => file.replace(/\\/g, '/') === 'C:/pw/chrome.exe';
+  const viewport = { width: 1366, height: 800 };
+  const recordVideo = { dir: 'C:/tmp/aioson-video-x', size: viewport };
+  await openBrowser({ playwright: pw, env: NO_ENV, exists, fetchJson: async () => null, viewport, recordVideo });
+  await openBrowser({ playwright: pw, env: NO_ENV, exists, fetchJson: async () => null });
+  assert.deepEqual(contexts, [{ viewport, recordVideo }, {}]);
+});
+
 test('openBrowser reports the missing prerequisite instead of throwing', async () => {
   const pw = fakePlaywright();
   const nothing = await openBrowser({ playwright: pw, env: NO_ENV, exists: () => false, fetchJson: async () => null, platform: 'linux' });

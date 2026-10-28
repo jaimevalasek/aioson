@@ -243,7 +243,7 @@ module.exports = {
     help_qa_scan:
       'aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] [--html] [--json] [--locale=fr]',
     help_browser_run:
-      'aioson browser:run [path] --script=<walkthrough.json> [--url=<url-app>|--file=<html>] [--slug=<feature>] [--prototype] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--continue] [--out=<dir>] [--no-persist] [--json] [--locale=fr]',
+      'aioson browser:run [path] --script=<walkthrough.json> [--url=<url-app>|--file=<html>] [--slug=<feature>] [--prototype] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--continue] [--out=<dir>] [--no-persist] [--json] [--locale=fr]',
     help_browser_snapshot:
       'aioson browser:snapshot [path] --url=<url-page>|--file=<html> [--target=<locator>] [--max-lines=80] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--json] [--locale=fr]',
     help_qa_report:
@@ -1229,6 +1229,7 @@ module.exports = {
     verdict_pass: 'Walkthrough PASS : {passed}/{total} étapes ok.',
     verdict_fail: 'Walkthrough FAIL : {passed}/{total} étapes ok ({planned} prévues).',
     report_written: 'Rapport écrit : {path}',
+    video_written: 'Vidéo enregistrée : {path}',
     superseded: '{files} artefact(s) de l\'exécution précédente supprimé(s) ({kb} Ko) — le dossier d\'artefacts ne garde que cette exécution.',
     replay: 'Replay : {command}'
   },

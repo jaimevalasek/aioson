@@ -15,9 +15,10 @@ const { clip } = require('./script');
 
 // A Jev judgment is a critic, never the authority: it neither proves nor
 // fails an id. The id needs a deterministic step; the judgment stays in the
-// step list and the Semantic judgments section.
+// step list and the Semantic judgments section. A caption is narration for a
+// person watching and proves nothing either.
 function provesIds(step) {
-  return step.do !== 'judge';
+  return step.do !== 'judge' && step.do !== 'caption';
 }
 
 function rollupIds(steps, stoppedAt) {
@@ -82,6 +83,7 @@ function buildMarkdown(report) {
   lines.push(`- Verdict: **${report.ok ? 'PASS' : 'FAIL'}** (${report.steps.filter((s) => s.ok).length}/${report.steps.length} steps executed ok${report.stopped_at !== null ? `, stopped at step ${report.stopped_at}` : ''})`);
   lines.push(`- Target: ${report.target.url} (${report.target.kind}, scope ${report.scope})`);
   lines.push(`- Browser: ${report.browser.label}${report.browser.version ? ` ${report.browser.version}` : ''}`);
+  if (report.video) lines.push(`- Video: ${report.video}`);
   lines.push(`- Script: ${report.script.path} (sha256 ${report.script.sha256.slice(0, 12)})`);
   lines.push(`- Replay: \`${report.replay}\``);
   const scenario = report.scenario;

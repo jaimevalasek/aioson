@@ -1,13 +1,13 @@
 ---
 name: browser-walkthrough
-description: Drive the real application in a real browser with a replayable walkthrough script — accessibility-tree-first location, act-then-verify, boundary proof, per-AC/PROM evidence the gates read; paths that start outside the page (webhooks, callbacks) replayed from their entry over fixture cases, with optional Jev judgments
+description: Drive the real application in a real browser with a replayable walkthrough script — accessibility-tree-first location, act-then-verify, boundary proof, per-AC/PROM evidence the gates read; paths that start outside the page (webhooks, callbacks) replayed from their entry over fixture cases, with optional Jev judgments; narrated slow-motion demos a person can watch
 agents: [qa, tester, shakedown, refiner, dev, pentester, benchmark]
 priority: 10
-version: 1.1.0
+version: 1.2.0
 modes: [executing]
 task_types: [qa, verification, smoke, e2e, browser, prototype, acceptance]
 load_tier: trigger
-triggers: [browser, chrome, walkthrough, production smoke, real application, click, e2e, playwright, cdp, prototype interaction, login wall, webhook, simulate external system, fixture cases, data-driven, jev judge, end to end simulation]
+triggers: [browser, chrome, walkthrough, production smoke, real application, click, e2e, playwright, cdp, prototype interaction, login wall, webhook, simulate external system, fixture cases, data-driven, jev judge, end to end simulation, browser demo, watch it happen, narrated walkthrough, slow motion]
 paths: [app/**, src/**, pages/**, components/**, .aioson/briefings/**]
 ---
 
@@ -60,7 +60,7 @@ Keep walkthroughs under `.aioson/qa/walkthroughs/{slug}/<name>.json` (delivery) 
 }
 ```
 
-Top-level: `name`, `feature` (slug), `url` or `file` (a local HTML, opened as `file://`), `scope: "prototype"`, `viewport`, `timeout` (ms per step, default 10000), `boundary_wait` (ms, default 3000), `continue`, `snapshot_lines` (default 80, max 400), `vars` (see [Paths that start outside the page](#paths-that-start-outside-the-page)). Command flags override: `--url`, `--file`, `--slug`, `--prototype`, `--continue`, `--out=<dir>`, `--no-persist`.
+Top-level: `name`, `feature` (slug), `url` or `file` (a local HTML, opened as `file://`), `scope: "prototype"`, `viewport`, `timeout` (ms per step, default 10000), `boundary_wait` (ms, default 3000), `continue`, `snapshot_lines` (default 80, max 400), `vars` (see [Paths that start outside the page](#paths-that-start-outside-the-page)), `slow_mo` (ms between browser actions, max 5000 — see [A run a person watches](#a-run-a-person-watches)). Command flags override: `--url`, `--file`, `--slug`, `--prototype`, `--continue`, `--out=<dir>`, `--no-persist`, `--slow-mo=<ms>`, `--video[=<file>]`.
 
 ### Targets
 
@@ -95,6 +95,7 @@ Append `>>first`, `>>last`, or `>>nth=2` to pick one of several matches.
 | `request` | `url`, `method`, `headers`, `body`, `status`, `contains`, `json`, `save`, `secret`, `poll`, `interval`, `external` — the runner sends the call an outside system would send |
 | `each` | `from` (a JSON file in the project) or `items`, `select`, `where`, `as`, `label`, `limit`, `steps` — the same steps for every case |
 | `judge` | `question`, `type` (`noul`/`score`/`choice`), `criteria`, `min`, `min_score`, `equals`, `min_confidence`, `target`, `context`, `pii`, `soft`, `required` — a Jev judgment of what the page shows |
+| `caption` | `text` (empty clears it), `ms` (hold, headed runs only, max 60000), `position` (`bottom`/`top`) — narration on screen for a person watching; proves nothing |
 
 Any step may carry `ac` (string or array of ids), `boundary` (`"POST /api/orders"`, `"POST /api/orders -> 201"`, or `{ "method", "url", "status" }` — a `/regex/` url is accepted), `boundary_wait`, `timeout`, and `note`. `optional: true` (not on `each` or `judge`) is for what only sometimes appears — a notes pop-up, a cookie banner: when the step fails it is recorded as skipped, the run goes on, and it proves nothing; give it a short `timeout`.
 
@@ -129,6 +130,21 @@ Many production paths begin where no user clicks: a WhatsApp provider calls the 
 - **`request`** — the runner, not the page, sends it. The default check is a status below 400; `status` (a code or a list), `contains` (text or `/regex/`), and `json` (`path → value`, a value may be `/regex/`) tighten it. `poll: true` repeats it until the checks pass or the step `timeout` ends — the way to wait for background work. `secret: true` makes the values it saves secrets (a session token from a login request): scrubbed like an env value. Only loopback hosts and the walkthrough's own origin are reachable; `"external": true` reaches another host on purpose. A request that answered is recorded as the derived smoke's trigger and real boundary.
 - **`each`** — one record for the loop and one per child step per item, indexed `{loop}.{item}.{child}` and labelled with `label`; a failing item stops the run like any step (`--continue` runs every item). Keep the fixture in the project — a test set with each case's expected outcome is the best one, because the walkthrough can check the outcome per case.
 - **`judge`** — Jev answers one question about the page (the aria tree of `target`, or the whole page) plus an optional `context`. `noul` passes at `min` (the project's Jev threshold by default), `score` at `min_score`, `choice` when the answer is in `equals` (and above `min_confidence`). Personal data — e-mails and digit runs of eight or more — is masked before sending unless `"pii": "keep"`, which is only for synthetic data. A judgment is a critic, never the authority: it never proves or fails an id, a deterministic step must. `soft: true` turns a failed judgment into a warning to review; without Jev configured the step is skipped, never passed, and fails only with `required: true`. See `.aioson/docs/jev-review.md` for when a semantic verdict becomes a finding.
+
+## A run a person watches
+
+The same script can be a demonstration: the owner watches the real flow — a customer's message arriving, the screen that receives it, the person who answers — instead of reading a report. Run it with `--headed`, pace it with `--slow-mo=<ms>` (or `slow_mo` in the script; 300–600 reads well), and narrate with `caption` steps:
+
+```json
+{ "do": "caption", "text": "A customer writes on WhatsApp: “{{case.message}}”", "ms": 3500 },
+{ "do": "request", "method": "POST", "url": "/api/webhooks/messages", "body": { "text": "{{case.message}}" } },
+{ "do": "type", "target": "role=textbox[name=\"Type a message\"]", "value": "{{case.reply}}", "delay": 35 }
+```
+
+- A caption is a large banner at the bottom (or `position: "top"`) that stays until the next caption replaces it; `text: ""` clears it. It lives in a closed shadow root under an `aria-hidden` host that lets clicks through, so no locator, `text=` match, aria snapshot or Jev judgment can read it — a caption that quotes the message on screen never makes the `expect` after it pass on the caption.
+- `ms` holds the caption only when someone will watch — a headed run, or a recorded one; headless (CI) the same script runs at full speed, so the demonstration stays a regression test. `type` with `delay` (ms per key) shows the text being typed.
+- `--video` records the run to `{name}.webm` beside the report; `--video=<file>` records it there (relative to the project), for an owner who watches later or on another machine. It needs no window: a headless recorded run holds its captions and keeps its pace. Only a browser the run launches is filmed — an attached `--cdp` session is the operator's and is never recorded (the report warns). The report's `- Video:` line names the file.
+- A caption carries no `ac`: it is narration, never evidence.
 
 ## Evidence
 

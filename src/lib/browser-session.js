@@ -219,9 +219,12 @@ function modeLabel(mode, details = {}) {
  * Open a browser session. Resolves the same way `probeBrowsers` reports, then
  * either attaches (CDP) or launches (channel / bundled).
  *
+ * `recordVideo` ({ dir, size }) records a launched browser's pages; an attached
+ * (CDP) session never records — the operator's browser is not ours to film.
+ *
  * @returns {Promise<{ok: boolean, mode?: string, label?: string, browser?: object, context?: object, newPage?: Function, close?: Function, error?: string, hint?: string}>}
  */
-async function openBrowser({ projectDir = null, playwright = undefined, env = process.env, config = null, cdp = '', channel = '', headless = true, viewport = null, exists = fs.existsSync, fetchJson = defaultFetchJson, platform = process.platform } = {}) {
+async function openBrowser({ projectDir = null, playwright = undefined, env = process.env, config = null, cdp = '', channel = '', headless = true, viewport = null, slowMo = 0, recordVideo = null, exists = fs.existsSync, fetchJson = defaultFetchJson, platform = process.platform } = {}) {
   const pw = playwright === undefined ? loadPlaywright([projectDir]) : playwright;
   if (!pw) {
     return { ok: false, error: 'playwright_not_installed', hint: 'npm install -D playwright (the project) or run from a tree that has it' };
@@ -245,7 +248,7 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
   if (mode === 'cdp') {
     let browser;
     try {
-      browser = await pw.chromium.connectOverCDP(probe.modes.cdp.endpoint);
+      browser = await pw.chromium.connectOverCDP(probe.modes.cdp.endpoint, slowMo > 0 ? { slowMo } : undefined);
     } catch (error) {
       return { ok: false, error: 'cdp_connect_failed', detail: String(error && error.message || error), hint: 'the endpoint answered /json/version but refused the DevTools connection' };
     }
@@ -276,7 +279,7 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
     };
   }
 
-  const launchOptions = { headless };
+  const launchOptions = { headless, ...(slowMo > 0 ? { slowMo } : {}) };
   if (mode === 'chrome' || mode === 'msedge') launchOptions.channel = mode;
   let browser;
   try {
@@ -284,7 +287,7 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
   } catch (error) {
     return { ok: false, error: 'browser_launch_failed', detail: String(error && error.message || error), mode, hint: mode === 'bundled' ? 'npx playwright install chromium' : `Playwright could not launch channel=${mode}` };
   }
-  const context = await browser.newContext(viewport ? { viewport } : {});
+  const context = await browser.newContext({ ...(viewport ? { viewport } : {}), ...(recordVideo ? { recordVideo } : {}) });
   return {
     ok: true,
     mode,

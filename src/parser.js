@@ -27,6 +27,9 @@ const BOOLEAN_FLAGS = new Set([
   // feature:export structure/output toggles — pure booleans; without these
   // a following positional (e.g. `--flatten .`) would be swallowed as the value.
   'flatten', 'no-index',
+  // browser:run — `--video` records beside the report; the `--video=<file>`
+  // form is parsed by the `=` branch first, so `--video .` keeps the path.
+  'video',
   // jev:judge — `--check` is a switch (live key probe); `dossier:audit` keeps
   // its documented `--check=<name>` form, which the `=` branch parses first.
   'check',
