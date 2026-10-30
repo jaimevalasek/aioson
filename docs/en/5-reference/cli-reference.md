@@ -1310,6 +1310,17 @@ aioson execution:seed [path] --lanes=<lane-a,lane-b> [--feature=<slug>] [--json]
 
 Writes `.aioson/config/execution-roles.json` for the lanes given — or, with `--feature` and no `--lanes`, for the plan's `## Development execution lanes` table, or, before that table exists, one lane per measured surface of a two-surface plan (`lanes_source: surfaces`) — **disabled**: one `{lane}_dev` role per lane plus `integration_dev` and `qa`, each on an execution host installed on this machine (the reviewer on a second host when there is one, `independent_review: false` otherwise), every model the harness default `configured-default`, `source` naming the planner and the feature. Never touches an existing file (`already_present`, with `missing_roles` the lanes need and the file lacks — exit 0). Refuses with the cause when no execution host is installed (`no_execution_host`, with the install command per registered host), when the write fails (`write_failed`), or when the lanes are missing or malformed (`lanes_required`, `lane_invalid`, `too_many_lanes`) — exit 1. Choosing the models, enabling the file and signing the hosts stay the owner's acts; the framework seeds, it never unlocks.
 
+## execution:configure
+
+```bash
+aioson execution:configure [path] --feature=<slug> [--lanes=backend,frontend] --json
+aioson execution:configure [path] --feature=<slug> --config=<reviewed-json-file> --expect-digest=<expected_digest> --confirm --json
+```
+
+Describes a wizard for the main monitoring chat without writing configuration or launching hosts. Single DEV remains the recommended implementation default; orchestration is an explicit choice. The chat asks CLI, model and reasoning effort for each implementation lane, QA and final integration supervisor (`integration_dev`). Model IDs and compatible efforts come from the local catalog when available; an unavailable catalog permits an exact model ID, validated before execution. Existing settings and CLI defaults require explicit keep/change answers. Show the complete summary, then confirm, edit or cancel.
+
+The confirmed command requires every role's `host`, `model` and `reasoning_effort` in the reviewed document; `null` explicitly selects the configured effort. It saves atomically and records a role-map-bound confirmation. A stale or missing `--expect-digest` refuses the write. The current chat remains the coordinator; `integration_dev` selects the external final integration DEV. Follow `next` to validate the chosen routes, then `compile_command`. The executor refuses unconfirmed default models before automatic host validation or dispatch, including `--resume` and `--detach`.
+
 ## execution:profiles:validate
 
 ```bash

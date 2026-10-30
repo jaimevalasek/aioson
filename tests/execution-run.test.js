@@ -10,7 +10,7 @@ const { spawnSync } = require('node:child_process');
 
 const { runExecution: runCommand, formatProgress } = require('../src/commands/execution');
 const { runStatePath, parseChoice, composeQaPrompt, nextAvailableReport } = require('../src/agent-execution/execution-run');
-const { signatureKey, writeSignatures } = require('../src/lib/host-signature');
+const { signatureKey, writeSignatures, DEFAULT_MODEL } = require('../src/lib/host-signature');
 const { acquireLease, releaseLease } = require('../src/agent-execution/dispatcher');
 const { openRuntimeDb, getExecutionSnapshot, listExecutionEvents } = require('../src/runtime-store');
 const { buildQaLaneProfile } = require('../src/agent-execution/qa-lane-profile');
@@ -277,6 +277,58 @@ async function readState(ctx) {
 }
 
 // ───────────────────────── preflight ─────────────────────────
+
+test('signed default models cannot start, resume, detach or probe before the explicit role configuration confirmation', async t => {
+  const roles = structuredClone(ROLES);
+  roles.roles.frontend_dev.host = 'codex';
+  roles.roles.integration_dev = { host: 'codex', model: DEFAULT_MODEL, reasoning_effort: null };
+  for (const role of Object.values(roles.roles)) {
+    role.model = DEFAULT_MODEL;
+    role.reasoning_effort = null;
+  }
+  const signatures = Object.fromEntries(['codex', 'claude'].map(host => [signatureKey(host, DEFAULT_MODEL, null), signed(host, DEFAULT_MODEL, null)]));
+  const ctx = await setup(t, { roles, signatures });
+  let probes = 0;
+  const fakes = adapters();
+  for (const extra of [{ preflight: true }, {}, { resume: true }, { fresh: true }, { detach: true }]) {
+    const refused = await run(ctx, { registry: fakes.registry, extra, engine: { profileProbe: async () => { probes += 1; throw new Error('unconfirmed configuration must never probe'); } } });
+    assert.equal(refused.ok, false, JSON.stringify(refused));
+    assert.equal(refused.reason, 'preflight_failed');
+    assert.match(refused.preflight.issues.join('\n'), /defaults_unconfirmed.*execution:configure/);
+  }
+  assert.equal(probes, 0);
+  assert.equal(fakes.log.length, 0, 'no worker started');
+  assert.equal(await fs.access(runStatePath(ctx.dir, SLUG)).then(() => true).catch(() => false), false);
+  // Complete the production wizard, explicitly selecting the CLI model and
+  // configured effort for every role, rather than hand-writing a receipt.
+  const wizardOptions = { configureOptions: { locate: async binary => ['codex', 'claude'].includes(binary) ? path.join(ctx.binDir, `${binary}.exe`) : null, catalogLoader: async () => ({ models: [] }) } };
+  const wizard = await runCommand({ args: [ctx.dir], options: { sub: 'configure', feature: SLUG, json: true }, logger, env: ctx.env, engineOptions: wizardOptions });
+  assert.equal(wizard.state, 'awaiting_confirmation');
+  const config = path.join(ctx.dir, 'reviewed-choices.json');
+  await fs.writeFile(config, JSON.stringify(wizard.configuration));
+  const applied = await runCommand({ args: [ctx.dir], options: { sub: 'configure', feature: SLUG, config, confirm: true, 'expect-digest': wizard.expected_digest, json: true }, logger, env: ctx.env, engineOptions: wizardOptions });
+  assert.equal(applied.state, 'confirmed', JSON.stringify(applied));
+  const ready = await run(ctx, { registry: fakes.registry, extra: { preflight: true } });
+  assert.equal(ready.status, 'ready', JSON.stringify(ready.preflight));
+  // A new effort is a new choice even when a previous host/model is signed.
+  roles.roles.backend_dev.reasoning_effort = 'high';
+  await fs.writeFile(path.join(ctx.dir, '.aioson/config/execution-roles.json'), JSON.stringify(roles));
+  const changed = await run(ctx, { registry: fakes.registry, extra: { preflight: true } });
+  assert.equal(changed.reason, 'preflight_failed');
+  assert.match(changed.preflight.issues.join('\n'), /defaults_unconfirmed/);
+});
+
+test('framework-created named models also require model/effort confirmation before any probe or worker', async t => {
+  const roles = { ...structuredClone(ROLES), source: 'aioson-planner (feature: orders)' };
+  const ctx = await setup(t, { roles });
+  const fakes = adapters();
+  let probes = 0;
+  const result = await run(ctx, { registry: fakes.registry, engine: { profileProbe: async () => { probes += 1; throw new Error('not confirmed'); } } });
+  assert.equal(result.reason, 'preflight_failed');
+  assert.match(result.preflight.issues.join('\n'), /configuration_unconfirmed.*execution:configure/);
+  assert.equal(probes, 0);
+  assert.equal(fakes.log.length, 0);
+});
 
 test('context use above the retired ceiling runs to completion and remains visible in metrics', async t => {
   const ctx = await setup(t);

@@ -28,9 +28,8 @@
  * frontend / shared per file — the axis models are assigned on, since each
  * lane's `{lane}_dev` role carries its own host and model). `proposeSplit`
  * turns those numbers into candidate lanes and rows: raw material the planner
- * turns into tables; `recommendExecution` turns them into the measured
- * recommendation the question cites — the roles file's lock state is never an
- * input. The measurement never decides: the answer is the owner's.
+ * turns into tables. Single DEV is always the recommended starting path;
+ * scale informs an explicitly requested orchestration, never selects it.
  */
 
 const {
@@ -338,34 +337,20 @@ function measurePlanScale(content, { minFiles = DEFAULT_SPLIT_MIN_FILES, ceiling
 }
 
 /**
- * The measured recommendation for the one execution question — advice, never
- * the answer. `single` below the split floor, or when nothing measurable can
- * run in parallel; `orchestrated` when the plan is a split candidate AND a
- * real cut exists (two surfaces, or rows already sharing a wave). The roles
- * file's lock state is deliberately NOT an input: an incident showed the
- * asking model reading "locked" as "not advisable" and recommending a single
- * context for a 52-file two-surface plan. Availability names the unlock step;
- * it never flips what the numbers say. The owner still decides.
+ * The onboarding recommendation is single DEV at every scale. Measurements
+ * still describe possible cuts, but orchestration requires the owner's explicit
+ * choice and role configuration. Advice never overrides a recorded choice.
  */
-function recommendExecution(scale, { proposal = null } = {}) {
+function recommendExecution(scale) {
   if (!scale || !scale.files) return { choice: 'single', reasons: ['no plan measured'] };
   const floor = scale.threshold?.min_files ?? DEFAULT_SPLIT_MIN_FILES;
   if (!scale.split_candidate) {
     return { choice: 'single', reasons: [`${scale.files} file(s) below the ${floor}-file split floor for one context`] };
   }
-  const surfaces = scale.surfaces || {};
-  const concurrent = scale.parallelism?.max_concurrent_units || 0;
-  if (surfaces.two_sided !== true && concurrent < 2) {
-    return { choice: 'single', reasons: [`split candidate (${scale.files} files ≥ ${floor}) with one measured surface and no rows sharing a wave — nothing to cut on yet`] };
-  }
-  const reasons = [`${scale.files} files ≥ the ${floor}-file floor for one context`];
-  if (surfaces.two_sided === true) reasons.push(`two surfaces (backend ${surfaces.backend} · frontend ${surfaces.frontend})`);
-  if (concurrent >= 2) reasons.push(`${concurrent} units already share a wave`);
-  if (proposal && Array.isArray(proposal.rows) && proposal.rows.length > 0) reasons.push(`the split proposal cuts ${proposal.rows.length} row(s) into surface lanes`);
-  return { choice: 'orchestrated', reasons };
+  return { choice: 'single', reasons: ['single DEV is the recommended default for simpler implementation and monitoring; orchestration requires an explicit user choice'] };
 }
 
-/** `orchestrated — 52 files ≥ the 12-file floor for one context; two surfaces (backend 14 · frontend 38)` */
+/** Formats advice independently of the owner's recorded execution choice. */
 function formatRecommendation(recommendation) {
   if (!recommendation) return 'none';
   return `${recommendation.choice} — ${recommendation.reasons.join('; ')}`;

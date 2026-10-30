@@ -200,8 +200,8 @@ test('planner activation pins the offer when every role is signed; a compiled pl
   let result = await activate(dir);
   assert.equal(result.agent, 'planner');
   assert.match(result.prompt, /Orchestrated execution: AVAILABLE \(roles signed on this machine: backend_dev=codex\/gpt-5\.6\/high, frontend_dev=kimi\/kimi-k3, qa=claude\/claude-sonnet-5\)\./);
-  assert.match(result.prompt, /Ask the user once \(AskUserQuestion\): single DEV or orchestrated lanes with these roles — recommend what `plan\.recommendation` measures/);
-  assert.doesNotMatch(result.prompt, /\(default, as today\)/, 'the fixed default that overrode the measurement is gone');
+  assert.match(result.prompt, /Ask the user once \(AskUserQuestion\): single DEV \(recommended default\) or orchestrated lanes/);
+  assert.match(result.prompt, /ask model AND effort per role in the main monitoring chat/);
   assert.match(result.prompt, /aioson execution:compile \. --feature=orders/);
   assert.doesNotMatch(result.prompt, /Compiled execution plan/);
 

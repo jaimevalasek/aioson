@@ -127,7 +127,7 @@ The authority chain stays complete: every required `PROM-*` resolves through PRD
 
 Present the trade-off compactly: **single DEV** usually has the shortest wall-clock path; **orchestrated lanes** optimize isolation and independent review, not speed, and may take longer through per-unit DEV → QA, recovery and integration. Never invent hours without comparable evidence. For orchestration add `Monitor: aioson execution:dashboard . --feature={slug}` (waves, active units, elapsed time and integration).
 
-After writing the plan, run `aioson execution:offer . --feature={slug} --json`. When `plan.scale.split_candidate` is true (12+ files) or the user asked for split execution, ask once (AskUserQuestion): single DEV or orchestrated lanes, recommending `plan.recommendation` for its reasons; a lock never flips it — cite `onboarding.next` as the unlock step. Record the answer: `execution: single` in the frontmatter, or:
+Run `aioson execution:offer . --feature={slug} --json` after writing. If `plan.scale.split_candidate` or split execution was requested, ask once (AskUserQuestion): **single DEV (recommended default)** or orchestrated lanes. Honor an explicit orchestration choice. Record `execution: single` in the frontmatter, or:
 
 ```markdown
 ## Development execution lanes
@@ -137,7 +137,7 @@ After writing the plan, run `aioson execution:offer . --feature={slug} --json`. 
 | frontend | src/ui/**, tests/ui/** | dev |
 ```
 
-Lanes are the model axis (each `{lane}_dev` role has its own host/model): one per surface when `plan.scale.surfaces` shows backend and frontend, disjoint write paths, tests under a lane-owned path (`plan.split_proposal` is raw material). Then `aioson execution:seed . --feature={slug}` writes the roles file disabled — one `{lane}_dev` per lane plus `qa` on installed hosts; models, enabling and signing are the owner's acts, never yours. Once the offer answers `available`, `aioson execution:compile . --feature={slug}` derives manifest lanes and unit prompts from the tables (never hand-edit; refusals name findings).
+Lanes are the model axis: backend/frontend when measured, disjoint code/tests (`plan.split_proposal` is raw material). Open `aioson execution:configure . --feature={slug} --json` in the main monitoring chat: ask **model and effort per role**, QA and integration supervisor included. Follow `.aioson/docs/dev/execution-lanes.md`; defaults never answer the wizard. After confirmation, `aioson execution:compile . --feature={slug}` derives lanes and prompts from the tables; never hand-edit them.
 
 For orchestrated lanes or the compiled harness lane (`.aioson/plans/{slug}/harness-contract.json` exists or the user requests `@forge-run`), add one `## Execution Sequence` table to the plan — `execution:compile` and `forge:compile` refuse without it; the plain Dev lane never needs it:
 

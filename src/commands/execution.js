@@ -21,7 +21,7 @@
  *   execution:graph   --feature    the compiled plan drawn as a graph (ascii |
  *                                  mermaid | json), run state laid over it
  *
- * All read-only on refusal; `offer` never fails the process.
+ * Offer and configuration previews are read-only; `offer` never fails the process.
  */
 
 const fs = require('node:fs/promises');
@@ -84,7 +84,7 @@ function logDependencies(logger, result) {
 const { renderMonitor } = require('../agent-execution/execution-terminal');
 const { runExecutionProfileValidation } = require('./execution-profile-validation');
 
-const SUBCOMMANDS = ['offer', 'seed', 'profiles:validate', 'compile', 'run', 'decide', 'status', 'graph', 'dependencies', 'dashboard', 'prices'];
+const SUBCOMMANDS = ['offer', 'seed', 'configure', 'profiles:validate', 'compile', 'run', 'decide', 'status', 'graph', 'dependencies', 'dashboard', 'prices'];
 const STATUS_FORMATS = ['full', 'line', 'table'];
 const DEFAULT_WATCH_SECONDS = 5;
 
@@ -277,9 +277,8 @@ async function describePlanTables(projectDir, feature, { env, now }) {
     execution_choice: content !== null ? resolveExecutionChoice(content).choice : null,
     // Candidate lanes and rows cut by surface — raw material, never a table.
     split_proposal: proposal,
-    // What the numbers say the question should recommend. Lock state is not
-    // an input: availability names the unlock step, it never flips this.
-    recommendation: scale ? recommendExecution(scale, { proposal }) : null,
+    // The simple starting path remains recommended at every measured scale.
+    recommendation: scale ? recommendExecution(scale) : null,
     compiled: { path: executionPlanRelative(feature), exists: compiled.exists, fresh: false, issues: [] }
   };
   if (compiled.exists) {
@@ -421,12 +420,26 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
           }
           for (const line of formatSplitProposal(result.plan.split_proposal)) logger.log(`  ${line}`);
           if (result.plan.recommendation) {
-            const locked = result.plan.recommendation.choice === 'orchestrated' && !offer.available
-              ? ` (locked today — that never flips the recommendation; unlock: ${result.onboarding.next})`
-              : '';
-            logger.log(`  recommendation: ${formatRecommendation(result.plan.recommendation)}${locked}`);
+            logger.log(`  recommendation: ${formatRecommendation(result.plan.recommendation)}`);
           }
         }
+      }
+    }
+    return result;
+  }
+
+  if (sub === 'configure') {
+    const { runExecutionConfigure } = require('./execution-configure');
+    const plan = feature ? await describePlanTables(projectDir, feature, { env, now }) : null;
+    const lanes = typeof options.lanes === 'string' ? options.lanes.split(',') : plan?.lanes?.length ? plan.lanes : (plan?.split_proposal?.lanes || []).map(lane => lane.lane);
+    const result = await runExecutionConfigure({ projectDir, feature, lanes, options, env, now, ...engineOptions.configureOptions });
+    if (!options.json) {
+      if (!result.ok) logger.error(`${result.reason}: ${result.message}`);
+      else {
+        logger.log(`Execution wizard: ${result.state}`);
+        for (const role of result.roles) logger.log(`  ${role.label}: ${role.current.host}/${role.current.model} / effort=${role.current.reasoning_effort || 'CLI configured (choose explicitly)'}`);
+        logger.log(result.instructions);
+        logger.log(`Next: ${result.next}`);
       }
     }
     return result;

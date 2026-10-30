@@ -474,6 +474,8 @@ module.exports = {
       'aioson execution:offer [path] [--feature=<slug>] [--confirm-defaults] [--json] [--locale=pt-BR]',
     help_execution_seed:
       'aioson execution:seed [path] --lanes=<lane-a,lane-b> [--feature=<slug>] [--json] [--locale=pt-BR]',
+    help_execution_configure:
+      'aioson execution:configure [path] --feature=<slug> [--lanes=<lane-a,lane-b>] [--config=<arquivo-json-revisado> --expect-digest=<digest> --confirm] [--json] — wizard de modelo e effort por papel no chat de monitoramento',
     help_execution_profiles_validate:
       'aioson execution:profiles:validate [path] [--profile=<nome[,nome2]>] [--concurrency=<1..10>] [--ttl=<horas>] [--timeout=<ms>] [--refresh] [--status] [--json] [--locale=pt-BR]',
     help_execution_compile:

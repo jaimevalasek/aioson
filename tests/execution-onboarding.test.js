@@ -152,7 +152,7 @@ test('execution:offer names the unlock step and the measured scale — silence w
   assert.equal(result.reason, 'roles_file_missing');
   assert.equal(result.onboarding.state, 'not_unlocked');
   // The plan declares backend/frontend lanes, so the seed command is complete, not a placeholder.
-  assert.equal(result.onboarding.next, `aioson execution:seed . --feature=${SLUG} --lanes=backend,frontend`);
+  assert.equal(result.onboarding.next, `aioson execution:configure . --feature=${SLUG} --lanes=backend,frontend --json`);
   assert.ok(result.hosts.registered.includes('codex'));
   assert.ok(Array.isArray(result.hosts.installed));
   assert.deepEqual(result.plan.lanes, ['backend', 'frontend']);
@@ -165,13 +165,13 @@ test('execution:offer names the unlock step and the measured scale — silence w
   assert.equal(result.plan.scale.threshold.min_files, 12);
 
   const withoutFeature = await offer(dir, env);
-  assert.equal(withoutFeature.onboarding.next, 'aioson execution:seed . --feature=<slug> --lanes=<lane-a,lane-b>');
+  assert.equal(withoutFeature.onboarding.next, 'aioson execution:configure . --feature=<slug> --lanes=<lane-a,lane-b> --json');
   assert.equal(withoutFeature.plan, undefined);
 
   const disabled = await setup(t, { roles: { ...ROLES, enabled: false } });
   const off = await offer(disabled.dir, disabled.env);
   assert.equal(off.onboarding.state, 'disabled');
-  assert.match(off.onboarding.next, /set "enabled": true in \.aioson\/config\/execution-roles\.json/);
+  assert.match(off.onboarding.next, /execution:configure.*--json/);
 
   const unsigned = await offer(dir, env, {});
   assert.equal(unsigned.reason, 'roles_file_missing');
@@ -187,7 +187,7 @@ test('execution:offer names the unlock step and the measured scale — silence w
   assert.equal(low.plan.scale.threshold.min_files, 5);
 });
 
-test('execution:offer recommends on the measured scale, never on the lock — the incident: a locked 52-file two-surface plan was presented with "single DEV (Recommended)"', async (t) => {
+test('execution:offer recommends single DEV even for a 52-file two-surface plan and preserves the measured split proposal', async (t) => {
   // The incident's shape: 38 frontend + 12 backend + 2 shared files in 5
   // phases, no lanes table, no sequence — the state the question is asked in.
   const panel = Array.from({ length: 38 }, (_, i) => `apps/panel/src/S${i}.tsx`);
@@ -216,19 +216,17 @@ test('execution:offer recommends on the measured scale, never on the lock — th
   assert.equal(result.plan.scale.phases, 5);
   assert.equal(result.plan.scale.split_candidate, true);
   assert.equal(result.plan.scale.surfaces.two_sided, true);
-  // The measured recommendation is orchestrated even though the path is locked.
-  assert.equal(result.plan.recommendation.choice, 'orchestrated');
-  assert.match(result.plan.recommendation.reasons[0], /52 files ≥ the 12-file floor for one context/);
-  assert.ok(result.plan.recommendation.reasons.some((reason) => /two surfaces \(backend 12 · frontend 38\)/.test(reason)));
-  assert.equal(result.onboarding.next, `aioson execution:seed . --feature=${SLUG} --lanes=backend,frontend`);
+  assert.equal(result.plan.recommendation.choice, 'single');
+  assert.match(result.plan.recommendation.reasons[0], /recommended default.*explicit user choice/);
+  assert.deepEqual(result.plan.split_proposal.lanes.map(lane => lane.lane), ['backend', 'frontend']);
+  assert.equal(result.onboarding.next, `aioson execution:configure . --feature=${SLUG} --lanes=backend,frontend --json`);
 
-  // The human output prints the recommendation and says the lock never flips it.
+  // Human output carries the same default as JSON.
   const lines = [];
   await runExecution({ args: [dir], options: { sub: 'offer', feature: SLUG }, logger: { log: (line) => lines.push(line), error() {}, warn() {} }, env });
   const recommendationLine = lines.find((line) => line.includes('recommendation:'));
   assert.ok(recommendationLine, 'the offer prints the recommendation line');
-  assert.match(recommendationLine, /recommendation: orchestrated — 52 files/);
-  assert.match(recommendationLine, /locked today — that never flips the recommendation; unlock: aioson execution:seed \. --feature=orders --lanes=backend,frontend/);
+  assert.match(recommendationLine, /recommendation: single — .*recommended default/);
 
   // A recorded single choice below any real cut still recommends single — the recommendation is advice, the choice stays the owner's.
   const smallResult = await offer(dir, { ...env, AIOSON_EXECUTION_SPLIT_MIN_FILES: '100' }, { feature: SLUG });
@@ -360,7 +358,7 @@ test('execution:seed through the command: lanes come from --lanes or from the pl
   assert.equal(payload.plan.execution_choice, null);
   const human = run(['execution:offer', empty.dir, `--feature=${SLUG}`]);
   assert.equal(human.status, 0);
-  assert.match(human.stdout, /next: aioson execution:seed \. --feature=orders --lanes=<lane-a,lane-b>/);
+  assert.match(human.stdout, /next: aioson execution:configure \. --feature=orders --lanes=<lane-a,lane-b> --json/);
   assert.match(human.stdout, /scale: 0 file\(s\) in 0 phase\(s\), 0 wave\(s\), 0 in parallel — below the split floor \(12 files\); execution choice not recorded/);
 });
 
@@ -386,7 +384,7 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
     { role: 'qa', host: 'codex', model: DEFAULT_MODEL }
   ]);
   assert.equal(result.onboarding.state, 'pending_confirmation');
-  assert.equal(result.onboarding.next, 'aioson execution:offer . --confirm-defaults');
+  assert.equal(result.onboarding.next, 'aioson execution:configure . --feature=<slug> --json');
   assert.equal(result.missing, undefined, 'signatures were not even evaluated');
   assert.equal(result.confirmation, undefined);
 
@@ -419,7 +417,8 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
   assert.equal(result.reason, 'defaults_unconfirmed');
   assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'integration_dev', 'qa']);
 
-  // AC-offer-silent: every model chosen → no pendency, no confirmation needed.
+  // Naming all models on a framework-created profile still requires the
+  // complete model/effort confirmation; signatures are a different decision.
   await edit((document) => {
     const roles = document.profiles[document.active_profile].roles;
     roles.frontend_dev.model = 'claude-sonnet-5';
@@ -427,6 +426,9 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
     roles.qa.model = 'gpt-5.6';
   });
   result = await offer(dir, env);
+  assert.equal(result.reason, 'configuration_unconfirmed');
+  assert.deepEqual(result.pending_confirmation.map(item => item.role), ['backend_dev', 'frontend_dev', 'integration_dev', 'qa']);
+  result = await offer(dir, env, { 'confirm-defaults': true });
   assert.equal(result.reason, 'signature_missing');
   assert.equal(result.pending_confirmation, undefined);
 

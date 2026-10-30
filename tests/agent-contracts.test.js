@@ -95,13 +95,12 @@ test('Planner asks the orchestration question on the measured scale and records 
     const orchestration = await fs.readFile(path.join(ROOT, file.startsWith('template/') ? 'template' : '', modulePath), 'utf8');
     assert.match(planner, /aioson execution:offer \. --feature=\{slug\} --json/, `${file}: the offer runs after the plan is written`);
     assert.match(planner, /plan\.scale\.split_candidate/, `${file}: the question is asked on the measured number`);
-    assert.match(planner, /onboarding\.next/, `${file}: a locked path names its unlock step`);
-    // The third incident: 52 files, two surfaces, roles file missing — and the model marked "single DEV (Recommended)" because the kernel pinned a fixed default and read the lock as advice.
-    assert.match(planner, /recommending `plan\.recommendation`/, `${file}: the recommendation is the measured one, never a fixed default`);
-    assert.match(planner, /a lock never flips it/, `${file}: availability names the unlock step, it never argues for single DEV`);
-    assert.doesNotMatch(planner, /single DEV \(default\)/, `${file}: the fixed default that overrode the measurement is gone`);
+    assert.match(planner, /defaults never answer the wizard/, `${file}: settings never stand in for explicit answers`);
+    assert.match(planner, /single DEV \(recommended default\)/, `${file}: single DEV is always the starting recommendation`);
+    assert.match(planner, /Honor an explicit orchestration choice/, `${file}: advice never overrides the owner's answer`);
+    assert.match(planner, /execution:configure.*main monitoring chat.*model and effort per role/, `${file}: orchestration asks model AND effort`);
     assert.match(planner, /`execution: single` in the frontmatter/, `${file}: the single-DEV answer is recorded`);
-    assert.match(planner, /aioson execution:seed \. --feature=\{slug\}/, `${file}: lanes seed the roles file`);
+    assert.match(planner, /aioson execution:configure \. --feature=\{slug\} --json/, `${file}: lanes open the role wizard`);
     assert.match(planner, /\| Lane \| Exact write paths \| Integration owner \|/, `${file}: the lanes table is lane, paths, owner`);
     assert.doesNotMatch(planner, /\| Lane \| Host \| Model \|/, `${file}: host and model belong to the roles file, not the plan`);
     assert.match(planner, /the measured plan scale earns the question; the answer is the user's or the approved PRD's/, `${file}: classification never decides`);
@@ -114,7 +113,7 @@ test('Planner asks the orchestration question on the measured scale and records 
     // The second incident: "one row per delivery phase" produced a single lane running one whole phase per process.
     assert.match(orchestration, /One row per UNIT \(one process, one context\), never per phase/, `${file}: the Execution Sequence row is the unit, not the phase`);
     assert.doesNotMatch(planner, /One row per delivery phase/, `${file}: the old prescription is gone`);
-    assert.match(planner, /Lanes are the model axis \(each `\{lane\}_dev` role has its own host\/model\): one per surface when `plan\.scale\.surfaces` shows backend and frontend/, `${file}: lanes are declared by surface because the model is assigned per lane`);
+    assert.match(planner, /Lanes are the model axis: backend\/frontend when measured, disjoint code\/tests/, `${file}: lanes are declared by measured surface with disjoint ownership`);
     assert.match(orchestration, /plan\.scale\.units\[\]\.over_budget/, `${file}: the unit ceiling is the measured cut`);
     assert.match(orchestration, /a bare phase number = every row of that phase/, `${file}: Depends on semantics for a phase cut per lane`);
     assert.match(orchestration, /one lane with one row per wave is serial by construction \(`orchestration_serial`\)/, `${file}: the serial shape is named`);

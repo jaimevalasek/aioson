@@ -6,6 +6,31 @@ src: "AIOSON supervised session: plano de 77 arquivos em 4 fases encadeadas saiu
 
 # A opção existia inteira e era invisível
 
+## Política vigente desde 30/10/2026
+
+O dono revisou a recomendação descrita no terceiro incidente: **DEV único é
+sempre o padrão recomendado**, pois novos usuários se perdiam na execução
+orquestrada. A escala continua sendo medida e pode orientar uma divisão,
+mas não promove a opção avançada. Orquestração exige escolha explícita.
+
+O outro defeito foi reproduzido: `execution:offer` dizia
+`defaults_unconfirmed`, mas compile e preflight aceitavam os mesmos papéis
+assinados sem confirmação. `execution:configure` agora fornece ao chat
+principal um wizard que pergunta **modelo e effort por papel**, usa opções
+do catálogo local ou modelos já registrados, exige resumo confirmado e
+grava sob lock com digest esperado. O executor verifica a mesma confirmação
+antes de sondar hosts e antes de despachar, também em resume/detach.
+Configurações criadas pelo planner/wizard exigem confirmação mesmo com todos
+os modelos nomeados; trocar effort também invalida a confirmação. A seleção
+do supervisor usa `integration_dev`; o chat atual continua o coordenador.
+
+Reproduções em `tests/execution-configure.test.js` e
+`tests/execution-run.test.js`, incluindo dois processos disputando a mesma
+configuração. As seções abaixo registram a evolução histórica, não a
+política atual de recomendação.
+
+## Histórico
+
 Toda a máquina de execução orquestrada estava pronta — tabela de faixas,
 `execution:compile`, motor de ondas, spawner, painel do cliente desktop — e
 tinha **um único gatilho**: `execution:offer` respondendo `available: true`,

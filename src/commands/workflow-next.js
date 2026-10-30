@@ -1769,15 +1769,15 @@ async function buildExecutionActivationContext(targetDir, state, stageName) {
         const installed = await installedExecutionHosts();
         const onboarding = describeOnboarding(offer, { feature: slug, installed });
         return `Orchestrated execution: NOT UNLOCKED here (${offer.reason}; execution hosts installed on this machine: ${installed.join(', ') || 'none'}). `
-          + `After writing the plan, \`aioson execution:offer . --feature=${slug} --json\` measures \`plan.scale\` and \`plan.recommendation\` — a split candidate earns the one question (single DEV or orchestrated lanes), and the measured recommendation is the one to present: the lock never flips it; \`onboarding.next\` names the unlock step (now: ${onboarding.next}).`;
+          + `After writing the plan, \`aioson execution:offer . --feature=${slug} --json\` measures \`plan.scale\` — a split candidate earns the one question: single DEV (recommended default) or orchestrated lanes. Scale and availability never change the recommendation. Honor explicit orchestration and complete its model/effort wizard; \`onboarding.next\` names the next step (now: ${onboarding.next}).`;
       }
       const roles = Object.entries(offer.roles.roles)
         .map(([key, role]) => `${key}=${role.host}/${role.model}${role.reasoning_effort ? `/${role.reasoning_effort}` : ''}`)
         .join(', ');
       const lines = [
         `Orchestrated execution: AVAILABLE (roles signed on this machine: ${roles}).`,
-        `Ask the user once (AskUserQuestion): single DEV or orchestrated lanes with these roles — recommend what \`plan.recommendation\` measures (aioson execution:offer . --feature=${slug} --json), never a fixed default. `
-        + 'On orchestrated: add the `## Development execution lanes` and `## Execution Sequence` tables to the plan, then run '
+        `Ask the user once (AskUserQuestion): single DEV (recommended default) or orchestrated lanes. Existing roles never imply the choice. On explicit orchestration, ask model AND effort per role in the main monitoring chat with \`aioson execution:configure . --feature=${slug} --json\`; confirm the full summary. `
+        + 'Add the `## Development execution lanes` and `## Execution Sequence` tables to the plan, then run '
         + `\`aioson execution:compile . --feature=${slug}\` before completing — with orchestrated execution selected, the planner stage cannot complete on a missing or stale compiled plan.`
       ];
       const compiled = await readExecutionPlan(targetDir, slug);
@@ -1799,7 +1799,7 @@ async function buildExecutionActivationContext(targetDir, state, stageName) {
     ];
     if (!status.run) {
       lines.push(`Run state: ${status.compiled ? 'compiled, not started' : `NOT COMPILED — run: aioson execution:compile . --feature=${slug}`}.`);
-      lines.push(`Next: aioson execution:run . --feature=${slug} --preflight --json, then aioson execution:run . --feature=${slug}; answer decisions with execution:decide; integrate from aioson execution:status . --feature=${slug} --json.`);
+      lines.push(`Before the first run, open the wizard in this main monitoring chat: aioson execution:configure . --feature=${slug} --json. Ask model AND reasoning effort explicitly per role (including QA and integration supervisor); confirm the full summary before applying. Then aioson execution:run . --feature=${slug} --preflight --json and aioson execution:run . --feature=${slug}; answer decisions with execution:decide; integrate from aioson execution:status . --feature=${slug} --json.`);
     } else {
       const run = status.run;
       lines.push(`Run state: ${run.status}${run.reason ? ` (${run.reason})` : ''} — lane units passed ${run.units.passed}/${run.units.lane}, qa passed ${run.units.qa_passed}, findings ${status.findings.length}, decisions pending ${run.decisions_pending.length}.`);
@@ -1827,7 +1827,7 @@ async function buildExecutionActivationContext(targetDir, state, stageName) {
  */
 async function inspectExecutionScale(targetDir, slug) {
   const none = { blocking: false, advisory: false };
-  const { measurePlanScale, resolveExecutionChoice, splitMinFiles, formatPlanScale, formatRecommendation, formatUnit, proposeSplit, recommendExecution, unitCeiling } = require('../lib/plan-scale');
+  const { measurePlanScale, resolveExecutionChoice, splitMinFiles, formatPlanScale, formatRecommendation, formatUnit, recommendExecution, unitCeiling } = require('../lib/plan-scale');
   const { parseDevelopmentLanes } = require('../harness/plan-waves');
   let content;
   try {
@@ -1839,7 +1839,7 @@ async function inspectExecutionScale(targetDir, slug) {
   const choice = resolveExecutionChoice(content);
   if (!scale.split_candidate) return none;
   if (!choice.choice) {
-    const recommendation = recommendExecution(scale, { proposal: proposeSplit(content, { minFiles: splitMinFiles(process.env), ceiling: unitCeiling(process.env) }) });
+    const recommendation = recommendExecution(scale);
     return {
       blocking: false,
       advisory: true,
@@ -1847,7 +1847,7 @@ async function inspectExecutionScale(targetDir, slug) {
       check: 'execution_scale',
       scale,
       recommendation,
-      message: `[Execution Scale] the plan for "${slug}" touches ${formatPlanScale(scale)} — a split candidate (floor ${scale.threshold.min_files} files for one context) — and records no execution choice. Ask the owner once (single DEV or orchestrated lanes), recommending the measured choice: ${formatRecommendation(recommendation)}. A locked roles file never flips the recommendation — it only names the unlock step. Record the answer: \`execution: single\` in the plan frontmatter, or the \`## Development execution lanes\` table + aioson execution:seed . --feature=${slug} --lanes=<lane-a,lane-b>.`
+      message: `[Execution Scale] the plan for "${slug}" touches ${formatPlanScale(scale)} — a split candidate (floor ${scale.threshold.min_files} files for one context) — and records no execution choice. Ask the owner once: single DEV (recommended default) or orchestrated lanes. Recommendation: ${formatRecommendation(recommendation)}. Scale and availability never change it. Record the answer: \`execution: single\` in the plan frontmatter, or the \`## Development execution lanes\` table + aioson execution:configure . --feature=${slug} --json (explicit model/effort choices and confirmed summary).`
     };
   }
   if (choice.choice !== 'orchestrated') return none;

@@ -66,7 +66,7 @@ const { readSignatures, findSignature, signatureState, ensureHostSignature, prob
 const { getExecutionCapabilities, resolveSandboxArgs, LANE_WORKER_MODE } = require('../lib/tool-capabilities');
 const { captureCorrectionBaseline } = require('../lib/specialist-correction');
 const { openRuntimeDb, appendExecutionEvent } = require('../runtime-store');
-const { profileFallbackOrder, readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner } = require('../lib/execution-roles');
+const { profileFallbackOrder, readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner, checkExecutionConfirmation } = require('../lib/execution-roles');
 const { wrapRegistryWithSpawner } = require('./adapters/spawner');
 const { currentActivity, observeExecution } = require('./execution-observation');
 const { createExecutionLoopGuard, structuredTool } = require('./execution-loop-guard');
@@ -1392,6 +1392,10 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
   check('manifest', Boolean(loaded.exists && loaded.ok), loaded.exists ? (loaded.ok ? null : 'invalid') : 'missing');
   const rolesRead = await readExecutionRoles(projectDir);
   const store = await readSignatures({ env });
+  if (rolesRead.ok && rolesRead.enabled) {
+    const confirmation = await checkExecutionConfirmation(projectDir, rolesRead.roles);
+    if (!confirmation.ok) check('execution-configuration', false, `${confirmation.reason}: ${confirmation.pending.map(role => role.role).join(', ')} — complete the role wizard in the monitoring chat: aioson execution:configure . --feature=${feature} --json`);
+  }
   const policyRead = await readExecutionPolicy(projectDir);
   if (!policyRead.ok) check('execution-policy', false, policyRead.errors.join('; '));
   const routingWarnings = [];
@@ -1575,7 +1579,7 @@ async function runExecution({
     // checked; a continuously edited file remains a normal preflight/runtime
     // configuration error, not an unbounded validation loop.
     for (let pass = 0; pass < 3; pass += 1) {
-      if (!current?.ok || !current.enabled || !current.file_digest) return { roles: current, result, digest: null };
+      if (!current?.ok || !current.enabled || !current.file_digest || !(await checkExecutionConfirmation(projectDir, current.roles)).ok) return { roles: current, result, digest: null };
       const targetDigest = current.file_digest;
       const profile = runtimeProfileOption(current);
       emit({ type: 'profile_validation', status: 'checking', profiles: profile || 'legacy' });
@@ -1994,6 +1998,8 @@ async function runExecution({
       // would read the invalid file again.
       if (!keptPrevious) currentRoles = await validateChangedRuntimeConfig(currentRoles);
       if (!currentRoles?.ok || !currentRoles.enabled) throw new Error(`${currentRoles?.reason || 'roles_unavailable'}: ${currentRoles?.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles?.path || 'execution roles changed during validation'}`);
+      const confirmation = await checkExecutionConfirmation(projectDir, currentRoles.roles);
+      if (!confirmation.ok) throw new Error(`${confirmation.reason}: complete the model/effort wizard before dispatch: aioson execution:configure . --feature=${feature} --json`);
       const supervisorTakeover = !override && role === 'dev' && Boolean(unitState.supervisor_takeover);
       const routingLaneId = supervisorTakeover ? 'integration' : laneId;
       const selected = resolveLaneRoles(currentRoles.roles, routingLaneId)[role];

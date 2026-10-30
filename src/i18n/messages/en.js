@@ -476,6 +476,8 @@ module.exports = {
       'aioson execution:offer [path] [--feature=<slug>] [--confirm-defaults] [--json] [--locale=en]',
     help_execution_seed:
       'aioson execution:seed [path] --lanes=<lane-a,lane-b> [--feature=<slug>] [--json] [--locale=en]',
+    help_execution_configure:
+      'aioson execution:configure [path] --feature=<slug> [--lanes=<lane-a,lane-b>] [--config=<reviewed-json-file> --expect-digest=<digest> --confirm] [--json] — role model and effort wizard in the monitoring chat',
     help_execution_profiles_validate:
       'aioson execution:profiles:validate [path] [--profile=<name[,name2]>] [--concurrency=<1..10>] [--ttl=<hours>] [--timeout=<ms>] [--refresh] [--status] [--json] [--locale=en]',
     help_execution_compile:

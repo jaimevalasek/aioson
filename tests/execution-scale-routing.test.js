@@ -171,13 +171,13 @@ test('planner activation names the locked state and the unlock step for MEDIUM f
   assert.match(pin, /aioson execution:offer \. --feature=orders --json/);
   assert.match(pin, /`plan\.scale`/);
   assert.match(pin, /onboarding\.next/);
-  assert.match(pin, /now: aioson execution:seed \. --feature=orders --lanes=<lane-a,lane-b>\)\.$/);
+  assert.match(pin, /now: aioson execution:configure \. --feature=orders --lanes=<lane-a,lane-b> --json\)\.$/);
   const activated = await activate(medium);
   assert.equal(activated.agent, 'planner');
   assert.match(activated.prompt, /Orchestrated execution: NOT UNLOCKED here \(roles_file_missing/);
 
   const disabled = await project(tt, { classification: 'MEDIUM', roles: { ...ROLES, enabled: false } });
-  assert.match(await buildExecutionActivationContext(disabled, state('MEDIUM'), 'planner'), /NOT UNLOCKED here \(roles_disabled;.*now: set "enabled": true in \.aioson\/config\/execution-roles\.json/);
+  assert.match(await buildExecutionActivationContext(disabled, state('MEDIUM'), 'planner'), /NOT UNLOCKED here \(roles_disabled;.*now: aioson execution:configure/);
 
   const large = await project(tt, { classification: 'LARGE' });
   assert.match(await buildExecutionActivationContext(large, state('LARGE'), 'planner'), /NOT UNLOCKED here \(roles_file_missing/);
@@ -205,11 +205,11 @@ test('planner completion: a split-candidate plan with no recorded execution choi
   assert.equal(gate.scale.phases, 4);
   assert.equal(gate.scale.parallel_phases, 0);
   assert.match(gate.message, /^\[Execution Scale\] the plan for "orders" touches 16 file\(s\) \(16 new\) in 4 phase\(s\), 4 wave\(s\), 0 in parallel — a split candidate \(floor 12 files for one context\) — and records no execution choice\./);
-  assert.match(gate.message, /`execution: single` in the plan frontmatter, or the `## Development execution lanes` table \+ aioson execution:seed \. --feature=orders --lanes=<lane-a,lane-b>\./);
-  // The advisory carries the measured recommendation — the lock is not an input and cannot flip it.
-  assert.equal(gate.recommendation.choice, 'orchestrated');
-  assert.match(gate.message, /recommending the measured choice: orchestrated — 16 files ≥ the 12-file floor for one context/);
-  assert.match(gate.message, /A locked roles file never flips the recommendation/);
+  assert.match(gate.message, /`execution: single` in the plan frontmatter, or the `## Development execution lanes` table \+ aioson execution:configure \. --feature=orders --json/);
+  // Scale still informs splitting; the starting recommendation stays single.
+  assert.equal(gate.recommendation.choice, 'single');
+  assert.match(gate.message, /Recommendation: single — .*recommended default/);
+  assert.match(gate.message, /Scale and availability never change it/);
   // Only the planner reads the scale; DEV under single execution sees nothing.
   assert.deepEqual(await inspectExecutionGate(unrecorded, SLUG, 'dev'), { blocking: false, advisory: false });
 

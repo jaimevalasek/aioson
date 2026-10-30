@@ -20,7 +20,6 @@ const {
   formatSplitProposal,
   formatUnit,
   measurePlanScale,
-  proposeSplit,
   recommendExecution,
   resolveExecutionChoice,
   splitMinFiles,
@@ -201,7 +200,7 @@ const SERIAL_ONE_SURFACE = plan({
   ]
 });
 
-test('plan-scale: the recommendation is measured — the incident was the asking model reading "locked" as "not advisable" and recommending one context for a two-surface split candidate', () => {
+test('plan-scale: single DEV is recommended at every scale; measured cuts never select orchestration', () => {
   // Below the floor: single, on the number.
   const small = recommendExecution(measurePlanScale(plan({
     delta: ['| CAP-s-a | create | none | src/api/orders.ts, tests/api/orders.test.ts | endpoints |'],
@@ -210,21 +209,17 @@ test('plan-scale: the recommendation is measured — the incident was the asking
   assert.equal(small.choice, 'single');
   assert.match(small.reasons[0], /below the 12-file split floor/);
 
-  // The incident shape: split candidate, two surfaces — orchestrated, and every reason is a number.
-  const big = recommendExecution(measurePlanScale(BIG), { proposal: proposeSplit(BIG) });
-  assert.equal(big.choice, 'orchestrated');
-  assert.match(big.reasons[0], /15 files ≥ the 12-file floor for one context/);
-  assert.ok(big.reasons.some((reason) => /two surfaces \(backend \d+ · frontend \d+\)/.test(reason)), 'the surface cut is a named reason');
-  assert.ok(big.reasons.some((reason) => /split proposal cuts \d+ row\(s\) into surface lanes/.test(reason)), 'the proposal is a named reason when given');
-  assert.equal(formatRecommendation(big), `orchestrated — ${big.reasons.join('; ')}`);
+  const big = recommendExecution(measurePlanScale(BIG));
+  assert.equal(big.choice, 'single');
+  assert.match(big.reasons[0], /recommended default.*explicit user choice/);
+  assert.equal(formatRecommendation(big), `single — ${big.reasons.join('; ')}`);
 
   // Split candidate with one surface and strictly serial waves: single — nothing to cut on yet.
-  const flat = recommendExecution(measurePlanScale(SERIAL_ONE_SURFACE), { proposal: proposeSplit(SERIAL_ONE_SURFACE) });
+  const flat = recommendExecution(measurePlanScale(SERIAL_ONE_SURFACE));
   assert.equal(flat.choice, 'single');
-  assert.match(flat.reasons[0], /13 files ≥ 12/);
-  assert.match(flat.reasons[0], /nothing to cut on yet/);
+  assert.match(flat.reasons[0], /recommended default/);
 
-  // One surface, but two rows already share a wave: a real cut exists — orchestrated.
+  // Even a ready parallel cut remains an option the owner must choose.
   const parallelPlan = plan({
     delta: [
       `| CAP-flat-a | create | none | ${Array.from({ length: 13 }, (_, i) => `src/server/mod${i}.ts`).join(', ')} | modules |`
@@ -238,8 +233,8 @@ test('plan-scale: the recommendation is measured — the incident was the asking
     ]
   });
   const parallel = recommendExecution(measurePlanScale(parallelPlan));
-  assert.equal(parallel.choice, 'orchestrated');
-  assert.ok(parallel.reasons.some((reason) => /2 units already share a wave/.test(reason)));
+  assert.equal(parallel.choice, 'single');
+  assert.match(parallel.reasons[0], /explicit user choice/);
 
   // No plan measured: single, and the formatter never throws on nothing.
   assert.deepEqual(recommendExecution(measurePlanScale('')), { choice: 'single', reasons: ['no plan measured'] });

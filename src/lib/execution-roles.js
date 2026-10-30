@@ -5,14 +5,14 @@
  * execution path (compiled lanes running as parallel external processes with a
  * host/model per role).
  *
- * The framework SEEDS it and never UNLOCKS it: `seedExecutionRoles` (the
+ * Seeding never unlocks it: `seedExecutionRoles` (the
  * planner, `aioson execution:seed`) writes a multi-profile document starting
  * at `roles01`, with one `{lane}_dev` role per lane plus `qa`, each on an
  * execution host installed on this machine at the harness default model,
  * always root-disabled, and never touches an existing file.
- * Choosing a model, enabling the file and signing the hosts stay acts of a
- * person (or of the supervising desktop client, which validated each pair with
- * `aioson host:signature`). It never ships in `template/`. Absent, disabled or
+ * The chat wizard applies model/effort choices and enables it only after the
+ * owner's explicit confirmation. Host signatures prove those choices work.
+ * It never ships in `template/`. Absent, disabled or
  * invalid → the orchestrated option does not exist and the single-DEV route is
  * untouched; the offer then names the unlock step instead of staying silent.
  *
@@ -32,6 +32,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { writeAtomically } = require('./feature-registry-storage');
 const { REASONING_EFFORTS, MAX_MODEL_NAME_LENGTH, MAX_DEVELOPMENT_LANES, effortsForHost } = require('../agent-execution/schema');
 const { listExecutionHosts, getExecutionCapabilities } = require('./tool-capabilities');
 const { readSignatures, findSignature, signatureState, similarSignedModel, locateOnPath, DEFAULT_MODEL } = require('./host-signature');
@@ -41,6 +42,7 @@ const EXECUTION_ROLES_RELATIVE_PATH = '.aioson/config/execution-roles.json';
 // never inside it: the desktop client's reader refuses unknown root keys.
 const EXECUTION_ROLES_CONFIRMATION_RELATIVE_PATH = '.aioson/config/execution-roles.confirmed.json';
 const SEED_SOURCE_PREFIX = 'aioson-planner';
+const WIZARD_SOURCE_PREFIX = 'aioson-wizard';
 const SEEDED_PROFILE_NAME = 'roles01';
 const LANE_ID = /^[a-z][a-z0-9-]*$/;
 const EXECUTION_ROLES_VERSION = 1;
@@ -675,20 +677,34 @@ async function readConfirmation(projectDir) {
   }
 }
 
+/** Shared by the offer and the executor: signatures never imply consent. */
+async function checkExecutionConfirmation(projectDir, roles) {
+  const defaults = defaultModelRoles(roles);
+  // Framework-created settings require the complete wizard even when every
+  // model is named. Legacy client-owned explicit configurations remain valid.
+  const wizardRequired = [SEED_SOURCE_PREFIX, WIZARD_SOURCE_PREFIX].some(prefix => String(roles.source || '').startsWith(prefix));
+  if (!defaults.length && !wizardRequired) return { ok: true, pending: [], reason: null };
+  const confirmation = await readConfirmation(projectDir);
+  const ok = confirmation.digest === rolesDigest(roles);
+  const pending = defaults.length ? defaults : Object.entries(roles.roles).map(([role, value]) => ({ role, ...value }));
+  return { ok, pending, reason: ok ? null : defaults.length ? 'defaults_unconfirmed' : 'configuration_unconfirmed' };
+}
+
 /**
- * Record the owner's "run with the default models" answer against the current
- * role map. A later change to any role changes the digest and reopens the
- * question — only for the roles still on the default.
+ * Record the owner's answer against the complete host/model/effort map. Used
+ * by the wizard and the legacy --confirm-defaults action. A later role change
+ * reopens framework-created choices or roles still on a CLI-default model.
  */
-async function confirmDefaultModels(projectDir, { now = Date.now(), hosts } = {}) {
+async function confirmDefaultModels(projectDir, { now = Date.now(), hosts, expectedDigest } = {}) {
   const read = await readExecutionRoles(projectDir, { hosts });
   if (!read.present || !read.ok) return { ok: false, reason: read.reason, path: EXECUTION_ROLES_CONFIRMATION_RELATIVE_PATH, errors: read.errors };
   const pending = defaultModelRoles(read.roles);
   const digest = rolesDigest(read.roles);
+  if (expectedDigest !== undefined && expectedDigest !== digest) return { ok: false, reason: 'configuration_changed', path: EXECUTION_ROLES_CONFIRMATION_RELATIVE_PATH };
   const record = { version: 1, digest, at: new Date(now).toISOString(), roles: pending.map((item) => item.role) };
   try {
     await fs.mkdir(path.dirname(confirmationPath(projectDir)), { recursive: true });
-    await fs.writeFile(confirmationPath(projectDir), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
+    await writeAtomically(confirmationPath(projectDir), `${JSON.stringify(record, null, 2)}\n`);
   } catch (error) {
     return { ok: false, reason: 'write_failed', path: EXECUTION_ROLES_CONFIRMATION_RELATIVE_PATH, error: error.message };
   }
@@ -708,8 +724,8 @@ function describeOnboarding(offer, { feature = null, lanes = [], installed = nul
     case 'roles_file_missing':
       return {
         state: 'not_unlocked',
-        next: `aioson execution:seed . --feature=${slug} --lanes=${laneList}`,
-        message: `${rolesPath} does not exist — seed it (one dev role per lane plus qa, disabled, on an installed host), then choose the models and enable it`,
+        next: `aioson execution:configure . --feature=${slug} --lanes=${laneList} --json`,
+        message: `${rolesPath} does not exist — open the wizard in the monitoring chat and explicitly choose host, model and reasoning effort per role, then confirm the summary`,
         ...(hosts ? { hosts } : {})
       };
     case 'roles_unreadable':
@@ -722,14 +738,15 @@ function describeOnboarding(offer, { feature = null, lanes = [], installed = nul
     case 'roles_disabled':
       return {
         state: 'disabled',
-        next: `set "enabled": true in ${rolesPath} (the desktop client's execution panel does the same)`,
-        message: `${rolesPath} exists but is disabled — enabling it is the owner's act`
+        next: `aioson execution:configure . --feature=${slug} --lanes=${laneList} --json`,
+        message: `${rolesPath} exists but is disabled — review model and effort choices in the monitoring chat wizard before enabling`
       };
     case 'defaults_unconfirmed':
+    case 'configuration_unconfirmed':
       return {
         state: 'pending_confirmation',
-        next: 'aioson execution:offer . --confirm-defaults',
-        message: `role(s) still on the harness default model: ${(offer.pending_confirmation || []).map((item) => `${item.role} (${item.host})`).join(', ')} — choose a model per role in ${rolesPath}, or confirm the defaults once`
+        next: `aioson execution:configure . --feature=${slug} --json`,
+        message: `unconfirmed role choices: ${(offer.pending_confirmation || []).map((item) => `${item.role} (${item.host})`).join(', ')} — explicitly choose model AND effort per role in the monitoring chat wizard, then confirm the summary`
       };
     case 'ok':
       return { state: 'ready', next: `aioson execution:compile . --feature=${slug}`, message: 'orchestrated execution is available on this machine' };
@@ -747,7 +764,7 @@ function describeOnboarding(offer, { feature = null, lanes = [], installed = nul
 /**
  * The offer: is the orchestrated path available in this project on this
  * machine right now? Requires the unlock file (present, valid, enabled), the
- * owner's answer on any role still at the default model, and a valid,
+ * owner's answer on framework-created choices (or any CLI-default model), and a valid,
  * unexpired signature for every declared role — in that order, so nobody is
  * sent to sign a model they were about to change.
  */
@@ -763,12 +780,9 @@ async function offerExecution(projectDir, { env = process.env, now = Date.now(),
   };
   if (!roles.present || !roles.ok) return { ...base, reason: roles.reason };
   if (!roles.enabled) return { ...base, reason: 'roles_disabled' };
-  const pending = defaultModelRoles(roles.roles);
-  if (pending.length > 0) {
-    const confirmation = await readConfirmation(projectDir);
-    if (confirmation.digest !== rolesDigest(roles.roles)) {
-      return { ...base, reason: 'defaults_unconfirmed', pending_confirmation: pending };
-    }
+  const confirmation = await checkExecutionConfirmation(projectDir, roles.roles);
+  if (!confirmation.ok) {
+    return { ...base, reason: confirmation.reason, pending_confirmation: confirmation.pending };
   }
   const signatures = await checkRoleSignatures(roles.roles, { env, now });
   if (!signatures.ok) {
@@ -796,13 +810,16 @@ module.exports = {
   EXECUTION_ROLES_VERSION,
   ON_UNAVAILABLE,
   SEED_SOURCE_PREFIX,
+  WIZARD_SOURCE_PREFIX,
   checkRoleSignatures,
+  checkExecutionConfirmation,
   confirmDefaultModels,
   defaultModelRoles,
   describeOnboarding,
   executionRolesPath,
   installedExecutionHosts,
   laneRoleKey,
+  normalizeExecutionRoles,
   offerExecution,
   readConfirmation,
   readExecutionRoles,
@@ -811,6 +828,7 @@ module.exports = {
   resolveProfileFallbacks,
   rolesDigest,
   seedExecutionRoles,
+  seedRolesDocument,
   signatureHint,
   validateExecutionRoles
 };

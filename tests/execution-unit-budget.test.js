@@ -289,7 +289,7 @@ test('execution:seed without --lanes and without a lanes table seeds one lane pe
   const locked = await offer(dir, env);
   assert.equal(locked.reason, 'roles_file_missing');
   assert.deepEqual(locked.plan.lanes, []);
-  assert.equal(locked.onboarding.next, `aioson execution:seed . --feature=${SLUG} --lanes=backend,frontend`);
+  assert.equal(locked.onboarding.next, `aioson execution:configure . --feature=${SLUG} --lanes=backend,frontend --json`);
   const result = await runExecution({ args: [dir], options: { sub: 'seed', feature: SLUG, json: true }, logger, env });
   assert.deepEqual(result.lanes, ['backend', 'frontend']);
   assert.equal(result.lanes_source, 'surfaces');
@@ -301,8 +301,8 @@ test('execution:seed without --lanes and without a lanes table seeds one lane pe
   }
   // After a seed the next step is the owner's: enable the file (or, with no host installed, install one).
   const offered = await offer(dir, env);
-  if (result.outcome === 'seeded') assert.match(offered.onboarding.next, /set "enabled": true in \.aioson\/config\/execution-roles\.json/);
-  else assert.equal(offered.onboarding.next, `aioson execution:seed . --feature=${SLUG} --lanes=backend,frontend`);
+  if (result.outcome === 'seeded') assert.match(offered.onboarding.next, /execution:configure.*--json/);
+  else assert.equal(offered.onboarding.next, `aioson execution:configure . --feature=${SLUG} --lanes=backend,frontend --json`);
 });
 
 test('execution:compile refuses oversized units; an explicitly raised ceiling retains shape diagnostics and context contracts', async (t) => {
