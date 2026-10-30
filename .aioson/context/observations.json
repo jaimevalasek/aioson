@@ -401,6 +401,36 @@
       "created_at": "2026-10-20T16:44:08.488Z",
       "updated_at": "2026-10-20T16:44:08.488Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-a877b2",
+      "kind": "defect",
+      "summary": "CI remoto 39464997007 do commit 06f57cc4 falha na instalação de better-sqlite3 em Windows com Node 20.20.2: sem binário precompilado e node-gyp 10 não detecta Visual Studio 18 do runner; validate e as demais matrizes passam. Evidência: htt…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-10-30T15:05:17.543Z",
+      "updated_at": "2026-10-30T15:05:17.543Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-1af1d0",
+      "kind": "risk",
+      "summary": "O gate de release local foi bloqueado por npm audit --omit=dev nas dependências atuais: 3 achados altos envolvendo undici 6.29.0 e zod via @cursor/sdk 1.0.31; package.json e lockfile ainda são os da versão 1.75.0, sem mudanças de dependênc…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-10-30T15:06:30.508Z",
+      "updated_at": "2026-10-30T15:06:30.508Z",
+      "resolution": null
     }
   ]
 }

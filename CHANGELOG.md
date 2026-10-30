@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.76.0] - 2026-10-30
+
 ### Added
 
 - **Orchestrated execution has an explicit model and effort wizard in the main monitoring chat.** `execution:configure --feature=<slug> --json` describes CLI, model and reasoning-effort choices for every implementation lane, QA and the final integration supervisor. It offers local catalog entries and saved model IDs, filters known model-specific efforts, and treats CLI defaults as explicit choices. The reviewed summary is applied only with `--config`, `--expect-digest` and `--confirm`; atomic writes and a lock prevent competing confirmations from overwriting newer choices. The next step validates the chosen routes before compilation.
