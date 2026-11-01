@@ -68,6 +68,8 @@ test('Gate D rejects AC-name-only tests and accepts asserting evidence', async (
 test('Gate D reads a Laravel delivery: php artisan QA commands and PHPUnit assertions', async () => {
   const root = await tmp();
   await seed(root);
+  // A complete Files contract is the audit scope, so the plan names the PHPUnit test.
+  await write(root, '.aioson/context/implementation-plan-demo.md', plan().replaceAll('tests/demo.test.js', 'tests/Feature/DemoTest.php'));
   await write(root, 'src/demo.js', 'module.exports = true;\n');
   await write(root, 'tests/demo.test.js', "const test=require('node:test'); test('placeholder',()=>{});\n");
   await write(root, 'tests/Feature/DemoTest.php', `<?php
