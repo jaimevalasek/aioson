@@ -1,7 +1,8 @@
 'use strict';
 
-const fs = require('node:fs/promises');
 const path = require('node:path');
+const { extractPlannedPaths } = require('./planned-paths');
+const { loadRepositoryPathPolicy } = require('./repository-paths');
 const {
   scanArtifacts,
   readFileSafe,
@@ -435,50 +436,14 @@ function validateDeliveryPlan(content, artifact, productMap) {
   return { findings, rows };
 }
 
-function extractPlannedPaths(value) {
-  const candidates = String(value || '')
-    .replace(/<br\s*\/?>/gi, ',')
-    .split(/[,;\n]/)
-    .map((item) => cleanCell(item)
-      .replace(/^\s*(?:create|modify|reuse|retire|criar|modificar|reusar|remover)\s*:\s*/i, '')
-      .replace(/\s+\((?:create|modify|reuse|retire|new|existing|criar|modificar|reusar|novo|existente)\)\s*$/i, '')
-      .trim())
-    .filter(Boolean);
-
-  return [...new Set(candidates.filter((candidate) => {
-    if (/[*?{}[\]]/.test(candidate)) return false;
-    if (/^(?:https?:|[a-z]+\s)/i.test(candidate)) return false;
-    return /[\\/]/.test(candidate) || /\.[a-z0-9]{1,10}$/i.test(candidate);
-  }))];
-}
-
 function plannedPathKey(value) {
   const normalized = String(value || '').replace(/\\/g, '/').replace(/^\.\//, '');
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
 }
 
-async function pathExistsInsideRoot(targetDir, relPath) {
-  const absolute = path.resolve(targetDir, relPath);
-  const relative = path.relative(targetDir, absolute);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return false;
-  try {
-    const [rootReal, targetReal, stat] = await Promise.all([
-      fs.realpath(targetDir),
-      fs.realpath(absolute),
-      fs.stat(absolute)
-    ]);
-    const realRelative = path.relative(rootReal, targetReal);
-    return stat.isFile()
-      && Boolean(realRelative)
-      && !realRelative.startsWith('..')
-      && !path.isAbsolute(realRelative);
-  } catch {
-    return false;
-  }
-}
-
 async function validateDeliveryPaths(targetDir, productMap, delivery, artifact, implementationDelta = { rows: [] }) {
   const findings = [];
+  const repositoryPaths = await loadRepositoryPathPolicy(targetDir);
   const plannedPathsByCap = new Map();
   const retiredPaths = new Set(
     (implementationDelta.rows || [])
@@ -498,7 +463,12 @@ async function validateDeliveryPaths(targetDir, productMap, delivery, artifact, 
     const missingPaths = [];
     const presentRetiredPaths = [];
     for (const plannedPath of plannedPaths) {
-      const exists = await pathExistsInsideRoot(targetDir, plannedPath);
+      const state = await repositoryPaths.inspect(plannedPath);
+      if (!state.safe) {
+        findings.push(finding('execution', 'capability_delivery_path_outside_repository', `${row.cap} uses an unsafe or undeclared repository path: ${plannedPath}`, artifact));
+        continue;
+      }
+      const exists = state.exists;
       if (retiredPaths.has(plannedPathKey(plannedPath))) {
         if (exists) presentRetiredPaths.push(plannedPath);
       } else if (!exists) {
@@ -903,6 +873,8 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
   };
 
   if (applicable) {
+    const repositoryPaths = await loadRepositoryPathPolicy(targetDir);
+    stageFindings.plan.push(...repositoryPaths.issues.map((issue) => finding('plan', issue.check, issue.message, '.aioson/repository-roots.json')));
     productMap = validateProductCapabilityMap(inputs.prd, artifacts.prd.path || `prd-${slug}.md`);
     const repositoryFitToolkit = {
       CAP_ID_EXACT_RE,
@@ -914,7 +886,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
       mapColumns,
       finding,
       extractPlannedPaths,
-      pathExistsInsideRoot
+      inspectRepositoryPath: repositoryPaths.inspect
     };
     currentSystemFit = validateCurrentSystemFit({
       content: inputs.prd,

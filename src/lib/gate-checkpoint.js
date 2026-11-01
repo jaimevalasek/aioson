@@ -10,7 +10,8 @@ const {
   normalizeLabel,
   parseFirstMarkdownTable
 } = require('./feature-completeness-format');
-const { isInsideRoot } = require('../verification/path-policy');
+const { extractPlannedPaths } = require('./planned-paths');
+const { loadRepositoryPathPolicy } = require('./repository-paths');
 
 const CHECKPOINTS_DIR = '.aioson/runtime/checkpoints';
 
@@ -95,17 +96,6 @@ function parsePlanStatus(content) {
   return status ? cleanCell(status[1]).toLowerCase() : '';
 }
 
-function extractDeltaPaths(value) {
-  return [...new Set(String(value || '')
-    .replace(/<br\s*\/?>/gi, ',')
-    .split(/[,;\n]/)
-    .map((item) => cleanCell(item)
-      .replace(/^\s*(?:create|modify|reuse|retire)\s*:\s*/i, '')
-      .replace(/\s+\((?:create|modify|reuse|retire|new|existing)\)\s*$/i, '')
-      .trim())
-    .filter((item) => item && !/[*?{}[\]]/.test(item) && (/[\\/]/.test(item) || /\.[a-z0-9]{1,10}$/i.test(item))))];
-}
-
 function parseImplementationDelta(content) {
   const section = extractSection(content, [
     'Implementation Delta',
@@ -121,41 +111,23 @@ function parseImplementationDelta(content) {
   if (columns.missing.length > 0) return null;
   return table.rows.flatMap((row) => {
     const action = normalizeLabel(row[columns.indexes.action]);
-    return extractDeltaPaths(row[columns.indexes.paths]).map((relativePath) => ({
+    return extractPlannedPaths(row[columns.indexes.paths]).map((relativePath) => ({
       action,
       path: relativePath
     }));
   });
 }
 
-async function inspectPathState(targetDir, item, planMtimeMs) {
-  if (!item.path || path.isAbsolute(item.path)) return { ...item, state: 'unsafe' };
-  const absolute = path.resolve(targetDir, item.path);
-  const relative = path.relative(targetDir, absolute);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    return { ...item, state: 'unsafe' };
-  }
-  try {
-    const [rootRealPath, targetRealPath, stat] = await Promise.all([
-      fs.realpath(targetDir),
-      fs.realpath(absolute),
-      fs.stat(absolute)
-    ]);
-    if (!isInsideRoot(rootRealPath, targetRealPath) || !stat.isFile()) {
-      return { ...item, state: 'unsafe' };
-    }
-    return {
-      ...item,
-      state: 'present',
-      mtime: stat.mtime.toISOString(),
-      after_plan: stat.mtimeMs > planMtimeMs
-    };
-  } catch (error) {
-    return {
-      ...item,
-      state: error && error.code === 'ENOENT' ? 'absent' : 'unsafe'
-    };
-  }
+async function inspectPathState(repositoryPaths, item, planMtimeMs) {
+  const state = await repositoryPaths.inspect(item.path);
+  if (!state.safe) return { ...item, state: 'unsafe' };
+  if (!state.exists) return { ...item, state: 'absent' };
+  return {
+    ...item,
+    state: 'present',
+    mtime: state.stat.mtime.toISOString(),
+    after_plan: state.stat.mtimeMs > planMtimeMs
+  };
 }
 
 async function resolveGateCBaseline(targetDir, slug, artifactPath) {
@@ -211,7 +183,8 @@ async function resolveGateCBaseline(targetDir, slug, artifactPath) {
   // was edited later. Without one, only the plan file's own mtime can date it.
   const approvedBaselineMs = Number.isFinite(checkpoint.approved_baseline_ms) ? checkpoint.approved_baseline_ms : null;
   const baselineMs = approvedBaselineMs ?? planStat.mtimeMs;
-  const states = await Promise.all(delta.map((item) => inspectPathState(targetDir, item, baselineMs)));
+  const repositoryPaths = await loadRepositoryPathPolicy(targetDir);
+  const states = await Promise.all(delta.map((item) => inspectPathState(repositoryPaths, item, baselineMs)));
   const unsafe = states.filter((item) => item.state === 'unsafe');
   const createPresentBeforePlan = states.filter((item) => item.action === 'create' && item.state === 'present' && !item.after_plan);
   const started = states.some((item) => (

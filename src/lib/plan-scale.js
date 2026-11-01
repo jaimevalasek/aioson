@@ -43,6 +43,7 @@ const {
   AC_ID_RE
 } = require('./feature-completeness-format');
 const { parseImplementationDelta } = require('./gate-checkpoint');
+const { hasPathPattern } = require('./planned-paths');
 const { parseExecutionWaves, groupByWave, parseDevelopmentLanes, splitPathCell } = require('../harness/plan-waves');
 
 const DEFAULT_SPLIT_MIN_FILES = 12;
@@ -96,7 +97,7 @@ function unitCeiling(env = process.env) {
 function asFilePath(value) {
   const item = cleanCell(value).replace(/\\/g, '/').replace(/^\.\//, '').trim();
   if (!item || /^(\.{3}|-+|—|n\/a|none)$/i.test(item)) return null;
-  if (/[*?{}[\]<>]/.test(item) || /\s/.test(item) || item.endsWith('/')) return null;
+  if (hasPathPattern(item) || /[<>\s]/.test(item) || item.endsWith('/')) return null;
   if (!(/\//.test(item) || /\.[a-z0-9]{1,10}$/i.test(item))) return null;
   return item;
 }

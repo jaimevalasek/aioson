@@ -74,6 +74,52 @@ test('Gate C requires one complete implementation plan for SMALL and MEDIUM', as
   assert.match(result.recommendation, /@dev/);
 });
 
+test('Gate C requires declared sibling roots and shares literal route paths with baseline and execution checks', async () => {
+  const workspace = await tmp();
+  const root = path.join(workspace, 'play');
+  const cloud = path.join(workspace, 'cloud');
+  const route = '../cloud/app/api/[id]/route.ts';
+  await seed(root, { status: 'approved' });
+  await fs.mkdir(cloud, { recursive: true });
+  await write(root, '.aioson/context/implementation-plan-demo.md', plan('approved')
+    .replace('status: approved', 'status: approved\nrepository_roots: ["../cloud"]')
+    .replaceAll('src/demo.js, tests/demo.test.js', route));
+  const check = () => runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
+  let result = await check();
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(result.missing.some((item) => item.includes('implementation_delta_path_outside_repository')));
+  await write(root, '.aioson/repository-roots.json', JSON.stringify({ version: 1, roots: ['../cloud'] }));
+  result = await check();
+  assert.equal(result.result, 'PASS', result.missing.join('\n'));
+  assert.equal(result.evidence.find((item) => item.type === 'gate_c_baseline').mode, 'pre_implementation');
+
+  // A literal dynamic route already on disk must not disappear as a "glob".
+  await write(root, route, 'export const GET = () => true;');
+  const past = new Date(Date.now() - 60000);
+  await fs.utimes(path.join(root, route), past, past);
+  result = await check();
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(result.missing.some((item) => item.includes('implementation_delta_create_path_exists')));
+  assert.ok(result.missing.some((item) => item.includes('gate_c_recovery_plan_newer_than_execution')));
+  await fs.unlink(path.join(root, route));
+
+  const approved = await runGateApprove({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
+  assert.equal(approved.ok, true);
+  await write(root, route, 'export const GET = () => true;');
+  const { analyzeFeatureCompleteness } = require('../src/lib/feature-completeness');
+  let delivered = await analyzeFeatureCompleteness(root, 'demo', { includeExecutionStructure: true });
+  assert.equal(delivered.stage_findings.execution.length, 0);
+  await fs.unlink(path.join(root, route));
+  delivered = await analyzeFeatureCompleteness(root, 'demo', { includeExecutionStructure: true });
+  assert.ok(delivered.stage_findings.execution.some((item) => item.check === 'capability_delivery_files_missing' && item.message.includes(route)));
+
+  // Removing the grant revokes it even with a previously approved checkpoint.
+  await write(root, '.aioson/repository-roots.json', JSON.stringify({ version: 1, roots: [] }));
+  result = await check();
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(result.missing.some((item) => item.includes('implementation_delta_path_outside_repository')));
+});
+
 test('Gate C bloqueia feature runtime detectável sem harness-contract (A5)', async () => {
   const root = await tmp();
   await seed(root, { status: 'pending' });

@@ -146,6 +146,123 @@ test('ac:test-audit strict mode accepts an AC-linked test with an assertion sign
   assert.equal(result.items[0].status, 'covered');
 });
 
+async function scopedPlanFixture(files, ids = ['AC-001']) {
+  const workspace = await makeTmpDir();
+  const project = path.join(workspace, 'play');
+  const backend = path.join(workspace, 'cloud');
+  const cli = path.join(workspace, 'cli');
+  for (const directory of [project, backend, cli]) await fs.mkdir(directory);
+  await writeFile(project, '.aioson/context/prd-publishing.md', [
+    '# Publishing', '## Feature Capability Map',
+    '| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |',
+    '|---|---|---|---|---|', '| CAP-publishing | Deliver the app | Author publishes | required | Core |',
+    '## Acceptance Criteria', '| AC | CAP | Observable behavior | Evidence |', '|---|---|---|---|',
+    ...ids.map(id => `| ${id} | CAP-publishing | App is delivered | Automated test |`)
+  ].join('\n'));
+  await writeFile(project, '.aioson/context/implementation-plan-publishing.md', [
+    '# Plan', '## Capability Delivery Plan', '| CAP | Phase | Files | Verification |', '|---|---|---|---|',
+    `| CAP-publishing | 1 | ${files} | node --test |`
+  ].join('\n'));
+  return { project, backend, cli };
+}
+
+test('ac:test-audit reads only exact planned tests in explicitly declared sibling repositories', async () => {
+  const { project, backend, cli } = await scopedPlanFixture('tests/local.test.js, ../cloud/tests/runtime.test.ts, ../cli/tests/package.test.js', ['AC-001', 'AC-002', 'AC-003', 'AC-004']);
+  await writeFile(project, '.aioson/repository-roots.json', JSON.stringify({ version: 1, roots: ['../cloud', '../cli'] }));
+  await writeFile(project, 'tests/local.test.js', "test('AC-001', () => { assert.equal(1, 1); });");
+  await writeFile(backend, 'tests/runtime.test.ts', "test('AC-002', () => { expect(2).toBe(2); });");
+  await writeFile(cli, 'tests/package.test.js', "test('AC-003', () => { assert.equal(3, 3); });");
+  await writeFile(backend, 'tests/unplanned.test.ts', "test('AC-004 belongs to another feature', () => { expect(4).toBe(4); });");
+  const result = await auditAcceptanceCriteriaTests(project, 'publishing', { requireCriteria: true, requireAssertions: true });
+  assert.deepEqual(result.items.map(item => item.status), ['covered', 'covered', 'covered', 'missing']);
+  assert.equal(result.items[1].evidence[0].file, '../cloud/tests/runtime.test.ts');
+  assert.equal(result.items[2].evidence[0].file, '../cli/tests/package.test.js');
+  assert.equal(result.summary.test_files_scanned, 3);
+  assert.equal(result.test_scope.kind, 'feature_plan');
+});
+
+test('ac:test-audit never reads an undeclared sibling even when the plan names its test', async (t) => {
+  const { project, backend } = await scopedPlanFixture('tests/local.test.js, ../cloud/tests/private.test.ts', ['AC-001', 'AC-002']);
+  await writeFile(project, 'tests/local.test.js', "test('AC-001', () => { assert.equal(1, 1); });");
+  const external = path.join(backend, 'tests/private.test.ts');
+  await writeFile(backend, 'tests/private.test.ts', "test('AC-002', () => { expect(2).toBe(2); });");
+  const readFile = fs.readFile; const reads = [];
+  t.mock.method(fs, 'readFile', async (file, ...args) => { reads.push(path.resolve(String(file))); return readFile(file, ...args); });
+  const result = await auditAcceptanceCriteriaTests(project, 'publishing', { requireAssertions: true });
+  assert.equal(result.items[1].status, 'missing');
+  assert(!reads.includes(external), 'Unauthorized test content must never reach readText');
+  const outside = path.join(path.dirname(project), 'outside');
+  await writeFile(outside, 'private.test.ts', "test('AC-002', () => { expect(2).toBe(2); });");
+  await writeFile(project, '.aioson/repository-roots.json', JSON.stringify({ version: 1, roots: ['../cloud'] }));
+  await fs.symlink(outside, path.join(backend, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
+  await writeFile(project, '.aioson/context/implementation-plan-publishing.md', '# Plan\n## Capability Delivery Plan\n| CAP | Phase | Files | Verification |\n|---|---|---|---|\n| CAP-publishing | 1 | tests/local.test.js, ../cloud/escape/private.test.ts | node --test |');
+  const escaped = await auditAcceptanceCriteriaTests(project, 'publishing', { requireAssertions: true });
+  assert.equal(escaped.items[1].status, 'missing');
+  assert(!reads.includes(path.join(backend, 'escape/private.test.ts')) && !reads.includes(path.join(outside, 'private.test.ts')), 'A declared root cannot grant a link target outside itself');
+});
+
+test('ac:test-audit ignores both strong and weak unrelated AC collisions when the feature Files scope is complete', async () => {
+  const { project } = await scopedPlanFixture('tests/publishing.test.js', ['AC-001', 'AC-002', 'AC-003']);
+  await writeFile(project, 'tests/publishing.test.js', "test('AC-003 publishing', () => { assert.equal(delivered(), true); });");
+  await writeFile(project, 'src/pages/Settings/__tests__/VoiceSettingsPage.test.tsx', "test('AC-001 installs the voice model', () => { expect(model).toBe('Kokoro'); });\ntest('AC-002 voice empty placeholder', () => {});");
+  const result = await auditAcceptanceCriteriaTests(project, 'publishing', { requireCriteria: true, requireAssertions: true });
+  assert.deepEqual(result.items.map(item => item.status), ['missing', 'missing', 'covered']);
+  assert.deepEqual(result.items[0].evidence, []); assert.deepEqual(result.items[1].weak_evidence, []);
+  assert.equal(result.summary.test_files_scanned, 1);
+});
+
+test('ac:test-audit deduplicates planned aliases by realpath before reading their contents', async (t) => {
+  const { project, backend } = await scopedPlanFixture('../cloud/tests/runtime.test.ts, ../cloud/test-alias/runtime.test.ts');
+  await writeFile(project, '.aioson/repository-roots.json', JSON.stringify({ version: 1, roots: ['../cloud'] }));
+  await writeFile(backend, 'tests/runtime.test.ts', "test('AC-001', () => { expect(1).toBe(1); });");
+  await fs.symlink(path.join(backend, 'tests'), path.join(backend, 'test-alias'), process.platform === 'win32' ? 'junction' : 'dir');
+  const readFile = fs.readFile, reads = [];
+  t.mock.method(fs, 'readFile', async (file, ...args) => { if (String(file).endsWith('runtime.test.ts')) reads.push(file); return readFile(file, ...args); });
+  const result = await auditAcceptanceCriteriaTests(project, 'publishing', { requireAssertions: true });
+  assert.equal(result.ok, true); assert.equal(result.summary.test_files_scanned, 1); assert.equal(reads.length, 1);
+  assert.equal(result.items[0].evidence[0].file, '../cloud/tests/runtime.test.ts');
+});
+
+test('ac:test-audit cannot resurrect ignored cache tests through an explicit Files entry or a safe alias', async (t) => {
+  const ignored = ['node_modules', '.git', 'dist', 'build', 'coverage', '.aioson/backups'];
+  const { project } = await scopedPlanFixture(['tests/publishing.test.js', ...ignored.map(dir => `${dir}/borrowed.test.js`), 'cache-alias/borrowed.test.js'].join(', '), ['AC-001', 'AC-002']);
+  await writeFile(project, 'tests/publishing.test.js', "test('AC-001', () => { assert.equal(1, 1); });");
+  for (const directory of ignored) await writeFile(project, `${directory}/borrowed.test.js`, "test('AC-002', () => { assert.equal(2, 2); });");
+  await fs.symlink(path.join(project, 'node_modules'), path.join(project, 'cache-alias'), process.platform === 'win32' ? 'junction' : 'dir');
+  const readFile = fs.readFile, reads = [];
+  t.mock.method(fs, 'readFile', async (file, ...args) => { if (String(file).endsWith('borrowed.test.js')) reads.push(file); return readFile(file, ...args); });
+  const result = await auditAcceptanceCriteriaTests(project, 'publishing', { requireAssertions: true });
+  assert.deepEqual(result.items.map(item => item.status), ['covered', 'missing']);
+  assert.equal(reads.length, 0); assert.equal(result.summary.test_files_scanned, 1);
+});
+
+test('ac:test-audit keeps local repository discovery for no-plan and legacy lane plans without a complete Files contract', async () => {
+  for (const plan of [null, '# Simple lane plan\n\n## Phase 1\nImplement checkout and test locally.']) {
+    const project = await makeTmpDir();
+    await writeFile(project, '.aioson/context/requirements-checkout.md', 'AC-001: checkout is saved.');
+    await writeFile(project, 'tests/unlisted.test.js', "test('AC-001', () => { assert.equal(1, 1); });");
+    if (plan) await writeFile(project, '.aioson/context/implementation-plan-checkout.md', plan);
+    const result = await auditAcceptanceCriteriaTests(project, 'checkout', { requireAssertions: true });
+    assert.equal(result.ok, true); assert.equal(result.items[0].evidence[0].file, 'tests/unlisted.test.js');
+    assert.equal(result.test_scope.kind, 'repository');
+  }
+  const { project } = await scopedPlanFixture('tests/listed.test.js');
+  await writeFile(project, 'tests/unlisted.test.js', "test('AC-001', () => { assert.equal(1, 1); });");
+  const planFile = path.join(project, '.aioson/context/implementation-plan-publishing.md');
+  await fs.writeFile(planFile, (await fs.readFile(planFile, 'utf8')).replace('| 1 |', '| TBD |'));
+  const incomplete = await auditAcceptanceCriteriaTests(project, 'publishing', { requireAssertions: true });
+  assert.equal(incomplete.ok, true); assert.equal(incomplete.test_scope.kind, 'repository', 'An unresolved phase is not a complete feature Files contract');
+});
+
+test('ac:test-audit fails closed on an invalid root declaration instead of silently scanning local tests', async () => {
+  const { project } = await scopedPlanFixture('tests/local.test.js');
+  await writeFile(project, '.aioson/repository-roots.json', JSON.stringify({ version: 1, roots: ['..'] }));
+  await writeFile(project, 'tests/local.test.js', "test('AC-001', () => { assert.equal(1, 1); });");
+  const result = await auditAcceptanceCriteriaTests(project, 'publishing', { requireAssertions: true });
+  assert.equal(result.ok, false); assert.equal(result.summary.test_files_scanned, 0);
+  assert.equal(result.test_scope.issues[0].check, 'repository_roots_invalid');
+});
+
 test('ac:test-audit reads PHPUnit and Laravel assertion methods', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, '.aioson/context/requirements-report.md', 'AC-report-01: same numbers. AC-report-02: export route. AC-report-03: command output.');

@@ -83,6 +83,14 @@ Every required CAP has at least one stable AC. Evidence describes how QA can pro
 
 Every delivery path is classified as `reuse`, `modify`, `create`, or `retire`. At Gate C, reuse/modify/retire paths already exist and create paths do not. `retire` means the exact file is intentionally removed. Evidence-backed recommended technical choices proceed without a routine human confirmation.
 
+Paths are relative to the project root. A delivery spanning repositories may opt in to specific additional roots through the project-owned `.aioson/repository-roots.json`:
+
+```json
+{"version": 1, "roots": ["../cloud", "../cli"]}
+```
+
+The operator authorizes these roots; a plan, review or source document cannot grant filesystem access by naming a directory. Without this configuration, validation stays within the project. Roots must be existing directories and cannot be a parent of the project or a filesystem root. Invalid configuration fails closed. Each literal path must remain inside its declared repository both lexically and on disk, including the nearest existing ancestor of a planned create; escaping or dangling links and junctions are rejected. Gate C, baseline recovery and delivery verification use the same policy. Paths remain project-relative (`../cloud/src/api.ts`), and existence/action checks apply in the owning repository. Literal Next route directories such as `[id]`, `[...slug]` and `[[...slug]]` are checked and counted as exact paths.
+
 ## Capability delivery plan
 
 ```markdown

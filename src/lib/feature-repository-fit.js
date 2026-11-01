@@ -1,7 +1,5 @@
 'use strict';
 
-const path = require('node:path');
-
 const FIT_DECISIONS = new Set(['reuse', 'extend', 'replace', 'new']);
 const DELTA_ACTIONS = new Set(['reuse', 'modify', 'create', 'retire']);
 
@@ -45,13 +43,6 @@ function normalizeMappedDecision(value, aliases, toolkit) {
 function normalizePathKey(value) {
   const normalized = String(value || '').replace(/\\/g, '/').replace(/^\.\//, '');
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
-}
-
-function isSafeRepositoryPath(targetDir, relPath) {
-  if (!relPath || path.isAbsolute(relPath)) return false;
-  const absolute = path.resolve(targetDir, relPath);
-  const relative = path.relative(targetDir, absolute);
-  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative);
 }
 
 function validateCurrentSystemFit({
@@ -167,7 +158,6 @@ function validateCurrentSystemFit({
 }
 
 async function validateImplementationDelta({
-  targetDir,
   content,
   artifact,
   productMap,
@@ -260,7 +250,8 @@ async function validateImplementationDelta({
     for (const relPath of paths) {
       const pathKey = normalizePathKey(relPath);
       const capPathKey = `${capKey}:${pathKey}`;
-      if (!isSafeRepositoryPath(targetDir, relPath)) {
+      const pathState = await toolkit.inspectRepositoryPath(relPath);
+      if (!pathState.safe) {
         findings.push(toolkit.finding('plan', 'implementation_delta_path_outside_repository', `${cap || `row ${rowNumber}`} uses an unsafe or absolute path: ${relPath}`, artifact));
         continue;
       }
@@ -275,7 +266,7 @@ async function validateImplementationDelta({
       }
 
       if (!DELTA_ACTIONS.has(action)) continue;
-      const exists = await toolkit.pathExistsInsideRoot(targetDir, relPath);
+      const exists = pathState.exists;
       if (['reuse', 'modify'].includes(action) && !exists) {
         findings.push(toolkit.finding('plan', 'implementation_delta_existing_path_missing', `${cap} marks ${relPath} as ${action}, but the file does not exist`, artifact));
       }

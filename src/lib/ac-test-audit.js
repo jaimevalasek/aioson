@@ -21,11 +21,14 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { extractPlannedPaths, hasPathPattern } = require('./planned-paths');
+const { loadRepositoryPathPolicy } = require('./repository-paths');
 const {
   extractSection,
   parseFirstMarkdownTable,
   mapColumns,
   cleanCell,
+  isPlaceholder,
   normalizeLabel,
   genericEvidence
 } = require('./feature-completeness-format');
@@ -130,6 +133,62 @@ async function listTestFiles(targetDir, dirPath = targetDir, out = []) {
     if (isTestFile(rel)) out.push(full);
   }
   return out;
+}
+
+async function plannedTestScope(targetDir, slug) {
+  const candidates = (name) => [
+    path.join(targetDir, '.aioson', 'context', `${name}-${slug}.md`),
+    path.join(targetDir, '.aioson', 'context', 'done', slug, `${name}-${slug}.md`)
+  ];
+  const { content: plan, path: planPath } = await readTextFirst(candidates('implementation-plan'));
+  const section = extractSection(plan, ['Capability Delivery Plan', 'Plano de Entrega de Capacidades', 'Matriz de Entrega de Capacidades']);
+  const table = section ? parseFirstMarkdownTable(section) : null;
+  const fallback = { complete: false, paths: [], plan: null };
+  if (!table || table.rows.length === 0) return fallback;
+  const columns = mapColumns(table, {
+    cap: ['CAP', 'Capability ID', 'ID'], phase: ['Phase', 'Fase'],
+    files: ['Files', 'Paths', 'Arquivos', 'Caminhos'], verification: ['Verification', 'Check', 'Verificacao']
+  });
+  if (columns.missing.length) return fallback;
+  const rows = table.rows.map(row => ({ cap: cleanCell(row[columns.indexes.cap]).toLowerCase(),
+    phase: cleanCell(row[columns.indexes.phase]), files: cleanCell(row[columns.indexes.files]),
+    verification: cleanCell(row[columns.indexes.verification]) }));
+  const { content: prd, path: prdPath } = await readTextFirst(candidates('prd'));
+  const { validateProductCapabilityMap } = require('./feature-completeness');
+  const productMap = validateProductCapabilityMap(prd, prdPath);
+  const caps = new Set(rows.map(row => row.cap));
+  // Only a complete feature contract replaces legacy repository discovery.
+  // A plan names candidates; repository-roots remains the authority to read them.
+  const complete = table.malformed.length === 0 && productMap.rows.length > 0 && productMap.findings.length === 0
+    && caps.size === rows.length && rows.every(row => productMap.allCaps.some(cap => cap.toLowerCase() === row.cap)
+      && !isPlaceholder(row.phase) && !isPlaceholder(row.verification)
+      && !hasPathPattern(row.files) && extractPlannedPaths(row.files).length > 0)
+    && productMap.requiredCaps.every(cap => caps.has(cap.toLowerCase()));
+  return { complete, paths: rows.flatMap(row => extractPlannedPaths(row.files)), plan: toRel(targetDir, planPath) };
+}
+
+async function collectTestFiles(targetDir, slug) {
+  const scope = await plannedTestScope(targetDir, slug);
+  const policy = await loadRepositoryPathPolicy(targetDir);
+  const result = { files: [], scope: { kind: scope.complete ? 'feature_plan' : 'repository', plan: scope.plan, issues: policy.issues } };
+  if (policy.issues.length) return result;
+  const candidates = scope.complete ? scope.paths
+    : [...(await listTestFiles(targetDir)).map(file => toRel(targetDir, file)), ...scope.paths];
+  const seen = new Set();
+  for (const candidate of candidates) {
+    const absolute = path.resolve(targetDir, candidate.replace(/\\/g, '/'));
+    if (!isTestFile(candidate) || shouldSkipDir(targetDir, path.dirname(absolute))) continue;
+    const state = await policy.inspect(candidate);
+    if (!state.safe || !state.exists) continue;
+    let real;
+    try { real = await fs.realpath(absolute); } catch { continue; }
+    if (shouldSkipDir(targetDir, path.dirname(real))) continue;
+    const key = process.platform === 'win32' ? real.toLowerCase() : real;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.files.push(real);
+  }
+  return result;
 }
 
 // A Rust lifetime or loop label is an apostrophe followed by an identifier that
@@ -549,7 +608,7 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
   const requireAssertions = Boolean(options.requireAssertions);
   const acceptQaEvidence = Boolean(options.acceptQaEvidence);
   const criteria = await collectAcceptanceCriteria(targetDir, slug);
-  const testFiles = await listTestFiles(targetDir);
+  const { files: testFiles, scope: testScope } = await collectTestFiles(targetDir, slug);
   const testContents = [];
   for (const filePath of testFiles) {
     const content = await readText(filePath);
@@ -626,9 +685,10 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
   };
 
   return {
-    ok: !noCriteria && missingItems.length === 0,
+    ok: !noCriteria && missingItems.length === 0 && testScope.issues.length === 0,
     feature: slug,
     audited_at: new Date().toISOString(),
+    test_scope: testScope,
     policy: {
       require_criteria: requireCriteria,
       require_assertions: requireAssertions,
