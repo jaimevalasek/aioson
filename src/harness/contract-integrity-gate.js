@@ -130,7 +130,8 @@ async function evaluateContractIntegrityGate(targetDir, slug, options = {}) {
       options: {
         slug,
         json: true,
-        strict: Boolean(options.strict || governedRuntime)
+        strict: Boolean(options.strict || governedRuntime),
+        timeout: options.timeout
       },
       logger: makeSilentLogger(),
       t: () => undefined

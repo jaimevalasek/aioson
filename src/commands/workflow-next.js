@@ -1143,7 +1143,7 @@ async function resetQaDevCycle(targetDir, featureSlug) {
   });
 }
 
-async function finalizeCurrentStage(targetDir, config, state, stageName) {
+async function finalizeCurrentStage(targetDir, config, state, stageName, options = {}) {
   const normalizedStage = normalizeAgentName(stageName || state.current || state.next);
   if (!normalizedStage) {
     throw new Error('No stage is active to complete.');
@@ -1271,7 +1271,8 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
       // (A5: the close-time discovery was the root cause of the rework).
       const hasHarnessContract = await exists(harnessContractPath);
       const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
-        runChecks: hasHarnessContract
+        runChecks: hasHarnessContract,
+        timeout: options.timeout
       });
       if (!integrityGate.ok) {
         const errMsg = formatContractIntegrityGateError(integrityGate, normalizedStage);
@@ -2266,7 +2267,8 @@ async function runWorkflowNext({ args, options, logger, t }) {
         targetDir,
         config,
         state,
-        options.complete === true ? state.current || state.next : options.complete
+        options.complete === true ? state.current || state.next : options.complete,
+        { timeout: options.timeout }
       );
     } catch (err) {
       // ── Auto-heal intercept ───────────────────────────────────────────────

@@ -505,7 +505,8 @@ async function runFeatureClose({ args, options = {}, logger }) {
     // Gate 1 — harness contract integrity (§2c). No preflight os RG-* não
     // executam (runChecks=false): avaliação estática apenas, zero side effects.
     const integrityGate = await evaluateContractIntegrityGate(targetDir, slug, {
-      runChecks: Boolean(contractContent) && !preflight
+      runChecks: Boolean(contractContent) && !preflight,
+      timeout: options.timeout
     });
     if (!integrityGate.ok) {
       blockers.push({
