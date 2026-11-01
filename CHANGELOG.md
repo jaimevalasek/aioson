@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.77.0] - 2026-11-01
+
+### Added
+
+- **`system:package` builds a protected runtime package that a host can trust.** The packaging pipeline left `store-system.js` for `src/lib/system-runtime-package.js`, which `system:package` and `system:publish` now share: protected JavaScript and TypeScript (minified, or obfuscated when the app declares it), binary assets, an inventory with its exclusions, a SHA-256 per file and per ZIP, and per-file, total and ZIP size limits. `system:package --capabilities --json` reports protocol 1 and what the packager supports (`protectedRuntime`, `runtimeVersion`, `manifestCompatibility`, `sourceSnapshot`, `fingerprint`, `typeScript`), so a host such as the AIOSON Play refuses a bundled CLI that cannot build its packages instead of shipping a broken one. Packaging runs on a source snapshot with a fingerprint: an input edited after compilation starts cannot authorize an older artifact. `--runtime-version` stamps the staged manifest and leaves the author's `manifest.json` untouched, `--build` runs without the publish token in its environment, a link that leaves the project is refused instead of packaged, and a failed preparation answers with a `runtime_*` code and the bounded list of files in the JSON error.
+- **A delivery that spans repositories can name the sibling repositories it touches.** Gate C, baseline recovery and delivery verification refused every path outside the project, so a feature that changes the client, the site and the CLI together could not plan its real files. The project-owned `.aioson/repository-roots.json` (`{"version": 1, "roots": ["../cloud"]}`) now lists the additional roots the operator authorizes — a plan, review or source document can never grant one. Roots must exist and cannot be the project's parent or a filesystem root; every literal path must stay inside its repository both lexically and on disk, links and junctions included; an invalid configuration fails closed. Next route directories (`[id]`, `[...slug]`, `[[...slug]]`) count as literal paths, not globs, and the AC test audit reads the test files named by a complete feature plan, so tests that live in a sibling repository are audited too.
+
+### Fixed
+
+- **`--timeout` reaches the harness checks of the integrity gate.** `workflow:next --complete` and `feature:close` ran the RG-* checks of the harness contract with the criteria runner's default timeout, so a long suite (a full desktop build or test run) was cut short even when the operator passed `--timeout`. The flag now travels from both commands through the integrity gate into the harness check and the criteria runner.
+
 ## [1.76.0] - 2026-10-30
 
 ### Added
