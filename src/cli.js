@@ -2293,8 +2293,9 @@ async function main() {
       writeJson({
         ok: false,
         error: {
-          code: 'command_error',
-          message: error.message,
+          code: error.runtimeDiagnostic?.code ?? 'command_error',
+          message: error.runtimeDiagnostic ? 'Runtime preparation failed. Review the listed files.' : error.message,
+          ...(error.runtimeDiagnostic ? { files: error.runtimeDiagnostic.files } : {}),
           command
         }
       });

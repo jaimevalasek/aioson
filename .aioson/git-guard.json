@@ -21,6 +21,13 @@
   ],
   "contentAllowRules": [
     {
+      "path": "tests/system-runtime-package.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "2026-11-01: line 63 sets a sentinel publish credential in the child environment to prove system:package --build strips it; synthetic value, never a credential."
+    },
+    {
       "path": "src/context-selector.js",
       "rules": [
         "generic_secret_assignment"

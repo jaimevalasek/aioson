@@ -46,7 +46,7 @@ const TYPED_SERVER = [
   ''
 ].join('\n');
 
-test('build packages keep the server runtime under its .ts path but strip types, comments and locals', { skip: !canStripTypes && 'Node without module.stripTypeScriptTypes' }, async (ctx) => {
+test('AC-013: build packages keep the server runtime under its .ts path but strip types, comments and locals', { skip: !canStripTypes && 'Node without module.stripTypeScriptTypes' }, async (ctx) => {
   const dir = await makeApp(ctx, {
     'server/server.ts': TYPED_SERVER,
     'server/types.d.ts': 'export interface Secret { key: string }',
@@ -171,7 +171,7 @@ test('build packages drop sourceMappingURL comments from JS and CSS, minified bu
   assert.equal(stripSourceMapComments('const x = 1;\n//@ sourceMappingURL=x.map'), 'const x = 1;\n');
 });
 
-test('build protection transforms long-line JS instead of trusting its layout', async (ctx) => {
+test('AC-013: build protection transforms long-line JS instead of trusting its layout', async (ctx) => {
   const source = 'function readableBusinessRule(value) { return value + 1; } module.exports = readableBusinessRule; /*' +
     'x'.repeat(31000) + '*/';
   const dir = await makeApp(ctx, { 'server/rules.js': source });
