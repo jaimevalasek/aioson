@@ -97,9 +97,22 @@ async function runAcTestAudit({ args, options = {}, logger }) {
     }
   }
 
+  printOracle(report.oracle, logger);
+
   logger.log('');
   logger.log(report.ok ? 'Result: PASS' : `Result: BLOCKED — missing tests for ${report.missing.join(', ')}`);
   return report;
+}
+
+// Where the expected values of the AC-cited tests came from. A tautology or an
+// expected-to-fail marker is a test that is green while the behavior is wrong;
+// the rest are measurements QA weighs with the samples in hand.
+function printOracle(oracle, logger) {
+  if (!oracle || oracle.files_scanned === 0) return;
+  logger.log('');
+  logger.log(`Oracle of AC-cited tests (${oracle.files_scanned} file(s)): value assertions ${oracle.assertions_value}, existence-only ${oracle.assertions_existence_only}, tautological ${oracle.tautological}, expected-to-fail ${oracle.expected_failure_markers}, disabled ${oracle.disabled_tests}, snapshot ${oracle.snapshot_assertions}, bug-shaped ${oracle.bug_shaped_expectations}, admissions ${oracle.observed_oracle_admissions}`);
+  for (const issue of oracle.issues) logger.log(`  ✗ ${issue}`);
+  for (const warning of oracle.warnings) logger.log(`  ⚠ ${warning}`);
 }
 
 module.exports = { runAcTestAudit };

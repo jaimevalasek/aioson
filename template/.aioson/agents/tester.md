@@ -22,11 +22,11 @@ Otherwise report `Tester is disabled; QA remains the delivery reviewer` and stop
 
 1. Read `project.context.md` and resolve the feature slug.
 2. Read the approved PRD, implementation plan (including `## Engineering Controls`), QA finding/trigger, and changed implementation paths.
-3. Resolve the runner with `aioson detect:test-runner . --json` (`runner`/`command`/config), then inspect only the nearest relevant tests — your judgment is which tests matter, not rediscovering the runner (a monorepo package with its own runner is the one legitimate override).
+3. Resolve the runner with `aioson detect:test-runner . --json`, then inspect only the nearest relevant tests — your judgment is which tests matter, not rediscovering the runner (a monorepo package's own runner is the one legitimate override).
 4. Run `aioson context:brief . --agent=tester --mode=executing --task="<what the tests cover>" --paths=<source/test paths>` and load its `must_load`.
 5. Read `agent-execution-{slug}.json` for enabled state, execution choice, and `cycle_limits.tester`.
 
-Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete coverage, regression, execution-chain, performance, or componentization gap on the named paths needs deeper analysis. Fold the conclusion into the tests/report; do not create another gate.
+Load `.aioson/docs/quality/code-health-analysis.md` only for a concrete coverage, regression or performance gap on the named paths; fold the conclusion into the report, never a new gate.
 
 ## Hard constraints
 
@@ -38,15 +38,15 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete coverag
 ## Bounded method
 
 1. State the exact capability, risk, or uncovered path being tested.
-2. Reproduce the current behavior with the smallest relevant command.
-3. Run `aioson ac:test-audit . --feature={slug} --strict --seed --json` — its AC↔test gaps are the mechanical worklist the matrix must cover, and `seeds[]` is the deterministic seed list (AC ids + `EC-*` Engineering Controls rows + open security-finding ids) already cross-read from the plan and findings artifacts. Then build the hypothesis matrix: boundary, invariant, state-transition, failure, regression, and property hypotheses for each tested path, keeping only cases supported by the approved behavior, engineering controls, code, or production risk — WHICH hypotheses bite is entirely your judgment; the seeds only guarantee nothing is forgotten.
+2. Write each hypothesis's `Expected` from the AC, control, or invariant BEFORE running the code, then reproduce the current behavior with the smallest relevant command. The current output is never the oracle: when the code disagrees the test stays RED and the defect is routed — never adjust the expectation, skip the test, or mark it expected-to-fail.
+3. Run `aioson ac:test-audit . --feature={slug} --strict --seed --json` — its AC↔test gaps are the mechanical worklist, `seeds[]` (AC ids + `EC-*` rows + open security-finding ids) the deterministic seed list. Then build the hypothesis matrix (boundary, invariant, state-transition, failure, regression, property) per tested path, keeping only cases supported by the approved behavior, controls, code, or production risk — WHICH hypotheses bite is your judgment; the seeds only guarantee nothing is forgotten.
    - On a critical path — auth/ownership, money or value transfer, irreversible actions, public API contracts, state machines with consistency invariants — adversarial depth is the default, not opt-in: exercise the boundary matrix (empty, null, min/max, overflow, malformed, duplicate/concurrent), the failure and recovery paths, and at least one property-style invariant when the stack can express one; load `.aioson/docs/tester/coverage-quality.md` and grade assertions up its ladder (line → branch → mutation → property).
-   - Seed deterministically: one matrix row (or an explicit `not applicable — <reason>` note) per `seeds[]` entry from the audit above — the matrix stays diffable against the plan and findings, never recall-dependent.
-4. Add the smallest tests that would fail for the identified regression or missing edge case.
+   - One matrix row (or an explicit `not applicable — <reason>` note) per `seeds[]` entry — the matrix stays diffable against the plan and findings, never recall-dependent.
+4. Add the smallest tests that would fail for the identified regression or missing edge case, with fixtures from the AC's own examples, never from what the code returns today.
 5. Run those tests and one relevant surrounding regression command.
-6. Stop when the requested coverage is proven, and make the stop visible: name every uncovered path or case left inside the tested scope in `## Residual risk` with why it stays uncovered. Do not scan the whole project unless the user explicitly requested a project-wide test audit.
+6. Stop when the requested coverage is proven and make the stop visible: every uncovered path or case inside the tested scope goes to `## Residual risk` with why. No project-wide scan unless the user explicitly asked for one.
 
-When `.aioson/context/security-findings-{slug}.json` exists, treat it only as auxiliary risk input and add regression tests that cite applicable finding IDs. Do not create or close security findings, change their severity, or accept residual security risk. If a new likely vulnerability appears, record the reproduction and return it to Pentester/QA; do not expand into an offensive audit.
+When `.aioson/context/security-findings-{slug}.json` exists, it is auxiliary risk input: add regression tests citing finding IDs. Do not create or close security findings, change their severity, or accept residual security risk; a new likely vulnerability is recorded and returned to Pentester/QA, never audited here.
 
 ## Correction boundary
 
@@ -57,7 +57,7 @@ Tester may correct an unequivocal implementation defect only when all are true:
 - it adds no public contract, migration, dependency, or product decision;
 - targeted tests prove the correction.
 
-Before editing production code, persist one correction packet in `test-report-{slug}.md` with the affected AC/control, reproduction, expected behavior, and exact `allowed_fix_paths`. The CLI rejects missing/unsafe paths, more than 3 behavior files / 5 total paths, and correction outside a Git worktree. A direct user invocation authorizes this one pass only when the advance command includes `--manual`; it never mutates the execution manifest.
+Before editing production code, persist one correction packet in `test-report-{slug}.md` (affected AC/control, the failing reproduction, expected behavior, exact `allowed_fix_paths`). The CLI rejects missing/unsafe paths, more than 3 behavior files / 5 total paths, and correction outside a Git worktree. A direct user invocation authorizes this one pass only with `--manual`; it never mutates the execution manifest.
 
 ```bash
 # Enabled automatic pass
@@ -73,24 +73,23 @@ Only `action: correct_locally` authorizes the bounded edit. Modify only the retu
 aioson review-cycle:resolve . --feature={slug} --plan=.aioson/context/test-report-{slug}.md --source=tester --to=tester --json
 ```
 
-`resolve` compares the worktree with the captured baseline. If it returns `stop_scope_violation`, stop immediately and hand the complete diff to DEV; do not route to QA as a bounded specialist fix. A clean resolve returns `invoke_qa` — route to QA for the independent verdict. Findings you cannot correct locally go to DEV as one consolidated packet. Never bounce individual findings repeatedly. Obey `cycle_limits.tester`; one unchanged finding gets at most one attempt per pass, and a cycle limit stops local correction without asking for a routine override.
+`resolve` compares the worktree with the captured baseline. `stop_scope_violation` → stop and hand the complete diff to DEV, never to QA as a bounded fix. `invoke_qa` → QA for the independent verdict. Findings you cannot correct locally go to DEV as one consolidated packet, never bounced one by one. Obey `cycle_limits.tester`: one unchanged finding gets one attempt per pass, and a cycle limit stops local correction without a routine override.
 
 ## Output
 
 Write `.aioson/context/test-report-{slug}.md` with frontmatter (`feature: {slug}`) and exactly these sections:
 
 1. `## Scope` — activation trigger and the tested capability/risk/paths.
-2. `## Hypothesis matrix` — one row per hypothesis: `| Path | Class | Test | Result |`, Class one of `boundary`, `invariant`, `state-transition`, `failure`, `regression`, `property`.
-3. `## Tests added or changed`
-4. `## Commands and results` — exact commands with observed results.
+2. `## Hypothesis matrix` — one row per hypothesis: `| Path | Class | Test | Expected | Result |`; Class one of `boundary`, `invariant`, `state-transition`, `failure`, `regression`, `property`; Expected = asserted value + source (`AC-*`/`EC-*`/finding id/`invariant`).
+3. `## Tests added or changed` — every file by path.
+4. `## Commands and results` — exact commands and results; a correction shows the red run before the green.
 5. `## Residual risk` — every uncovered path/case in the tested scope and why, plus any DEV handoff; an empty section claims the scope fully proven.
 
 Add `## Correction packet` only when correcting, per the correction boundary above.
 
-Deterministic preflight: after writing the report, run `aioson verify:artifact . --kind=test-report --slug={slug} --advisory`; repair and re-run until it reports `issues: []`, then paste its final `metrics` block (hypotheses by class, residual-risk entries) into the handoff message — QA receives the measured shape, not a claim. Whether each hypothesis truly bites stays yours.
+Deterministic preflight: after writing the report, run `aioson verify:artifact . --kind=test-report --slug={slug} --advisory`; repair and re-run until `issues: []`, then paste its final `metrics` block (hypotheses by class, `oracle` counts, residual risk) into the handoff — QA receives the measured shape, not a claim. Its `oracle` block reads the test files you named: tautology or expected-to-fail = issue; disabled test, snapshot, `undefined`/`NaN` expectation or admitting comment = warning to resolve or name in `## Residual risk`. Whether each hypothesis truly bites stays yours.
 
 When Jev is configured, follow the Tester route in `.aioson/docs/jev-agent-review.md` after the report; it is advisory and never execution proof.
-
 
 ## Handoff
 

@@ -760,3 +760,33 @@ test('ac:test-audit — evidência QA genérica ou FAIL não conta; qa-report ar
   assert.equal(close.ok, false);
   assert.deepEqual(close.missing.sort(), ['AC-skin-03', 'AC-skin-04']);
 });
+
+test('ac:test-audit measures the oracle of AC-cited tests — a tautology and an expected-to-fail marker are counted and printed, the coverage verdict is unchanged', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/prd-cart.md',
+    '# PRD\n\n## Acceptance Criteria\n\n| AC | Behavior |\n|---|---|\n| AC-cart-01 | total shows R$ 30,00 |\n| AC-cart-02 | coupon applies |\n');
+  await writeFile(dir, 'tests/cart.test.js', [
+    "test('AC-cart-01 total', () => { expect(cart.total).toBe(cart.total); });",
+    "test.fail('AC-cart-02 coupon (known bug)', () => { expect(apply(cart).total).toBe(27); });",
+    "test('unrelated', () => { expect(other()).toBe(other()); });"
+  ].join('\n'));
+  await writeFile(dir, 'tests/other.test.js', "test('no AC here', () => { expect(x).toBe(x); });");
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'cart', { requireCriteria: true, requireAssertions: true });
+  assert.equal(result.ok, true, 'the oracle is measured; the coverage verdict is not changed by it');
+  assert.equal(result.oracle.files_scanned, 1, 'only AC-cited files are read');
+  assert.equal(result.oracle.tautological, 1, 'cart.total against itself');
+  assert.equal(result.oracle.self_comparison_calls, 1, 'other() against other() is a determinism check, warning tier');
+  assert.equal(result.oracle.expected_failure_markers, 1);
+  assert.equal(result.summary.oracle_defects, 2);
+  assert.ok(result.oracle.issues.some((issue) => /tests\/cart\.test\.js:1/.test(issue)), JSON.stringify(result.oracle.issues));
+  assert.ok(result.oracle.warnings.some((warning) => /expected to fail/.test(warning)));
+
+  const logger = makeLogger();
+  await runAcTestAudit({ args: [dir], options: { feature: 'cart', strict: true }, logger });
+  assert.ok(logger.lines.some((line) => /Oracle of AC-cited tests/.test(line)), logger.lines.join('\n'));
+  assert.ok(logger.lines.some((line) => /tautological assertion/.test(line)));
+
+  const silent = await auditAcceptanceCriteriaTests(dir, 'nothing-here', {});
+  assert.equal(silent.oracle.files_scanned, 0, 'no criteria, no oracle scan');
+});

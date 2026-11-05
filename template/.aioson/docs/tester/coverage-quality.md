@@ -1,8 +1,8 @@
 ---
-description: "Tester deep guide — mutation testing, property-based patterns, test smells catalog, contract testing, adjacent quality layers. Load during an enabled Tester review when a concrete coverage gap requires graduated assertion quality."
-agents: [tester, qa]
+description: "Tester deep guide — oracle discipline (the expected value comes from the approved behavior, never from the current output), mutation testing, property-based patterns, test smells catalog, contract testing, adjacent quality layers. Load during an enabled Tester review, or when a green test coexists with a reported defect."
+agents: [tester, qa, dev]
 task_types: [testing, coverage]
-triggers: [coverage quality, mutation testing, property based]
+triggers: [coverage quality, mutation testing, property based, test oracle, expected value, snapshot test, skipped test, characterization test, green test with bug]
 ---
 
 # Tester — Coverage Quality Beyond Line %
@@ -13,6 +13,38 @@ Load this when:
 - Critical modules (auth, money, ownership, irreversible actions) reach line coverage ≥ 80% and need stronger evidence.
 - Existing tests pass but the user reports bugs in production (signal: weak assertions, missing failure-mode tests).
 - A failing mutation, property, or pact test surfaces in CI and you need to interpret it.
+- A green suite coexists with a reported defect, or a test's expected value cannot be traced to an AC — the oracle is the implementation (§0).
+
+## 0. Oracle discipline — the expected value comes from the approved behavior
+
+A test has two halves: the action and the oracle, the place its expected value came from. Line, branch and even mutation coverage measure the action half. Nothing below matters if the oracle is the implementation: a test whose expected value was copied from what the code returned today is green with the bug in place, and the suite now protects the defect — the change that fixes the bug is the change that turns the test red.
+
+**The rule.** Write `Expected` before running the code, from one of four sources only: an `AC-*`, an `EC-*` engineering control, an open finding, or a named invariant. Build fixtures from the AC's own examples (the two items of R$ 15,00 the PRD describes), never from a database dump or a captured response of the current build. Then run. Three outcomes are legal:
+
+| Code vs. `Expected` | What you do |
+|---|---|
+| agrees | the row is `PASS`; cite the source in `Expected` |
+| disagrees and the AC already determines the answer | keep the test RED, write the correction packet (§7), fix inside `allowed_fix_paths`, record red-then-green in `## Commands and results` |
+| disagrees and the answer is not determined | keep the test RED, route to DEV (Product via QA when the intent is ambiguous), name it in `## Residual risk` |
+
+Never: adjust the expectation to the output; skip, `todo` or `fixme` the red test; mark it expected-to-fail (`test.fail`, `xfail`, `expectedFailure`); replace the value with a snapshot; compare a value with itself. Each of these makes a defective behavior pass as proven.
+
+**What the gate measures.** `aioson verify:artifact . --kind=test-report --slug={slug} --advisory` reads every file named in `## Tests added or changed`; `aioson ac:test-audit . --feature={slug} --strict` reads every AC-cited test. Both report an `oracle` block:
+
+| Signal | Tier | Meaning |
+|---|---|---|
+| `tautological` | issue | `expect(x).toBe(x)`, `assert_eq!(a, a)`, `expect(true).toBe(true)` — the system under test is not in the assertion |
+| `self_comparison_calls` | warning | `expect(f(x)).toBe(f(x))` — a determinism check: proves the call is stable, not that its value is right; add the value the AC implies |
+| `expected_failure_markers` | issue (tester) / warning (audit) | a test written for the bug, graded green while the bug stands |
+| `disabled_tests` | warning | skip/todo/fixme/`@Disabled`/`#[ignore]`/`markTestSkipped` — a platform guard must say so in the sample |
+| `snapshot_assertions` | warning | the current output is the oracle by construction; pair each with a value assertion from the AC |
+| `bug_shaped_expectations` | warning | `undefined`, `NaN`, `[object Object]`, `Invalid Date` asserted as the correct result; `server_error_expectations` counts HTTP 5xx |
+| `observed_oracle_admissions` | warning | comments or titles saying "current behavior", "known bug", "until fixed", "comportamento atual", "por enquanto" |
+| `assertions_existence_only` vs `assertions_value` | warning at ≥ 60% | `toBeDefined()`, `assert.ok(x)`, `not.toThrow()` prove the code runs, not that it is right |
+
+A count above zero is resolved or named in `## Residual risk` with why — never explained away in the handoff. A matrix row whose `Expected` names the current output ("current output", "same as before", "comportamento atual") or is empty is itself an issue: the text says the oracle is the implementation.
+
+**Turning a characterization test into a spec test.** When an existing test only pins today's output: find the AC or invariant it should serve; write the value that AC implies; if the code disagrees you have found a defect, not a flaky test — route it. If no AC covers the behavior, the test documents unspecified behavior: say so in `## Residual risk` and leave it out of the AC evidence.
 
 ## 1. The four-tier coverage quality ladder
 
@@ -337,37 +369,35 @@ Broader or ambiguous defects go once to Dev. Tester never grants Gate D.
 
 ## 8. Reporting template
 
-When invoked on a feature, produce this structure in `.aioson/context/test-report-{slug}.md`:
+`.aioson/context/test-report-{slug}.md` — the shape `verify:artifact --kind=test-report` measures. `Expected` carries the asserted value and its source; a correction shows the red run before the green one.
 
 ```markdown
-## Coverage Quality Report — {feature/module} — {date}
+---
+feature: {slug}
+---
 
-### Tier 1 — Line coverage
-- Module: src/auth/  →  87% (target ≥ 90% critical) ⚠
-- Module: src/orders/ →  82% (target ≥ 80% overall) ✓
+## Scope
+Trigger: QA finding on the cancellation flow. Paths: src/orders/cancel.ts, src/orders/refund.ts.
 
-### Tier 2 — Branch coverage
-- src/auth/jwt.ts: 64% — gap: error-path branches uncovered
-- src/orders/cart.ts: 71% ✓
+## Hypothesis matrix
+| Path | Class | Test | Expected | Result |
+|---|---|---|---|---|
+| src/orders/cancel.ts | boundary | second cancel on a cancelled order | 409 `ALREADY_CANCELLED` (AC-cancel-02) | PASS |
+| src/orders/refund.ts | invariant | refunds never exceed the captured total | sum(refunds) ≤ captured for every sequence (invariant) | PASS |
+| src/orders/cancel.ts | failure | refund API timeout | order stays `paid`, no refund row (EC-2) | FAIL → correction packet |
 
-### Tier 3 — Mutation score (critical modules only)
-- src/auth/jwt.ts: 73% (target ≥ 80%) ⚠ — survivors:
-  - jwt.ts:42:10 boolean replacement (expired check)
-  - jwt.ts:58:14 conditional boundary (>= → >)
+## Tests added or changed
+- tests/orders/cancel.test.ts (new, 3 tests)
 
-### Tier 4 — Property-based
-- ✓ codec round-trip (auth/token.ts)
-- ✗ ledger-balance-invariant — not implemented yet
+## Commands and results
+- `npm test -- tests/orders/cancel.test.ts`: FAIL (1 failing) — timeout path double-refunds, before the fix
+- `npm test -- tests/orders/cancel.test.ts`: PASS (exit code 0) — after the fix
 
-### Test smells found
-- Mystery Guest in tests/auth.test.ts:88 (reads JWT_SECRET from env)
-- Mock Overdose in tests/orders.test.ts (8 mocks for 1 system call)
-
-### Recommendations
-- Cover the two survived mutants in jwt.ts before merge.
-- Add ledger-balance invariant property test.
-- Refactor 2 smells before next sprint.
+## Residual risk
+- Concurrent cancel+refund race not covered — no harness for it in this project; returned to QA.
 ```
+
+Coverage tiers, mutation survivors and test smells (§1–§4) belong under `## Residual risk` or in the handoff message, never in new sections — the gate measures exactly these five.
 
 ## 9. References
 

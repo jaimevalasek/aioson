@@ -224,6 +224,17 @@ test('Tester and Pentester implement only bounded corrections and return accepta
   assert.match(tester, /## Residual risk/);
   assert.match(tester, /docs\/tester\/coverage-quality\.md/);
   assert.match(tester, /--kind=test-report --slug=\{slug\} --advisory/);
+  // Oracle discipline: the matrix names where each expected value came from,
+  // the expectation is written before the code runs, and the gate reads the
+  // named test files for implementation-derived oracles.
+  assert.match(tester, /\| Path \| Class \| Test \| Expected \| Result \|/);
+  assert.match(tester, /BEFORE running the code/);
+  assert.match(tester, /current output is never the oracle/i);
+  assert.match(tester, /never adjust the expectation, skip the test, or mark it expected-to-fail/i);
+  assert.match(tester, /`oracle` block/);
+  assert.match(coverageGuide, /## 0\. Oracle discipline/);
+  assert.match(coverageGuide, /\| Path \| Class \| Test \| Expected \| Result \|/);
+  assert.match(coverageGuide, /tautological/);
   assert.match(pentester, /review-cycle:advance .*--source=pentester --to=pentester/);
   assert.match(pentester, /--manual/);
   assert.match(pentester, /stop_scope_violation/);
@@ -283,6 +294,29 @@ test('QA is a bounded reviewer and never deepens work merely by classification',
     assert.match(content, /not.*classification|never classification-triggered|not a classification/i);
   }
   assert.match(qa, /Small work should normally receive a small verification pass/i);
+});
+
+test('Dev, QA and the dev brain hold the test-oracle rule: the expected value comes from the approved behavior, never from the output', async () => {
+  const [dev, qa, brainRaw, indexRaw] = await Promise.all([
+    read('.aioson/agents/dev.md'),
+    read('.aioson/agents/qa.md'),
+    read('.aioson/brains/dev/patterns.brain.json'),
+    read('.aioson/brains/_index.json')
+  ]);
+  assert.match(dev, /each expected value comes from the AC or control, never from the output the code produced/i);
+  assert.match(dev, /every `oracle` defect it names before QA/);
+  assert.match(qa, /Its `oracle` block reads the AC-cited tests/);
+  assert.match(qa, /oracle is the implementation's own output/i);
+  const brain = JSON.parse(brainRaw);
+  const node = brain.nodes.find((entry) => entry.id === 'dev-009');
+  assert.ok(node, 'dev-009 oracle node exists');
+  assert.ok(node.q >= 4, 'binding quality');
+  assert.ok(node.tags.includes('oracle') && node.tags.includes('testing'));
+  assert.match(node.src, /^AIOSON supervised session/);
+  const index = JSON.parse(indexRaw);
+  const entry = index.brains.find((item) => item.id === 'dev/patterns');
+  assert.equal(entry.nodes, brain.nodes.length);
+  assert.ok(entry.tags.includes('oracle'));
 });
 
 test('canonical prompts never make legacy abstraction artifacts prerequisites', async () => {

@@ -16,7 +16,7 @@ Independently decide whether the delivered application fulfills the approved PRD
 6. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/qa.md` only.
 7. Load another review-intelligence profile only when a Critical/High risk or explicit independent-review request justifies a deeper challenge; Sheldon's current PRD review is already mandatory input.
 
-Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete defect pattern on changed paths makes code-health analysis material to the delivery verdict. Do not turn it into a broad audit.
+Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete defect pattern on changed paths is material to the verdict; never a broad audit.
 
 ## Hard constraints
 
@@ -41,9 +41,9 @@ aioson prototype:check . --feature={slug} --strict
 aioson ac:test-audit . --feature={slug} --strict
 ```
 
-The AC audit is one signal. If it cannot understand the project's stack, inspect and run the stack-native tests directly; report the tool limitation instead of claiming zero coverage.
+The AC audit is one signal. If it cannot understand the project's stack, inspect and run the stack-native tests directly; report the tool limitation instead of claiming zero coverage. Its `oracle` block reads the AC-cited tests: a tautology, an expected-to-fail or disabled test, a snapshot, or `undefined`/`NaN` asserted as correct stays green while the behavior is wrong — a High finding, never coverage.
 
-For a delivery with a visual or rich operational surface, run `aioson brain:query . --agent=qa --tags=interaction,forms --min-quality=4 --format=compact 2>/dev/null || true`; its nodes and matching `.aioson/rules/` are delivery criteria for promised surfaces: each interaction contract carried by the PRD, plan, or an AC (mask/validation behavior, status-change confirm and cancel paths, drag-and-drop persistence, live widget data) needs one concrete CAP/AC evidence row proven on the real surface. The query never adds scope. `agent:done` measures visual craft and `feature:trace` carries both sides. When Jev is configured, load `.aioson/docs/jev-review.md` and follow its QA route.
+For a delivery with a visual or rich operational surface, run `aioson brain:query . --agent=qa --tags=interaction,forms --min-quality=4 --format=compact 2>/dev/null || true`; its nodes and matching `.aioson/rules/` are delivery criteria for promised surfaces: each interaction contract carried by the PRD, plan, or an AC (masks, confirm/cancel paths, drag-and-drop persistence, live widget data) needs one CAP/AC evidence row proven on the real surface. The query never adds scope. `agent:done` measures visual craft and `feature:trace` carries both sides. When Jev is configured, load `.aioson/docs/jev-review.md` and follow its QA route.
 
 ## Risk-first checklist
 
@@ -58,7 +58,7 @@ For a delivery with a visual or rich operational surface, run `aioson brain:quer
 
 - Prototype's key interaction/state materially missing without an approved deviation.
 - Error/recovery path promised by an AC is absent.
-- Tests exercise a parallel fixture instead of the production integration.
+- Tests exercise a parallel fixture instead of the production integration, or their oracle is the implementation's own output.
 
 #### Medium/Low
 
@@ -72,7 +72,7 @@ For a delivery with a visual or rich operational surface, run `aioson brain:quer
 - Never repeat the same failing command or diagnostic more than twice without new evidence or a changed hypothesis.
 - When a reproducible implementation defect is found, stop expanding the investigation and return the minimal reproduction to Dev.
 - Do not invoke Tester, Pentester, Validator, browser automation, or full-suite stress work merely because of classification. Require a concrete trigger.
-- Run focused AC evidence and the production smoke while investigating. On PASS, `gate:check --gate=D` owns the one comprehensive project verification and caches it by implementation fingerprint; `gate:approve` and `workflow:next --complete=qa` consume that evidence. Do not run the same unchanged full suite manually before or after those commands.
+- Run focused AC evidence and the production smoke while investigating. On PASS, `gate:check --gate=D` owns the one comprehensive project verification and caches it by implementation fingerprint; `gate:approve` and `workflow:next --complete=qa` consume that evidence — never rerun the same unchanged full suite by hand around them.
 
 The goal is a fast trustworthy verdict. Small work should normally receive a small verification pass.
 
@@ -82,7 +82,7 @@ Get the PROM→CAP→AC→phase→files chain precomputed — never re-derive it
 aioson feature:trace . --feature={slug} --json
 ```
 
-It returns every promise with its decision/caps, every capability with its ACs, delivery phases, files and verification, plus `gaps[]` for anything the artifacts left malformed (treat gaps as findings, not as license to skip), and `visual` — the prototype's recorded kind=visual evidence (craft, tells, materials); `measured: false` or `stale: true` on a visible surface is a finding to name. Then, for each required `CAP-*` in the trace:
+It returns the chain plus `gaps[]` for anything the artifacts left malformed (gaps are findings, not license to skip), and `visual` — the prototype's recorded kind=visual evidence (craft, tells, materials); `measured: false` or `stale: true` on a visible surface is a finding to name. Then, for each required `CAP-*` in the trace:
 
 1. Take its `AC-*` rows from the trace (open the PRD only to judge wording, not to rebuild the map).
 2. Inspect the implementing files and tests the trace names.
@@ -97,13 +97,13 @@ When Jev is configured, follow the QA route in `.aioson/docs/jev-agent-review.md
 
 For a browser-reachable surface, steps 5-8 are a walkthrough you write, not prose: load `.aioson/docs/qa/browser-walkthrough.md`, read the page with `aioson browser:snapshot . --url=<entry>`, tag your own steps (never Dev's spec files) with the AC ids and a `boundary`, and run `aioson browser:run . --script=<file> --url=<entry> --slug={slug}`; the smoke fields cite its report path. `feature:trace` returns `browser` — `measured: false` on a web delivery is a finding to name. At a login wall attach to the operator's signed-in Chrome with `--cdp`; never script credentials.
 
-Run `aioson rules:check . --changed`. A `HIGH` is a project rule being violated and is a FAIL on its own, whatever the PRD, the plan, or a dossier deviation says — route it back as a correction packet naming the rule. `MED` findings come from docs and process skills, which are craft rather than law: report them as advice, never as the blocker.
+Run `aioson rules:check . --changed`. A `HIGH` is a project rule being violated and is a FAIL on its own, whatever the PRD, the plan, or a dossier deviation says — route it back as a correction packet naming the rule. `MED` findings come from docs and process skills, which are craft, not law: report them as advice, never as the blocker.
 
 Run broader regression tests proportional to the changed surface. Invoke `@pentester` only for triggered sensitive surfaces or suspicious findings; invoke `@tester` only when deeper coverage is enabled and useful.
 
-When a specialist trigger is concrete—an engineering-control row, an observed finding, the approved plan, or a user request—read `.aioson/context/agent-execution-{slug}.json` and honor its enabled flag and `cycle_limits`; the specialist must return to QA for the delivery verdict. After any bounded correction, independently review that diff (changed behavior: `.aioson/docs/qa/scope-drift.md`) and rerun the relevant evidence. A missing trigger never delays the verdict.
+When a specialist trigger is concrete (a control row, a finding, the approved plan, or a user request), read `.aioson/context/agent-execution-{slug}.json` and honor its enabled flag and `cycle_limits`; the specialist must return to QA for the delivery verdict. After any bounded correction, independently review that diff (changed behavior: `.aioson/docs/qa/scope-drift.md`) and rerun the relevant evidence. A missing trigger never delays the verdict.
 
-Security-findings adjudication: when `.aioson/context/security-findings-{slug}.json` exists (produced by `@pentester`), QA is the final authority over its statuses. Review every open finding against the delivered state and record the outcome — `fixed` only after rerunning the finding's reproduction, `false_positive` with the disproving evidence, `accepted_risk` only with an explicit user/product decision. Update the JSON statuses, cite the adjudication under the report's regression/security notes, and treat an unadjudicated Critical/High security finding as a blocking issue for the verdict.
+Security-findings adjudication: when `.aioson/context/security-findings-{slug}.json` exists (produced by `@pentester`), QA is the final authority over its statuses. Review every open finding against the delivered state and record the outcome — `fixed` only after rerunning the finding's reproduction, `false_positive` with the disproving evidence, `accepted_risk` only with an explicit user/product decision. Update the JSON statuses, cite it under regression/security notes, and treat an unadjudicated Critical/High security finding as a blocking issue for the verdict.
 
 ## Output contract
 

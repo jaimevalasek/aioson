@@ -46,7 +46,7 @@ done-gate line, not a bespoke implementation.
 | `sources` | `@sheldon`, `@product` | source-pack re-hash + `SRC-*`/`PROM-*`/Source Coverage reconciliation | blocking |
 | `review` | `@refiner` | review-surface gate (canonical marker, stale `source_hash`, feedback schema) | advisory |
 | `visual` | `@dev` / design flows | visual-quality measurement over the delivered surface | advisory |
-| `test-report` | `@tester` | test-report lint (mandatory sections, hypothesis classes, correction packet) | blocking done gate |
+| `test-report` | `@tester` | test-report lint (mandatory sections, hypothesis classes, the `Expected` oracle of every row, correction packet with its red run) + oracle lint over the named test files (tautology, expected-to-fail, skip, snapshot, bug-shaped expectation, admitting comment) | blocking done gate |
 | `security-findings` | `@pentester` | QA's own Gate D validator on `security-findings-{slug}.json` (review contract, coverage roll-ups, surfaces, sanitized targets) + the finding contract (vocabularies matched exactly, retired owners, legacy version, remediation records); open high/critical findings are metrics for QA, never issues; records `security:audit`/`security:scan` wrote (`source`) keep the scanner's shape and are counted, not held to the authored contract | advisory at `agent:done`; Gate D blocks at QA |
 | `squad-pilot` | `@squad` | squad-pilot lint (pilot block, fingerprint, deliverable + builder drift) | blocking — `squad:pilot-approve` refuses while issues remain |
 | `squad-package` | `@squad` | `squad:validate --strict` + executor lint (stubs, placeholders, thin/bloated prompts, missing core sections, near-duplicates, argv-only workers) | advisory rider at `agent:done`; strict errors block `validate` itself |

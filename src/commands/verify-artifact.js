@@ -1155,10 +1155,14 @@ const ADAPTERS = {
   },
 
   // The deterministic half of the Tester contract: report identity, the
-  // class-tagged hypothesis matrix, executed-command evidence, and named
-  // residual risk — so stopping short of full coverage is a visible decision,
-  // never a silent default. Whether each hypothesis actually bites, and the
-  // delivery verdict itself, stay with the agent and with QA.
+  // class-tagged hypothesis matrix with the oracle of every row, executed-command
+  // evidence, and named residual risk — so stopping short of full coverage is a
+  // visible decision, never a silent default. The test files the report names
+  // are then read for the shapes of an implementation-derived oracle
+  // (tautology, expected-to-fail, skip, snapshot, bug-shaped expectation): a
+  // green test whose expected value was copied from the current output is the
+  // defect this gate exists to see. Whether each hypothesis actually bites, and
+  // the delivery verdict itself, stay with the agent and with QA.
   'test-report': async (ctx) => {
     const rel = `.aioson/context/test-report-${ctx.slug}.md`;
     let reportText;
@@ -1169,14 +1173,20 @@ const ADAPTERS = {
     }
 
     const { analyzeTestReport } = require('../lib/test-report-lint');
+    const { analyzeNamedTestFiles } = require('../lib/test-oracle-lint');
     const result = analyzeTestReport({ report: reportText, slug: ctx.slug });
-    const ok = result.issues.length === 0;
+    const oracle = await analyzeNamedTestFiles(ctx.targetDir, result.metrics.test_files_named, { mode: 'tester' });
+    const issues = [...result.issues, ...oracle.issues];
+    const ok = issues.length === 0;
     return {
       ok,
-      issues: result.issues,
-      warnings: result.warnings,
-      checks: [{ id: 'test-report', ok, detail: result.issues.join('; ') || null }],
-      metrics: { ...result.metrics, file: rel }
+      issues,
+      warnings: [...result.warnings, ...oracle.warnings],
+      checks: [
+        { id: 'test-report', ok: result.issues.length === 0, detail: result.issues.join('; ') || null },
+        { id: 'test-oracle', ok: oracle.issues.length === 0, detail: oracle.issues.join('; ') || null }
+      ],
+      metrics: { ...result.metrics, file: rel, oracle: oracle.metrics }
     };
   },
 

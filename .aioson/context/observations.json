@@ -431,6 +431,21 @@
       "created_at": "2026-10-30T15:06:30.508Z",
       "updated_at": "2026-10-30T15:06:30.508Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-7d446b",
+      "kind": "risk",
+      "summary": "Consumer test agents already dodge the AC scanner: a Playwright skip was written as 'if (platform) test.skip(...)' with a comment saying the if-form keeps the scanner from registering a skipped test — the oracle lint counts conditional ski…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-05T05:14:10.309Z",
+      "updated_at": "2026-11-05T05:14:10.309Z",
+      "resolution": null
     }
   ]
 }

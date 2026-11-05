@@ -23,6 +23,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { extractPlannedPaths, hasPathPattern } = require('./planned-paths');
 const { loadRepositoryPathPolicy } = require('./repository-paths');
+const { maskNonCode, isRustSource } = require('./source-mask');
 const {
   extractSection,
   parseFirstMarkdownTable,
@@ -49,15 +50,6 @@ function isTestFile(relPath) {
   if (/(?:_spec|_test)\.rb$/i.test(rel)) return true;
   if (/(?:Test|Tests)\.(?:java|kt|kts|cs)$/i.test(rel)) return true;
   return false;
-}
-
-// Rust is the one supported language whose quotes need their own lexing: an
-// apostrophe may be a lifetime rather than a literal, and a raw string carries
-// its own delimiter. The masker relaxes those two rules for these files only,
-// because in every other language a single quote does open a string and must
-// keep being blanked.
-function isRustSource(relPath) {
-  return /\.rs$/i.test(String(relPath || ''));
 }
 
 function extractAcIds(content) {
@@ -189,128 +181,6 @@ async function collectTestFiles(targetDir, slug) {
     result.files.push(real);
   }
   return result;
-}
-
-// A Rust lifetime or loop label is an apostrophe followed by an identifier that
-// no closing apostrophe terminates: `'static`, `'a`, `'_`, `'outer:`. A char
-// literal always closes, so `'a'` and `b'a'` still read as literals, and an
-// escape (`'\n'`, `'\''`) never starts an identifier.
-function isRustLifetimeAt(chars, index) {
-  if (!/[A-Za-z_]/.test(chars[index + 1] || '')) return false;
-  let end = index + 1;
-  while (end < chars.length && /[A-Za-z0-9_]/.test(chars[end])) end += 1;
-  return chars[end] !== "'";
-}
-
-// A Rust raw string takes no escapes and may hold quotes of its own: `r"..."`,
-// `r#"..."#`, `br##"..."##`. Reading one as an ordinary string closes it at the
-// first inner quote and leaves the mask inverted for the rest of the file —
-// hiding real assertions and, worse, exposing string bodies as if they were
-// code. Returns the index of the closing delimiter, or null when `index` does
-// not open a raw string. An unterminated one masks to the end, which is the
-// conservative direction.
-function rustRawStringAt(chars, index) {
-  let hashes = 0;
-  let prefix = index - 1;
-  while (prefix >= 0 && chars[prefix] === '#') {
-    hashes += 1;
-    prefix -= 1;
-  }
-  if (chars[prefix] !== 'r') return null;
-  if (chars[prefix - 1] === 'b' || chars[prefix - 1] === 'c') prefix -= 1;
-  // The prefix must open the token, never end a longer identifier.
-  if (prefix > 0 && /[A-Za-z0-9_]/.test(chars[prefix - 1] || '')) return null;
-
-  for (let i = index + 1; i < chars.length; i += 1) {
-    if (chars[i] !== '"') continue;
-    let closed = true;
-    for (let hash = 1; hash <= hashes; hash += 1) {
-      if (chars[i + hash] !== '#') {
-        closed = false;
-        break;
-      }
-    }
-    if (closed) return i + hashes;
-  }
-  return chars.length - 1;
-}
-
-// Blank comments and string/template contents while preserving offsets and
-// newlines. AC ids may legitimately live in test titles/comments, so matching
-// still uses the original source; only test/assertion syntax is read from this
-// masked view. This is deliberately conservative: ambiguous text is never
-// promoted to executable proof.
-function maskNonCode(content, options = {}) {
-  const text = String(content || '');
-  // Rust needs two exceptions the other languages do not: a lifetime opens no
-  // literal, and a raw string carries its own delimiter. Lexing either as an
-  // ordinary quote desynchronises the mask for the rest of the file.
-  const rust = options.rust ?? isRustSource(options.file);
-  const chars = [...text];
-  let state = 'code';
-  let quote = null;
-  let escaped = false;
-
-  for (let i = 0; i < chars.length; i += 1) {
-    const current = chars[i];
-    const next = chars[i + 1];
-
-    if (state === 'line-comment') {
-      if (current === '\n' || current === '\r') state = 'code';
-      else chars[i] = ' ';
-      continue;
-    }
-    if (state === 'block-comment') {
-      if (current === '*' && next === '/') {
-        chars[i] = ' ';
-        chars[i + 1] = ' ';
-        i += 1;
-        state = 'code';
-      } else if (current !== '\n' && current !== '\r') {
-        chars[i] = ' ';
-      }
-      continue;
-    }
-    if (state === 'string') {
-      if (current !== '\n' && current !== '\r') chars[i] = ' ';
-      if (escaped) {
-        escaped = false;
-      } else if (current === '\\') {
-        escaped = true;
-      } else if (current === quote) {
-        state = 'code';
-        quote = null;
-      }
-      continue;
-    }
-
-    if (current === '/' && next === '/') {
-      chars[i] = ' ';
-      chars[i + 1] = ' ';
-      i += 1;
-      state = 'line-comment';
-    } else if (current === '/' && next === '*') {
-      chars[i] = ' ';
-      chars[i + 1] = ' ';
-      i += 1;
-      state = 'block-comment';
-    } else if (current === '"' || current === "'" || current === '`') {
-      if (rust && current === "'" && isRustLifetimeAt(chars, i)) continue;
-      const rawEnd = rust && current === '"' ? rustRawStringAt(chars, i) : null;
-      if (rawEnd !== null) {
-        for (let j = i; j <= rawEnd; j += 1) {
-          if (chars[j] !== '\n' && chars[j] !== '\r') chars[j] = ' ';
-        }
-        i = rawEnd;
-        continue;
-      }
-      chars[i] = ' ';
-      state = 'string';
-      quote = current;
-      escaped = false;
-    }
-  }
-  return chars.join('');
 }
 
 function hasAssertionNearAc(content, acId, options = {}) {
@@ -670,6 +540,12 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
   }
   const missingItems = items.filter((item) => !['covered', 'deferred', 'out_of_scope'].includes(item.status));
   const noCriteria = requireCriteria && items.length === 0;
+  // The oracle of the AC-cited tests: an "assertion signal" near the AC proved a
+  // test ASSERTS something; it never said whether the expected value came from
+  // the AC or from the output the code produced. A tautology, a test marked
+  // expected-to-fail, a skip, a snapshot or `undefined` asserted as correct is
+  // measured here for QA and Dev — the coverage verdict (`ok`) is unchanged.
+  const oracle = auditTestOracles(criteria, testContents);
   const summary = {
     acs_total: items.length,
     deferred: items.filter(item => item.status === 'deferred').length,
@@ -681,7 +557,8 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
     assertion_signals_required: requireAssertions,
     qa_evidence_accepted: acceptQaEvidence,
     browser_covered: items.filter((item) => item.evidence.some((e) => e.kind === 'browser')).length,
-    test_files_scanned: testContents.length
+    test_files_scanned: testContents.length,
+    oracle_defects: oracle.tautological + oracle.expected_failure_markers
   };
 
   return {
@@ -695,11 +572,21 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
       accept_qa_evidence: acceptQaEvidence
     },
     summary,
+    oracle,
     items,
     missing: noCriteria
       ? ['<no acceptance criteria declared>']
       : missingItems.map((item) => item.ac)
   };
+}
+
+function auditTestOracles(criteria, testContents) {
+  const { analyzeTestOracle } = require('./test-oracle-lint');
+  const relevant = criteria.length === 0
+    ? []
+    : testContents.filter((item) => criteria.some((criterion) => mentionsAcId(item.content, criterion.id, item.file)));
+  const result = analyzeTestOracle({ files: relevant, mode: 'audit' });
+  return { ...result.metrics, issues: result.issues, warnings: result.warnings };
 }
 
 module.exports = {
