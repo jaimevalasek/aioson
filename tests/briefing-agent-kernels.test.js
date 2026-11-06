@@ -17,6 +17,7 @@ const DOCS = [
   'docs/briefing/sql-as-documentation.md',
   'docs/briefing/exploration-and-artifacts.md',
   'docs/briefing/refinement-loop.md',
+  'docs/briefing/logged-in-screens.md',
   'docs/briefing/prototype-and-delegation.md',
   'docs/briefing/visual-exploration.md',
   'docs/briefing/review-surface-fallback.md',
@@ -80,7 +81,9 @@ test('Briefing routes activation, exploration, deep craft, expansion, and exact 
   }
 
   assert.match(kernel, /one specified observable outcome/i);
-  assert.match(kernel, /obtain explicit confirmation before the first write/i);
+  assert.match(kernel, /write without asking/i);
+  assert.match(kernel, /Never overwrite an existing briefing without confirmation/i);
+  assert.doesNotMatch(kernel, /before the first write|slug confirmation/i);
   assert.match(kernel, /One activation should advance one coherent decision branch/i);
 });
 
@@ -115,29 +118,27 @@ test('Refiner delivers its initial draft before optional visual work and preserv
   const kernel = await read(TEMPLATE, 'agents/refiner.md');
   const prototype = await read(TEMPLATE, 'docs/briefing/prototype-and-delegation.md');
   const initial = prototype.indexOf('## Build initial prototype');
-  const choice = prototype.indexOf('## Prototype continuation choice');
+  const choice = prototype.indexOf('## Prototype refinement cycle');
   const validation = prototype.indexOf('## Authorized refinement and approval validation');
-  assert.ok(initial >= 0 && initial < choice && choice < validation, 'initial creation and user choice must precede expensive validation');
+  assert.ok(initial >= 0 && initial < choice && choice < validation, 'initial creation must precede the cycle, and the cycle its validation');
   const draft = prototype.slice(initial, choice);
   const checkpoint = prototype.slice(choice, validation);
   const fullValidation = prototype.slice(validation);
 
-  assert.match(kernel, /Build an initial draft, then offer stopping or a bounded premium quality pass/i);
+  assert.match(kernel, /Build an initial draft, deliver its path, then run one bounded premium quality pass by default/i);
   assert.match(kernel, /Draft delivery never grants approval/i);
   assert.match(draft, /pause before Prototype Forge's `After the functional build`/);
   assert.doesNotMatch(draft, /aioson (?:verify:artifact|browser:run)|--screenshots/);
-  assert.match(checkpoint, /Finish with the current prototype/);
-  assert.match(checkpoint, /Continue refining \(more time and tokens\)/);
-  assert.match(checkpoint, /stop and wait for the answer before polishing/i);
-  assert.match(checkpoint, /No answer authorizes no additional work/);
+  assert.match(checkpoint, /one bounded refinement cycle runs by default, with no question first/);
+  assert.doesNotMatch(checkpoint, /Would you like to finish/);
+  assert.match(checkpoint, /when the user told you not to refine this prototype/);
   assert.match(checkpoint, /status: draft/);
   assert.match(checkpoint, /Do not propose `briefing:approve` or Product as ready/);
   assert.match(checkpoint, /`agent:done` static check.*does not restart work/);
   assert.match(checkpoint, /one bounded cycle: inspect → repair → final verification/);
   assert.match(checkpoint, /do not reset that budget/);
-  assert.match(checkpoint, /prior explicit request.*counts; do not ask again/);
-  assert.match(checkpoint, /Autopilot.*does not itself authorize the refinement loop/);
-  assert.match(checkpoint, /On resume, read it before work: pending\/finish is a stop/);
+  assert.match(checkpoint, /Autopilot.*never adds a second cycle/);
+  assert.match(checkpoint, /On resume, read it before work: a recorded stop is a stop/);
   assert.match(checkpoint, /Update the record before final measurement/);
   assert.match(checkpoint, /Stopping never waives an approval gate/);
 
@@ -146,6 +147,36 @@ test('Refiner delivers its initial draft before optional visual work and preserv
   assert.match(fullValidation, /aioson browser:run/);
   assert.match(fullValidation, /refuses missing, stale, failed, or unverified evidence/);
   assert.match(fullValidation, /do not restart it to make a gate green/);
+});
+
+test('a logged-in screen has a route both agents load, beside the rule against the other way', async () => {
+  // The route sat in briefing-craft.md, which a concrete problem never loads, and the
+  // refiner had none: an agent that needed a screen read .env and minted a session.
+  const [briefing, refiner, route, craft] = await Promise.all([
+    read(TEMPLATE, 'agents/briefing.md'),
+    read(TEMPLATE, 'agents/refiner.md'),
+    read(TEMPLATE, 'docs/briefing/logged-in-screens.md'),
+    read(TEMPLATE, 'docs/briefing/briefing-craft.md')
+  ]);
+  for (const [name, kernel] of [['briefing', briefing], ['refiner', refiner]]) {
+    assert.match(kernel, /^\| A logged-in screen of the current product matters \| `\.aioson\/docs\/briefing\/logged-in-screens\.md` \|$/m, name);
+    assert.match(kernel, /open credential sources.*mint a session|open credential sources or mint a session/i, name);
+  }
+  for (const route_ of ['value_env', '--save-state', '--cdp', 'browser-walkthrough.md']) assert.ok(route.includes(route_), route_);
+  assert.match(route, /Who saw it/);
+  assert.match(route, /What nobody saw/);
+  assert.match(craft, /follow `\.aioson\/docs\/briefing\/logged-in-screens\.md`/);
+});
+
+test('the review tells the owner what saving does, and the kernel never asks twice', async () => {
+  const [refiner, loop] = await Promise.all([read(TEMPLATE, 'agents/refiner.md'), read(TEMPLATE, 'docs/briefing/refinement-loop.md')]);
+  assert.match(refiner, /run apply with `--confirm-if-clean`/);
+  assert.match(refiner, /the user's own words to apply are that confirmation, so never ask twice/);
+  assert.match(loop, /--confirm-if-clean --json/);
+  assert.match(loop, /applied_without_confirmation: true/);
+  assert.match(loop, /pending_confirmation: true/);
+  assert.match(loop, /never ask twice/);
+  assert.match(loop, /marked `"defers": true`/);
 });
 
 test('Briefing modules are managed and template/workspace copies remain byte-identical', async () => {

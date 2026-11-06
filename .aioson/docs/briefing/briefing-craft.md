@@ -214,7 +214,7 @@ Follow-ups:
 
 ### E — Gaps (current vs desired state)
 
-To see a logged-in screen of the current product, never open a credential source or mint a session. On a local app with a seeded test account, use a walkthrough (`.aioson/docs/qa/browser-walkthrough.md` § A test account and a reused session). Otherwise ask the owner for a print or to attach with `--cdp`.
+To see a logged-in screen of the current product, follow `.aioson/docs/briefing/logged-in-screens.md`.
 > "What's still undefined that would need an answer before moving forward? For each thing, can we frame it as 'today we have X, we want Y, the delta is Z'?"
 
 ### F — Open questions classification

@@ -1214,6 +1214,8 @@ function logDeliveryParityLine(logger, dp, t) {
   logger.log(`agent:done — ${parityLine(dp, t)}`);
 }
 
+const { logCredentialReadsLine, resolveCredentialReads } = require('../lib/credential-source-scan');
+
 /**
  * Knowledge-routing trajectory (advisory). An agent whose kernel tells it to
  * run `context:brief` promised to consult the routed rules/docs/skills; the
@@ -1319,6 +1321,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       agent: normalizedAgent,
       session: hasActiveSession ? session : null
     });
+    const credentialReads = await resolveCredentialReads({ db, targetDir, agent: normalizedAgent });
 
     if (hasActiveSession) {
       // Live or tracked session is already open — only append a completion note.
@@ -1384,8 +1387,9 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         logVerifyArtifactLine(logger, verifyArtifact);
         logDeliveryParityLine(logger, deliveryParity, t);
         logBriefConsultationLine(logger, briefConsultation);
+        logCredentialReadsLine(logger, credentialReads);
       }
-      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation };
+      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation, credential_reads: credentialReads };
     }
 
     // No active session — create a standalone task+run and immediately complete it.
@@ -1463,8 +1467,9 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       logVerifyArtifactLine(logger, verifyArtifact);
       logDeliveryParityLine(logger, deliveryParity, t);
       logBriefConsultationLine(logger, briefConsultation);
+      logCredentialReadsLine(logger, credentialReads);
     }
-    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation };
+    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation, credential_reads: credentialReads };
   } finally {
     db.close();
   }

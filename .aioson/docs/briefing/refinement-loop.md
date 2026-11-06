@@ -59,7 +59,7 @@ Use when `refinement-feedback.json` is absent or the user explicitly requests re
 
 Allowed categories: `ambiguity`, `redundancy`, `gap`, `risk`, `pending-decision`, `scope-suggestion`. Allowed severities: `low`, `medium`, `high`. Use `blocking: true` only when Product cannot responsibly write the PRD without resolution. `section_id` is the section-title kebab case.
 
-Material choices use two to four legitimate alternatives. Use `single` for mutually exclusive paths and `multiple` only for independent compatible choices. Labels, descriptions and impacts must explain real differences; never add fake alternatives to make the card look complete. A finding with no real choice may keep the legacy `recommendation` shape and receives visible accept/change/defer actions.
+Material choices use two to four legitimate alternatives. Use `single` for mutually exclusive paths and `multiple` only for independent compatible choices. Labels, descriptions and impacts must explain real differences; never add fake alternatives to make the card look complete. A `scope-suggestion` carries a recommendation only when it cites a `PROM-*` the briefing holds, or on an option that leaves the scope as it is, marked `"defers": true`: the owner takes the recommended option in about 95% of the answers, so recommending scope decides it. An idea with no promise behind it stays on the card with no recommendation, and `briefing:review` refuses the rest as `invalid_findings`. A finding with no real choice may keep the legacy `recommendation` shape and receives visible accept/change/defer actions.
 
 For existing-system fit, include observed behavior and exact repository paths in `text`. Routine evidence-backed corrections belong in `recommendation`, not in a new user question.
 
@@ -83,14 +83,16 @@ Use when `.aioson/briefings/{slug}/refinement-feedback.json` exists.
 
 1. If the user pasted exported JSON, write it verbatim to the canonical feedback path.
 2. Read the round through `aioson briefing:feedback . --slug={slug}` first — the lean view: every finding, comment, decision and blocking item, plus the text of only the sections a note or a status change touches. The raw JSON carries the whole briefing twice (`original_text` and `current_text` for every section); never read it end to end. Incorporate accepted findings and decision-bearing notes into the target section's `current_text` with a surgical edit of the named sections only. The CLI writes only `current_text`; notes alone never reach `briefings.md`. When text still equals `original_text`, fold in the decision/rationale, mark a resolved open question, and set the section to `change_requested`. Edit only feedback JSON. Ask instead of guessing an ambiguous note.
-3. Dry-run:
+3. Apply if clean:
 
 ```bash
-aioson briefing:apply-feedback . --slug={slug} --json
+aioson briefing:apply-feedback . --slug={slug} --confirm-if-clean --json
 ```
 
-Show changed/blocked sections, finding decisions, pending blockers, and every note incorporated into text. A dry-run never writes `briefings.md`. For stale feedback, default to regeneration; offer `--allow-stale` only if the user insists.
-4. Stop for explicit confirmation.
+A round is clean when the owner saved the page, with no note, no comment, no other choice, nothing blocked, and no rewritten section outside the accepted findings (open questions, sources, gaps and additional files are bookkeeping). Saving was the confirmation: the CLI applies it and answers `applied_without_confirmation: true`, so report what changed and go to `Decide after apply`, with `briefing:approve` still the user's.
+
+Any other round is a dry-run that answers `pending_confirmation: true` and lists `confirmation.reasons`. Show changed/blocked sections, finding decisions, pending blockers, and every note incorporated into text. A dry-run never writes `briefings.md`. For stale feedback, default to regeneration; offer `--allow-stale` only if the user insists.
+4. Stop for explicit confirmation. The user's own words to apply in this conversation, such as "apply the recommended", are that confirmation: never ask twice.
 5. On confirmation:
 
 ```bash

@@ -87,4 +87,4 @@ If an approved briefing already has `prd_generated`, do not repurpose it as a fr
 
 ## Slug gate
 
-Derive a stable kebab-case slug from the actual problem, not the first proposed UI. Show the exact target `.aioson/briefings/{slug}/` and wait for confirmation before any first write. If it already exists, offer continuation or a genuinely distinct slug.
+Derive a stable kebab-case slug from the actual problem, not the first proposed UI, and write to `.aioson/briefings/{slug}/` without asking, naming the slug in your next message. A slug the user named wins. If it already exists, offer continuation or a genuinely distinct slug. If the user asks for another name before approval, rename the folder and its registry entry.

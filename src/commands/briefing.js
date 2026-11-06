@@ -30,9 +30,11 @@ const {
   assertFeedbackPath,
   collectApprovedReviewDecisions,
   validateFeedback,
-  validateFindingsInput
+  validateFindingsInput,
+  briefingPromiseIds
 } = require('../lib/refiner/feedback-schema');
 const { resolveBriefingPath } = require('../lib/refiner/briefing-paths');
+const { assessRoundConfirmation, describeConfirmationReasons, USER_EXPORT_METHODS } = require('../lib/refiner/clean-round');
 const { resolvePrototypeState } = require('../lib/refiner/prototype-resolution');
 const { validatePrototypeManifestQuality } = require('../lib/prototype-manifest-quality');
 const { readVisualEvidence, visualEvidenceBlock } = require('../lib/visual-evidence');
@@ -538,7 +540,6 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
 // validate + apply the exported feedback. This kills the per-run hand-written
 // HTML (token cost + schema drift) that used to stand in for these commands.
 
-const USER_EXPORT_METHODS = new Set(['download', 'copy-paste', 'file-system-access']);
 
 /**
  * Resolve which briefing a refinement command targets. Refinable = `draft`, or
@@ -644,7 +645,7 @@ async function runBriefingReview({ args, options = {}, logger }) {
       logger.error('findings file must be a JSON array or { "findings": [...] }');
       return { ok: false, error: 'invalid_findings', slug };
     }
-    const check = validateFindingsInput(findings, { sectionIds: parsed.sections.map((s) => s.id) });
+    const check = validateFindingsInput(findings, { sectionIds: parsed.sections.map((s) => s.id), promiseIds: briefingPromiseIds(markdown) });
     if (!check.ok) {
       for (const err of check.errors) logger.error(`findings: ${err}`);
       return { ok: false, error: 'invalid_findings', slug, errors: check.errors };
@@ -741,6 +742,35 @@ function summarizeFeedback(feedback) {
   };
 }
 
+// Validate + summarize so the agent can present the plan and ask for the human
+// go-ahead. Never touches briefings.md.
+async function dryRunFeedback({ projectDir, slug, feedback, allowStale, logger }) {
+  let current;
+  try {
+    current = await fsp.readFile(resolveBriefingPath(projectDir, slug, 'briefings.md'), 'utf8');
+  } catch {
+    logger.error(`briefings.md not found for "${slug}".`);
+    return { ok: false, error: 'briefing_not_found', slug };
+  }
+  const validation = validateFeedback(feedback, { slug, currentSourceHash: hashText(current), allowStale });
+  const summary = summarizeFeedback(feedback);
+  if (!validation.ok) {
+    for (const err of validation.errors) logger.error(`feedback: ${err}`);
+    return { ok: false, error: 'invalid_feedback', slug, mode: 'dry-run', validation, summary };
+  }
+  const confirmation = assessRoundConfirmation(feedback, { stale: validation.stale });
+  logger.log(`Dry-run for "${slug}" (feedback round ${feedback.round || 1}):`);
+  logger.log(`  changed sections: ${summary.changed_sections.map((c) => c.id).join(', ') || 'none'}`);
+  logger.log(`  blocked sections: ${summary.blocked_sections.join(', ') || 'none'}`);
+  logger.log(`  findings: ${summary.findings_total} (${Object.entries(summary.findings_by_status).map(([k, v]) => `${k}: ${v}`).join(', ') || '-'})`);
+  logger.log(`  approved review decisions: ${summary.approved_review_decisions.map((decision) => `${decision.id}=${decision.selected_option_ids.join('+')}`).join(', ') || 'none'}`);
+  logger.log(`  pending blocking findings: ${summary.pending_blocking_findings.join(', ') || 'none'}`);
+  for (const warning of validation.warnings) logger.log(`  warning: ${warning}`);
+  logger.log(confirmation.required ? `  needs the owner's confirmation: ${describeConfirmationReasons(confirmation.reasons)}` : '  clean round: --confirm-if-clean applies it without asking again');
+  logger.log('Re-run with --confirm to apply.');
+  return { ok: true, slug, mode: 'dry-run', pending_confirmation: true, confirmation, validation, summary };
+}
+
 async function runBriefingApplyFeedback({ args, options = {}, logger }) {
   const projectDir = resolveTargetDir(args);
   const resolved = await resolveRefinableSlug(projectDir, options.slug);
@@ -798,31 +828,11 @@ async function runBriefingApplyFeedback({ args, options = {}, logger }) {
     return { ...result, slug, mode: 'declined' };
   }
 
+  const cleanRound = Boolean(options['confirm-if-clean'] || options.confirmIfClean);
   if (!options.confirm) {
-    // Dry-run: validate + summarize so the agent can present the plan and ask
-    // for the human go-ahead. Never touches briefings.md.
-    let current;
-    try {
-      current = await fsp.readFile(resolveBriefingPath(projectDir, slug, 'briefings.md'), 'utf8');
-    } catch {
-      logger.error(`briefings.md not found for "${slug}".`);
-      return { ok: false, error: 'briefing_not_found', slug };
-    }
-    const validation = validateFeedback(feedback, { slug, currentSourceHash: hashText(current), allowStale });
-    const summary = summarizeFeedback(feedback);
-    if (!validation.ok) {
-      for (const err of validation.errors) logger.error(`feedback: ${err}`);
-      return { ok: false, error: 'invalid_feedback', slug, mode: 'dry-run', validation, summary };
-    }
-    logger.log(`Dry-run for "${slug}" (feedback round ${feedback.round || 1}):`);
-    logger.log(`  changed sections: ${summary.changed_sections.map((c) => c.id).join(', ') || 'none'}`);
-    logger.log(`  blocked sections: ${summary.blocked_sections.join(', ') || 'none'}`);
-    logger.log(`  findings: ${summary.findings_total} (${Object.entries(summary.findings_by_status).map(([k, v]) => `${k}: ${v}`).join(', ') || '-'})`);
-    logger.log(`  approved review decisions: ${summary.approved_review_decisions.map((decision) => `${decision.id}=${decision.selected_option_ids.join('+')}`).join(', ') || 'none'}`);
-    logger.log(`  pending blocking findings: ${summary.pending_blocking_findings.join(', ') || 'none'}`);
-    for (const warning of validation.warnings) logger.log(`  warning: ${warning}`);
-    logger.log('Re-run with --confirm to apply.');
-    return { ok: true, slug, mode: 'dry-run', pending_confirmation: true, validation, summary };
+    const dryRun = await dryRunFeedback({ projectDir, slug, feedback, allowStale, logger });
+    if (!cleanRound || !dryRun.ok || dryRun.confirmation.required) return dryRun;
+    logger.log('Clean round: the owner saved the review with no note and the recommended options, so saving was the confirmation.');
   }
 
   const result = await applyConfirmedFeedback(projectDir, slug, feedback, { confirmed: true, allowStale });
@@ -870,6 +880,7 @@ async function runBriefingApplyFeedback({ args, options = {}, logger }) {
     result.nextAction = 'build_prototype';
     if (result.reportData) result.reportData.next_action = 'build_prototype';
   }
+  if (result.reportData) result.reportData.confirmation = cleanRound && !options.confirm ? 'saved page, clean round' : 'explicit';
   if (result.reportData && (result.archived || prototypePending)) {
     if (result.archived) result.reportData.feedback_path = result.archived;
     await writeRefinementReport(projectDir, slug, result.reportData);
@@ -886,7 +897,7 @@ async function runBriefingApplyFeedback({ args, options = {}, logger }) {
   } else {
     logger.log('  No blockers — approve with `aioson briefing:approve` and hand off to @product, or regenerate the review for another round.');
   }
-  return { ...result, slug, mode: 'apply' };
+  return { ...result, slug, mode: 'apply', applied_without_confirmation: Boolean(cleanRound && !options.confirm) };
 }
 
 // ─── briefing:feedback — the lean read of a pending round ────────────────────

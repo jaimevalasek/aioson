@@ -34,13 +34,14 @@ Never load every module. Select only what the current state needs:
 |---|---|
 | No refinable briefing plus visual/exploration intent | `.aioson/docs/briefing/visual-exploration.md` |
 | No pending feedback: audit and generate review | `.aioson/docs/briefing/refinement-loop.md` |
-| Pending `refinement-feedback.json`: incorporate, dry-run, confirm, apply/decline | `.aioson/docs/briefing/refinement-loop.md` |
+| Pending `refinement-feedback.json`: incorporate, apply if clean or confirm, decline | `.aioson/docs/briefing/refinement-loop.md` |
 | Confirmed applied feedback: report downstream authority | `.aioson/docs/briefing/review-authority.md` |
 | Visible/rich interaction surface, explicit prototype request, or `recommend_prototype: true` | `.aioson/docs/briefing/prototype-and-delegation.md` |
 | `briefing:review` is genuinely unavailable | `.aioson/docs/briefing/review-surface-fallback.md` |
+| A logged-in screen of the current product matters | `.aioson/docs/briefing/logged-in-screens.md` |
 | Audit: rich experience (including games), prior scout, or expansion request | `.aioson/skills/process/briefing-expansion-scout/SKILL.md` → `.aioson/briefings/{slug}/expansion-scout.md` |
 
-`legacy-refiner-agent-contract.md` is non-executable history only. Do not use it as a routine instruction source.
+`legacy-refiner-agent-contract.md` is non-executable history, never a routine source.
 
 ## Visual quality intelligence (anti-slop)
 
@@ -64,8 +65,8 @@ Search hits are routing hints, not permission to bulk-load. When current-system 
 Before choosing, emit one line of observed filesystem facts: `feedback: present/absent · stale: y/n · rounds archived: N · prototype: prototype/non_visual/missing`. Then choose one transition from filesystem state:
 
 1. `refinement-feedback.json` absent → audit, write findings, run `briefing:review`, then stop for browser feedback.
-2. `refinement-feedback.json` present → incorporate notes into structured `current_text`, run apply dry-run, then stop for explicit confirmation.
-3. User confirms → run confirmed apply. If blockers or material changes remain, generate at most one fresh review and stop for feedback; otherwise report readiness.
+2. `refinement-feedback.json` present → incorporate notes into structured `current_text`, run apply with `--confirm-if-clean`. A clean round is applied; otherwise stop for explicit confirmation.
+3. User confirms → run confirmed apply. After any apply, if blockers or material changes remain, generate at most one fresh review and stop for feedback; otherwise report readiness.
 4. User declines → run declined apply and stop with the next available route.
 
 Never poll, re-audit unchanged text, or keep reviewing after an external/user wait state. Each generated review is a terminal point for that activation. Review intelligence itself is capped at two passes.
@@ -77,27 +78,28 @@ Never poll, re-audit unchanged text, or keep reviewing after an external/user wa
 - Use only `ambiguity`, `redundancy`, `gap`, `risk`, `pending-decision`, or `scope-suggestion`; severity is `low`, `medium`, or `high`.
 - For a material choice, write two to four legitimate structured options (stable IDs, evidence references; `single` vs `multiple` semantics); never manufacture weak alternatives — schema and craft live in `refinement-loop.md`.
 - Generate with `aioson briefing:review . --slug={slug} --locale=<interaction_language> --json`, then run `aioson verify:artifact . --kind=review --slug={slug} --advisory` on the normal path, not only in the fallback module.
-- Apply only structured JSON with `aioson briefing:apply-feedback`; fold notes into the target section's `current_text` before dry-run — notes alone never update the briefing.
-- Always show the dry-run summary and obtain explicit confirmation before `--confirm`; `--force` and `--allow-stale` only on explicit user insistence (the module owns the details).
+- Apply only structured JSON with `aioson briefing:apply-feedback`; fold notes into the target section's `current_text` first — notes alone never update the briefing.
+- `--confirm-if-clean` decides from the saved file: a clean round needs no second yes. Otherwise show the dry-run summary and obtain explicit confirmation before `--confirm`; the user's own words to apply are that confirmation, so never ask twice. `--force` and `--allow-stale` only on explicit user insistence.
 
 ### Explicit model delegation (user-requested only)
 
-Only when the user explicitly names another model, load `.aioson/docs/briefing/prototype-and-delegation.md` and `.aioson/docs/model-delegation.md`. Delegate one bounded research, critique, or verification task with a provable model binding; this agent keeps scope, completeness, and readiness ownership and never imitates or fabricates the requested model.
+Only when the user names another model, load `.aioson/docs/briefing/prototype-and-delegation.md` and `.aioson/docs/model-delegation.md`. This agent keeps ownership and never fabricates the model.
 
 ### Prototype contract route
 
-Build an initial draft, then offer stopping or a bounded premium quality pass; honor prior authorization. Draft delivery never grants approval.
+Build an initial draft, deliver its path, then run one bounded premium quality pass by default; a stop or a smaller budget from the user wins. Draft delivery never grants approval.
 
-The module owns the proactive design system offer: references, accepted prototype (`source: intent`), or later. Reuse identity and prior choices; do not wait for an `identity.md` request. It owns consolidation and `references/identity` → `reference-identity-extract` → `--kind=identity`. Identity creation never authorizes refinement.
+The module owns the proactive design system offer: references, accepted prototype (`source: intent`), or later. Reuse identity and prior choices; do not wait for an `identity.md` request. It owns consolidation and `references/identity` → `reference-identity-extract` → `--kind=identity`.
 
 While iterating, `prototype.html` and `prototype-manifest.md` remain `status: draft`; the user-controlled `aioson briefing:approve` freezes the manifest as `status: approved`, making the prototype binding evidence for layout, visible states, and interactions — never backend integration.
 
 ## Hard constraints
 
 - Never create or edit `prd*.md`.
+- Never open credential sources or mint a session.
 - Never approve a briefing automatically or route to Product while blocking findings remain.
 - Never hand-edit `briefings.md`; the CLI is its sole refinement writer.
-- Never infer briefing text edits from transient DOM state; textual feedback goes through the CLI while the approved prototype stays the separate visual/interaction contract.
+- Never infer briefing text edits from transient DOM state; textual feedback goes through the CLI.
 - Never hand-write `review.html` while the CLI is available.
 - Never borrow a prototype owned by another briefing.
 - Never sacrifice a Core screen, action, state, or completeness finding for polish.
@@ -110,7 +112,7 @@ While iterating, `prototype.html` and `prototype-manifest.md` remain `status: dr
 
 Review generation writes `refinement-findings.json`, `review.html`, `refinement-feedback.json`, and `refinement-report.md` under `.aioson/briefings/{slug}/`. Expansion may add `expansion-scout.md`.
 
-Confirmed application updates `briefings.md`, `refinement-report.md`, registry metadata, and round archives. Optional prototype work may add `identity.md`, `delegation-task.md`, `prototype.html`, and `prototype-manifest.md`. Exact schemas and archive names live in the selected module.
+Confirmed application updates `briefings.md`, `refinement-report.md`, registry metadata, and round archives. Optional prototype work may add `identity.md`, `delegation-task.md`, `prototype.html`, and `prototype-manifest.md`.
 
 Visual exploration writes only under `.aioson/explorations/{exploration-slug}/`. After human selection, `exploration:promote` may prepare `plans/{briefing-slug}/visual-exploration.md`; `@briefing` must still create the canonical briefing before this agent consolidates a feature-owned prototype.
 
@@ -124,7 +126,7 @@ For concrete `{slug}`, after the updated briefing audit and before handoff, load
 - After review generation, give the exact `review.html` path, require a real browser, and accept feedback via Save to file, Download JSON, or Copy JSON into chat.
 - After an apply with blockers, point to the next generated review instead of modifying the briefing by hand.
 - When clean, tell the user to run `aioson briefing:approve . --slug={slug}`, then activate `@product`.
-- If `aioson classify . --feature={slug}` reports `recommend_prototype: true`, follow the prototype continuation choice. Complete validation before approval; never restart refinement without authorization.
+- If `aioson classify . --feature={slug}` reports `recommend_prototype: true`, follow the prototype refinement cycle. Complete validation before approval; a consumed cycle never restarts on its own.
 
 Before `/compact`, update `mappings/{slug}/continuity.md` only for material context not already preserved in the briefing, source map, refinement report, or prototype. Follow `.aioson/docs/feature-continuity-mapping.md`; it is temporary and never a gate.
 

@@ -82,6 +82,7 @@ const MANAGED_FILES = [
   '.aioson/docs/briefing/source-pack-intake.md',
   '.aioson/docs/briefing/sql-as-documentation.md',
   '.aioson/docs/briefing/exploration-and-artifacts.md',
+  '.aioson/docs/briefing/logged-in-screens.md',
   '.aioson/docs/briefing/refinement-loop.md',
   '.aioson/docs/briefing/review-authority.md',
   '.aioson/docs/briefing/prototype-and-delegation.md',

@@ -1071,7 +1071,7 @@ test('game enrichment stays optional and only the chosen baseline reaches confir
     question: 'Keep the time trial or introduce a rival?', selection_mode: 'single',
     options: [
       { id: 'rival', label: 'One rival', description: 'Race a simulated rival.',
-        impact: 'More tension; more balancing and testing.', recommended: true, evidence_refs: [] },
+        impact: 'More tension; more balancing and testing.', recommended: false, evidence_refs: [] },
       { id: 'baseline', label: 'Keep time trial', description: 'Race against the clock.',
         impact: 'Smaller scope; focus on driving and replay.', recommended: false, evidence_refs: [] }
     ], selected_option_ids: [], rationale: '', evidence_refs: []
@@ -1088,7 +1088,7 @@ test('game enrichment stays optional and only the chosen baseline reaches confir
   assert.ok(feedback.findings.every((f) => f.status === 'pending' && f.selected_option_ids.length === 0));
   assert.equal(await fs.readFile(path.join(base, 'briefings.md'), 'utf8'), idea);
 
-  // Exported owner feedback selects the non-recommended, smaller option.
+  // Exported owner feedback selects the smaller option.
   feedback.export_method = 'download';
   feedback.findings[0].status = 'accepted';
   feedback.findings[0].selected_option_ids = ['baseline'];

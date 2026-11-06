@@ -53,6 +53,7 @@ function buildRefinementReport(data) {
     `- Applied hash: ${data.applied_hash || '-'}`,
     `- Status: ${data.status || 'review_generated'}`,
     `- Round: ${data.round || 1}`,
+    ...(data.confirmation ? [`- Confirmation: ${data.confirmation}`] : []),
     `- Next action: ${nextAction}`,
     `- Approved review authority: ${authorityStatus}`,
     '',

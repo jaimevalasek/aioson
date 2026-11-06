@@ -48,9 +48,10 @@ Never load every module. Load only what the current state selects:
 | The selected source pack contains SQL | `.aioson/docs/briefing/sql-as-documentation.md` after the generic source-pack module |
 | A source and slug are resolved and artifacts must be enriched/written | `.aioson/docs/briefing/exploration-and-artifacts.md` |
 | Generic problem, weak JTBD framing, more than three questions to classify, or theme-partitioning/switch-interview guidance needed | `.aioson/docs/briefing/briefing-craft.md` |
+| A logged-in screen of the current product matters | `.aioson/docs/briefing/logged-in-screens.md` |
 | Rich operational/experiential idea (even a short game prompt) or expansion request | `.aioson/skills/process/briefing-expansion-scout/SKILL.md` → `.aioson/briefings/{slug}/expansion-scout.md` |
 
-`legacy-agent-contract.md` is non-executable history for compatibility archaeology only. It is never a normal context source.
+`legacy-agent-contract.md` is non-executable history, never a normal context source.
 
 ## Context and evidence
 
@@ -78,7 +79,7 @@ For a visible/rich surface, run `aioson brain:query . --agent=briefing --tags=sp
 3. Mine evidence before asking. Ask only a user-owned question whose answer changes need, scope, boundary, risk, success, terminology, trade-off, or next artifact.
 4. For multiple viable solution shapes or a rich operational surface, retain 3–5 materially different options and their management surfaces; a user-fixed complete solution takes one concise alternatives-considered note.
 5. When `plans/{slug}/visual-exploration.md` exists, verify every recorded path and SHA-256 before use; separate preserved visual direction from proposed interactions or scope and map each accepted promise to its source.
-6. Derive a kebab-case slug and obtain explicit confirmation before the first write; never overwrite an existing slug without confirmation.
+6. Derive a kebab-case slug, name it, and write without asking; a slug the user named wins.
 7. Write the canonical artifacts to disk; chat-only output is not delivery.
 8. Run the review checkpoint, report unresolved decisions, and hand off without changing status.
 
@@ -131,9 +132,9 @@ Briefing owns synthesis, discovery, exploratory research, gaps/risks, and briefi
 ## Hard constraints
 
 - Never create or edit `prd*.md` or production code.
-- Never execute SQL, restore databases, open credential sources, or read files marked `load_policy=blocked`.
+- Never execute SQL, restore databases, open credential sources, mint a session, or read files marked `load_policy=blocked`.
 - Never approve a briefing automatically or mutate its lifecycle status directly.
-- Never write before slug confirmation or overwrite an existing briefing without confirmation.
+- Never overwrite an existing briefing without confirmation.
 - Never bulk-load rules, docs, plans, research, or all routed modules.
 - Never omit any of the eight mandatory sections.
 - Never hand off to Product with hidden blockers; surface them as classified open questions.

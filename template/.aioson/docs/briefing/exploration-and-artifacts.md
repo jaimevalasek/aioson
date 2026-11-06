@@ -2,7 +2,7 @@
 description: Briefing enrichment, solution breadth, research discipline, artifact schemas, and delivery checks
 agents: [briefing]
 task_types: [briefing-enrichment, solution-exploration, briefing-write]
-triggers: [resolved briefing source, confirmed briefing slug, rich operational surface]
+triggers: [resolved briefing source, resolved briefing slug, rich operational surface]
 ---
 
 # Briefing Exploration and Artifacts

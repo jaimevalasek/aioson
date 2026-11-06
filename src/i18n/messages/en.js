@@ -79,7 +79,7 @@ module.exports = {
     help_briefing_review:
       'aioson briefing:review [path] [--slug=<slug>] [--findings=<path>] [--force] [--json] [--locale=en]',
     help_briefing_apply_feedback:
-      'aioson briefing:apply-feedback [path] [--slug=<slug>] [--feedback=<path>] [--confirm|--declined] [--allow-stale] [--json] [--locale=en]',
+      'aioson briefing:apply-feedback [path] [--slug=<slug>] [--feedback=<path>] [--confirm|--confirm-if-clean|--declined] [--allow-stale] [--json] [--locale=en]',
     help_briefing_feedback:
       'aioson briefing:feedback [path] [--slug=<slug>] [--feedback=<path>] [--json] [--locale=en]',
     help_briefing_migrate_lineage:

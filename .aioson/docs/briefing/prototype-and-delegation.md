@@ -71,7 +71,7 @@ If the user named another model for reference research or critique, finish expli
 ## Build initial prototype
 
 1. Load `.aioson/skills/process/prototype-forge/SKILL.md`, and — for every surface where the aesthetic argues — `.aioson/docs/design/visual-effects.md` (the effect vocabulary with its CSS recipes and cost contracts) plus the engine's `references/aesthetic-registers.md`: the register's premium bar names the moves, the vocabulary tells how each one is built and what it costs.
-2. Follow its build contract and non-regression order for the requested Core screens, navigation, mock behavior and chosen visual direction. For this canonical Refiner route, pause before Prototype Forge's `After the functional build` polish/check/evidence steps. Its full Gate applies to approval-ready handoff, not initial draft delivery; the continuation choice below controls when to run it. Keep the design engine active from the first build.
+2. Follow its build contract and non-regression order for the requested Core screens, navigation, mock behavior and chosen visual direction. For this canonical Refiner route, pause before Prototype Forge's `After the functional build` polish/check/evidence steps. Its full Gate applies to approval-ready handoff, not initial draft delivery; the refinement cycle below runs it. Keep the design engine active from the first build.
 3. Write:
 
 ```text
@@ -80,21 +80,19 @@ If the user named another model for reference research or critique, finish expli
 ```
 
 The manifest declares `feature: {slug}`, `status: draft`, and the `identity:` record the build consumed (or `none`) during refinement. That identity line is what carries the extracted visual system past briefing approval into the PRD and implementation; omitting it silently strands the record here. Never reuse another briefing's manifest/prototype. The user-controlled `aioson briefing:approve` command changes it to `status: approved`; only then may Product and downstream agents treat it as binding.
-## Prototype continuation choice
+## Prototype refinement cycle
 
-After creating the initial files, check owner/path and do one opening/primary-action smoke when browser tools are available. Fix an obvious launch blocker once, or disclose it. Deliver the exact prototype path and any known limitations before further visual work.
+After creating the initial files, check owner/path and do one opening/primary-action smoke when browser tools are available. Fix an obvious launch blocker once, or disclose it. Deliver the exact prototype path and any known limitations in one short message, then continue: one bounded refinement cycle runs by default, with no question first. Say that it takes more time and tokens, and that the user can stop it.
 
-Ask once in the interaction language: "The initial prototype has been created. Would you like to finish with this version, or let me run a refinement round to improve it?" Offer **Finish with the current prototype** and **Continue refining (more time and tokens)**. This is a terminal choice: stop and wait for the answer before polishing, capturing a route matrix, opening more screenshots, running the full walkthrough, or starting another review pass. No answer authorizes no additional work.
+- **Refine, the default:** run one bounded cycle: inspect → repair → final verification, using the existing premium pass and validation below. New warnings, routes, or re-preparing a report do not reset that budget. Return the improved prototype and residual findings; another cycle needs another explicit request.
+- **Stop:** when the user told you not to refine this prototype, before or during the cycle, deliver the files as `status: draft`, name validation still pending, record the choice and end the activation. Do not propose `briefing:approve` or Product as ready. The normal `agent:done` static check may report findings; it does not restart work.
+- **Smaller scope:** honor a smaller named scope or budget. A request only to change one detail authorizes that change and its focused check. `recommend_prototype: true`, Autopilot, or a generic "continue" never adds a second cycle.
 
-- **Finish:** deliver the files as `status: draft`, name validation still pending, record the choice and end the activation. Do not propose `briefing:approve` or Product as ready. The normal `agent:done` static check may report findings; it does not restart work.
-- **Refine:** run one bounded cycle: inspect → repair → final verification, using the existing premium pass and validation below. New warnings, routes, or re-preparing a report do not reset that budget. Return the improved prototype and residual findings; another cycle needs another explicit request.
-- **Already authorized:** a prior explicit request to refine automatically for this prototype counts; do not ask again. Honor a smaller named scope or budget. "Create a premium prototype", `recommend_prototype: true`, Autopilot, or a generic "continue" does not itself authorize the refinement loop; a direct answer to this choice does. A request only to change one detail authorizes that change and its focused check.
-
-Record the choice, the user's authorizing words, and the cycle's remaining/consumed budget under `## Refinement budget` in the existing manifest. On resume, read it before work: pending/finish is a stop, and a consumed cycle never restarts itself. Update the record before final measurement so it cannot invalidate its own evidence. A later explicit request to prepare for approval authorizes the outstanding validation; if findings need another repair cycle, report them and obtain that choice. Stopping never waives an approval gate or implies `--accept-craft`/a runtime waiver.
+Record the choice, the user's words or `default`, and the cycle's remaining/consumed budget under `## Refinement budget` in the existing manifest. On resume, read it before work: a recorded stop is a stop, and a consumed cycle never restarts itself. Update the record before final measurement so it cannot invalidate its own evidence. A later explicit request to prepare for approval authorizes the outstanding validation; if findings need another repair cycle, report them and obtain that choice. Stopping never waives an approval gate or implies `--accept-craft`/a runtime waiver.
 
 ## Authorized refinement and approval validation
 
-Run only after the continuation choice authorizes refinement, or the user explicitly requests approval preparation. Apply Prototype Forge's bounded premium quality pass only when refinement was authorized. Preserve its non-regression and completeness gates. Measure `craft weight N/100` on brand surfaces, `precision N/100` on operate/read surfaces, and runtime fold density where applicable. Presence alone does not prove quality.
+Run as the default cycle above, unless the user stopped it, or when the user explicitly requests approval preparation. Apply Prototype Forge's bounded premium quality pass only in that cycle. Preserve its non-regression and completeness gates. Measure `craft weight N/100` on brand surfaces, `precision N/100` on operate/read surfaces, and runtime fold density where applicable. Presence alone does not prove quality.
 
 Verify owner/path directly because no PRD exists. Product later runs `aioson prototype:check . --feature={slug} --strict`. Measure the built prototype before any PRD binds it:
 
@@ -112,7 +110,7 @@ Give the exact paths and state that the prototype models the final visual/intera
 
 ## Consolidate the accepted design system
 
-For a recorded `intent` choice, once the prototype has been inspected and the owner explicitly accepts that visual direction, write the promised `identity.md` without asking for the same creation permission again. Initial delivery, silence, choosing Finish, or passing telemetry is not visual acceptance. If acceptance is still missing, include "Do you accept this visual direction as the reusable identity?" within the existing delivery checkpoint, report consolidation as pending, and stop; do not open a new refinement cycle. Visual acceptance does not approve the briefing.
+For a recorded `intent` choice, once the prototype has been inspected and the owner explicitly accepts that visual direction, write the promised `identity.md` without asking for the same creation permission again. Initial delivery, silence, stopping the cycle, or passing telemetry is not visual acceptance. If acceptance is still missing, include "Do you accept this visual direction as the reusable identity?" within the existing delivery checkpoint, report consolidation as pending, and stop; do not open a new refinement cycle. Visual acceptance does not approve the briefing.
 
 Use `.aioson/skills/process/reference-identity-extract/references/identity-schema.md` for the exact shape, with `source: intent`, `generated_by: refiner`, and honest provenance describing the accepted prototype rather than nonexistent references. Extract the actual applied values and patterns: pillars, semantic palette, font stacks/scale, spacing/grid/breakpoints, radius/depth, motion/reduced motion, signature moves, anti-goals, and component anatomy, states, interactions, responsive and accessibility rules. Include only decisions demonstrated by the accepted surface; do not invent a component library or claim this document implements one.
 

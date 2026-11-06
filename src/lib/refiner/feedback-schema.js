@@ -64,6 +64,7 @@ function normalizeDecisionOption(option, index) {
     description: sanitizeText(option && option.description),
     impact: sanitizeText(option && option.impact),
     recommended: Boolean(option && option.recommended),
+    defers: Boolean(option && option.defers),
     evidence_refs: normalizeTextArray(option && option.evidence_refs)
   };
 }
@@ -164,6 +165,9 @@ function validateStructuredFinding(finding, label, { requireAcceptedSelection = 
     if (option.recommended !== undefined && typeof option.recommended !== 'boolean') {
       errors.push(`${optionLabel}.recommended must be a boolean`);
     }
+    if (option.defers !== undefined && typeof option.defers !== 'boolean') {
+      errors.push(`${optionLabel}.defers must be a boolean`);
+    }
     errors.push(...validateEvidenceRefs(option.evidence_refs, `${optionLabel}.evidence_refs`));
     const id = String(option.id || '');
     if (id && optionIds.has(id)) errors.push(`${label}.options has duplicate id: ${id}`);
@@ -191,12 +195,54 @@ function validateStructuredFinding(finding, label, { requireAcceptedSelection = 
   return errors;
 }
 
+const PROMISE_ID_RE = /\bPROM-[A-Za-z0-9_-]+/g;
+
+/** The promises a briefing holds, read from its map. `not_applicable` is no promise. */
+function briefingPromiseIds(markdown) {
+  const ids = new Set();
+  for (const line of String(markdown || '').split('\n')) {
+    const cell = /^\|\s*(PROM-[A-Za-z0-9_-]+)\s*\|/.exec(line);
+    if (cell && !/\|\s*not_applicable\s*\|\s*$/.test(line)) ids.add(cell[1]);
+  }
+  return ids;
+}
+
+function citedPromises(finding, option) {
+  const text = [finding.text, finding.recommendation, ...(finding.evidence_refs || []), option && option.description, option && option.impact, ...((option && option.evidence_refs) || [])]
+    .filter(Boolean).join(' ');
+  return text.match(PROMISE_ID_RE) || [];
+}
+
+/**
+ * The owner takes the recommended option in 95% of the review answers, so recommending
+ * scope is deciding it. An idea with no promise behind it stays on the card, and the
+ * owner chooses it: only a promise the briefing holds, or an option that leaves the
+ * scope as it is (`defers: true`), can carry the recommendation.
+ */
+function scopeRecommendationErrors(finding, label, promiseIds) {
+  if (finding.category !== 'scope-suggestion') return [];
+  const options = Array.isArray(finding.options) ? finding.options : [];
+  const backed = (option) => {
+    const cited = citedPromises(finding, option);
+    return cited.length > 0 && (!promiseIds || cited.some((id) => promiseIds.has(id)));
+  };
+  const fix = 'cite a PROM-* the briefing holds, mark an option that leaves the scope as it is with defers: true, or drop the recommendation and let the owner choose';
+  if (options.length === 0) {
+    return String(finding.recommendation || '').trim() && !backed(null)
+      ? [`finding ${label} recommends scope with no promise behind it: ${fix}`]
+      : [];
+  }
+  return options
+    .filter((option) => option && option.recommended && option.defers !== true && !backed(option))
+    .map((option) => `finding ${label} recommends scope with no promise behind it (${option.id}): ${fix}`);
+}
+
 /**
  * Validate agent-supplied audit findings BEFORE they are baked into the review
  * surface. Strict where normalizeFinding is lenient: the agent must name a real
  * section and a valid category, and every finding must carry text.
  */
-function validateFindingsInput(findings, { sectionIds = [] } = {}) {
+function validateFindingsInput(findings, { sectionIds = [], promiseIds = null } = {}) {
   const errors = [];
   if (!Array.isArray(findings)) {
     return { ok: false, errors: ['findings must be an array'] };
@@ -219,6 +265,7 @@ function validateFindingsInput(findings, { sectionIds = [] } = {}) {
       errors.push(`finding ${label} points at unknown section_id: ${finding.section_id}`);
     }
     errors.push(...validateStructuredFinding(finding, `finding ${label}`));
+    errors.push(...scopeRecommendationErrors(finding, label, promiseIds));
   });
   return { ok: errors.length === 0, errors };
 }
@@ -382,6 +429,7 @@ function assertFeedbackPath(projectDir, slug, candidatePath) {
 }
 
 module.exports = {
+  briefingPromiseIds,
   buildInitialFeedback,
   collectApprovedReviewDecisions,
   DECISION_LIMITS,

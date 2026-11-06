@@ -100,7 +100,7 @@ const BOOLEAN_FLAGS = new Set([
   'preflight', 'explain', 'restore', 'sweep', 'no-archive', 'no-distill', 'no-trim', 'keep-evidence',
   // briefing:apply-feedback — pure booleans; `--confirm .` / `--declined .`
   // / `--allow-stale .` must not swallow the path positional.
-  'confirm', 'declined', 'allow-stale',
+  'confirm', 'confirm-if-clean', 'declined', 'allow-stale',
   // model delegation — execution is permitted only when the user explicitly
   // named another model; this switch must never swallow the project path.
   'explicit-model-request',

@@ -43,6 +43,7 @@ const { getAgentDefinition } = require('../agents');
 const { recordAgentActivation } = require('../lib/agent-activation');
 const { redactTelemetryText } = require('../lib/telemetry-redaction');
 const { redactCommandSecrets } = require('../lib/compaction-recap');
+const { readsCredentialSource } = require('../lib/credential-source-scan');
 
 const HOOKS_EMIT_VERSION = '1';
 const SILENT = { log: () => {}, error: () => {} };
@@ -414,7 +415,8 @@ function shellLine(input) {
 
 function commandDetails(toolName, input, hookEvent, payload) {
   const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
-  return { message: cmd ? `$ ${cmd}` : 'Bash', extra: bashOutcome(hookEvent, payload, shellLine(input)) };
+  const credentialRead = readsCredentialSource(shellLine(input)) ? { credential_read: true } : {};
+  return { message: cmd ? `$ ${cmd}` : 'Bash', extra: { ...bashOutcome(hookEvent, payload, shellLine(input)), ...credentialRead } };
 }
 
 function todoDetails(toolName, input) {
