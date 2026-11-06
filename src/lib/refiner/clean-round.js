@@ -16,7 +16,7 @@
  */
 
 const { promiseRows } = require('../feature-source-lineage');
-const { sectionId, serializeBriefingSections } = require('./briefing-sections');
+const { serializeBriefingSections } = require('./briefing-sections');
 const { collectApprovedReviewDecisions, sanitizeText } = require('./feedback-schema');
 const { planSectionWrites } = require('./section-writes');
 
@@ -25,10 +25,12 @@ const { planSectionWrites } = require('./section-writes');
 const USER_EXPORT_METHODS = new Set(['download', 'copy-paste', 'file-system-access']);
 
 // Closing a question or adding a source row is the bookkeeping of a decision, whichever
-// section the decision named. A decision closes about one line, so it licenses about one.
+// section the decision named. In the real rounds a decision closed at most one such line
+// and added at most two, so that is what one licenses.
 const BOOKKEEPING_SECTIONS = new Set(['open-questions', 'sources', 'identified-gaps', 'additional-files']);
 
 const STABLE_ID_RE = /\b(?:PROM|SRC)-[A-Za-z0-9_-]+/g;
+const PROMISE_ID_RE = /\bPROM-[A-Za-z0-9_-]+/g;
 
 const hasText = (value) => String(value || '').trim().length > 0;
 const nonBlankLines = (text) => String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -86,26 +88,25 @@ function decisionsAskingForText(findings) {
   return collectApprovedReviewDecisions(findings).filter((decision) => !deferred.has(decision.id));
 }
 
-function linesLost(section) {
-  const kept = new Set(nonBlankLines(section.current_text));
-  return nonBlankLines(section.file_text).filter((line) => !kept.has(line)).length;
-}
-
-// A heading would start another section, and folding a decision never leaves a section
-// with one line: neither happened in the real rounds on record.
+// A heading would start another section, and a fold that leaves less than half of a
+// section is a rewrite: one of the 58 real rewrites did, in a round with other reasons.
 function reshapesSection(section) {
   return /^##\s/m.test(section.current_text)
-    || (nonBlankLines(section.file_text).length >= 3 && nonBlankLines(section.current_text).length <= 1);
+    || 2 * nonBlankLines(section.current_text).length < nonBlankLines(section.file_text).length;
+}
+
+function staysBookkeeping(section, decisions) {
+  if (!BOOKKEEPING_SECTIONS.has(section.file_id) || decisions.length === 0) return false;
+  const before = new Set(nonBlankLines(section.file_text));
+  const after = new Set(nonBlankLines(section.current_text));
+  const lost = [...before].filter((line) => !after.has(line)).length;
+  const gained = [...after].filter((line) => !before.has(line)).length;
+  return lost <= decisions.length && gained <= 2 * decisions.length;
 }
 
 function explainedByDecisions(decisions) {
   const named = new Set(decisions.map((decision) => decision.section_id));
-  return (section) => {
-    if (reshapesSection(section)) return false;
-    const id = sectionId(section.title);
-    if (named.has(id)) return true;
-    return BOOKKEEPING_SECTIONS.has(id) && decisions.length > 0 && linesLost(section) <= decisions.length;
-  };
+  return (section) => !reshapesSection(section) && (named.has(section.file_id) || staysBookkeeping(section, decisions));
 }
 
 // The agent marks what it rewrites. The same mark on untouched text is a request from the
@@ -113,7 +114,7 @@ function explainedByDecisions(decisions) {
 // dropped, and an emptied one keeps its old text: none of these is what was asked.
 function needsAction(section) {
   return section.file_text === undefined
-    || (!hasText(section.requested_text) && hasText(section.file_text))
+    || (!hasText(section.requested_text) && hasText(sanitizeText(section.file_text)))
     || ['remove_requested', 'blocked'].includes(section.status)
     || (section.status === 'change_requested' && section.current_text === section.file_text);
 }
@@ -123,20 +124,38 @@ function dropsStableIds(section) {
   return (String(section.file_text || '').match(STABLE_ID_RE) || []).some((id) => !kept.has(id));
 }
 
-// Applying strips what looks like a tag. A line of the file with one stays only while
-// nobody changes it, and one the agent wrote would never reach the file.
+// Applying strips what looks like a tag. One the owner typed or the agent wrote never
+// reaches the file, and a line of the file with one stays only while nobody changes it.
 function losesMarkup(section) {
-  if (sanitizeText(section.requested_text) !== section.requested_text) return true;
+  const asked = String(section.requested_text || '').replace(/\r\n?/g, '\n');
+  if (sanitizeText(asked) !== asked) return true;
+  if (section.current_text === section.file_text) return false;
   const written = new Set(section.current_text.split('\n'));
   return String(section.file_text || '').split(/\r?\n/).some((line) => /[<>]/.test(line) && !written.has(line));
 }
 
+const promiseIdsIn = (text) => text.match(PROMISE_ID_RE) || [];
+
+// What a promise says, as the validator reads the map: where it was found is free to
+// change. A row the map cannot read stays word for word, and an id the file did not have
+// is a new promise, which would back scope in the next round.
 function changedPromises(before, after) {
-  const kept = new Map(promiseRows(after).map((row) => [row.id, row]));
-  return promiseRows(before).filter((row) => {
-    const now = kept.get(row.id);
-    return !now || now.intent !== row.intent || now.state !== row.state;
-  });
+  const read = new Map(promiseRows(before).filter((row) => row.intent && row.state).map((row) => [row.id, row]));
+  const written = new Map(promiseRows(after).map((row) => [row.id, row]));
+  const reworded = [...read.values()]
+    .filter((row) => {
+      const now = written.get(row.id);
+      return !now || now.intent !== row.intent || now.state !== row.state;
+    })
+    .map((row) => row.id);
+  const kept = new Set(after.split(/\r?\n/).map((line) => line.trim()));
+  const unread = before.split(/\r?\n/)
+    .filter((line) => line.includes('|') && !kept.has(line.trim()))
+    .flatMap(promiseIdsIn)
+    .filter((id) => !read.has(id));
+  const known = new Set(promiseIdsIn(before));
+  const added = promiseIdsIn(after).filter((id) => !known.has(id));
+  return [...new Set([...reworded, ...unread, ...added])].map((id) => ({ id }));
 }
 
 // The next round has to read what this one writes: a repeated heading would refuse it.
@@ -156,7 +175,7 @@ function sectionReasons(source, findings, briefing) {
     ...reason('section_action', sections.filter(needsAction)),
     ...reason('text_outside_findings', changed.filter((section) => !explained(section))),
     ...reason('ids_dropped', changed.filter(dropsStableIds)),
-    ...reason('markup_stripped', changed.filter(losesMarkup)),
+    ...reason('markup_stripped', sections.filter(losesMarkup)),
     ...writtenReasons(briefing, sections)
   ];
 }

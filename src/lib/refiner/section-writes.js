@@ -33,14 +33,20 @@ function textToWrite(section, fileText) {
 
 /**
  * Each section of the feedback with `current_text` as it would be written, `file_text`
- * as the file holds it (undefined when no heading has that title, and the write will
- * drop it), and `requested_text` as the feedback asked.
+ * and `file_id` as the file has them (undefined when no heading has that title, and the
+ * write will drop it), and `requested_text` as the feedback asked.
  */
 function planSectionWrites(markdown, feedback) {
-  const fileSections = new Map(parseBriefingSections(markdown).sections.map((section) => [section.title, section.original_text]));
+  const fileSections = new Map(parseBriefingSections(markdown).sections.map((section) => [section.title, section]));
   return (feedback.sections || []).map((section) => {
-    const fileText = fileSections.get(section.title);
-    return { ...section, requested_text: section.current_text, file_text: fileText, current_text: textToWrite(section, fileText) };
+    const inFile = fileSections.get(section.title) || {};
+    return {
+      ...section,
+      requested_text: section.current_text,
+      file_id: inFile.id,
+      file_text: inFile.original_text,
+      current_text: textToWrite(section, inFile.original_text)
+    };
   });
 }
 

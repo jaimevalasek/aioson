@@ -114,7 +114,29 @@ test('a shell command that reads a credential source is recognized', () => {
     'bat .env',
     'cat .env\\\n  README.md',
     'cat a#b .env',
-    'grep -F KEY .env'
+    'grep -F KEY .env',
+    'x=$((1<<2))\ncat .env',
+    'echo "$((1<<2))"\ncat .env',
+    '((i<<2))\ncat .env',
+    'for ((i=0;i<3;i++)); do cat .env; done',
+    'x=$((cat .env) | wc -l)',
+    'x=$(cat <<EOF\nbody\nEOF)\ncat .env',
+    'ssh prod \'cat "/srv/app/.env"\'',
+    'ssh prod \'cat < /srv/app/.env\'',
+    'cat ${ENV_FILE:-.env}',
+    'grep KEY .env*',
+    'cat .env.*',
+    'cat .env.$NODE_ENV',
+    'cat .env.${NODE_ENV}',
+    'ssh prod <<\'EOF\'\ncat .env\nEOF',
+    'bash <<EOF\ncat .env\nEOF',
+    'sudo bash <<\'EOF\'\ncat .env\nEOF',
+    'cat C:\\\\app\\\\.env',
+    'wsl cat .env',
+    'winpty cat .env',
+    'eval cat .env',
+    'eval "cat .env"',
+    'busybox cat .env'
   ]) assert.equal(readsCredentialSource(command), true, command);
 });
 
@@ -176,6 +198,11 @@ test('naming the file, writing about it, or starting a process with it is no rea
     'sudo tee .env',
     'grep -ne secret -ne .env .gitignore',
     'grep -F .env list.txt',
+    'ssh prod "cat /etc/hosts; ls -la /srv/app/.env"',
+    'rg --max-depth 2 .env docs',
+    'cat <<\'EOF\'\ncat .env\nEOF',
+    'tee notes.md <<EOF\ncat .env\nEOF',
+    'x=$((1<<2))\necho .env',
     '',
     undefined
   ]) assert.equal(readsCredentialSource(command), false, String(command));
@@ -204,6 +231,10 @@ test('input built to be slow ends quickly', () => {
   readsCredentialSource(`.env <<EOF\n${'$('.repeat(90000)}`);
   readsCredentialSource(`.env ${'<<A '.repeat(40000)}\nx`);
   readsCredentialSource(`.env ${'\\'.repeat(150000)}`);
+  readsCredentialSource(`.env ${'$(('.repeat(60000)}`);
+  readsCredentialSource(`.env ${'(('.repeat(90000)}`);
+  readsCredentialSource(`.env ${'sudo '.repeat(40000)} x`);
+  readsCredentialSource(`.env ${'${a'.repeat(60000)}`);
   assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);
 });
 

@@ -16,16 +16,18 @@
  * `grep -E ".env|secret" list` from `grep SECRET .env`, nor a commit message that names
  * the file from a command that opens it. Advisory: it reports, and a session still
  * closes. It sees the Bash tool only, the one the hooks record, and no plain file read.
- * A file named through a variable (`for f in .env; do cat "$f"; done`) goes unseen.
+ * A file named through a variable (`for f in .env; do cat "$f"; done`) goes unseen, and
+ * a message that quotes a call such as `open('.env')` counts as one.
  */
 
 const MAX_TEXT = 200 * 1024;
 const MAX_LINE = 4000;
 const MAX_DEPTH = 6;
+const MAX_ARITHMETIC = 500;
 
 // A template holds no secret, and `.envrc` is another file. A backslash is a folder only
 // after a path character: `\.env`, `^\.env` and `.*\.env` are patterns.
-const ENV_PATH = /^(?:[^|;&()^]*\/|[^|;&()*^]*[\w.-]\\)?\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_-]+)*$/i;
+const ENV_PATH = /^(?:[^|;&()^]*\/|[^|;&()*^]*[\w.-]\\+)?\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_$*{}-]+)*\*?$/i;
 // A script that opens the file by name, in the languages an agent reaches for.
 const SCRIPT_READ = /\b(?:readFileSync|readFile|ReadAllText|ReadAllLines|open|fopen|read|Path|file_get_contents|parse_ini_file|dotenv_values)\(\s*[^)]*?['"`][^'"`]*\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_-]+)*['"`]/i;
 
@@ -35,18 +37,20 @@ const FILE_READERS = new Set(['cat', 'bat', 'tac', 'nl', 'more', 'less', 'head',
 // reads `.gitignore`, and `ls -a | grep .env` reads nothing.
 const PATTERN_READERS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack', 'sed', 'awk', 'gawk', 'findstr', 'select-string', 'sls']);
 const SCRIPT_OPTIONS = new Set(['-f', '--file']);
-const VALUE_OPTIONS = new Set(['-A', '-B', '-C', '-m', '-g', '-t', '--glob', '--type', '--include', '--exclude', '--max-count', '--context', '--after-context', '--before-context']);
+const VALUE_OPTIONS = new Set(['-A', '-B', '-C', '-m', '-g', '-t', '--glob', '--type', '--include', '--exclude', '--max-count', '--max-depth', '--maxdepth', '--context', '--after-context', '--before-context']);
 const GIVES_PATTERN = new Set(['script', 'pattern', 'attached']);
 const TAKES_NEXT = new Set(['script', 'path', 'pattern', 'value']);
 // Words a command starts behind, none with options of its own.
 const PREFIX_WORDS = new Set(['if', 'then', 'elif', 'else', 'while', 'until', 'do', '!', '{', 'time', 'command', 'builtin', 'nohup', 'exec']);
 // Tools that run a command given in their own arguments, after options of their own.
-const RUNNERS = new Set(['sudo', 'doas', 'env', 'timeout', 'nice', 'ionice', 'stdbuf', 'xargs', 'watch', 'ssh', 'docker', 'podman', 'kubectl']);
+const RUNNERS = new Set(['sudo', 'doas', 'env', 'timeout', 'nice', 'ionice', 'stdbuf', 'xargs', 'watch', 'eval', 'wsl', 'winpty', 'busybox', 'ssh', 'docker', 'podman', 'kubectl']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh', 'cmd', 'pwsh', 'powershell']);
 const SHELL_BODY = /^(?:-[a-z]*c|\/c|-command)$/i;
 const DOUBLE_QUOTE_ESCAPES = new Set(['"', '\\', '$', '`']);
 
-const isEnvPath = (word) => typeof word === 'string' && ENV_PATH.test(word);
+// `${ENV_FILE:-.env}` names the file when nothing else does.
+const isEnvPath = (word) => typeof word === 'string' && ENV_PATH.test(word.replace(/\$\{\w+:?-([^}]*)\}/g, '$1'));
+const runsItsInput = (word) => SHELLS.has(baseName(word)) || baseName(word) === 'ssh';
 
 function append(state, text, quoted = false) {
   state.word = state.word || { text: '', quoted: false };
@@ -60,7 +64,7 @@ function endWord(state) {
   state.word = null;
   state.redirect = null;
   if (redirect === 'input') state.inputs.push(word.text);
-  else if (redirect === 'heredoc') state.heredocs.push(word);
+  else if (redirect === 'heredoc') state.heredocs.push({ ...word, feedsShell: state.words.some(runsItsInput) });
   else if (redirect !== 'skip') state.words.push(word.text);
 }
 
@@ -83,6 +87,18 @@ function readNested(state, at, closer) {
   return next;
 }
 
+// `$((1<<2))` is arithmetic: no command and no heredoc in there, and never a file name.
+function arithmeticEnd(text, open) {
+  const window = text.slice(open, open + MAX_ARITHMETIC);
+  const end = window.indexOf('))');
+  return end !== -1 && !/\.env/i.test(window.slice(0, end)) ? open + end + 2 : -1;
+}
+
+function readSubstitution(state, at) {
+  const end = state.text.startsWith('$((', at) ? arithmeticEnd(state.text, at) : -1;
+  return end !== -1 ? end : readNested(state, at + 2, ')');
+}
+
 // Inside double quotes the shell still runs substitutions, and a backslash only escapes four characters.
 function stepDouble(state, at) {
   const { text } = state;
@@ -90,7 +106,7 @@ function stepDouble(state, at) {
     append(state, DOUBLE_QUOTE_ESCAPES.has(text[at + 1]) ? text[at + 1] : text.slice(at, at + 2));
     return at + 2;
   }
-  if (text.startsWith('$(', at)) return readNested(state, at + 2, ')');
+  if (text.startsWith('$(', at)) return readSubstitution(state, at);
   if (text[at] === '`') return readNested(state, at + 1, '`');
   append(state, text[at]);
   return at + 1;
@@ -141,26 +157,48 @@ function readOutput(state, at) {
   return next;
 }
 
+function innerState(state, body) {
+  return { ...state, text: body, word: null, words: [], inputs: [], redirect: null, heredocs: [], depth: state.depth + 1 };
+}
+
 // A quoted terminator keeps the body as text. Unquoted, the shell runs what its `$(...)` holds.
-function runHeredocBody(state, body) {
-  const inner = { ...state, text: body, word: null, words: [], inputs: [], redirect: null, heredocs: [] };
+function runExpansions(state, body) {
+  if (state.depth >= MAX_DEPTH) return;
+  const inner = innerState(state, body);
   let at = 0;
   while (at < body.length) at = stepDouble(inner, at);
 }
 
-function readHeredoc(state, start, word) {
+// Fed to a shell or to ssh, the body is the script.
+function runScript(state, body) {
+  if (state.depth >= MAX_DEPTH) return;
+  const inner = innerState(state, body);
+  parseUntil(inner, 0, null);
+  endCommand(inner);
+}
+
+// Inside `$(...)` a heredoc also ends at `EOF)`, and the parenthesis still closes the substitution.
+function heredocEnd(state, start, terminator) {
   const { text } = state;
-  const terminator = word.text.replace(/\\/g, '');
   let line = start;
   while (line < text.length) {
     const found = text.indexOf('\n', line);
-    const end = found === -1 ? text.length : found;
-    if (text.slice(line, end).trim() === terminator) break;
-    line = end + 1;
+    const stop = found === -1 ? text.length : found;
+    const content = text.slice(line, stop).trim();
+    if (content === terminator) return { bodyEnd: line, next: stop + 1 };
+    if (state.depth > 0 && content.startsWith(`${terminator})`)) return { bodyEnd: line, next: text.indexOf(')', line) };
+    line = stop + 1;
   }
-  if (!word.quoted && terminator === word.text) runHeredocBody(state, text.slice(start, line));
-  const found = text.indexOf('\n', line);
-  return found === -1 ? text.length : found + 1;
+  return { bodyEnd: text.length, next: text.length };
+}
+
+function readHeredoc(state, start, word) {
+  const terminator = word.text.replace(/\\/g, '');
+  const { bodyEnd, next } = heredocEnd(state, start, terminator);
+  const body = state.text.slice(start, bodyEnd);
+  if (word.feedsShell) runScript(state, body);
+  else if (!word.quoted && terminator === word.text) runExpansions(state, body);
+  return next;
 }
 
 function readNewline(state, at) {
@@ -181,7 +219,7 @@ function readComment(state, at) {
 }
 
 function readDollar(state, at) {
-  if (state.text[at + 1] === '(') return readNested(state, at + 2, ')');
+  if (state.text[at + 1] === '(') return readSubstitution(state, at);
   append(state, '$');
   return at + 1;
 }
@@ -193,7 +231,8 @@ function readEscape(state, at) {
 
 function readParen(state, at) {
   endCommand(state);
-  return readNested(state, at + 1, ')');
+  const end = state.text[at + 1] === '(' ? arithmeticEnd(state.text, at) : -1;
+  return end !== -1 ? end : readNested(state, at + 1, ')');
 }
 
 function readBacktick(state, at) {
@@ -279,12 +318,15 @@ function shellBodyReads(args, depth) {
 
 const canBeRun = (name) => name !== '.' && (FILE_READERS.has(name) || PATTERN_READERS.has(name) || SHELLS.has(name));
 
-// `sudo -u www cat .env`, `timeout 5 cat .env`, `ssh prod "cat .env"`: the first word
-// that reads anything is the command, whatever options came before it.
+// `sudo -u www cat .env`, `timeout 5 cat .env`, `ssh prod "cat .env"`: in each command of
+// what the tool was given, the first word that reads anything is the command.
 function runnerReads(args, depth) {
-  const words = args.flatMap((arg) => arg.split(/\s+/));
-  const at = words.findIndex((word) => canBeRun(baseName(word)));
-  return at !== -1 && toolReads(baseName(words[at]), words.slice(at + 1), depth);
+  if (depth >= MAX_DEPTH) return false;
+  return parseCommands(args.join(' ')).some(({ words, inputs }) => {
+    if (inputs.some(isEnvPath)) return true;
+    const at = words.findIndex((word) => canBeRun(baseName(word)));
+    return at !== -1 && toolReads(baseName(words[at]), words.slice(at + 1), depth + 1);
+  });
 }
 
 function toolReads(name, args, depth) {

@@ -149,14 +149,14 @@ function rewrite(section, text) {
 }
 
 /** A round as recommended: the agent folded F1 where it points and closed one question. */
-function cleanFeedback() {
+function cleanFeedback(briefing = RICH) {
   const feedback = {
     export_method: 'file-system-access',
     arrived_decided: [],
     comments: [],
     decisions: [],
     blocking_items: [],
-    sections: parseBriefingSections(RICH).sections,
+    sections: parseBriefingSections(briefing).sections,
     findings: [
       {
         id: 'F1', section_id: 'proposed-solution', category: 'pending-decision', blocking: true, status: 'accepted', note: '', rationale: '', text: 'Which?', selection_mode: 'single',
@@ -204,9 +204,12 @@ test('every reason to ask again is named, with the ids behind it', () => {
     ['ids_dropped', (f) => { sec(f, 'problem').current_text = 'Original problem.'; }],
     ['ids_dropped', (f) => { rewrite(sec(f, 'sources'), sec(f, 'sources').current_text.replace(/SRC-001/g, 'conversational')); }],
     ['markup_stripped', (f) => { sec(f, 'proposed-solution').current_text = 'Returns Map<string, User> here.'; }],
+    ['markup_stripped', (f) => { sec(f, 'problem').current_text = sec(f, 'problem').current_text.replace('Original', 'Original<b>'); }],
     ['promises_changed', (f) => { rewrite(sec(f, 'sources'), sec(f, 'sources').current_text.replace('Charge 3%', 'Charge 30%')); }],
     ['promises_changed', (f) => { rewrite(sec(f, 'sources'), sec(f, 'sources').current_text.replace('required', 'not_applicable')); }],
     ['promises_changed', (f) => { rewrite(sec(f, 'sources'), sec(f, 'sources').current_text.replace(/\n\| PROM-001.*/, '\n\nDropped: PROM-001.')); }],
+    ['promises_changed', (f) => { rewrite(sec(f, 'sources'), `${sec(f, 'sources').current_text}\n| PROM-900 | chat | now | Add a billing module | required |`); }],
+    ['promises_changed', (f) => { rewrite(sec(f, 'proposed-solution'), 'Original solution.\nMore of it.\nAnd PROM-900 too.'); }],
     ['unwritable', (f) => { rewrite(sec(f, 'risks'), '- Risk one\n\n## Open questions\nNone.'); }]
   ];
   for (const [code, change] of cases) {
@@ -300,13 +303,40 @@ test('bookkeeping follows a decision, a line for a decision, and keeps every pro
   rewrite(sec(threeLost, 'open-questions'), '- Something else\n- And something else.');
   assert.deepEqual(judge(threeLost).reasons, [{ code: 'text_outside_findings', ids: ['open-questions'] }]);
 
+  const gains = (lines) => {
+    const feedback = cleanFeedback();
+    rewrite(sec(feedback, 'identified-gaps'), `${sec(feedback, 'identified-gaps').current_text}\n${Array.from({ length: lines }, (_, index) => `- New gap ${index}`).join('\n')}`);
+    return judge(feedback).reasons;
+  };
+  assert.deepEqual(gains(4), [], 'two decisions add four lines at most');
+  assert.deepEqual(gains(5), [{ code: 'text_outside_findings', ids: ['identified-gaps'] }]);
+
   const newPromise = cleanFeedback();
   rewrite(sec(newPromise, 'sources'), `${sec(newPromise, 'sources').current_text}\n| PROM-002 | SRC-001 | Item 2 | Refund in 7 days | required |`);
-  assert.equal(judge(newPromise).required, false, 'a new promise takes nothing from the old ones');
+  assert.deepEqual(judge(newPromise).reasons, [{ code: 'promises_changed', ids: ['PROM-002'] }], 'it would back scope in the next round');
 
   const newLocator = cleanFeedback();
   rewrite(sec(newLocator, 'sources'), sec(newLocator, 'sources').current_text.replace('Item 1', 'Item one, second paragraph'));
   assert.equal(judge(newLocator).required, false, 'where a promise was found is not what it promises');
+});
+
+test('a promise the map cannot read has to stay word for word', () => {
+  const SECOND = '\n\n| PROM | Source | Locator | Approved intent | State |\n|---|---|---|---|---|\n| PROM-002 | SRC-001 | Item 2 | Refund in 7 days | required |\n\n## Open questions';
+  const shapes = {
+    'a short delimiter': [(text) => text.replace('|---|---|---|---|---|', '|--|--|--|--|--|'), 'PROM-001'],
+    'another state header': [(text) => text.replace('| State |', '| Status |'), 'PROM-001'],
+    'a heading the map does not know': [(text) => text.replace('### Source Promise Map', '### Mapa de Promessas'), 'PROM-001'],
+    'a row with a stray pipe': [(text) => text.replace('Charge 3%', 'Charge 3% | 5%'), 'PROM-001'],
+    'a second table': [(text) => text.replace('\n\n## Open questions', SECOND), 'PROM-002']
+  };
+  for (const [label, [shape, id]] of Object.entries(shapes)) {
+    const briefing = shape(RICH);
+    assert.equal(judge(cleanFeedback(briefing), { briefing }).required, false, `${label}: left alone`);
+    const flipped = cleanFeedback(briefing);
+    const row = sec(flipped, 'sources').current_text.split('\n').find((line) => line.includes(id));
+    rewrite(sec(flipped, 'sources'), sec(flipped, 'sources').current_text.replace(row, row.replace('required', 'not_applicable')));
+    assert.deepEqual(judge(flipped, { briefing }).reasons, [{ code: 'promises_changed', ids: [id] }], label);
+  }
 });
 
 test('a fold never leaves a named section with a line, nor starts another section', () => {
@@ -315,6 +345,15 @@ test('a fold never leaves a named section with a line, nor starts another sectio
     rewrite(sec(feedback, 'risks'), text);
     assert.deepEqual(judge(feedback).reasons, [{ code: 'text_outside_findings', ids: ['risks'] }], text);
   }
+  const briefing = RICH.replace('- Risk three', '- Risk three\n- Risk four\n- Risk five');
+  const half = (lines) => {
+    const feedback = cleanFeedback(briefing);
+    rewrite(sec(feedback, 'risks'), lines.join('\n'));
+    return judge(feedback, { briefing }).required;
+  };
+  assert.equal(half(['- One', '- Two']), true, 'five lines down to two');
+  assert.equal(half(['- One', '- Two', '- Three']), false);
+
   const twoLines = cleanFeedback();
   rewrite(sec(twoLines, 'risks'), '- Risk one\n- A rollback is named.');
   assert.equal(judge(twoLines).required, false);
@@ -370,6 +409,27 @@ test('a section is found by title, the way the write finds it', () => {
   const missing = cleanFeedback();
   missing.sections = missing.sections.filter((section) => section.id !== 'problem');
   assert.deepEqual(judge(missing).reasons, [{ code: 'unwritable', ids: ['missing_sections'] }]);
+});
+
+test('headings that normalize alike keep their own ids, so a decision licenses only its own', () => {
+  const ids = (titles) => parseBriefingSections(titles.map((title) => `## ${title}\nx\n`).join('\n')).sections.map((section) => section.id);
+  assert.deepEqual(ids(['Risks', 'RISKS', 'Risks!']), ['risks', 'risks-2', 'risks-3']);
+  assert.deepEqual(ids(['Risks 2', 'Risks', 'RISKS']), ['risks-2', 'risks', 'risks-3']);
+  assert.deepEqual(ids(['概要', '詳細']), ['section', 'section-2']);
+
+  const briefing = RICH.replace('## Identified gaps', '## RISKS\n- Another risk\n\n## Identified gaps');
+  const other = cleanFeedback(briefing);
+  const second = sec(other, 'risks-2');
+  rewrite(second, '- Rewritten.');
+  assert.deepEqual(judge(other, { briefing }).reasons, [{ code: 'text_outside_findings', ids: ['risks-2'] }], 'F2 names the first of them');
+});
+
+test('a section the review shows empty stays clean while nobody writes in it', () => {
+  const briefing = RICH.replace('- Theme one', '<!-- filled in later -->');
+  const feedback = cleanFeedback(briefing);
+  sec(feedback, 'themes').original_text = '';
+  sec(feedback, 'themes').current_text = '';
+  assert.equal(judge(feedback, { briefing }).required, false);
 });
 
 test('the generator stamps what arrives decided, and a page with no stamp cannot say', () => {
@@ -637,6 +697,18 @@ test('a round that changes no text leaves the file as it was', async (t) => {
     assert.equal(applied.appliedHash, hashText(briefing));
     assert.equal(await fileOf(project), briefing);
   }
+});
+
+test('a tag the owner typed never reaches the file, so the round asks instead of dropping it', async (t) => {
+  const project = await makeProject(t);
+  await saveCleanRound(project, (feedback) => {
+    const problem = feedback.sections.find((section) => section.id === 'problem');
+    problem.current_text = 'Original<b> problem.';
+  }, { rewrite: false });
+  const dry = await applyClean(project);
+  assert.equal(dry.mode, 'dry-run');
+  assert.deepEqual(dry.confirmation.reasons, [{ code: 'markup_stripped', ids: ['problem'] }]);
+  assert.equal(await fileOf(project), BRIEFING);
 });
 
 test('blank space at the end of a section is no change, whatever the section ends with', async (t) => {

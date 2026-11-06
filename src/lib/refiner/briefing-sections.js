@@ -21,23 +21,36 @@ function sectionId(title) {
     .replace(/^-|-$/g, '');
 }
 
+// The review page and the findings key sections by id. Headings that normalize alike, or
+// a title with no Latin letter, must not share one, or an edit lands on the wrong section.
+function uniqueSectionId(title, used) {
+  const base = sectionId(title) || 'section';
+  let id = base;
+  for (let suffix = 2; used.has(id); suffix += 1) id = `${base}-${suffix}`;
+  used.add(id);
+  return id;
+}
+
 function hashText(text) {
   return crypto.createHash('sha256').update(String(text || ''), 'utf8').digest('hex');
+}
+
+function headingSpans(content, matches) {
+  return matches.map((match, index) => ({
+    title: match[1].trim(),
+    bodyStart: match.index + match[0].length,
+    bodyEnd: index + 1 < matches.length ? matches[index + 1].index : content.length
+  }));
 }
 
 function parseBriefingSections(markdown, sourcePath = 'briefings.md') {
   const content = String(markdown || '');
   const matches = [...content.matchAll(/^##\s+(.+?)\s*$/gm)];
-  const sections = [];
-
-  for (let index = 0; index < matches.length; index += 1) {
-    const match = matches[index];
-    const title = match[1].trim();
-    const bodyStart = match.index + match[0].length;
-    const bodyEnd = index + 1 < matches.length ? matches[index + 1].index : content.length;
+  const usedIds = new Set();
+  const sections = headingSpans(content, matches).map(({ title, bodyStart, bodyEnd }) => {
     const originalText = content.slice(bodyStart, bodyEnd).replace(/^\r?\n/, '').replace(/\s+$/, '');
-    sections.push({
-      id: sectionId(title),
+    return {
+      id: uniqueSectionId(title, usedIds),
       title,
       source_path: sourcePath,
       original_text: originalText,
@@ -45,8 +58,8 @@ function parseBriefingSections(markdown, sourcePath = 'briefings.md') {
       current_text: originalText,
       status: 'unchanged',
       comments_count: 0
-    });
-  }
+    };
+  });
 
   const missing = MANDATORY_SECTIONS.filter((title) => !sections.some((section) => section.title === title));
   return { sections, missing, source_hash: hashText(content) };
@@ -88,11 +101,7 @@ function serializeBriefingSections(originalMarkdown, sections) {
 
   let output = '';
   let cursor = 0;
-  for (let index = 0; index < matches.length; index += 1) {
-    const match = matches[index];
-    const title = match[1].trim();
-    const bodyStart = match.index + match[0].length;
-    const bodyEnd = index + 1 < matches.length ? matches[index + 1].index : content.length;
+  for (const { title, bodyStart, bodyEnd } of headingSpans(content, matches)) {
     output += content.slice(cursor, bodyStart);
     const replacement = byTitle.get(title);
     const nextText = replacement ? replacement.current_text || '' : content.slice(bodyStart, bodyEnd).replace(/^\r?\n/, '');
