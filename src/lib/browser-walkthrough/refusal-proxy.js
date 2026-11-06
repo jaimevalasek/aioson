@@ -48,7 +48,7 @@ async function startRefusalProxy() {
     note(req);
     req.resume();
     res.writeHead(403, { 'content-type': 'text/plain', connection: 'close' });
-    res.end('Refused: this walkthrough only reaches loopback.\n');
+    res.end('Refused: the pages of this walkthrough only reach loopback.\n');
   });
   const refuseSocket = (req, socket) => {
     note(req);
@@ -66,10 +66,17 @@ async function startRefusalProxy() {
   let udpSeen = false;
   const udp = dgram.createSocket('udp4');
   udp.on('message', () => { udpSeen = true; });
-  await new Promise((resolve, reject) => {
-    udp.once('error', reject);
-    udp.bind(0, '127.0.0.1', resolve);
-  });
+  try {
+    await new Promise((resolve, reject) => {
+      udp.once('error', reject);
+      udp.bind(0, '127.0.0.1', resolve);
+    });
+  } catch (error) {
+    // The caller got no proxy to close, and a listening server holds the process.
+    udp.close();
+    server.close();
+    throw error;
+  }
   udp.on('error', () => {});
   return {
     port: server.address().port,
@@ -122,8 +129,9 @@ function stunCall(port) {
 async function containmentFailure(context, proxy) {
   const page = await context.newPage();
   try {
-    await page.goto(`http://${PROBE_HOST}/`, { timeout: 5000 }).catch(() => {});
-    if (!proxy.probed()) return 'the browser did not use the refusal proxy, so the run could reach other hosts';
+    // Which of the two it is cannot be told from here: a slow machine also ends this way.
+    const answer = await page.goto(`http://${PROBE_HOST}/`, { timeout: 5000 }).then(() => '', (error) => String(error && error.message || error).split('\n')[0]);
+    if (!proxy.probed()) return `the probe never reached the refusal proxy${answer ? ` (${answer})` : ''}, so the browser may be ignoring it or the machine too slow to tell`;
     await page.evaluate(stunCall, proxy.udpPort);
     await new Promise((resolve) => { setTimeout(resolve, 100); });
     return proxy.udpSeen() ? 'the browser sent WebRTC traffic past the refusal proxy, so the run could reach other hosts' : null;

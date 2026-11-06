@@ -38,8 +38,9 @@ const scriptContract = require('./script');
 const targets = require('./targets');
 const steps = require('./steps');
 const reports = require('./report');
-const { createScenario, interpolate, isLoopbackUrl, resolveStep, loadItems, scrub, scrubRecord } = require('./scenario');
+const { createScenario, hostSecrets, interpolate, resolveStep, loadItems, scrub, scrubRecord } = require('./scenario');
 const { startRefusalProxy } = require('./refusal-proxy');
+const { containedStepFailure, hostsOutsideTheRun, openOrClose, watchPageHosts } = require('./contained-run');
 const { hostOf, resolveStateFiles, saveSessionState, stateTargetRefusal, usesValueEnv, valueEnvRefusal } = require('./session-state');
 const { clearDir, isContainedFolder } = require('../evidence-artifacts');
 const { isValidSlug } = require('../../dossier/schema');
@@ -142,51 +143,6 @@ function lintScript(script) {
   return warnings;
 }
 
-// The proxy also refuses the browser's own traffic (updates, sign-in, autofill), and
-// no step should be blamed on that. What a page asked for is what a step can cite.
-function watchPageHosts(session, page) {
-  const watched = { asked: new Set(), lastNavigation: '', reported: '' };
-  const onSocket = (socket) => watched.asked.add(hostOf(socket.url()));
-  const watchPage = (opened) => { if (typeof opened.on === 'function') opened.on('websocket', onSocket); };
-  // A new tab's first request has no frame yet, and Playwright throws on asking.
-  const isMainNavigation = (request) => {
-    try { return request.isNavigationRequest() && request.frame() === page.mainFrame(); } catch { return false; }
-  };
-  const onRequest = (request) => {
-    watched.asked.add(hostOf(request.url()));
-    if (isMainNavigation(request)) watched.lastNavigation = request.url();
-  };
-  watchPage(page);
-  if (session.context && typeof session.context.on === 'function') {
-    session.context.on('request', onRequest);
-    session.context.on('page', watchPage);
-  }
-  return watched;
-}
-
-// A refused tunnel leaves the page on chrome-error, with no address of its own.
-function offMachineHost(page, watched) {
-  let url = '';
-  try { url = page.url(); } catch { /* the page is gone */ }
-  if (/^chrome-error:/i.test(url)) url = watched.lastNavigation;
-  return /^https?:/i.test(url) && !isLoopbackUrl(url) ? hostOf(url) : '';
-}
-
-// A main frame off this machine is on a page the proxy refused, so the step that left
-// it there fails, once, naming the host. A new tab is not the page under test.
-function containedStepFailure(record, page, refusalProxy, watched) {
-  const host = offMachineHost(page, watched);
-  const justLeft = host && host !== watched.reported;
-  watched.reported = host;
-  if (justLeft) {
-    const refusal = `the browser could not reach ${host}: this run only reaches loopback, and the request was refused before it left the machine`;
-    return { ok: false, error: record.error ? `${refusal} (${record.error})` : refusal };
-  }
-  const refused = refusalProxy.hosts().filter((name) => watched.asked.has(name));
-  if (!record.ok && refused.length > 0) return { error: `${record.error || record.detail} (the pages of this run were refused ${refused.join(', ')}: it only reaches loopback)` };
-  return null;
-}
-
 function stepWarningFor(record, savedSession) {
   if (record.warning === 'login_wall') {
     return savedSession
@@ -217,17 +173,6 @@ async function diagnoseFailedStep(record, index, { page, script, scenario, artif
       await page.screenshot({ path: pngFile, fullPage: false });
       record.artifacts.push(pngFile);
     } catch { /* best effort */ }
-  }
-}
-
-// A browser that never opened must not leave the proxy holding the process.
-async function openOrClose(open, options, refusalProxy) {
-  let session = null;
-  try {
-    session = await open(options);
-    return session;
-  } finally {
-    if (refusalProxy && !(session && session.ok)) await refusalProxy.close();
   }
 }
 
@@ -348,6 +293,7 @@ async function runWalkthrough(options) {
   // Only loopback from here on: every other channel a page has is refused, with no
   // race to win. It closes with the run.
   const refusalProxy = handlesCredential || stateFiles.save ? await startRefusalProxy() : null;
+  scenario.contained = Boolean(refusalProxy);
 
   // `--slow-mo` wins over the script's `slow_mo`; both only pace a run.
   const pace = slowMo === null || slowMo === undefined ? script.slow_mo : clampSlowMo(slowMo);
@@ -381,6 +327,7 @@ async function runWalkthrough(options) {
   const network = { rows: [], failed: 0, supportsBoundaryCapture: true, activeBoundary: null };
   const rowsByRequest = new WeakMap();
   const warnings = lintScript(script);
+  if (refusalProxy && session.mode === 'msedge') warnings.push('msedge_own_connection: the main process of Edge keeps its own connection to Microsoft, outside the refusal proxy. What it carries was not measured, and --browser=chrome has no such connection');
   if (handlesCredential && videoTarget) warnings.push('value_env_on_video: a recording shows what is typed into a text field, and nothing can scrub a video; keep the value in a password field or drop --video');
   const executed = [];
   const ariaSeen = [];
@@ -455,7 +402,8 @@ async function runWalkthrough(options) {
       const record = scrubRecord(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index, watched: headed || Boolean(videoTarget) }), scenario.secrets);
       Object.assign(record, extra);
       const failure = refusalProxy ? containedStepFailure(record, page, refusalProxy, watchedHosts) : null;
-      if (failure) Object.assign(record, scrub(failure, scenario.secrets));
+      if (failure) Object.assign(record, scrub(failure, hostSecrets(scenario.secrets)));
+      record.url = scrub(record.url, hostSecrets(scenario.secrets));
       executed.push(record);
       if (record.snapshot && record.snapshot.preview) ariaSeen.push(record.snapshot.preview);
       const stepWarning = stepWarningFor(record, stateFiles.load ? toRel(targetDir, stateFiles.load) : '');
@@ -553,20 +501,20 @@ async function runWalkthrough(options) {
   // or into text read before the value was resolved, leaves here too. The run's own
   // names (script, feature, replay) are not page text and stay as they are, even
   // when a value happens to be an ordinary word of them.
+  const hostForms = hostSecrets(scenario.secrets);
   const fromPage = scrub({
     target: { url: sanitizeUrl(baseUrl || (executed[0] && executed[0].url) || ''), kind: targetKind },
     ids,
     smoke: deriveSmoke(executed),
     console: consoleLog,
-    network: {
+    network: scrub({
       requests: network.rows.length,
       failed: network.failed,
       rows: network.rows.slice(0, MAX_NETWORK_ROWS).map((r) => ({ method: r.method, url: sanitizeUrl(r.url), status: r.status, failed: r.failed }))
-    },
+    }, hostForms),
     warnings,
     injection,
-    blocked_hosts: refusalProxy ? refusalProxy.hosts() : [],
-    blocked_hosts_from_pages: refusalProxy ? refusalProxy.hosts().filter((name) => watchedHosts && watchedHosts.asked.has(name)) : []
+    ...scrub(hostsOutsideTheRun(refusalProxy, watchedHosts, executed), hostForms)
   }, scenario.secrets);
   const report = {
     schema: SCHEMA,
@@ -594,6 +542,7 @@ async function runWalkthrough(options) {
     network_contained: Boolean(refusalProxy),
     blocked_hosts: fromPage.blocked_hosts,
     blocked_hosts_from_pages: fromPage.blocked_hosts_from_pages,
+    request_hosts: fromPage.request_hosts,
     scenario: scenario.counts,
     script: { path: scriptPath ? toRel(targetDir, path.resolve(targetDir, scriptPath)) : '', sha256: sha256(scriptRaw || JSON.stringify(script)) },
     replay: replayParts.join(' '),

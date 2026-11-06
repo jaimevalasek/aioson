@@ -109,6 +109,12 @@ function secretForms(value) {
   ]);
 }
 
+// A URL parser lowercases its host, so a value used as a host name comes back in a
+// form nothing else in the run has.
+function hostSecrets(secrets) {
+  return new Map([...secrets].flatMap(([form, label]) => [[form, label], [form.toLowerCase(), label]]));
+}
+
 function rememberSecret(scenario, value, label) {
   if (value.length < MIN_SECRET_LENGTH) return;
   for (const form of secretForms(value)) scenario.secrets.set(form, label);
@@ -399,6 +405,15 @@ function checkResponse(step, response) {
   return problems;
 }
 
+// A contained run keeps its values on this machine, and `request` is the one door the
+// proxy does not hold.
+function refusesValueOut({ step, scenario, url, headers, body }) {
+  if (!scenario.contained || step.external !== true || LOOPBACK_HOSTS.has(new URL(url).hostname.toLowerCase())) return '';
+  const outgoing = [url, JSON.stringify(headers), typeof body === 'string' ? body : ''];
+  if (outgoing.every((text) => scrub(text, scenario.secrets) === text)) return '';
+  return `request to ${new URL(url).origin} refused: it would carry a value_env, {{env.*}} or saved secret off this machine, and a run with value_env or --save-state keeps them here. Send it from a script without those`;
+}
+
 async function runRequest({ step, scenario, baseUrl, timeout, record }) {
   const method = String(step.method || 'GET').toUpperCase();
   const url = resolveRequestUrl(step.url, baseUrl);
@@ -414,6 +429,8 @@ async function runRequest({ step, scenario, baseUrl, timeout, record }) {
       if (!Object.keys(headers).some((name) => name.toLowerCase() === 'content-type')) headers['content-type'] = 'application/json';
     }
   }
+  const carriesValue = refusesValueOut({ step, scenario, url, headers, body });
+  if (carriesValue) throw new Error(carriesValue);
   scenario.counts.requests += 1;
   let attempts = 0;
   let last = null;
@@ -596,6 +613,7 @@ module.exports = {
   isLoopbackUrl,
   secretEnvValue,
   resolveStep,
+  hostSecrets,
   scrub,
   scrubRecord,
   maskPersonalData,

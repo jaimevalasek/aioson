@@ -302,7 +302,7 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
   const uncontained = refusalProxy ? await containmentFailure(context, refusalProxy).catch((error) => String(error && error.message || error)) : null;
   if (uncontained) {
     await browser.close().catch(() => {});
-    return { ok: false, error: 'network_containment_failed', detail: uncontained, hint: 'a browser policy or version may be overriding its network flags; use another browser or machine' };
+    return { ok: false, error: 'network_containment_failed', detail: `${modeLabel(mode)}: ${uncontained}`, hint: 'a browser policy or version may be overriding its network flags. Try another one with --browser=chrome, --browser=msedge or --browser=chromium, or run it again if the machine was busy' };
   }
   return {
     ok: true,

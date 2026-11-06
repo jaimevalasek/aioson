@@ -298,6 +298,7 @@ function measureFile(rel, lines) {
 module.exports = {
   SIZE_EXEMPT_PATH,
   countLogicLines,
+  MAX_REGEX_LITERAL,
   neutralizeBraceCode,
   braceFunctions,
   indentFunctions,

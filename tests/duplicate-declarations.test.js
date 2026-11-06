@@ -6,12 +6,8 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const {
-  extractDeclarations,
-  findDuplicateDeclarations,
-  isIndexable,
-  normalizeBody
-} = require('../src/lib/duplicate-declarations');
+const { extractDeclarations, normalizeBody } = require('../src/lib/declaration-extractor');
+const { findDuplicateDeclarations, isIndexable } = require('../src/lib/duplicate-declarations');
 const { runRulesCheck, discoverGovernance } = require('../src/commands/rules-check');
 const { MANAGED_FILES } = require('../src/constants');
 const { runAgentEpilogue } = require('../src/commands/agent-epilogue');

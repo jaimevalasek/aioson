@@ -1359,7 +1359,7 @@ module.exports = {
     chromium_missing_fallback: 'Bundled Chromium not found - falling back to {label}.'
   },
   browser_run: {
-    blocked_hosts: 'Hosts refused, this run only reaches loopback: {hosts}',
+    blocked_hosts: 'Hosts refused, the pages of this run only reach loopback: {hosts}',
     script_missing: 'No walkthrough script given.',
     script_missing_hint: 'Pass --script=<walkthrough.json> (see .aioson/docs/qa/browser-walkthrough.md for the step grammar).',
     script_invalid: 'Walkthrough script is invalid: {errors}',

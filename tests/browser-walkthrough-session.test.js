@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const http = require('node:http');
@@ -656,7 +656,9 @@ test('a browser the proxy cannot prove is not used', async () => {
   const refused = await openBrowser({ playwright, env: {}, refusalProxy: proxy, exists: () => true });
   assert.equal(refused.ok, false);
   assert.equal(refused.error, 'network_containment_failed');
-  assert.match(refused.detail, /did not use the refusal proxy/);
+  assert.match(refused.detail, /chromium.*: the probe never reached the refusal proxy \(.*ERR_NAME_NOT_RESOLVED\)/i);
+  assert.doesNotMatch(refused.detail, /did not use/, 'a slow machine ends the same way, so it does not claim to know');
+  assert.match(refused.hint, /--browser=chrome/);
   assert.deepEqual(closed, ['browser']);
   assert.deepEqual(launches[0].args, containmentArgs(4242));
 
@@ -671,7 +673,7 @@ test('a browser the proxy cannot prove is not used', async () => {
   assert.equal(plain.ok, true);
   assert.equal(launches[3].args, undefined, 'no flags on a run with nothing to contain');
 
-  assert.match(await containmentFailure(context, proxy), /did not use the refusal proxy/);
+  assert.match(await containmentFailure(context, proxy), /the probe never reached the refusal proxy/);
 
   const broken = { ...context, newPage: async () => { throw new Error('the page crashed'); } };
   const brokenPlaywright = { chromium: { ...playwright.chromium, launch: async () => ({ newContext: async () => broken, close: async () => { closed.push('broken'); }, version: () => '1' }) } };
@@ -699,7 +701,7 @@ test('in a contained run, a main frame off this machine fails the step that left
   const report = await runWalkthrough({ targetDir: root, script: script(steps), url: 'http://127.0.0.1:4100', saveState: STATE, env: {}, open: opener(page), clock: fastClock, persist: false });
   assert.equal(report.ok, false);
   assert.equal(report.steps.length, 2, 'the run stopped there');
-  assert.match(report.steps[1].error, /the browser could not reach sso\.example\.com: this run only reaches loopback/);
+  assert.match(report.steps[1].error, /the browser could not reach sso\.example\.com: the pages of this run only reach loopback/);
   assert.equal(fsSync.existsSync(path.join(root, STATE)), false);
   assert.match(report.warnings.join('\n'), /session state not saved/);
 
@@ -748,4 +750,82 @@ test('a failed rename takes the temp file with it, and a screenshot name does no
   };
   walk(root);
   assert.equal(files.join('\n').includes(SECRET), false);
+});
+
+test('a proxy that cannot open its socket closes what it opened, so the process can end', () => {
+  const code = `
+    const dgram = require('node:dgram');
+    const real = dgram.createSocket;
+    dgram.createSocket = (...args) => {
+      const socket = real(...args);
+      socket.bind = () => { process.nextTick(() => socket.emit('error', new Error('bind EACCES'))); return socket; };
+      return socket;
+    };
+    require(${JSON.stringify(path.resolve('src/lib/browser-walkthrough/refusal-proxy.js'))}).startRefusalProxy().catch((error) => console.log(error.message));
+  `;
+  const done = spawnSync(process.execPath, ['-e', code], { encoding: 'utf8', timeout: 15000 });
+  assert.equal(done.status, 0, done.stderr);
+  assert.match(done.stdout, /bind EACCES/);
+});
+
+test('a contained run keeps its values off a request to another host, and other runs are as they were', async (t) => {
+  const root = await project(t);
+  const sent = [];
+  const fetchImpl = async (url) => { sent.push(String(url)); return { status: 200, text: async () => '{}' }; };
+  const fill = { do: 'fill', target: 'label=Password', value_env: 'E2E_PASSWORD' };
+  const run = (steps, extra = {}) => runWalkthrough({ targetDir: root, script: script([{ do: 'goto', url: '/' }, ...steps]), url: 'http://127.0.0.1:4100', env, fetchImpl, open: opener(fakePage()), clock: fastClock, persist: false, continueOnFailure: true, ...extra });
+  const out = 'https://hooks.example.com/in';
+  const inBody = { do: 'request', url: out, external: true, method: 'POST', body: { v: '{{env.E2E_PASSWORD}}' } };
+
+  for (const [carrying, extra] of [
+    [inBody, {}],
+    [{ do: 'request', url: `${out}?v={{env.E2E_PASSWORD}}`, external: true }, {}],
+    [{ do: 'request', url: out, external: true, headers: { authorization: 'Bearer {{env.E2E_PASSWORD}}' } }, {}],
+    [inBody, { saveState: STATE }]
+  ]) {
+    const report = await run([...(extra.saveState ? [] : [fill]), carrying], extra);
+    const step = report.steps[report.steps.length - 1];
+    assert.equal(report.network_contained, true);
+    assert.equal(step.ok, false);
+    assert.match(step.error, /request to https:\/\/hooks\.example\.com refused: it would carry a value_env, \{\{env\.\*\}\} or saved secret off this machine/);
+    assert.deepEqual(report.request_hosts, []);
+    assert.deepEqual(sent, [], 'nothing was sent');
+  }
+
+  const plain = await run([fill, { do: 'request', url: `${out}?from=walkthrough`, external: true }]);
+  assert.equal(plain.ok, true, JSON.stringify(plain.steps.filter((step) => !step.ok)));
+  assert.deepEqual(plain.request_hosts, ['hooks.example.com'], 'no value, so it goes, and the report says where');
+  assert.equal(sent.length, 1);
+
+  const local = await run([fill, { do: 'request', url: '/api/login', method: 'POST', body: { v: '{{env.E2E_PASSWORD}}' } }]);
+  assert.equal(local.ok, true, 'this machine keeps it');
+  assert.deepEqual(local.request_hosts, []);
+
+  // No value_env and no --save-state: the same step works as it did before the branch.
+  sent.length = 0;
+  const free = await run([inBody]);
+  assert.equal(free.ok, true);
+  assert.equal(free.network_contained, false);
+  assert.deepEqual(sent, [out]);
+  assert.deepEqual(free.request_hosts, ['hooks.example.com']);
+});
+
+test('the report says what the pages reached and what request reached, and warns about Edge', async (t) => {
+  const root = await project(t);
+  const fetchImpl = async () => ({ status: 200, text: async () => '{}' });
+  const withMode = (mode) => async (options) => ({ ...(await opener(fakePage())(options)), mode });
+  const steps = [{ do: 'goto', url: '/' }, { do: 'fill', target: 'label=Password', value_env: 'E2E_PASSWORD' }, { do: 'request', url: 'https://hooks.example.com/in', external: true }];
+  const base = { targetDir: root, url: 'http://127.0.0.1:4100', slug: 'orders', env, fetchImpl, clock: fastClock };
+  const edge = await runWalkthrough({ ...base, script: script(steps), open: withMode('msedge') });
+  assert.match(edge.warnings.join('\n'), /msedge_own_connection: the main process of Edge keeps its own connection to Microsoft, outside the refusal proxy/);
+  const markdown = await fs.readFile(path.join(root, edge.markdown_path), 'utf8');
+  assert.match(markdown, /The pages of this run only reached loopback/);
+  assert.match(markdown, /`request` and `judge` steps leave through the runner/);
+  assert.match(markdown, /Reached by a `request` step, from the runner and outside the proxy: hooks\.example\.com/);
+  assert.doesNotMatch(markdown, /This run only reached/);
+
+  const chrome = await runWalkthrough({ ...base, script: script(steps), open: withMode('chrome'), persist: false });
+  assert.doesNotMatch(chrome.warnings.join('\n'), /msedge_own_connection/);
+  const uncontained = await runWalkthrough({ ...base, script: script([{ do: 'goto', url: '/' }]), open: withMode('msedge'), persist: false });
+  assert.doesNotMatch(uncontained.warnings.join('\n'), /msedge_own_connection/, 'nothing is promised there');
 });
