@@ -45,14 +45,19 @@ async function writeRefinementReport(projectDir, slug, reportData) {
   return report;
 }
 
-// Declining never writes to briefings.md, so a stale source hash is irrelevant
-// to safety — validating it would only dead-end the user whose briefing moved
-// on. Hence allowStale defaults to TRUE here (and only here).
-async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = true } = {}) {
+async function readValidated(projectDir, slug, feedback, allowStale) {
   const briefingPath = resolveBriefingPath(projectDir, slug, 'briefings.md');
   const currentMarkdown = await fs.readFile(briefingPath, 'utf8');
   const currentSourceHash = hashText(currentMarkdown);
   const validation = validateFeedback(feedback, { slug, currentSourceHash, allowStale });
+  return { briefingPath, currentMarkdown, currentSourceHash, validation };
+}
+
+// Declining never writes to briefings.md, so a stale source hash is irrelevant
+// to safety — validating it would only dead-end the user whose briefing moved
+// on. Hence allowStale defaults to TRUE here (and only here).
+async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = true } = {}) {
+  const { currentSourceHash, validation } = await readValidated(projectDir, slug, feedback, allowStale);
   if (!validation.ok) {
     return { ok: false, error: 'invalid_feedback', validation };
   }
@@ -79,24 +84,12 @@ async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = 
   return { ok: true, skippedChanges, nextAction: 'rerun_review', appliedHash: currentSourceHash, reportData };
 }
 
-// The review works on sanitized text, which drops anything shaped like a tag. A section
-// nobody changed keeps its bytes, or `Map<string, User>` would leave with no type.
-function textToWrite(section, fileSections) {
-  if (section.status === 'remove_requested') return 'TBD';
-  const text = sanitizeText(section.current_text || section.original_text || '');
-  const body = fileSections.get(section.id);
-  return body !== undefined && sanitizeText(body) === text ? body : text;
-}
-
 async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = false, allowStale = false } = {}) {
   if (!confirmed) {
     return { ok: false, error: 'confirmation_required' };
   }
 
-  const briefingPath = resolveBriefingPath(projectDir, slug, 'briefings.md');
-  const currentMarkdown = await fs.readFile(briefingPath, 'utf8');
-  const currentSourceHash = hashText(currentMarkdown);
-  const validation = validateFeedback(feedback, { slug, currentSourceHash, allowStale });
+  const { briefingPath, currentMarkdown, validation } = await readValidated(projectDir, slug, feedback, allowStale);
   if (!validation.ok) {
     return { ok: false, error: 'invalid_feedback', validation };
   }
@@ -164,6 +157,15 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
     pendingBlockingFindings: pendingBlockingFindings.length,
     reportData
   };
+}
+
+// The review works on sanitized text, which drops anything shaped like a tag. A section
+// nobody changed keeps its bytes, or `Map<string, User>` would leave with no type.
+function textToWrite(section, fileSections) {
+  if (section.status === 'remove_requested') return 'TBD';
+  const text = sanitizeText(section.current_text || section.original_text || '');
+  const body = fileSections.get(section.id);
+  return body !== undefined && sanitizeText(body) === text ? body : text;
 }
 
 module.exports = { applyConfirmedFeedback, applyDeclinedFeedback, writeRefinementReport };
