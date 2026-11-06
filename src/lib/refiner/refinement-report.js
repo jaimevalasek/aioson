@@ -18,6 +18,23 @@ function selectedLabels(decision) {
     .join('; ');
 }
 
+function reportHeader(data, { feedbackPath, nextAction, authorityStatus }) {
+  return [
+    `# Refinement Report — ${data.briefing_slug}`,
+    '',
+    `- Source briefing: ${data.source_briefing_path}`,
+    `- Feedback: ${feedbackPath}`,
+    `- Source hash: ${data.source_hash || '-'}`,
+    `- Applied hash: ${data.applied_hash || '-'}`,
+    `- Status: ${data.status || 'review_generated'}`,
+    `- Round: ${data.round || 1}`,
+    ...(data.confirmation ? [`- Confirmation: ${data.confirmation}`] : []),
+    `- Next action: ${nextAction}`,
+    `- Approved review authority: ${authorityStatus}`,
+    '',
+  ];
+}
+
 function buildRefinementReport(data) {
   const nextAction = data.next_action || 'rerun_review';
   const findings = Array.isArray(data.findings) ? data.findings : [];
@@ -45,18 +62,7 @@ function buildRefinementReport(data) {
       ]
     : [];
   return [
-    `# Refinement Report — ${data.briefing_slug}`,
-    '',
-    `- Source briefing: ${data.source_briefing_path}`,
-    `- Feedback: ${feedbackPath}`,
-    `- Source hash: ${data.source_hash || '-'}`,
-    `- Applied hash: ${data.applied_hash || '-'}`,
-    `- Status: ${data.status || 'review_generated'}`,
-    `- Round: ${data.round || 1}`,
-    ...(data.confirmation ? [`- Confirmation: ${data.confirmation}`] : []),
-    `- Next action: ${nextAction}`,
-    `- Approved review authority: ${authorityStatus}`,
-    '',
+    ...reportHeader(data, { feedbackPath, nextAction, authorityStatus }),
     '## Approved Review Decisions',
     '',
     approvedDecisions.length > 0

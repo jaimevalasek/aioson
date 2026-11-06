@@ -80,7 +80,7 @@ module.exports = {
     help_briefing_review:
       'aioson briefing:review [chemin] [--slug=<slug>] [--findings=<chemin>] [--force] [--json] [--locale=fr]',
     help_briefing_apply_feedback:
-      'aioson briefing:apply-feedback [chemin] [--slug=<slug>] [--feedback=<chemin>] [--confirm|--declined] [--allow-stale] [--json] [--locale=fr]',
+      'aioson briefing:apply-feedback [chemin] [--slug=<slug>] [--feedback=<chemin>] [--confirm|--confirm-if-clean|--declined] [--allow-stale] [--json] [--locale=fr]',
     help_briefing_feedback:
       'aioson briefing:feedback [chemin] [--slug=<slug>] [--feedback=<chemin>] [--json] [--locale=fr]',
     help_briefing_migrate_lineage:

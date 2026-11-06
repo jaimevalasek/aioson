@@ -13,7 +13,8 @@ const path = require('node:path');
 
 const { runBriefingReview } = require('../src/commands/briefing');
 const { writeBriefingRegistry } = require('../src/lib/refiner/briefing-registry');
-const { briefingPromiseIds, normalizeFinding, validateFindingsInput } = require('../src/lib/refiner/feedback-schema');
+const { briefingPromiseIds } = require('../src/lib/feature-source-lineage');
+const { normalizeFinding, validateFindingsInput } = require('../src/lib/refiner/feedback-schema');
 
 const option = (id, extra = {}) => ({ id, label: id, description: `${id} description`, impact: `${id} impact`, recommended: false, evidence_refs: [], ...extra });
 
@@ -52,15 +53,20 @@ test('the idea itself stays on the card, with no recommendation', () => {
   assert.deepEqual(check(suggestion([option('a'), option('b')])), { ok: true, errors: [] });
 });
 
-test('a promise the briefing holds can recommend, wherever the finding cites it', () => {
+test('a promise the briefing holds can recommend, when the option itself cites it', () => {
   const places = [
     suggestion([option('a', { recommended: true, evidence_refs: ['PROM-001'] }), option('b')]),
     suggestion([option('a', { recommended: true, description: 'Delivers PROM-camera in full.' }), option('b')]),
-    suggestion([option('a', { recommended: true, impact: 'Closes PROM-001.' }), option('b')]),
-    suggestion([option('a', { recommended: true }), option('b')], { evidence_refs: ['PROM-001'] }),
-    suggestion([option('a', { recommended: true }), option('b')], { text: 'PROM-camera asks for this.' })
+    suggestion([option('a', { recommended: true, impact: 'Closes PROM-001.' }), option('b')])
   ];
   for (const finding of places) assert.deepEqual(check(finding), { ok: true, errors: [] }, JSON.stringify(finding));
+});
+
+test('the text of the finding backs no option: it may name a promise to deny it', () => {
+  const denied = suggestion([option('a', { recommended: true }), option('b', { recommended: true }), option('c')], { text: 'PROM-001 says nothing about this, no promise of yours.' });
+  assert.equal(check(denied).errors.length, 2);
+  assert.equal(check(suggestion([option('a', { recommended: true }), option('b')], { evidence_refs: ['PROM-001'] })).ok, false);
+  assert.equal(check(suggestion([option('a', { recommended: true, evidence_refs: ['PROM-camera'] }), option('b', { recommended: true })])).ok, false, 'one citation does not lend itself to the other option');
 });
 
 test('a promise the briefing does not hold recommends nothing', () => {
@@ -87,6 +93,8 @@ test('the legacy shape answers the same way', () => {
   const legacy = (extra) => ({ id: 'F9', section_id: 'themes', category: 'scope-suggestion', text: 'An optional idea.', ...extra });
   assert.equal(check(legacy({ recommendation: 'Add a checklist.' })).ok, false);
   assert.equal(check(legacy({ recommendation: 'Add a checklist for PROM-001.' })).ok, true);
+  assert.equal(check(legacy({ recommendation: 'Add a checklist.', evidence_refs: ['PROM-001'] })).ok, true);
+  assert.equal(check(legacy({ recommendation: 'Add a checklist.', text: 'PROM-001 does not ask for it.' })).ok, false);
   assert.equal(check(legacy({})).ok, true);
 });
 
@@ -97,19 +105,34 @@ test('the rule is about scope: other categories recommend freely', () => {
   }
 });
 
-test('the promises of a briefing are read from its map, without the ones that do not apply', () => {
-  const ids = briefingPromiseIds([
-    '### Source Promise Map', '',
+test('the promises of a briefing are read as the validator reads its map', () => {
+  const map = (...rows) => ['## Sources', '', '### Source Promise Map', '', ...rows, '', '## Open questions', '- None'].join('\n');
+  const plain = briefingPromiseIds(map(
     '| PROM | Source | Locator | Approved intent | State |',
     '|---|---|---|---|---|',
     '| PROM-001 | conversational | 1st message | Charge 3% | required |',
     '| PROM-camera | SRC-1 | item 2 | Any angle | deferred |',
     '| PROM-010 | conversational | 1st message | Remove licenses, replaced | not_applicable |',
+    '| not-an-id | conversational | 1st message | Some intent | required |',
+    '',
     'PROM-777 in prose is no row.'
-  ].join('\n'));
-  assert.deepEqual([...ids].sort(), ['PROM-001', 'PROM-camera']);
+  ));
+  assert.deepEqual([...plain].sort(), ['PROM-001', 'PROM-camera']);
+
+  // The contract allows more columns and other orders, and a state in backticks.
+  const extra = briefingPromiseIds(map(
+    '| # | PROM | Source | Approved intent | State | Note |',
+    '|---|---|---|---|---|---|',
+    '| 1 | PROM-001 | conversational | Charge 3% | required | x |',
+    '| 2 | PROM-002 | conversational | Replaced | not_applicable | gone |',
+    '| 3 | PROM-003 | conversational | Replaced | `not_applicable` | gone |'
+  ));
+  assert.deepEqual([...extra], ['PROM-001']);
+
   assert.equal(briefingPromiseIds('').size, 0);
   assert.equal(briefingPromiseIds(undefined).size, 0);
+  assert.equal(briefingPromiseIds('## Sources\n\n### Source Promise Map\n\nNo table yet.').size, 0);
+  assert.equal(briefingPromiseIds(map('| Other | Column |', '|---|---|', '| a | b |')).size, 0);
 });
 
 test('briefing:review refuses the round, writes no page, and accepts it once it cites a promise', async (t) => {

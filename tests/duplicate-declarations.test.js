@@ -399,7 +399,9 @@ test('a line or a file built to backtrack stays linear, and real code is read wh
     for (const text of cases) {
       const started = Date.now();
       extractDeclarations(rel, text);
-      assert.ok(Date.now() - started < 4000, `${rel} ${JSON.stringify(text.slice(0, 16))} took ${Date.now() - started} ms`);
+      // The defect took 40 s on 100 KB, so about 640 s at this size if it came back. The
+      // linear read takes seconds, and more on a busy machine: the limit is far from both.
+      assert.ok(Date.now() - started < 30000, `${rel} ${JSON.stringify(text.slice(0, 16))} took ${Date.now() - started} ms`);
     }
   }
   const count = 5000;

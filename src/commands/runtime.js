@@ -1226,7 +1226,7 @@ const { logCredentialReadsLine, resolveCredentialReads } = require('../lib/crede
  * requirement is read from the agent's own kernel file, so a consumer agent
  * that adopts the line is measured the same way — no hardcoded roster.
  */
-async function resolveBriefConsultation({ db, targetDir, agent, session }) {
+async function briefConsultationState({ db, targetDir, agent, session }) {
   const bare = String(agent || '').trim().replace(/^@/, '');
   if (!bare) return { required: false, state: 'not_required', briefs: 0, since: null };
   let required = false;
@@ -1258,7 +1258,14 @@ async function resolveBriefConsultation({ db, targetDir, agent, session }) {
   }
 }
 
+// What this session did, read once at its close: whether it consulted the brief, and
+// whether it read a credential source its kernel forbids.
+async function resolveBriefConsultation(context) {
+  return { ...await briefConsultationState(context), credential_reads: await resolveCredentialReads(context) };
+}
+
 function logBriefConsultationLine(logger, bc) {
+  logCredentialReadsLine(logger, bc && bc.credential_reads);
   if (bc && bc.state === 'consulted_generic') {
     logger.log('agent:done — context:brief consulted with a workflow-only task (advisory): no domain rule routed by triggers, task types or entities could match this session. Brief with the surfaces being built, in domain words, plus --paths=<files touched>.');
     return;
@@ -1321,7 +1328,6 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       agent: normalizedAgent,
       session: hasActiveSession ? session : null
     });
-    const credentialReads = await resolveCredentialReads({ db, targetDir, agent: normalizedAgent });
 
     if (hasActiveSession) {
       // Live or tracked session is already open — only append a completion note.
@@ -1387,9 +1393,8 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         logVerifyArtifactLine(logger, verifyArtifact);
         logDeliveryParityLine(logger, deliveryParity, t);
         logBriefConsultationLine(logger, briefConsultation);
-        logCredentialReadsLine(logger, credentialReads);
       }
-      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation, credential_reads: credentialReads };
+      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation };
     }
 
     // No active session — create a standalone task+run and immediately complete it.
@@ -1467,9 +1472,8 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       logVerifyArtifactLine(logger, verifyArtifact);
       logDeliveryParityLine(logger, deliveryParity, t);
       logBriefConsultationLine(logger, briefConsultation);
-      logCredentialReadsLine(logger, credentialReads);
     }
-    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation, credential_reads: credentialReads };
+    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation };
   } finally {
     db.close();
   }

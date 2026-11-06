@@ -25,8 +25,10 @@ Um `@briefing` precisou ver uma tela logada. O kernel proibia abrir fonte de cre
 
 ## Armadilhas
 
+- **Tirar uma confirmação expõe o que ela escondia.** A revisão independente reproduziu dois defeitos antigos da página: reabrir a aba achatava o texto em uma linha, e um rascunho da rodada anterior preenchia as decisões da nova. Ninguém sofria com eles porque alguém dizia "confirmo" no fim. Ao fazer o salvamento aplicar sozinho, viraram escrita que ninguém escolheu. Antes de remover uma salvaguarda, teste o caminho inteiro em navegador real, não só a regra nova.
+- **A cópia não é o arquivo.** A régua comparava as duas cópias do texto dentro do JSON, e as duas podem mudar juntas. O que muda é medido contra o `briefings.md`.
 - **A medida precisa ver o comando inteiro.** O evento guarda 200 caracteres, e no incidente o `.env` começava exatamente no caractere 200. A checagem roda no hook, sobre o comando completo, e grava só o sinalizador.
-- **Aspas enganam.** `grep -E ".env|secret"` parecia leitura, porque o `|` entre aspas parecia pipe. Só a leitura das 38 marcações reais mostrou isso, e tirar o texto entre aspas deixou 26, todas leituras de verdade.
+- **Expressão regular não lê shell.** `grep -E ".env|secret"` parecia leitura, e `cat .env 2>/dev/null`, `bash -c "cat .env"` e `$(grep X .env)` passavam despercebidos. Separar o comando como o shell separa resolveu os dois lados, conferido nas marcações reais.
 - **Rodada "limpa" não é rodada salva pelo dono.** Das 6 rodadas sem nota, só 1 veio do navegador. Nas outras 5 o agente preencheu o arquivo depois de uma frase no chat. Por isso há duas regras: a máquina reconhece a página salva, e a frase do dono vale como confirmação.
 - **Hipótese medida antes de virar proposta.** Estimar o tamanho do plano no refiner parecia a melhoria óbvia. A correlação com as fases deu 0,26 em 37 features, e a ideia morreu antes de virar código.
 - **Conte a resposta em texto livre também.** "Sempre escolhe refinar" era 5 de 5 nas perguntas estruturadas. Com a mesma pergunta feita em texto, a conta é 5 de 6.

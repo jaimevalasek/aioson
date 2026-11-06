@@ -165,9 +165,6 @@ function validateStructuredFinding(finding, label, { requireAcceptedSelection = 
     if (option.recommended !== undefined && typeof option.recommended !== 'boolean') {
       errors.push(`${optionLabel}.recommended must be a boolean`);
     }
-    if (option.defers !== undefined && typeof option.defers !== 'boolean') {
-      errors.push(`${optionLabel}.defers must be a boolean`);
-    }
     errors.push(...validateEvidenceRefs(option.evidence_refs, `${optionLabel}.evidence_refs`));
     const id = String(option.id || '');
     if (id && optionIds.has(id)) errors.push(`${label}.options has duplicate id: ${id}`);
@@ -197,20 +194,13 @@ function validateStructuredFinding(finding, label, { requireAcceptedSelection = 
 
 const PROMISE_ID_RE = /\bPROM-[A-Za-z0-9_-]+/g;
 
-/** The promises a briefing holds, read from its map. `not_applicable` is no promise. */
-function briefingPromiseIds(markdown) {
-  const ids = new Set();
-  for (const line of String(markdown || '').split('\n')) {
-    const cell = /^\|\s*(PROM-[A-Za-z0-9_-]+)\s*\|/.exec(line);
-    if (cell && !/\|\s*not_applicable\s*\|\s*$/.test(line)) ids.add(cell[1]);
-  }
-  return ids;
-}
-
+// Only what the option itself cites: a finding's text may name a promise to say that
+// it does not back the idea.
 function citedPromises(finding, option) {
-  const text = [finding.text, finding.recommendation, ...(finding.evidence_refs || []), option && option.description, option && option.impact, ...((option && option.evidence_refs) || [])]
-    .filter(Boolean).join(' ');
-  return text.match(PROMISE_ID_RE) || [];
+  const text = option
+    ? [option.description, option.impact, ...(option.evidence_refs || [])]
+    : [finding.recommendation, ...(finding.evidence_refs || [])];
+  return text.filter(Boolean).join(' ').match(PROMISE_ID_RE) || [];
 }
 
 /**
@@ -220,8 +210,11 @@ function citedPromises(finding, option) {
  * scope as it is (`defers: true`), can carry the recommendation.
  */
 function scopeRecommendationErrors(finding, label, promiseIds) {
-  if (finding.category !== 'scope-suggestion') return [];
   const options = Array.isArray(finding.options) ? finding.options : [];
+  const flags = options
+    .filter((option) => option && option.defers !== undefined && typeof option.defers !== 'boolean')
+    .map((option) => `finding ${label} option ${option.id} defers must be a boolean`);
+  if (finding.category !== 'scope-suggestion') return flags;
   const backed = (option) => {
     const cited = citedPromises(finding, option);
     return cited.length > 0 && (!promiseIds || cited.some((id) => promiseIds.has(id)));
@@ -229,12 +222,12 @@ function scopeRecommendationErrors(finding, label, promiseIds) {
   const fix = 'cite a PROM-* the briefing holds, mark an option that leaves the scope as it is with defers: true, or drop the recommendation and let the owner choose';
   if (options.length === 0) {
     return String(finding.recommendation || '').trim() && !backed(null)
-      ? [`finding ${label} recommends scope with no promise behind it: ${fix}`]
-      : [];
+      ? [...flags, `finding ${label} recommends scope with no promise behind it: ${fix}`]
+      : flags;
   }
-  return options
+  return [...flags, ...options
     .filter((option) => option && option.recommended && option.defers !== true && !backed(option))
-    .map((option) => `finding ${label} recommends scope with no promise behind it (${option.id}): ${fix}`);
+    .map((option) => `finding ${label} recommends scope with no promise behind it (${option.id}): ${fix}`)];
 }
 
 /**
@@ -429,7 +422,6 @@ function assertFeedbackPath(projectDir, slug, candidatePath) {
 }
 
 module.exports = {
-  briefingPromiseIds,
   buildInitialFeedback,
   collectApprovedReviewDecisions,
   DECISION_LIMITS,

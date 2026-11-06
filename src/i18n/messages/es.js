@@ -80,7 +80,7 @@ module.exports = {
     help_briefing_review:
       'aioson briefing:review [ruta] [--slug=<slug>] [--findings=<ruta>] [--force] [--json] [--locale=es]',
     help_briefing_apply_feedback:
-      'aioson briefing:apply-feedback [ruta] [--slug=<slug>] [--feedback=<ruta>] [--confirm|--declined] [--allow-stale] [--json] [--locale=es]',
+      'aioson briefing:apply-feedback [ruta] [--slug=<slug>] [--feedback=<ruta>] [--confirm|--confirm-if-clean|--declined] [--allow-stale] [--json] [--locale=es]',
     help_briefing_feedback:
       'aioson briefing:feedback [ruta] [--slug=<slug>] [--feedback=<ruta>] [--json] [--locale=es]',
     help_briefing_migrate_lineage:

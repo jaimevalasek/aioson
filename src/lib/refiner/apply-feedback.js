@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('node:fs/promises');
-const { hashText, serializeBriefingSections } = require('./briefing-sections');
+const { hashText, parseBriefingSections, serializeBriefingSections } = require('./briefing-sections');
 const { validateFeedback, sanitizeText } = require('./feedback-schema');
 const { buildRefinementReport } = require('./refinement-report');
 const { resolveBriefingPath } = require('./briefing-paths');
@@ -79,6 +79,15 @@ async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = 
   return { ok: true, skippedChanges, nextAction: 'rerun_review', appliedHash: currentSourceHash, reportData };
 }
 
+// The review works on sanitized text, which drops anything shaped like a tag. A section
+// nobody changed keeps its bytes, or `Map<string, User>` would leave with no type.
+function textToWrite(section, fileSections) {
+  if (section.status === 'remove_requested') return 'TBD';
+  const text = sanitizeText(section.current_text || section.original_text || '');
+  const body = fileSections.get(section.id);
+  return body !== undefined && sanitizeText(body) === text ? body : text;
+}
+
 async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = false, allowStale = false } = {}) {
   if (!confirmed) {
     return { ok: false, error: 'confirmation_required' };
@@ -92,15 +101,14 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
     return { ok: false, error: 'invalid_feedback', validation };
   }
 
-  const sections = feedback.sections.map((section) => {
-    const currentText = section.status === 'remove_requested' ? 'TBD' : sanitizeText(section.current_text || section.original_text || '');
-    return { ...section, current_text: currentText };
-  });
+  const fileSections = new Map(parseBriefingSections(currentMarkdown).sections.map((section) => [section.id, section.original_text]));
+  const sections = feedback.sections.map((section) => ({ ...section, current_text: textToWrite(section, fileSections) }));
   const nextMarkdown = serializeBriefingSections(currentMarkdown, sections);
   const appliedHash = hashText(nextMarkdown);
+  const unchanged = (section) => section.status === 'unchanged' && sanitizeText(section.current_text) === sanitizeText(section.original_text);
   const appliedChanges = sections
-    .filter((section) => section.status !== 'unchanged' || section.current_text !== section.original_text)
-    .map((section) => ({ section_id: section.id, title: section.title, summary: summarizeChange(section, section.current_text) }));
+    .filter((section) => !unchanged(section))
+    .map((section) => ({ section_id: section.id, title: section.title, summary: summarizeChange({ ...section, original_text: sanitizeText(section.original_text) }, sanitizeText(section.current_text)) }));
 
   await fs.writeFile(briefingPath, nextMarkdown, 'utf8');
 

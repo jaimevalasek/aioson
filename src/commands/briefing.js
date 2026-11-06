@@ -30,9 +30,9 @@ const {
   assertFeedbackPath,
   collectApprovedReviewDecisions,
   validateFeedback,
-  validateFindingsInput,
-  briefingPromiseIds
+  validateFindingsInput
 } = require('../lib/refiner/feedback-schema');
+const { briefingPromiseIds } = require('../lib/feature-source-lineage');
 const { resolveBriefingPath } = require('../lib/refiner/briefing-paths');
 const { assessRoundConfirmation, describeConfirmationReasons, USER_EXPORT_METHODS } = require('../lib/refiner/clean-round');
 const { resolvePrototypeState } = require('../lib/refiner/prototype-resolution');
@@ -758,7 +758,12 @@ async function dryRunFeedback({ projectDir, slug, feedback, allowStale, logger }
     for (const err of validation.errors) logger.error(`feedback: ${err}`);
     return { ok: false, error: 'invalid_feedback', slug, mode: 'dry-run', validation, summary };
   }
-  const confirmation = assessRoundConfirmation(feedback, { stale: validation.stale });
+  const inputFindings = await readOptionalJson(resolveBriefingPath(projectDir, slug, 'refinement-findings.json'));
+  const confirmation = assessRoundConfirmation(feedback, {
+    stale: validation.stale,
+    briefingSections: new Map(parseBriefingSections(current).sections.map((section) => [section.id, section.original_text])),
+    inputFindings: inputFindings.value
+  });
   logger.log(`Dry-run for "${slug}" (feedback round ${feedback.round || 1}):`);
   logger.log(`  changed sections: ${summary.changed_sections.map((c) => c.id).join(', ') || 'none'}`);
   logger.log(`  blocked sections: ${summary.blocked_sections.join(', ') || 'none'}`);
@@ -880,8 +885,8 @@ async function runBriefingApplyFeedback({ args, options = {}, logger }) {
     result.nextAction = 'build_prototype';
     if (result.reportData) result.reportData.next_action = 'build_prototype';
   }
-  if (result.reportData) result.reportData.confirmation = cleanRound && !options.confirm ? 'saved page, clean round' : 'explicit';
-  if (result.reportData && (result.archived || prototypePending)) {
+  if (result.reportData) {
+    result.reportData.confirmation = cleanRound && !options.confirm ? 'saved page, clean round' : 'explicit';
     if (result.archived) result.reportData.feedback_path = result.archived;
     await writeRefinementReport(projectDir, slug, result.reportData);
   }

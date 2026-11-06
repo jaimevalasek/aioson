@@ -577,7 +577,7 @@ function buildReviewHtml(data) {
   <script>
     const feedback = ${safeJson(feedback)};
     const L = ${safeJson(runtimeLabels)};
-    const LS_KEY = 'aioson-review:' + feedback.briefing_slug + ':' + feedback.source_hash;
+    const LS_KEY = 'aioson-review:' + feedback.briefing_slug + ':' + feedback.source_hash + ':' + feedback.review_generated_at;
     const sectionById = new Map(feedback.sections.map(section => [section.id, section]));
     const findingById = new Map((feedback.findings || []).map(finding => [finding.id, finding]));
     const statusEl = document.getElementById('status');
@@ -795,7 +795,7 @@ function buildReviewHtml(data) {
         const sectionEl = document.querySelector('.document-section[data-section="' + draftSection.id + '"]');
         if (!sectionEl) return;
         if (typeof draftSection.current_text === 'string') {
-          sectionEl.querySelector('[data-role="editor"]').innerText = draftSection.current_text;
+          sectionEl.querySelector('[data-role="editor"]').textContent = draftSection.current_text;
           sectionEl.querySelector('[data-role="reader"]').innerHTML = renderSafeMarkdown(draftSection.current_text);
         }
         sectionEl.querySelector('[data-role="status"]').value = draftSection.status || 'unchanged';

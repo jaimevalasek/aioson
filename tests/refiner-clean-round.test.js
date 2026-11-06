@@ -60,12 +60,12 @@ const FINDINGS = [
   { id: 'F2', section_id: 'risks', category: 'gap', severity: 'low', blocking: false, text: 'No rollback is named.', recommendation: 'Name a rollback.' }
 ];
 
-async function makeProject(t, findings = FINDINGS) {
+async function makeProject(t, findings = FINDINGS, briefing = BRIEFING) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-clean-round-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const base = path.join(dir, '.aioson', 'briefings', SLUG);
   await fs.mkdir(base, { recursive: true });
-  await fs.writeFile(path.join(base, 'briefings.md'), BRIEFING, 'utf8');
+  await fs.writeFile(path.join(base, 'briefings.md'), briefing, 'utf8');
   await fs.writeFile(path.join(base, 'refinement-findings.json'), JSON.stringify(findings), 'utf8');
   await writeBriefingRegistry(dir, {
     updated_at: '2026-11-06',
@@ -77,19 +77,23 @@ async function makeProject(t, findings = FINDINGS) {
 }
 
 /** What the page and the agent leave after a round the owner accepted as recommended. */
-async function saveCleanRound({ feedbackPath }, change = () => {}) {
+async function saveCleanRound({ feedbackPath }, change = () => {}, { rewrite = true } = {}) {
   const feedback = JSON.parse(await fs.readFile(feedbackPath, 'utf8'));
   feedback.export_method = 'file-system-access';
   feedback.findings[0].status = 'accepted';
   feedback.findings[0].selected_option_ids = ['desktop'];
   feedback.findings[1].status = 'accepted';
-  const solution = feedback.sections.find((section) => section.id === 'proposed-solution');
-  solution.status = 'change_requested';
-  solution.current_text = 'The sale starts on desktop.';
+  if (rewrite) {
+    const solution = feedback.sections.find((section) => section.id === 'proposed-solution');
+    solution.status = 'change_requested';
+    solution.current_text = 'The sale starts on desktop.';
+  }
   change(feedback);
   await fs.writeFile(feedbackPath, JSON.stringify(feedback, null, 2), 'utf8');
   return feedback;
 }
+
+const fullOption = (id, recommended) => ({ id, label: id, description: `${id} text`, impact: `${id} impact`, recommended, evidence_refs: [] });
 
 function cleanFeedback() {
   return {
@@ -104,10 +108,10 @@ function cleanFeedback() {
     ],
     findings: [
       {
-        id: 'F1', section_id: 'proposed-solution', category: 'pending-decision', blocking: true, status: 'accepted', note: '', rationale: '',
-        options: [{ id: 'yes', recommended: true }, { id: 'no', recommended: false }], selected_option_ids: ['yes']
+        id: 'F1', section_id: 'proposed-solution', category: 'pending-decision', blocking: true, status: 'accepted', note: '', rationale: '', text: 'Which?', selection_mode: 'single',
+        options: [fullOption('yes', true), fullOption('no', false)], selected_option_ids: ['yes']
       },
-      { id: 'F2', section_id: 'risks', category: 'gap', blocking: false, status: 'accepted', note: '', rationale: '', options: [], selected_option_ids: [] }
+      { id: 'F2', section_id: 'risks', category: 'gap', blocking: false, status: 'accepted', note: '', rationale: '', text: 'A gap.', recommendation: 'Name it.', options: [], selected_option_ids: [] }
     ]
   };
 }
@@ -138,7 +142,11 @@ test('every reason to ask again is named, with the ids behind it', () => {
     ['blocking_items', (f) => { f.blocking_items.push({ id: 'block-problem' }); }],
     ['section_action', (f) => { f.sections[2].status = 'remove_requested'; }],
     ['section_action', (f) => { f.sections[2].status = 'blocked'; }],
-    ['text_outside_findings', (f) => { f.sections[2].current_text = 'rewritten'; }]
+    ['section_action', (f) => { f.sections[2].status = 'change_requested'; }],
+    ['text_outside_findings', (f) => { f.sections[2].current_text = 'rewritten'; }],
+    ['ids_dropped', (f) => { f.sections[1].original_text = '| PROM-001 | a |'; }],
+    ['ids_dropped', (f) => { f.sections[1].original_text = '| SRC-001 | a |'; }],
+    ['markup_stripped', (f) => { f.sections[0].current_text = 'Returns Map<string, User> here.'; }]
   ];
   for (const [code, change] of cases) {
     const feedback = cleanFeedback();
@@ -155,17 +163,25 @@ test('every reason to ask again is named, with the ids behind it', () => {
   assert.deepEqual(codes(cleanFeedback(), { stale: true }), ['stale']);
 });
 
-test('only an accepted finding, or bookkeeping, covers a rewritten section', () => {
+test('a page section marked for change with nothing done is a request, and a rewrite carries the mark', () => {
+  const asked = cleanFeedback();
+  asked.sections[2].status = 'change_requested';
+  assert.deepEqual(assessRoundConfirmation(asked).reasons, [{ code: 'section_action', ids: ['problem'] }]);
+  assert.equal(assessRoundConfirmation(cleanFeedback()).required, false, 'the sections the agent rewrote carry it too');
+});
+
+test('only an accepted decision covers a rewritten section', () => {
   const rejected = cleanFeedback();
   rejected.findings.push({ id: 'F3', section_id: 'problem', category: 'gap', status: 'rejected', note: '', options: [], selected_option_ids: [] });
   rejected.sections[2].current_text = 'rewritten';
   assert.deepEqual(codes(rejected), ['unresolved', 'text_outside_findings']);
 
-  for (const bookkeeping of ['open-questions', 'sources', 'identified-gaps', 'additional-files']) {
-    const feedback = cleanFeedback();
-    feedback.sections.push({ id: bookkeeping, status: 'change_requested', original_text: 'a', current_text: 'b' });
-    assert.equal(assessRoundConfirmation(feedback).required, false, bookkeeping);
-  }
+  // Accepted, but with no recommendation there is no decision to apply.
+  const empty = cleanFeedback();
+  empty.findings.push({ id: 'F3', section_id: 'problem', category: 'gap', status: 'accepted', note: '', text: 'x', recommendation: '', options: [], selected_option_ids: [] });
+  empty.sections[2].current_text = 'rewritten';
+  assert.deepEqual(codes(empty), ['text_outside_findings']);
+
   for (const other of ['context', 'problem', 'themes', 'risks']) {
     const feedback = cleanFeedback();
     feedback.findings = feedback.findings.filter((finding) => finding.section_id !== other);
@@ -174,10 +190,53 @@ test('only an accepted finding, or bookkeeping, covers a rewritten section', () 
   }
 });
 
-test('a suggestion with no recommendation, left alone, is not an unresolved answer', () => {
+test('bookkeeping follows a decision, and keeps every promise and source', () => {
+  for (const bookkeeping of ['open-questions', 'sources', 'identified-gaps', 'additional-files']) {
+    const feedback = cleanFeedback();
+    feedback.sections.push({ id: bookkeeping, status: 'change_requested', original_text: 'a', current_text: 'b' });
+    assert.equal(assessRoundConfirmation(feedback).required, false, bookkeeping);
+  }
+
+  const noDecision = cleanFeedback();
+  noDecision.findings = [];
+  noDecision.sections = [{ id: 'sources', status: 'change_requested', original_text: 'a', current_text: 'b' }];
+  assert.deepEqual(codes(noDecision), ['text_outside_findings']);
+
+  const dropped = cleanFeedback();
+  dropped.sections[1] = { id: 'sources', status: 'change_requested', original_text: '| PROM-001 | x |\n| SRC-001 | y |', current_text: '| SRC-001 | y |' };
+  assert.deepEqual(assessRoundConfirmation(dropped).reasons, [{ code: 'ids_dropped', ids: ['sources'] }]);
+
+  const kept = cleanFeedback();
+  kept.sections[1] = { id: 'sources', status: 'change_requested', original_text: '| PROM-001 | x |', current_text: '| PROM-001 | x |\n| PROM-002 | new |' };
+  assert.equal(assessRoundConfirmation(kept).required, false);
+});
+
+test('a change is measured against the file, not the copy the JSON carries', () => {
+  const edited = cleanFeedback();
+  edited.findings = edited.findings.filter((finding) => finding.id !== 'F1');
+  edited.sections = [{ id: 'problem', status: 'unchanged', original_text: 'edited in both', current_text: 'edited in both' }];
+  assert.equal(assessRoundConfirmation(edited).required, false, 'the copy alone cannot tell');
+  const file = new Map([['problem', 'what the file holds']]);
+  assert.deepEqual(codes(edited, { briefingSections: file }), ['text_outside_findings']);
+  assert.equal(assessRoundConfirmation(edited, { briefingSections: new Map([['problem', 'edited in both']]) }).required, false);
+
+  const markup = cleanFeedback();
+  markup.findings = markup.findings.filter((finding) => finding.id !== 'F1');
+  markup.sections = [{ id: 'problem', status: 'unchanged', original_text: 'Returns Map here.', current_text: 'Returns Map here.' }];
+  assert.equal(assessRoundConfirmation(markup, { briefingSections: new Map([['problem', 'Returns Map<string> here.']]) }).required, false, 'the review shows it sanitized, and that is no change');
+});
+
+test('what the agent wrote already decided is not the owner\'s act on this page', () => {
+  assert.deepEqual(assessRoundConfirmation(cleanFeedback(), { inputFindings: [{ id: 'F1', status: 'accepted' }, { id: 'F2', status: 'pending' }] }).reasons, [{ code: 'arrived_decided', ids: ['F1'] }]);
+  assert.deepEqual(assessRoundConfirmation(cleanFeedback(), { inputFindings: { findings: [{ id: 'F2', selected_option_ids: ['x'] }] } }).reasons, [{ code: 'arrived_decided', ids: ['F2'] }]);
+  assert.equal(assessRoundConfirmation(cleanFeedback(), { inputFindings: [{ id: 'F1' }, { id: 'F2', status: 'pending', selected_option_ids: [] }] }).required, false);
+  assert.equal(assessRoundConfirmation(cleanFeedback(), { inputFindings: null }).required, false);
+});
+
+test('a suggestion nobody recommended, left alone, is not an unresolved answer', () => {
   const suggestion = (status, extra = {}) => ({
-    id: 'F9', section_id: 'themes', category: 'scope-suggestion', blocking: false, status, note: '', rationale: '',
-    options: [{ id: 'a', recommended: false }, { id: 'b', recommended: false }], selected_option_ids: [], ...extra
+    id: 'F9', section_id: 'themes', category: 'scope-suggestion', blocking: false, status, note: '', rationale: '', text: 'x', selection_mode: 'single',
+    options: [fullOption('a', false), fullOption('b', false)], selected_option_ids: [], ...extra
   });
   for (const status of ['pending', 'deferred']) {
     const feedback = cleanFeedback();
@@ -187,6 +246,14 @@ test('a suggestion with no recommendation, left alone, is not an unresolved answ
   const blocking = cleanFeedback();
   blocking.findings.push(suggestion('pending', { blocking: true }));
   assert.deepEqual(codes(blocking), ['unresolved']);
+
+  const recommended = cleanFeedback();
+  recommended.findings.push(suggestion('pending', { options: [fullOption('a', true), fullOption('b', false)] }));
+  assert.deepEqual(codes(recommended), ['unresolved'], 'a promise backed it and the owner did not take it');
+
+  const legacy = cleanFeedback();
+  legacy.findings.push(suggestion('pending', { options: [], selection_mode: null, recommendation: 'Add it for PROM-001.' }));
+  assert.deepEqual(codes(legacy), ['unresolved']);
 
   const chosen = cleanFeedback();
   chosen.findings.push(suggestion('accepted', { selected_option_ids: ['a'] }));
@@ -239,6 +306,31 @@ test('--confirm-if-clean writes nothing when the agent had to interpret somethin
   assert.ok(lines.some((line) => /needs the owner's confirmation: notes \(F1\)/.test(line)), lines.join('\n'));
 });
 
+test('findings the agent wrote already decided still ask, through the command', async (t) => {
+  const seeded = [{ ...FINDINGS[0], status: 'accepted', selected_option_ids: ['desktop'] }, { ...FINDINGS[1], status: 'accepted' }];
+  const project = await makeProject(t, seeded);
+  const feedback = JSON.parse(await fs.readFile(project.feedbackPath, 'utf8'));
+  assert.equal(feedback.findings[0].status, 'accepted', 'a later round carries earlier decisions this way');
+  feedback.export_method = 'file-system-access';
+  await fs.writeFile(project.feedbackPath, JSON.stringify(feedback), 'utf8');
+  const result = await runBriefingApplyFeedback({ args: [project.dir], options: { slug: SLUG, 'confirm-if-clean': true }, logger: quiet });
+  assert.equal(result.mode, 'dry-run');
+  assert.deepEqual(result.confirmation.reasons, [{ code: 'arrived_decided', ids: ['F1', 'F2'] }]);
+  assert.equal(await fs.readFile(path.join(project.base, 'briefings.md'), 'utf8'), BRIEFING);
+});
+
+test('both copies edited in the JSON still count as a change to the file', async (t) => {
+  const project = await makeProject(t);
+  await saveCleanRound(project, (feedback) => {
+    const problem = feedback.sections.find((section) => section.id === 'problem');
+    problem.original_text = 'Rewritten behind the review.';
+    problem.current_text = 'Rewritten behind the review.';
+  });
+  const result = await runBriefingApplyFeedback({ args: [project.dir], options: { slug: SLUG, 'confirm-if-clean': true }, logger: quiet });
+  assert.equal(result.mode, 'dry-run');
+  assert.deepEqual(result.confirmation.reasons, [{ code: 'text_outside_findings', ids: ['problem'] }]);
+});
+
 test('a file the agent filled is no saved page, and the owner\'s words still reach --confirm', async (t) => {
   const project = await makeProject(t);
   await saveCleanRound(project, (feedback) => { feedback.export_method = 'manual-save'; });
@@ -274,8 +366,48 @@ test('a stale round never applies on its own, even with --allow-stale', async (t
 
   const allowed = await runBriefingApplyFeedback({ args: [project.dir], options: { slug: SLUG, 'confirm-if-clean': true, 'allow-stale': true }, logger: quiet });
   assert.equal(allowed.mode, 'dry-run');
-  assert.deepEqual(allowed.confirmation.reasons, [{ code: 'stale', ids: [] }]);
+  assert.ok(allowed.confirmation.reasons.some((reason) => reason.code === 'stale'), JSON.stringify(allowed.confirmation.reasons));
   assert.match(await fs.readFile(path.join(project.base, 'briefings.md'), 'utf8'), /Edited after the review/);
+});
+
+test('a section nobody changed keeps its bytes, whatever the review shows of it', async (t) => {
+  const briefing = BRIEFING
+    .replace('Original context.', 'Returns `Map<string, User>` when a < b and c > d.')
+    .replace('- Risk one', '- Risk <one> stays');
+  const project = await makeProject(t, FINDINGS, briefing);
+  await saveCleanRound(project, () => {}, { rewrite: false });
+  const applied = await runBriefingApplyFeedback({ args: [project.dir], options: { slug: SLUG, 'confirm-if-clean': true }, logger: quiet });
+  assert.equal(applied.applied_without_confirmation, true, JSON.stringify(applied.confirmation));
+  assert.deepEqual(applied.appliedChanges, []);
+  const after = await fs.readFile(path.join(project.base, 'briefings.md'), 'utf8');
+  assert.equal(after, briefing);
+});
+
+test('a rewritten section that would lose markup asks first, and the others still keep theirs', async (t) => {
+  const briefing = BRIEFING.replace('Original context.', 'Returns `Map<string, User>`.');
+  const project = await makeProject(t, FINDINGS, briefing);
+  await saveCleanRound(project, (feedback) => {
+    feedback.sections.find((section) => section.id === 'proposed-solution').current_text = 'Keep the Map<K, V> type.';
+  });
+  const dry = await runBriefingApplyFeedback({ args: [project.dir], options: { slug: SLUG, 'confirm-if-clean': true }, logger: quiet });
+  assert.deepEqual(dry.confirmation.reasons, [{ code: 'markup_stripped', ids: ['proposed-solution'] }]);
+  const applied = await runBriefingApplyFeedback({ args: [project.dir], options: { slug: SLUG, confirm: true }, logger: quiet });
+  assert.equal(applied.ok, true);
+  assert.deepEqual(applied.appliedChanges.map((change) => change.section_id), ['proposed-solution']);
+  assert.match(await fs.readFile(path.join(project.base, 'briefings.md'), 'utf8'), /Returns `Map<string, User>`\./);
+});
+
+test('the report says how the round was confirmed, wherever the feedback came from', async (t) => {
+  const project = await makeProject(t);
+  await saveCleanRound(project);
+  const other = path.join(project.base, 'exported.json');
+  await fs.copyFile(project.feedbackPath, other);
+  const applied = await runBriefingApplyFeedback({
+    args: [project.dir], options: { slug: SLUG, 'confirm-if-clean': true, feedback: `.aioson/briefings/${SLUG}/exported.json` }, logger: quiet
+  });
+  assert.equal(applied.applied_without_confirmation, true);
+  assert.equal(applied.archived, undefined);
+  assert.match(await fs.readFile(path.join(project.base, 'refinement-report.md'), 'utf8'), /- Confirmation: saved page, clean round/);
 });
 
 test('the flag does not swallow the project path, and the page says what saving does', async (t) => {
