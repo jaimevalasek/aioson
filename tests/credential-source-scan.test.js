@@ -241,7 +241,8 @@ test('input built to be slow ends quickly', () => {
   readsCredentialSource(`cat ${'${a:-'.repeat(40000)} .env`);
   readsCredentialSource(`.env ${'cat <<A\n$('.repeat(20000)}`);
   readsCredentialSource(`.env ${'${a'.repeat(60000)}`);
-  assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);
+  // Eight copies sharing one core took 3.9 s, and the quadratic inputs this guards took 8 and 39 s.
+  assert.ok(Date.now() - started < 6000, `${Date.now() - started} ms`);
 });
 
 test('the rule is read from the agent\'s own kernel', () => {
