@@ -333,3 +333,74 @@ test('the notes do not loosen a gate: with no PRD, Gate A and Gate C stay blocke
     assert.equal(result.result, 'BLOCKED', gate);
   }
 });
+
+// What the fix of the discovery notes must not touch: only Source Coverage waits for
+// the PRD. An approved briefing's old table shape relaxes at birth, on the path with
+// no notes, and nowhere else.
+const LEGACY_SOURCE_TABLES = `### Source Inventory
+
+| ID | Fonte | Observação |
+|---|---|---|
+| SRC-001 | \`plans/${SLUG}/idea.md\` | Material source pack |
+
+### Source Promise Map
+
+| ID | Promessa material preservada | Disposição |
+|---|---|---|
+| PROM-001 | A todo can carry a due date | required |`;
+const legacyBriefing = `---
+slug: ${SLUG}
+source_plans: [plans/${SLUG}/idea.md]
+---
+
+# Briefing — Due dates
+
+## Sources
+
+${LEGACY_SOURCE_TABLES}
+`;
+const NOTE = '# Notes\n\nA kanban board could show the due dates, with a CRUD admin panel.\n';
+const PLAN_ONLY = `---\nfeature: ${SLUG}\nstatus: approved\nplan_contract: 2\n---\n\n# Plan\n\n## Capability Delivery Plan\n\n| CAP | Phase | Files | Verification |\n|---|---|---|---|\n| CAP-due | 1 | src/due.js | node --test |\n`;
+
+async function approved(dir) {
+  await writeBriefingRegistry(dir, { updated_at: '2026-07-27', briefings: [{ slug: SLUG, status: 'approved', source_plans: [`plans/${SLUG}/idea.md`], created_at: '2026-07-26', approved_at: '2026-07-27' }] });
+}
+
+test('a discovery note on an approved briefing does not relax its old table shape', async () => {
+  const { dir, write } = await project({ briefingText: legacyBriefing });
+  await write(`.aioson/briefings/${SLUG}/expansion-scout.md`, NOTE);
+  await approved(dir);
+  const report = await verify(dir, 'sources');
+  assert.equal(report.ok, false);
+  const issues = report.issues.join('\n');
+  for (const check of ['source_inventory_columns', 'source_promise_map_columns']) assert.match(issues, new RegExp(check), check);
+  assert.doesNotMatch(issues, /source_coverage_missing/, 'that one still waits for the PRD');
+  assert.doesNotMatch(report.warnings.join('\n'), /advisory: approved briefing/);
+});
+
+test('with no note the at-birth path keeps relaxing an approved briefing, as before', async () => {
+  const { dir } = await project({ briefingText: legacyBriefing });
+  await approved(dir);
+  const report = await verify(dir, 'sources');
+  assert.match(report.warnings.join('\n'), /source_inventory_columns.*advisory: approved briefing/);
+});
+
+for (const [label, extra] of [['a plan', {}], ['a plan and a note', { note: NOTE }]]) {
+  test(`with ${label} on disk and no PRD, Source Coverage is still charged`, async () => {
+    const { dir, write } = await project();
+    await write(`.aioson/context/implementation-plan-${SLUG}.md`, PLAN_ONLY);
+    if (extra.note) await write(`.aioson/briefings/${SLUG}/expansion-scout.md`, extra.note);
+    const report = await verify(dir, 'sources');
+    assert.equal(report.ok, false);
+    assert.match(report.issues.join('\n'), /source_coverage_missing/);
+    assert.equal(report.metrics.coverage_checked, true);
+  });
+}
+
+test('a PRD with no Source Coverage is charged on the at-birth path too', async () => {
+  // Short enough not to make the feature applicable: the at-birth path reads it.
+  const { dir } = await project({ prd: '# PRD\n\nA note.\n' });
+  const report = await verify(dir, 'sources');
+  assert.match(report.issues.join('\n'), /source_coverage_missing/);
+  assert.equal(report.metrics.coverage_checked, true);
+});

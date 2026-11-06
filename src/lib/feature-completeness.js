@@ -805,13 +805,22 @@ function validatePrdAcceptanceCriteria(content, artifact, productMap) {
 // Lineage at birth: before any PRD makes the feature applicable, a briefing
 // that pins sources is still re-hashed and parsed, so @briefing and @refiner see
 // a stale source or a broken map while the CLI can still rewrite the briefing.
-// Source Coverage is the PRD's section, so it is not due before a PRD exists,
-// whatever made the feature applicable: a discovery note naming a rich surface
-// does, with the briefing still on its way to Product.
-function lineageAtBirth(lineage, inputs) {
+// Source Coverage is the PRD's section, so it is not due before a PRD exists. This
+// lifts that one finding and nothing else.
+function coverageDueWithPrd(lineage, inputs) {
   const prdWritten = Boolean(String(inputs.prd || '').trim());
   const findings = prdWritten ? lineage.findings : lineage.findings.filter((item) => item.check !== 'source_coverage_missing');
-  return { ...lineage, findings, coverage_checked: prdWritten, at_birth: true };
+  return { ...lineage, findings, coverage_checked: prdWritten };
+}
+
+// A discovery note naming a rich surface makes a feature applicable while its
+// briefing is still on the way to Product. Only that shape waits for the PRD: a plan
+// or requirements on disk with no PRD is a broken chain, and stays charged. It is not
+// `at_birth`, which is the path that may relax an approved briefing's table shape.
+function onlyDiscoveryNotes(inputs, operationalSurfaces, options) {
+  return operationalSurfaces.length > 0
+    && !options.force
+    && ![inputs.prd, inputs.plan, inputs.requirements].some((content) => String(content || '').trim());
 }
 
 // Advisory to the gates: its findings stay off `findings`. An applicable feature
@@ -829,7 +838,7 @@ async function initialSourceLineage({ applicable, targetDir, slug, inputs, artif
     acceptance: { findings: [], rows: [], capToAcs: {} },
     lifecycle: { registry_entry: registryEntry, prd_exists: Boolean(artifacts.prd.exists) }
   });
-  return lineageAtBirth(lineage, inputs);
+  return { ...coverageDueWithPrd(lineage, inputs), at_birth: true };
 }
 
 async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
@@ -920,7 +929,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
         prd_exists: Boolean(artifacts.prd.exists)
       }
     });
-    if (!String(inputs.prd || '').trim()) sourceLineage = lineageAtBirth(sourceLineage, inputs);
+    if (onlyDiscoveryNotes(inputs, operationalSurfaces, options)) sourceLineage = coverageDueWithPrd(sourceLineage, inputs);
     delivery = validateDeliveryPlan(inputs.plan, artifacts.implementation_plan.path || `implementation-plan-${slug}.md`, productMap);
     planContract = await validatePlanContract({ targetDir, slug, content: inputs.plan, acceptance, delivery });
     engineeringControls = validateEngineeringControls({
