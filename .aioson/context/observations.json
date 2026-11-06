@@ -650,6 +650,108 @@
       "created_at": "2026-11-06T16:16:53.079Z",
       "updated_at": "2026-11-06T16:16:53.079Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-131ece",
+      "kind": "defect",
+      "summary": "A rota para ver telas logadas esta so em briefing-craft.md, carregado para problema generico, e o refiner nao tem nenhuma. Um @briefing ja leu o .env e criou sessao de admin por falta de caminho. Falta entrar nos modulos carregados no esta…",
+      "detail": null,
+      "paths": [],
+      "feature": "melhorias-briefing-refiner",
+      "origin_feature": null,
+      "agent": null,
+      "status": "resolved",
+      "seen": 1,
+      "created_at": "2026-11-06T17:12:29.056Z",
+      "updated_at": "2026-11-06T20:30:00.575Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": "template/.aioson/docs/briefing/logged-in-screens.md",
+        "why": null,
+        "by": "owner",
+        "at": "2026-11-06T20:30:00.575Z"
+      }
+    },
+    {
+      "id": "OBS-c16430",
+      "kind": "idea",
+      "summary": "Melhorias para briefing e refiner, nada implementado: tirar perguntas sem informacao, escopo recomendado so com promessa, porta de saida, plano de prova, regras de decisao na ausencia, entrega como dado. Ver plans/melhorias-briefing-refine…",
+      "detail": null,
+      "paths": [],
+      "feature": "melhorias-briefing-refiner",
+      "origin_feature": null,
+      "agent": null,
+      "status": "resolved",
+      "seen": 1,
+      "created_at": "2026-11-06T17:12:29.306Z",
+      "updated_at": "2026-11-06T20:30:00.771Z",
+      "resolution": {
+        "as": "answered",
+        "ref": null,
+        "why": "Os itens 1 a 3 foram entregues em b7e809b4. Os itens 4 a 7 seguem abertos em OBS-90e751.",
+        "by": "owner",
+        "at": "2026-11-06T20:30:00.771Z"
+      }
+    },
+    {
+      "id": "OBS-90e751",
+      "kind": "idea",
+      "summary": "Melhorias que faltam para briefing e refiner: porta de saida no refiner, plano de prova, regras de decisao na ausencia e entrega como dado (itens 4 a 7 de plans/melhorias-briefing-refiner.md). Dependem da decisao sobre a terceira forma de …",
+      "detail": null,
+      "paths": [],
+      "feature": "melhorias-briefing-refiner",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-06T20:29:51.955Z",
+      "updated_at": "2026-11-06T20:29:51.955Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-783956",
+      "kind": "risk",
+      "summary": "O alerta de leitura de .env ve so a ferramenta Bash: os hooks nao registram a ferramenta PowerShell. Ela teve 0 usos em cerca de 31 mil comandos em 4 projetos, entao e um limite aceito por enquanto. Registrar a ferramenta pede um matcher n…",
+      "detail": null,
+      "paths": [],
+      "feature": "melhorias-briefing-refiner",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-06T20:29:52.155Z",
+      "updated_at": "2026-11-06T20:29:52.155Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-1a1edd",
+      "kind": "defect",
+      "summary": "serializeBriefingSections reduz tres ou mais linhas em branco a uma, inclusive dentro de bloco de codigo, e mistura fins de linha quando a rodada muda texto num arquivo CRLF. Ja existia, vale para --confirm e so nao atinge mais a rodada qu…",
+      "detail": null,
+      "paths": [],
+      "feature": "melhorias-briefing-refiner",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-06T20:29:52.351Z",
+      "updated_at": "2026-11-06T20:29:52.351Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-340c61",
+      "kind": "idea",
+      "summary": "briefing:review recusa um achado com section_id desconhecido e a mensagem nao lista os ids validos. Com ids unicos, uma secao sem letra latina agora se chama section, section-2, e quem escreve o achado nao tem como saber sem ler o feedback…",
+      "detail": null,
+      "paths": [],
+      "feature": "melhorias-briefing-refiner",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-06T20:29:52.562Z",
+      "updated_at": "2026-11-06T20:29:52.562Z",
+      "resolution": null
     }
   ]
 }
