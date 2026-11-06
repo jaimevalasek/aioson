@@ -38,15 +38,15 @@ const scriptContract = require('./script');
 const targets = require('./targets');
 const steps = require('./steps');
 const reports = require('./report');
-const { createScenario, interpolate, resolveStep, loadItems, scrub } = require('./scenario');
-const { resolveStateFiles, saveSessionState, valueEnvRefusal } = require('./session-state');
+const { createScenario, interpolate, isLoopbackUrl, resolveStep, loadItems, scrub, scrubRecord } = require('./scenario');
+const { hostOf, installNavigationGuard, resolveStateFiles, saveSessionState, stateTargetRefusal, usesValueEnv, valueEnvRefusal } = require('./session-state');
 const { clearDir, isContainedFolder } = require('../evidence-artifacts');
 const { isValidSlug } = require('../../dossier/schema');
 
 const {
   SCHEMA, ACTIONS, DEFAULT_TIMEOUT_MS, DEFAULT_BOUNDARY_WAIT_MS, DEFAULT_SNAPSHOT_LINES,
   MAX_CONSOLE_SAMPLES, MAX_NETWORK_ROWS, LOGIN_WALL_RE,
-  idsOf, normalizeScript, clampLines, clampSlowMo, lintScript, loadScript, sanitizeUrl, maskedValue, clip, sha256, sleep, until
+  idsOf, normalizeScript, clampLines, clampSlowMo, loadScript, sanitizeUrl, maskedValue, clip, sha256, sleep, until
 } = scriptContract;
 const { parseTarget, locatorFor, parseBoundary, boundaryHit, urlMatches } = targets;
 const { runExpect, ariaSnapshot, previewSnapshot, executeStep, pad } = steps;
@@ -77,6 +77,66 @@ function scanCaptured({ aria = [], console: consoleSamples = [], steps: stepText
   for (const text of consoleSamples) fold('console', text);
   for (const text of stepTexts) fold('step', text);
   return merged;
+}
+
+// Actions that change what the page shows, and the steps that replace the view.
+const STATE_ACTIONS = new Set(['click', 'dblclick', 'fill', 'type', 'press', 'select', 'check', 'uncheck']);
+const VIEW_REPLACING = new Set(['reload', 'goto', 'back']);
+
+// A step that fails when the screen does not show the result. A `boundary`
+// proves the request, never the screen, and a `judge` proves nothing.
+function checksTheView(step) {
+  if (step.do === 'expect') return true;
+  if (step.do === 'eval') return step.equals !== undefined || step.contains !== undefined;
+  if (step.do === 'wait') return Boolean(step.target || step.text);
+  return false;
+}
+
+/**
+ * `reload_masks_stale_view`: an action reaching a `reload`, `goto` or `back` with
+ * no check between them, also across the turn of a loop. Rebuilding the page from
+ * the server hides a view that stayed stale after the action, so such a walkthrough
+ * passes over the defect it was written to catch. Advisory: the script may mean it
+ * (a login prelude), and only a reader can tell. `optional` steps may never run, so
+ * they neither arm nor clear it.
+ */
+function lintScript(script) {
+  const warnings = [];
+  let pending = null;
+  const charge = (step, where) => {
+    warnings.push(`step ${where}: reload_masks_stale_view — \`${pending.action}\` at step ${pending.where} reaches this \`${step.do}\` with no \`expect\` between them, and rebuilding the page hides a view that stayed stale; \`expect\` the result on screen first, then ${step.do} and \`expect\` that it persisted`);
+    pending = null;
+  };
+  // The turn of a loop: what the last item left pending meets the top of the next.
+  const acrossTheTurn = (steps, label) => {
+    for (const step of steps) {
+      if (step.optional === true) continue;
+      if (checksTheView(step) || STATE_ACTIONS.has(step.do) || step.do === 'each') return;
+      if (VIEW_REPLACING.has(step.do)) {
+        charge(step, label(step.index));
+        return;
+      }
+    }
+  };
+  const walk = (steps, label) => {
+    for (const step of steps || []) {
+      const where = label(step.index);
+      if (step.do === 'each') {
+        const childLabel = (child) => `${where}.${child}`;
+        walk(step.steps, childLabel);
+        const single = Array.isArray(step.items) && step.items.length < 2;
+        if (pending && !single) acrossTheTurn(step.steps, childLabel);
+        continue;
+      }
+      if (step.optional === true) continue;
+      if (checksTheView(step)) pending = null;
+      else if (VIEW_REPLACING.has(step.do)) {
+        if (pending) charge(step, where);
+      } else if (STATE_ACTIONS.has(step.do)) pending = { action: step.do, where };
+    }
+  };
+  walk(script && script.steps, (index) => String(index));
+  return warnings;
 }
 
 function injectionWarning(injection) {
@@ -184,12 +244,15 @@ async function runWalkthrough(options) {
   const artifactDir = dir ? path.join(dir, script.name) : null;
   const startedAt = new Date(clock.now()).toISOString();
 
-  // Both before any page opens: a refused run must not reach the browser at all.
-  const envRefusal = valueEnvRefusal(script, baseUrl);
+  // All before any page opens: a refused run must not reach the browser at all.
+  const envRefusal = valueEnvRefusal(script, baseUrl, { cdp, channel, env, config });
   if (envRefusal) return envRefusal;
   const stateFiles = resolveStateFiles({ targetDir, state, saveState, cdp, channel, env, config });
   if (stateFiles.refusal) return stateFiles.refusal;
+  const stateRefusal = stateTargetRefusal(script, baseUrl, stateFiles);
+  if (stateRefusal) return stateRefusal;
   let savedState = '';
+  const handlesCredential = usesValueEnv(script);
 
   // `--slow-mo` wins over the script's `slow_mo`; both only pace a run.
   const pace = slowMo === null || slowMo === undefined ? script.slow_mo : clampSlowMo(slowMo);
@@ -223,6 +286,9 @@ async function runWalkthrough(options) {
   const network = { rows: [], failed: 0, supportsBoundaryCapture: true, activeBoundary: null };
   const rowsByRequest = new WeakMap();
   const warnings = lintScript(script);
+  if (handlesCredential && videoTarget) warnings.push('value_env_on_video: a recording shows what is typed into a text field, and nothing can scrub a video; keep the value in a password field or drop --video');
+  const externalHosts = new Set();
+  let guard = null;
   const executed = [];
   const ariaSeen = [];
   let stoppedAt = null;
@@ -242,7 +308,9 @@ async function runWalkthrough(options) {
         warnings.push(`previous artifacts: ${cleared.kept} file(s) in ${toRel(targetDir, artifactDir)}/ could not be cleared (${cleared.code || cleared.error}) — close whatever holds them; this run's artifacts are written beside them`);
       }
     }
+    if (handlesCredential || stateFiles.save) guard = await installNavigationGuard(session);
     page = await session.newPage();
+    if (guard) guard.watch(page);
     if (videoTmp && typeof page.video === 'function') recording = page.video();
     if (typeof page.on === 'function') {
       page.on('console', (msg) => {
@@ -258,6 +326,8 @@ async function runWalkthrough(options) {
       });
       page.on('request', (request) => {
         const row = { method: String(request.method()).toUpperCase(), url: String(request.url()), status: null, failed: false, _request: request };
+        // Only after the value was typed: nothing sent before it can carry it.
+        if (scenario.valueTyped && /^https?:/i.test(row.url) && !isLoopbackUrl(row.url)) externalHosts.add(hostOf(row.url));
         const capture = network.activeBoundary;
         const matchesBoundary = capture && boundaryHit(capture.boundary, row);
         if (network.rows.length >= MAX_NETWORK_ROWS && !matchesBoundary) return;
@@ -291,8 +361,14 @@ async function runWalkthrough(options) {
     // One executed step → one record: run, diagnose a failure, scrub the
     // secrets the run resolved, collect what the page said.
     const runRecord = async (step, scope, index, extra) => {
-      const record = scrub(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index, watched: headed || Boolean(videoTarget) }), scenario.secrets);
+      const record = scrubRecord(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index, watched: headed || Boolean(videoTarget), guard }), scenario.secrets);
       Object.assign(record, extra);
+      // A blocked navigation fails the step that met it, whatever the step itself saw.
+      if (guard && guard.blocked && !guard.reported) {
+        guard.reported = true;
+        record.ok = false;
+        record.error = record.error || `the page tried to leave for ${guard.blocked}, and the navigation guard stopped it`;
+      }
       executed.push(record);
       if (record.snapshot && record.snapshot.preview) ariaSeen.push(record.snapshot.preview);
       if (record.warning === 'login_wall') {
@@ -300,6 +376,7 @@ async function runWalkthrough(options) {
           ? `step ${record.index}: landed on a login wall (${record.url}); the session saved at ${toRel(targetDir, stateFiles.load)} may have expired, so run the login walkthrough with --save-state again`
           : `step ${record.index}: landed on a login wall (${record.url}); attach to the operator's signed-in browser with --cdp instead of scripting credentials`);
       }
+      if (record.warning === 'env_value_on_remote_host') warnings.push(`step ${record.index}: env_value_on_remote_host — {{env.*}} was typed on ${hostOf(record.url)}, not on a local host; a real account belongs in --cdp, with no credential in the script`);
       if (record.warning === 'judge_concern') warnings.push(`step ${record.index}: Jev raised a semantic concern (${record.detail}) — review it and tie it to evidence before treating it as a defect`);
       if (!record.ok) {
         // What the page actually showed — the directed-retry input.
@@ -373,7 +450,7 @@ async function runWalkthrough(options) {
     // Only a passing run: a session left by a failed login would make the next
     // run fail somewhere that says nothing about the login.
     if (stateFiles.save) {
-      if (stoppedAt !== null || !executed.every((record) => record.ok)) {
+      if (stoppedAt !== null || (guard && guard.blocked) || !executed.every((record) => record.ok)) {
         warnings.push('session state not saved: the run did not pass');
       } else {
         try {
@@ -390,6 +467,7 @@ async function runWalkthrough(options) {
   // The file is complete only once the context closes.
   const videoSaved = videoTarget ? await keepVideo({ recording, videoTmp, videoTarget, warnings }) : '';
 
+  if (externalHosts.size > 0) warnings.push(`value_env_external_request: after a value_env value was typed, the page sent requests to ${[...externalHosts].join(', ')}; a request to another host can carry it, so read what the page sends`);
   const ids = rollupUnreached(script, executed, rollupIds(executed, stoppedAt));
   const reached = new Set(executed.map((s) => s.index));
   const ok = stoppedAt === null && script.steps.every((s) => reached.has(s.index)) && executed.every((s) => s.ok);
@@ -409,14 +487,29 @@ async function runWalkthrough(options) {
   if (stateFiles.load) replayParts.push(`--state=${toRel(targetDir, stateFiles.load)}`);
   if (stateFiles.save) replayParts.push(`--save-state=${toRel(targetDir, stateFiles.save)}`);
 
-  // The last pass over everything the report carries: a value the page echoed to
-  // the console, or into text read before it was resolved, leaves here too.
-  const report = scrub({
+  // The last pass over what came from the page: a value it echoed to the console,
+  // or into text read before the value was resolved, leaves here too. The run's own
+  // names (script, feature, replay) are not page text and stay as they are, even
+  // when a value happens to be an ordinary word of them.
+  const fromPage = scrub({
+    target: { url: sanitizeUrl(baseUrl || (executed[0] && executed[0].url) || ''), kind: targetKind },
+    ids,
+    smoke: deriveSmoke(executed),
+    console: consoleLog,
+    network: {
+      requests: network.rows.length,
+      failed: network.failed,
+      rows: network.rows.slice(0, MAX_NETWORK_ROWS).map((r) => ({ method: r.method, url: sanitizeUrl(r.url), status: r.status, failed: r.failed }))
+    },
+    warnings,
+    injection
+  }, scenario.secrets);
+  const report = {
     schema: SCHEMA,
     name: script.name,
     feature: ownerSlug,
     scope,
-    target: { url: sanitizeUrl(baseUrl || (executed[0] && executed[0].url) || ''), kind: targetKind },
+    target: fromPage.target,
     browser: { mode: session.mode, label: session.label, version: session.version || '' },
     video: videoSaved ? reportPath(targetDir, videoSaved) : '',
     session_state: { loaded: stateFiles.load ? toRel(targetDir, stateFiles.load) : '', saved: savedState ? toRel(targetDir, savedState) : '' },
@@ -427,24 +520,20 @@ async function runWalkthrough(options) {
     // What the previous run of this script left in the artifact folder and
     // this run removed — the folder is always the latest run's, never a pile.
     superseded_artifacts: superseded,
-    steps: executed.map((s) => ({ ...s, artifacts: s.artifacts.map((a) => toRel(targetDir, a)) })),
-    ids,
-    smoke: deriveSmoke(executed),
-    console: consoleLog,
-    network: {
-      requests: network.rows.length,
-      failed: network.failed,
-      rows: network.rows.slice(0, MAX_NETWORK_ROWS).map((r) => ({ method: r.method, url: sanitizeUrl(r.url), status: r.status, failed: r.failed }))
-    },
-    warnings,
-    injection,
+    steps: executed.map((s) => scrubRecord({ ...s, artifacts: s.artifacts.map((a) => toRel(targetDir, a)) }, scenario.secrets)),
+    ids: fromPage.ids,
+    smoke: fromPage.smoke,
+    console: fromPage.console,
+    network: fromPage.network,
+    warnings: fromPage.warnings,
+    injection: fromPage.injection,
     scenario: scenario.counts,
     script: { path: scriptPath ? toRel(targetDir, path.resolve(targetDir, scriptPath)) : '', sha256: sha256(scriptRaw || JSON.stringify(script)) },
     replay: replayParts.join(' '),
     persisted: false,
     report_path: '',
     markdown_path: ''
-  }, scenario.secrets);
+  };
 
   if (dir) {
     const jsonPath = path.join(dir, `${script.name}.json`);

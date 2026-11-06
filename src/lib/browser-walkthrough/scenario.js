@@ -85,6 +85,32 @@ function getPath(value, dotted) {
   return current;
 }
 
+/**
+ * The forms a value takes on its way through a page: in a url, in a form body, in
+ * a JSON string, in base64. A page that echoes `encodeURIComponent(value)` to its
+ * console, or a route that holds it, reaches the report in that form, and the
+ * literal alone would let it through.
+ */
+function secretForms(value) {
+  const base64 = Buffer.from(value, 'utf8').toString('base64');
+  return new Set([
+    value,
+    encodeURIComponent(value),
+    encodeURI(value),
+    encodeURIComponent(value).replace(/%20/g, '+'),
+    new URLSearchParams({ v: value }).toString().slice(2),
+    JSON.stringify(value).slice(1, -1),
+    base64,
+    base64.replace(/=+$/, ''),
+    base64.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
+  ]);
+}
+
+function rememberSecret(scenario, value, label) {
+  if (value.length < MIN_SECRET_LENGTH) return;
+  for (const form of secretForms(value)) scenario.secrets.set(form, label);
+}
+
 function envValue(name, scenario) {
   if (!ENV_NAME_RE.test(name)) throw new Error(`{{env.${name}}} is not a valid environment variable name`);
   let value = scenario.env && scenario.env[name];
@@ -98,7 +124,7 @@ function envValue(name, scenario) {
     throw new Error(`{{env.${name}}} is not set in the environment or the project .env`);
   }
   const resolved = value.trim();
-  if (resolved.length >= MIN_SECRET_LENGTH) scenario.secrets.set(resolved, `env.${name}`);
+  rememberSecret(scenario, resolved, `env.${name}`);
   return resolved;
 }
 
@@ -156,18 +182,29 @@ function resolveStep(step, scenario, scope = {}) {
 /** Replace every resolved secret in strings (deep) with its `[env.NAME]` label. */
 function scrub(value, secrets) {
   if (!secrets || secrets.size === 0) return value;
-  if (typeof value === 'string') {
-    let out = value;
-    for (const [secret, label] of secrets) {
-      if (out.includes(secret)) out = out.split(secret).join(`[${label}]`);
+  // Longest first: one form may hold another inside it.
+  const ordered = [...secrets].sort((a, b) => b[0].length - a[0].length);
+  const clean = (item) => {
+    if (typeof item === 'string') {
+      let out = item;
+      for (const [secret, label] of ordered) {
+        if (out.includes(secret)) out = out.split(secret).join(`[${label}]`);
+      }
+      return out;
     }
-    return out;
-  }
-  if (Array.isArray(value)) return value.map((item) => scrub(item, secrets));
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, scrub(item, secrets)]));
-  }
-  return value;
+    if (Array.isArray(item)) return item.map(clean);
+    if (item && typeof item === 'object') {
+      return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, clean(entry)]));
+    }
+    return item;
+  };
+  return clean(value);
+}
+
+// A step's own identity is not page text: its index, its action, the ids it proves
+// and the files it wrote keep their names, or the report would point at nothing.
+function scrubRecord(record, secrets) {
+  return { ...scrub(record, secrets), index: record.index, do: record.do, ids: record.ids, artifacts: record.artifacts };
 }
 
 // E-mail addresses and digit runs of 8+ (phones, CPF/CNPJ, cards, document
@@ -414,7 +451,7 @@ async function runRequest({ step, scenario, baseUrl, timeout, record }) {
     scenario.vars[name] = value;
     // A saved session token is a secret like an env value: scrubbed from
     // everything the run records from here on.
-    if (step.secret === true && typeof value === 'string' && value.length >= MIN_SECRET_LENGTH) scenario.secrets.set(value, `saved.${name}`);
+    if (step.secret === true && typeof value === 'string') rememberSecret(scenario, value, `saved.${name}`);
     saved.push(name);
   }
   if (saved.length > 0) record.request.saved = saved;
@@ -557,6 +594,7 @@ module.exports = {
   secretEnvValue,
   resolveStep,
   scrub,
+  scrubRecord,
   maskPersonalData,
   validateVars,
   validateRequest,

@@ -10,6 +10,7 @@ const path = require('node:path');
 
 const { normalizeScript, runWalkthrough } = require('../src/lib/browser-walkthrough');
 const { isLoopbackUrl } = require('../src/lib/browser-walkthrough/scenario');
+const { installNavigationGuard, saveSessionState } = require('../src/lib/browser-walkthrough/session-state');
 const { runBrowserRun } = require('../src/commands/browser-run');
 const { ensureProjectGitignorePolicy } = require('../src/installer');
 
@@ -355,4 +356,306 @@ test('the doc keeps the real-account rule and explains the exception', async () 
     assert.match(await fs.readFile(path.join(root, rel), 'utf8'), /A `Runtime` line is a walkthrough under `\.aioson\/qa\/walkthroughs\/\{slug\}\/`/);
   }
   assert.match(await fs.readFile(path.join(root, 'template/.aioson/skills/process/aioson-spec-driven/references/planner.md'), 'utf8'), /runtime_without_walkthrough/);
+});
+
+test('value_env refuses a name that reads like a production secret', () => {
+  for (const name of ['STRIPE_SECRET_KEY', 'OPENAI_API_KEY', 'JWT_PRIVATE_KEY', 'DATABASE_URL', 'database_url', 'my_secret']) {
+    assert.match(normalizeScript({ steps: [{ do: 'fill', target: 'label=A', value_env: name }] }).errors[0], /reads like a production secret/, name);
+  }
+  for (const name of ['E2E_PASSWORD', 'TEST_OWNER_EMAIL', 'SEEDED_USER']) {
+    assert.equal(normalizeScript({ steps: [{ do: 'fill', target: 'label=A', value_env: name }] }).ok, true, name);
+  }
+});
+
+test('value_env is masked by itself, whatever the field is called', async (t) => {
+  const root = await project(t);
+  const steps = [{ do: 'goto', url: '/' }, { do: 'fill', target: 'label=Account', value_env: 'E2E_PASSWORD' }, { do: 'type', target: 'label=Account', value_env: 'E2E_PASSWORD' }];
+  const report = await runWalkthrough({ targetDir: root, script: script(steps), url: 'http://127.0.0.1:4100', env, open: opener(fakePage()), clock: fastClock, persist: false });
+  assert.equal(report.ok, true);
+  assert.equal(report.steps[1].detail, 'filled label=Account with (masked)');
+  assert.equal(report.steps[2].detail, 'typed into label=Account (masked)');
+});
+
+test('--cdp refuses value_env: no credential travels in that script', async (t) => {
+  const root = await project(t);
+  for (const how of [{ cdp: '9222', env }, { env: { ...env, AIOSON_BROWSER_CDP: '9222' } }, { env, config: { browser: { cdp: '9222' } } }]) {
+    const open = opener(fakePage());
+    const report = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', clock: fastClock, persist: false, open, ...how });
+    assert.equal(report.error, 'value_env_with_cdp', JSON.stringify(how));
+    assert.equal(open.calls.length, 0);
+  }
+});
+
+test('a goto is read where it really lands before any page opens', async (t) => {
+  const root = await project(t);
+  const refused = async (url, extra = {}) => {
+    const open = opener(fakePage());
+    const report = await runWalkthrough({ targetDir: root, script: script([{ do: 'goto', url }, LOGIN[1]], extra), url: 'http://127.0.0.1:4100', env, open, clock: fastClock, persist: false });
+    return [report.error, open.calls.length];
+  };
+  assert.deepEqual(await refused('//evil.test/login'), ['value_env_requires_loopback', 0]);
+  assert.deepEqual(await refused('/\\evil.test/login'), ['value_env_requires_loopback', 0]);
+  assert.deepEqual(await refused('{{next}}', { vars: { next: 'https://evil.test/login' } }), ['value_env_requires_loopback', 0]);
+  assert.deepEqual(await refused('javascript:location="https://evil.test"'), ['value_env_requires_loopback', 0]);
+  // What only the run can know is left to the guard and the step.
+  assert.deepEqual(await refused('{{run.uid}}'), [undefined, 1]);
+  assert.deepEqual(await refused('/login'), [undefined, 1]);
+});
+
+test('--state and --save-state refuse another host, and a local one is fine', async (t) => {
+  const root = await project(t);
+  await fs.mkdir(path.dirname(path.join(root, STATE)), { recursive: true });
+  await fs.writeFile(path.join(root, STATE), JSON.stringify({ cookies: [], origins: [] }));
+  const plain = (url) => script([{ do: 'goto', url }]);
+  for (const flags of [{ state: STATE }, { saveState: STATE }]) {
+    for (const [target, goto] of [['https://app.example.com', '/'], ['http://127.0.0.1:4100', 'https://app.example.com/'], ['http://127.0.0.1:4100', '//app.example.com/']]) {
+      const open = opener(fakePage());
+      const report = await runWalkthrough({ targetDir: root, script: plain(goto), url: target, ...flags, env: {}, open, clock: fastClock, persist: false });
+      assert.equal(report.error, 'session_state_requires_loopback', `${JSON.stringify(flags)} ${target} ${goto}`);
+      assert.equal(open.calls.length, 0);
+    }
+    assert.equal((await runWalkthrough({ targetDir: root, script: plain('/'), url: 'http://localhost:4100', ...flags, env: {}, open: opener(fakePage()), clock: fastClock, persist: false })).ok, true);
+  }
+});
+
+test('{{env.*}} keeps working on another host, and says so', async (t) => {
+  const root = await project(t);
+  const steps = [{ do: 'goto', url: '/' }, { do: 'fill', target: 'label=Account', value: '{{env.E2E_PASSWORD}}' }, { do: 'type', target: 'label=Account', value: '{{env.E2E_PASSWORD}}' }, { do: 'fill', target: 'label=Name', value: 'plain' }];
+  const page = fakePage();
+  const remote = await runWalkthrough({ targetDir: root, script: script(steps), url: 'https://app.example.com', env, open: opener(page), clock: fastClock, persist: false });
+  assert.equal(remote.ok, true, 'it still works');
+  assert.equal(page.state.filled, 'plain');
+  const warned = remote.warnings.filter((line) => line.includes('env_value_on_remote_host'));
+  assert.equal(warned.length, 2, 'fill and type, and not the plain value');
+  assert.match(warned[0], /^step 1: env_value_on_remote_host — \{\{env\.\*\}\} was typed on app\.example\.com/);
+
+  const local = await runWalkthrough({ targetDir: root, script: script(steps), url: 'http://127.0.0.1:4100', env, open: opener(fakePage()), clock: fastClock, persist: false });
+  assert.deepEqual(local.warnings, []);
+});
+
+test('the value is scrubbed in every form a page gives it', async (t) => {
+  const root = await project(t);
+  const special = 'S3cr3t p@ss/"zz!';
+  const forms = [
+    special,
+    encodeURIComponent(special),
+    encodeURI(special),
+    encodeURIComponent(special).replace(/%20/g, '+'),
+    new URLSearchParams({ v: special }).toString().slice(2),
+    JSON.stringify(special).slice(1, -1),
+    Buffer.from(special).toString('base64')
+  ];
+  assert.equal(new Set(forms).size, forms.length, 'seven different strings');
+  const echo = forms.join(' | ');
+  const page = fakePage({
+    aria: `- text: ${echo}`,
+    elements: { 'text=Saved': { text: `Saved ${echo}` } },
+    onFill: (value, p) => {
+      p.emit('console', { type: () => 'error', text: () => echo });
+      p.emit('pageerror', new Error(`boom ${echo}`));
+      p.emit('request', { method: () => 'GET', url: () => `http://127.0.0.1:4100/next/${encodeURIComponent(value)}/x` });
+      p.state.url = `http://127.0.0.1:4100/next/${encodeURIComponent(value)}`;
+    }
+  });
+  const steps = [...LOGIN.slice(0, 2), { do: 'snapshot' }, { do: 'expect', target: 'text=Saved', contains: 'Saved' }, { do: 'expect', text: 'Never there', timeout: 1 }];
+  const report = await runWalkthrough({ targetDir: root, script: script(steps, { timeout: 5 }), url: 'http://127.0.0.1:4100', slug: 'orders', env: { E2E_PASSWORD: special }, open: opener(page), clock: fastClock, continueOnFailure: true });
+  assert.equal(page.state.filled, special);
+  const seen = [JSON.stringify(report)];
+  const walk = async (dir) => {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) await walk(file);
+      else seen.push(await fs.readFile(file, 'utf8'));
+    }
+  };
+  await walk(root);
+  assert.ok(seen.length > 3, 'the report and its artifacts were read');
+  for (const text of seen) {
+    for (const form of forms) {
+      assert.equal(text.includes(form), false, `${form} leaked`);
+      assert.equal(text.includes(JSON.stringify(form).slice(1, -1)), false, `${form} leaked inside JSON`);
+    }
+  }
+  assert.match(report.console.samples[0].text, /^\[env\.E2E_PASSWORD\] \| /);
+});
+
+test('the run\'s own names stay as they are when a value is an ordinary word of them', async (t) => {
+  const root = await project(t);
+  const steps = [{ do: 'goto', url: '/demo/login', ac: 'AC-demo-01' }, { do: 'fill', target: 'label=User', value_env: 'E2E_USER' }, { do: 'snapshot' }];
+  const normalized = normalizeScript({ name: 'demo-login', feature: 'demo', steps }).script;
+  const scriptPath = '.aioson/qa/walkthroughs/demo/demo-login.json';
+  const report = await runWalkthrough({ targetDir: root, script: normalized, scriptPath, url: 'http://127.0.0.1:4100', env: { E2E_USER: 'demo' }, open: opener(fakePage({ aria: '- text: demo user' })), clock: fastClock });
+  assert.equal(report.name, 'demo-login');
+  assert.equal(report.feature, 'demo');
+  assert.equal(report.script.path, scriptPath);
+  assert.match(report.replay, /--script=\.aioson\/qa\/walkthroughs\/demo\/demo-login\.json --url=http:\/\/127\.0\.0\.1:4100 --slug=demo/);
+  assert.equal(report.report_path, '.aioson/context/features/demo/browser/demo-login.json');
+  assert.equal(path.basename(report.steps[2].artifacts[0]).startsWith('demo-login'), true, 'an artifact keeps the name of its file');
+  assert.equal(fsSync.existsSync(path.join(root, report.steps[2].artifacts[0])), true);
+  assert.match(report.steps[0].url, /\[env\.E2E_USER\]/, 'what the page shows is still scrubbed');
+  assert.deepEqual(report.steps[0].ids, ['AC-DEMO-01']);
+});
+
+test('a dangling link at the state file or on its way is refused, and the write replaces what it finds', async (t) => {
+  const root = await project(t);
+  const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-walk-outside-'));
+  t.after(() => fs.rm(outside, { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, '.aioson/runtime'), { recursive: true });
+  const target = path.join(outside, 'cookies.json');
+  const run = (saveState, open = opener(fakePage())) => runWalkthrough({ targetDir: root, script: script([{ do: 'goto', url: '/' }]), url: 'http://127.0.0.1:4100', saveState, env: {}, open, clock: fastClock, persist: false });
+
+  let linked = true;
+  try {
+    await fs.symlink(path.join(outside, 'not-there-yet'), path.join(root, '.aioson/runtime/junc'), 'junction');
+  } catch {
+    linked = false;
+  }
+  if (linked) {
+    assert.equal((await run('.aioson/runtime/junc/s.json')).error, 'state_path_outside_runtime');
+    assert.equal(fsSync.existsSync(path.join(outside, 'not-there-yet')), false);
+  }
+  try {
+    await fs.symlink(target, path.join(root, '.aioson/runtime/dangling.json'), 'file');
+    assert.equal((await run('.aioson/runtime/dangling.json')).error, 'state_path_outside_runtime');
+    assert.equal(fsSync.existsSync(target), false, 'nothing was written through the link');
+  } catch (error) {
+    if (error.code !== 'EPERM') throw error;
+  }
+
+  // Readable by this user alone, written beside the target and renamed over it.
+  const writes = [];
+  const realWrite = fsSync.writeFileSync;
+  t.mock.method(fsSync, 'writeFileSync', (file, data, options) => {
+    writes.push({ file: String(file), options });
+    return realWrite(file, data, options);
+  });
+  const file = path.join(root, '.aioson/runtime/browser-state/owner.json');
+  await saveSessionState({ context: { storageState: async () => ({ cookies: [], origins: [] }) } }, file);
+  await saveSessionState({ context: { storageState: async () => ({ cookies: [{ name: 'again' }], origins: [] }) } }, file);
+  assert.equal(writes.length, 2);
+  assert.equal(writes[0].options.mode, 0o600);
+  assert.notEqual(writes[0].file, file);
+  assert.match(fsSync.readFileSync(file, 'utf8'), /again/);
+  assert.deepEqual(fsSync.readdirSync(path.dirname(file)), ['owner.json'], 'no temp file stays behind');
+});
+
+test('the navigation guard stops a main frame and leaves a subresource alone', async () => {
+  let predicate = null;
+  let handler = null;
+  const context = { route: async (match, fn) => { predicate = match; handler = fn; } };
+  const guard = await installNavigationGuard({ context });
+  assert.equal(predicate(new URL('http://127.0.0.1:4100/x')), false, 'a local request is never routed');
+  assert.equal(predicate(new URL('https://cdn.example.com/x.js')), true);
+  const fakeRoute = (request) => {
+    const calls = [];
+    return { calls, request: () => request, fallback: async () => calls.push('fallback'), abort: async (reason) => calls.push(`abort:${reason}`) };
+  };
+  const main = { isNavigationRequest: () => true, url: () => 'https://sso.example.com/login?x=1', frame: () => ({ parentFrame: () => null }) };
+  const inner = { isNavigationRequest: () => true, url: () => 'https://ads.example.com/f', frame: () => ({ parentFrame: () => ({}) }) };
+  const asset = { isNavigationRequest: () => false, url: () => 'https://cdn.example.com/x.js' };
+  const popup = { isNavigationRequest: () => true, url: () => 'https://popup.example.com/', frame: () => { throw new Error('not available'); } };
+
+  const forAsset = fakeRoute(asset);
+  await handler(forAsset);
+  assert.deepEqual(forAsset.calls, ['fallback']);
+  const forInner = fakeRoute(inner);
+  await handler(forInner);
+  assert.deepEqual(forInner.calls, ['fallback'], 'an iframe is not the main frame');
+  assert.equal(guard.blocked, null);
+
+  const waiting = guard.whenBlocked();
+  const forMain = fakeRoute(main);
+  await handler(forMain);
+  assert.deepEqual(forMain.calls, ['abort:blockedbyclient']);
+  assert.equal(guard.blocked, 'sso.example.com');
+  await waiting;
+  await guard.whenBlocked();
+
+  const later = await installNavigationGuard({ context });
+  const forPopup = fakeRoute(popup);
+  await handler(forPopup);
+  assert.deepEqual(forPopup.calls, ['abort:blockedbyclient']);
+  assert.equal(later.blocked, 'popup.example.com');
+
+  // A server redirect is not routed past its first url: the frame gives it away.
+  const listeners = {};
+  const frame = { url: () => 'https://sso.example.com/after-302' };
+  const other = { url: () => 'https://ads.example.com/iframe' };
+  const watched = await installNavigationGuard({});
+  watched.watch({ on: (event, fn) => { listeners[event] = fn; }, mainFrame: () => frame });
+  listeners.framenavigated(other);
+  assert.equal(watched.blocked, null, 'an iframe does not trip it');
+  listeners.framenavigated({ url: () => 'about:blank' });
+  assert.equal(watched.blocked, null);
+  listeners.framenavigated(frame);
+  assert.equal(watched.blocked, 'sso.example.com');
+});
+
+test('a blocked navigation fails the step that met it, and no session is saved', async (t) => {
+  const root = await project(t);
+  const page = fakePage({ elements: { 'role=button[name=Leave]': {} } });
+  let trip = null;
+  const original = page.on;
+  page.on = (event, fn) => { if (event === 'framenavigated') trip = fn; return original(event, fn); };
+  const leave = { do: 'click', target: 'role=button[name="Leave"]' };
+  const open = opener(page);
+  const steps = [{ do: 'goto', url: '/' }, leave, { do: 'goto', url: '/still-here' }];
+  const clicking = page.getByRole;
+  page.getByRole = (role, options) => {
+    const locator = clicking(role, options);
+    const click = locator.click;
+    locator.click = async (...args) => { await click(...args); trip({ url: () => 'https://sso.example.com/' }); };
+    return locator;
+  };
+  const report = await runWalkthrough({ targetDir: root, script: script(steps), url: 'http://127.0.0.1:4100', saveState: STATE, env: {}, open, clock: fastClock, persist: false });
+  assert.equal(report.ok, false);
+  assert.equal(report.steps.length, 2, 'the run stopped there');
+  assert.match(report.steps[1].error, /tried to leave for sso\.example\.com, and the navigation guard stopped it/);
+  assert.equal(fsSync.existsSync(path.join(root, STATE)), false);
+  assert.match(report.warnings.join('\n'), /session state not saved/);
+});
+
+test('value_env waits for the field, then refuses when the page tried to leave meanwhile', async (t) => {
+  const root = await project(t);
+  let trip = null;
+  const page = fakePage();
+  const original = page.on;
+  page.on = (event, fn) => { if (event === 'framenavigated') trip = fn; return original(event, fn); };
+  const label = page.getByLabel;
+  page.getByLabel = (name) => {
+    const locator = label(name);
+    locator.waitFor = () => new Promise((resolve, reject) => {
+      setTimeout(() => trip({ url: () => 'https://sso.example.com/' }), 1);
+      setTimeout(() => reject(new Error('never appeared')), 20);
+    });
+    return locator;
+  };
+  const report = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, open: opener(page), clock: fastClock, persist: false });
+  assert.equal(report.ok, false);
+  assert.match(report.steps[1].error, /value_env refused and nothing was typed: the page tried to leave for sso\.example\.com/);
+  assert.equal(page.state.filled, undefined);
+  await new Promise((resolve) => { setTimeout(resolve, 30); });
+});
+
+test('a request to another host warns only after the value was typed, and a video warns too', async (t) => {
+  const root = await project(t);
+  const external = { method: () => 'GET', url: () => 'https://cdn.example.com/font.woff' };
+  const before = fakePage();
+  before.goto = async (target) => { before.state.url = target; before.emit('request', external); };
+  const quiet = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, open: opener(before), clock: fastClock, persist: false });
+  assert.deepEqual(quiet.warnings, [], 'nothing sent before the value can carry it');
+
+  const after = fakePage({ onFill: (value, p) => p.emit('request', { method: () => 'GET', url: () => 'https://collect.example.com/c' }) });
+  const warned = await runWalkthrough({ targetDir: root, script: script([...LOGIN.slice(0, 2)]), url: 'http://127.0.0.1:4100', env, open: opener(after), clock: fastClock, persist: false });
+  assert.equal(warned.ok, true, 'a warning only');
+  assert.match(warned.warnings.join('\n'), /value_env_external_request: after a value_env value was typed, the page sent requests to collect\.example\.com/);
+
+  const noEnv = fakePage({ onFill: (value, p) => p.emit('request', external) });
+  const plain = await runWalkthrough({ targetDir: root, script: script([{ do: 'fill', target: 'label=A', value: 'x' }]), url: 'http://127.0.0.1:4100', env: {}, open: opener(noEnv), clock: fastClock, persist: false });
+  assert.deepEqual(plain.warnings, []);
+
+  const recorded = fakePage();
+  recorded.video = () => ({ path: async () => { throw new Error('no file in a fake'); } });
+  const filmed = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, video: true, open: opener(recorded), clock: fastClock, persist: false });
+  assert.match(filmed.warnings.join('\n'), /value_env_on_video/);
 });

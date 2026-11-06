@@ -601,6 +601,13 @@ test('reload_masks_stale_view: an action reaching reload or goto with no check b
   assert.deepEqual(lint([{ ...save, optional: true }, { do: 'goto', url: '/next' }]), [], 'an optional step may never have run');
   assert.equal(lint([save, { ...seen, optional: true }, { do: 'reload' }]).length, 1, 'an optional check may never have run');
 
+  assert.match(lint([save, { do: 'back' }])[0], /`click` at step 0 reaches this `back`/, 'going back replaces the view too');
+  // The turn of a loop: the last item's action meets the next item's first step.
+  assert.match(lint([{ do: 'each', items: [1, 2], steps: [{ do: 'goto', url: '/x' }, save] }])[0], /^step 0\.0: reload_masks_stale_view — `click` at step 0\.1/);
+  assert.match(lint([{ do: 'each', from: 'cases.json', steps: [{ do: 'reload' }, save] }])[0], /`click` at step 0\.1/, 'a file of items is more than one until read');
+  assert.deepEqual(lint([{ do: 'each', items: [1], steps: [{ do: 'goto', url: '/x' }, save] }]), [], 'one item never turns');
+  assert.deepEqual(lint([{ do: 'each', items: [1, 2], steps: [seen, { do: 'goto', url: '/x' }, save] }]), [], 'the check comes first in the next item');
+  assert.equal(lint([{ do: 'each', items: [1], steps: [save] }, { do: 'reload' }]).length, 1, 'after the loop, as after any step');
   // A loop's children are steps like any other, named by their own index.
   assert.match(lint([{ do: 'each', items: [1], steps: [save, { do: 'reload' }] }])[0], /^step 0\.1: reload_masks_stale_view — `click` at step 0\.0/);
   assert.deepEqual(lint([{ do: 'each', items: [1], steps: [save, seen, { do: 'reload' }] }]), []);

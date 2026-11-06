@@ -186,17 +186,31 @@ function renderCaption({ text, position }) {
   return 'shown';
 }
 
-// Checked on the page about to receive the value, not only on the script's target:
-// a local app can redirect to an external sign-in.
-function typedValue(step, scenario, page) {
+// Checked on the page about to receive the value, after the field resolved, because
+// that wait is when a local app redirects to an external sign-in. The navigation
+// guard holds the page where it is from here to the keystroke.
+async function typedValue(step, { scenario, page, locator, timeout, guard }) {
   if (step.value_env === undefined) return String(step.value);
+  const field = locator.waitFor({ state: 'visible', timeout });
+  field.catch(() => {});
+  await (guard ? Promise.race([field, guard.whenBlocked()]) : field);
+  if (guard && guard.blocked) throw new Error(`value_env refused and nothing was typed: the page tried to leave for ${guard.blocked}`);
   let here = '';
-  try { here = page.url(); } catch { here = ''; }
+  try { here = page.url(); } catch { /* no address, refused below */ }
   if (!isLoopbackUrl(here)) throw new Error(`value_env refused and nothing was typed: the page is on ${sanitizeUrl(here) || 'no address'}, not on a loopback host`);
-  return secretEnvValue(step.value_env, scenario);
+  const value = secretEnvValue(step.value_env, scenario);
+  scenario.valueTyped = true;
+  return value;
 }
 
-async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile, scenario = null, scope = {}, index = rawStep.index, watched = false }) {
+// `{{env.X}}` predates the loopback rule and other projects may rely on it, so it
+// keeps working elsewhere and says so.
+function remoteEnvValue(rawStep, page) {
+  if (!/\{\{\s*env\./.test(String(rawStep.value))) return false;
+  try { return !isLoopbackUrl(page.url()); } catch { return false; }
+}
+
+async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile, scenario = null, scope = {}, index = rawStep.index, watched = false, guard = null }) {
   const record = {
     index,
     do: rawStep.do,
@@ -257,14 +271,16 @@ async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, 
       }
       case 'fill': {
         const locator = locatorFor(page, step.target);
-        await locator.fill(typedValue(step, scenario, page), { timeout });
+        await locator.fill(await typedValue(step, { scenario, page, locator, timeout, guard }), { timeout });
         record.detail = `filled ${step.target} with ${maskedValue(step) ? '(masked)' : `"${clip(step.value, 80)}"`}`;
+        if (remoteEnvValue(rawStep, page)) record.warning = 'env_value_on_remote_host';
         break;
       }
       case 'type': {
         const locator = locatorFor(page, step.target);
-        await locator.pressSequentially(typedValue(step, scenario, page), { timeout, delay: Number(step.delay) || 0 });
+        await locator.pressSequentially(await typedValue(step, { scenario, page, locator, timeout, guard }), { timeout, delay: Number(step.delay) || 0 });
         record.detail = `typed into ${step.target} ${maskedValue(step) ? '(masked)' : `"${clip(step.value, 80)}"`}`;
+        if (remoteEnvValue(rawStep, page)) record.warning = 'env_value_on_remote_host';
         break;
       }
       case 'press': {

@@ -2,13 +2,13 @@
 
 /**
  * What a walkthrough may do with a session and a test account, checked before
- * any page opens.
+ * any page opens, and the guard that holds while the pages run.
  *
  * Logging in by hand on every run cost a Dev minutes per flow, so nobody used the
  * instrument. A seeded account on a local app may log in once (`value_env`), keep
  * the session (`--save-state`) and reuse it (`--state`). Everything else stays as
  * it was: a real account goes through `--cdp`, whose session is the operator's and
- * is never read or written here.
+ * is never read or written here, and no credential travels in its script.
  *
  * A state file holds live session cookies, so it lives only under
  * `.aioson/runtime/`, which the installer's gitignore policy keeps local.
@@ -29,24 +29,60 @@ function flatten(steps) {
 
 function hostOf(url) {
   try {
-    return new URL(url).hostname || new URL(url).protocol;
+    const parsed = new URL(url);
+    return parsed.hostname || parsed.protocol;
   } catch {
     return String(url);
   }
 }
 
+function usesValueEnv(script) {
+  return flatten(script && script.steps).some((step) => step.value_env !== undefined);
+}
+
 /**
- * Refuses a script with `value_env` when the target or a literal `goto` leaves the
- * machine. A url built from a variable cannot be read here, so the step checks the
- * page it is about to type into as well.
+ * Where a `goto` of the script would land, read before any page opens: a script
+ * variable is filled in and the url is resolved against the base, so `//host` and
+ * `/\host` count. What depends on the run (`{{env.X}}`, a saved value) stays out,
+ * and the navigation guard answers for it.
  */
-function valueEnvRefusal(script, baseUrl) {
-  const steps = flatten(script.steps);
-  if (!steps.some((step) => step.value_env !== undefined)) return null;
-  const literalGotos = steps
-    .filter((step) => step.do === 'goto' && /^[a-z][a-z0-9+.-]*:/i.test(String(step.url)))
-    .map((step) => String(step.url));
-  const outside = [...(baseUrl ? [baseUrl] : []), ...literalGotos].find((url) => !isLoopbackUrl(url));
+function literalDestinations(script, baseUrl) {
+  const vars = (script && script.vars) || {};
+  const out = [];
+  for (const step of flatten(script && script.steps)) {
+    if (step.do !== 'goto') continue;
+    const text = String(step.url).replace(/\{\{\s*([A-Za-z_][\w-]*)\s*\}\}/g, (whole, name) => (typeof vars[name] === 'string' ? vars[name] : whole));
+    if (text.includes('{{')) continue;
+    try {
+      out.push(new URL(text, baseUrl || undefined).href);
+    } catch {
+      // A relative url with no base has nowhere to go; one that names a host does.
+      if (/^[/\\]{2}/.test(text)) out.push(text);
+    }
+  }
+  return out;
+}
+
+function firstOutside(script, baseUrl) {
+  return [...(baseUrl ? [baseUrl] : []), ...literalDestinations(script, baseUrl)].find((url) => !isLoopbackUrl(url));
+}
+
+/**
+ * Refuses a script with `value_env` when the target or a `goto` leaves the machine,
+ * and under `--cdp`, where no credential travels in the script at all. What the run
+ * decides later is the guard's and the step's to refuse.
+ */
+function valueEnvRefusal(script, baseUrl, { cdp = '', channel = '', env = process.env, config = null } = {}) {
+  if (!usesValueEnv(script)) return null;
+  if (resolveBrowserRequest({ cdp, channel, env, config }).cdp) {
+    return {
+      ok: false,
+      error: 'value_env_with_cdp',
+      detail: 'value_env cannot be used with --cdp',
+      hint: 'an attached browser is the operator\'s signed-in session, and no credential travels in its script. Drop --cdp for a seeded account on a local app, or drop value_env'
+    };
+  }
+  const outside = firstOutside(script, baseUrl);
   if (!outside) return null;
   return {
     ok: false,
@@ -56,27 +92,40 @@ function valueEnvRefusal(script, baseUrl) {
   };
 }
 
+/** A saved session is a seeded account's on a local app: a real one goes through `--cdp`. */
+function stateTargetRefusal(script, baseUrl, stateFiles) {
+  if (!stateFiles.load && !stateFiles.save) return null;
+  const outside = firstOutside(script, baseUrl);
+  if (!outside) return null;
+  return {
+    ok: false,
+    error: 'session_state_requires_loopback',
+    detail: `--state and --save-state only run against a loopback target, and this one reaches ${hostOf(outside)}`,
+    hint: 'a live session of another host does not belong on disk. Attach to the operator\'s signed-in browser with --cdp instead'
+  };
+}
+
 function isInside(root, target) {
   const rel = path.relative(root, target);
   return rel !== '' && !rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel);
 }
 
-// A link inside the folder must not carry the file out of it.
-function realLocationStaysInside(targetDir, runtimeRoot, file) {
-  const realProject = fs.realpathSync(targetDir);
-  let probe = file;
-  while (!fs.existsSync(probe)) {
-    const parent = path.dirname(probe);
-    if (parent === probe) return false;
-    probe = parent;
+// Every component below the project, the file included and whether or not what it
+// points at exists: a dangling link would carry the write out of the folder.
+function crossesALink(project, file) {
+  let current = project;
+  for (const part of path.relative(project, file).split(path.sep)) {
+    current = path.join(current, part);
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch (error) {
+      if (error.code === 'ENOENT') return false;
+      return true;
+    }
+    if (stat.isSymbolicLink()) return true;
   }
-  const real = fs.realpathSync(probe);
-  if (fs.existsSync(runtimeRoot)) {
-    const realRoot = fs.realpathSync(runtimeRoot);
-    if (!isInside(realProject, realRoot)) return false;
-    return real === realRoot || isInside(realRoot, real);
-  }
-  return real === realProject || isInside(realProject, real);
+  return false;
 }
 
 // `git check-ignore` exits 0 ignored, 1 not ignored, 128 outside a repository.
@@ -97,7 +146,7 @@ function stateFile(targetDir, raw, flag) {
   const project = path.resolve(targetDir);
   const runtimeRoot = path.join(project, '.aioson', 'runtime');
   const file = path.resolve(project, raw.trim());
-  if (!isInside(runtimeRoot, file) || !realLocationStaysInside(project, runtimeRoot, file)) {
+  if (!isInside(runtimeRoot, file) || crossesALink(project, file)) {
     return refuse('state_path_outside_runtime', `${flag} is accepted only under ${RUNTIME_RELATIVE}/`, 'a state file holds live session cookies, and that folder is the one the project keeps out of git');
   }
   if (trackedByGit(project, file)) {
@@ -151,11 +200,78 @@ function resolveStateFiles({ targetDir, state, saveState, cdp, channel, env, con
   return { load, save };
 }
 
-/** Readable by this user alone where the platform honors the mode. */
+/**
+ * Written beside the target and renamed over it, so a link planted after the path
+ * check is replaced instead of followed, and an older file with wider permissions
+ * does not keep them. Readable by this user alone where the platform honors the mode.
+ */
 async function saveSessionState(session, file) {
   const state = await session.context.storageState();
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
+  const temp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(temp, `${JSON.stringify(state, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  fs.renameSync(temp, file);
 }
 
-module.exports = { resolveStateFiles, saveSessionState, valueEnvRefusal };
+function isMainFrameNavigation(request) {
+  if (!request.isNavigationRequest()) return false;
+  try {
+    return request.frame().parentFrame() === null;
+  } catch {
+    // A popup's first navigation has no frame yet, and it is a main frame.
+    return true;
+  }
+}
+
+/**
+ * Holds the main frame of every page on this machine while a run handles a test
+ * credential or keeps a session. The check of an address is not enough on its own:
+ * a page can navigate between the check and the keystroke, and a local app that
+ * redirects to an external sign-in after `load` is an ordinary shape.
+ *
+ * `route` aborts what it sees. A server redirect is not routed past its first url,
+ * so `watch` catches a main frame that landed elsewhere anyway; the step that needs
+ * the page refuses. Subresources are left alone: a page's own requests are its code.
+ */
+async function installNavigationGuard(session) {
+  const guard = {
+    blocked: null,
+    reported: false,
+    waiters: [],
+    trip(url) {
+      if (!guard.blocked) guard.blocked = hostOf(url);
+      for (const resolve of guard.waiters.splice(0)) resolve();
+    },
+    whenBlocked() {
+      return guard.blocked ? Promise.resolve() : new Promise((resolve) => { guard.waiters.push(resolve); });
+    },
+    watch(page) {
+      if (typeof page.on !== 'function') return;
+      page.on('framenavigated', (frame) => {
+        if (typeof page.mainFrame === 'function' && frame !== page.mainFrame()) return;
+        const url = String(frame.url());
+        if (/^https?:/i.test(url) && !isLoopbackUrl(url)) guard.trip(url);
+      });
+    }
+  };
+  const context = session.context;
+  if (context && typeof context.route === 'function') {
+    await context.route((url) => !isLoopbackUrl(url.href), async (route) => {
+      const request = route.request();
+      if (!isMainFrameNavigation(request)) return route.fallback();
+      guard.trip(request.url());
+      return route.abort('blockedbyclient');
+    });
+  }
+  return guard;
+}
+
+module.exports = {
+  installNavigationGuard,
+  resolveStateFiles,
+  saveSessionState,
+  stateTargetRefusal,
+  usesValueEnv,
+  valueEnvRefusal,
+  hostOf
+};
