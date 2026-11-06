@@ -169,3 +169,11 @@ test('regional locale fr_CA resolves to fr dictionary', async () => {
   assert.equal(cli.stdout.includes('Utilisation :'), true);
   assert.equal(cli.stdout.includes('AIOSON CLI'), true);
 });
+
+test('dev:progress has its help line in every locale', () => {
+  for (const locale of ['en', 'pt-BR', 'es', 'fr']) {
+    const { messages } = require(`../src/i18n/messages/${locale}`);
+    const cli = (messages || require(`../src/i18n/messages/${locale}`)).cli;
+    assert.match(cli.help_dev_progress, new RegExp(`^aioson dev:progress \\[path\\] --feature=<slug> \\[--json\\] \\[--locale=${locale}\\]$`), locale);
+  }
+});

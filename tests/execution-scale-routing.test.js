@@ -373,6 +373,20 @@ test('a large plan is named to the owner whatever the choice: it never blocks, a
   const fewFiles = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ phases: manyPhases }) });
   assert.match((await inspectExecutionGate(fewFiles, SLUG, 'planner')).message, /^\[Execution Scale\] The plan for "orders" has 8 phase/);
 
+  // Orchestrated too: the choice answers who runs it, not whether the owner knows.
+  const parallelLarge = Array.from({ length: 8 }, (_, i) => files(`src/p${i + 1}`, 1));
+  const orchestrated = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ lanes: true, parallel: true, phases: parallelLarge }) });
+  const named = await inspectExecutionGate(orchestrated, SLUG, 'planner');
+  assert.equal(named.blocking, false);
+  assert.equal(named.mode, 'orchestrated');
+  assert.deepEqual(named.large.reasons, ['phases']);
+  assert.match(named.message, /The plan for "orders" has 8 phase\(s\)/);
+  const wider = Array.from({ length: 8 }, (_, i) => files(`src/p${i + 1}`, 2));
+  const serialLarge = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ lanes: true, phases: wider }) });
+  const both2 = await inspectExecutionGate(serialLarge, SLUG, 'planner');
+  assert.match(both2.message, /is orchestrated but serial by construction/);
+  assert.match(both2.message, /The plan for "orders" has 8 phase\(s\)/);
+
   const previous = process.env.AIOSON_EXECUTION_LARGE_MIN_PHASES;
   process.env.AIOSON_EXECUTION_LARGE_MIN_PHASES = '9';
   try {

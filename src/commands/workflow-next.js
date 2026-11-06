@@ -1842,8 +1842,8 @@ async function inspectExecutionScale(targetDir, slug) {
   const choice = resolveExecutionChoice(content);
   const large = assessLargePlan(scale, largePlanLimits(process.env));
   const largeNotice = large ? formatLargePlan(large, slug) : '';
-  const largeAdvisory = () => ({ blocking: false, advisory: true, mode: 'single', check: 'execution_scale', scale, large, message: `[Execution Scale] ${largeNotice}` });
-  if (!scale.split_candidate) return large && choice.choice !== 'orchestrated' ? largeAdvisory() : none;
+  const largeAdvisory = (mode = 'single') => ({ blocking: false, advisory: true, mode, check: 'execution_scale', scale, large, message: `[Execution Scale] ${largeNotice}` });
+  if (!scale.split_candidate) return large ? largeAdvisory(choice.choice === 'orchestrated' ? 'orchestrated' : 'single') : none;
   if (!choice.choice) {
     const recommendation = recommendExecution(scale);
     return {
@@ -1861,7 +1861,7 @@ async function inspectExecutionScale(targetDir, slug) {
   // Orchestrated in name only: one unit per wave, or a unit one context cannot carry.
   const over = scale.units.filter((unit) => unit.over_budget);
   const serial = scale.parallelism.serial;
-  if (over.length === 0 && !serial) return none;
+  if (over.length === 0 && !serial) return large ? largeAdvisory('orchestrated') : none;
   const lanesTable = parseDevelopmentLanes(content);
   const laneCount = lanesTable ? lanesTable.rows.length : 0;
   const findings = [];
@@ -1873,7 +1873,8 @@ async function inspectExecutionScale(targetDir, slug) {
     mode: 'orchestrated',
     check: 'execution_scale',
     scale,
-    message: `[Execution Scale] the plan for "${slug}" is orchestrated but ${findings.join('; ')}. Cut the rows per lane/surface inside a wave (\`plan.scale.units\` and \`plan.split_proposal\` in aioson execution:offer . --feature=${slug} --json) and join the halves with Interface Contract rows — lanes are the model axis, one \`{lane}_dev\` role each.`
+    ...(large ? { large } : {}),
+    message: `[Execution Scale] the plan for "${slug}" is orchestrated but ${findings.join('; ')}. Cut the rows per lane/surface inside a wave (\`plan.scale.units\` and \`plan.split_proposal\` in aioson execution:offer . --feature=${slug} --json) and join the halves with Interface Contract rows — lanes are the model axis, one \`{lane}_dev\` role each.${large ? ` ${largeNotice}` : ''}`
   };
 }
 

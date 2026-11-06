@@ -244,6 +244,8 @@ module.exports = {
       'aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] [--html] [--json] [--locale=es]',
     help_browser_run:
       'aioson browser:run [path] --script=<walkthrough.json> [--url=<url-app>|--file=<html>] [--slug=<feature>] [--prototype] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--state=<file>] [--save-state=<file>] [--continue] [--out=<dir>] [--no-persist] [--json] [--locale=es]',
+    help_dev_progress:
+      'aioson dev:progress [path] --feature=<slug> [--json] [--locale=es]',
     help_browser_snapshot:
       'aioson browser:snapshot [path] --url=<url-pagina>|--file=<html> [--target=<locator>] [--max-lines=80] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--json] [--locale=es]',
     help_qa_report:

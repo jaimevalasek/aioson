@@ -14,6 +14,8 @@ const {
 } = require('../src/lib/duplicate-declarations');
 const { runRulesCheck, discoverGovernance } = require('../src/commands/rules-check');
 const { MANAGED_FILES } = require('../src/constants');
+const { runAgentEpilogue } = require('../src/commands/agent-epilogue');
+const { createTranslator } = require('../src/i18n');
 
 const silent = { log() {}, error() {} };
 const names = (rel, text) => extractDeclarations(rel, text).map((item) => item.name);
@@ -375,4 +377,18 @@ test('the known limit is written where a reader meets it', async () => {
     assert.match(text, /useLicenseDate/, rel);
     assert.match(text, /byName/, rel);
   }
+});
+
+test('agent:epilogue tells the Dev about a LOW copy, and does not fail for it', async (t) => {
+  const root = await project(t, { ...COPIES, '.aioson/docs/quality/duplicate-declarations.md': DOC });
+  const result = await runAgentEpilogue({
+    args: [root],
+    options: { json: true, agent: 'dev', summary: 'Phase done', 'no-dossier': true },
+    logger: silent,
+    t: createTranslator('en').t
+  });
+  const step = result.steps.find((item) => item.name === 'rules:check');
+  assert.ok(step, JSON.stringify(result.steps.map((item) => item.name)));
+  assert.equal(step.ok, true);
+  assert.match(step.reason, /2 LOW worth a second look/);
 });
