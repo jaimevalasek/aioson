@@ -96,13 +96,16 @@ function secretForms(value) {
   return new Set([
     value,
     encodeURIComponent(value),
+    encodeURIComponent(value).replace(/%[0-9A-F]{2}/g, (hex) => hex.toLowerCase()),
+    encodeURIComponent(encodeURIComponent(value)),
     encodeURI(value),
     encodeURIComponent(value).replace(/%20/g, '+'),
     new URLSearchParams({ v: value }).toString().slice(2),
     JSON.stringify(value).slice(1, -1),
     base64,
     base64.replace(/=+$/, ''),
-    base64.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
+    base64.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'),
+    Buffer.from(value, 'utf8').toString('hex')
   ]);
 }
 

@@ -39,7 +39,8 @@ const targets = require('./targets');
 const steps = require('./steps');
 const reports = require('./report');
 const { createScenario, interpolate, isLoopbackUrl, resolveStep, loadItems, scrub, scrubRecord } = require('./scenario');
-const { hostOf, installNavigationGuard, resolveStateFiles, saveSessionState, stateTargetRefusal, usesValueEnv, valueEnvRefusal } = require('./session-state');
+const { startRefusalProxy } = require('./refusal-proxy');
+const { hostOf, resolveStateFiles, saveSessionState, stateTargetRefusal, usesValueEnv, valueEnvRefusal } = require('./session-state');
 const { clearDir, isContainedFolder } = require('../evidence-artifacts');
 const { isValidSlug } = require('../../dossier/schema');
 
@@ -137,6 +138,51 @@ function lintScript(script) {
   };
   walk(script && script.steps, (index) => String(index));
   return warnings;
+}
+
+// The proxy also refuses the browser's own traffic (updates, sign-in, autofill), and
+// no step should be blamed on that. What a page asked for is what a step can cite.
+function watchPageHosts(session, page) {
+  const watched = { asked: new Set(), lastNavigation: '', reported: '' };
+  const onSocket = (socket) => watched.asked.add(hostOf(socket.url()));
+  const watchPage = (opened) => { if (typeof opened.on === 'function') opened.on('websocket', onSocket); };
+  // A new tab's first request has no frame yet, and Playwright throws on asking.
+  const isMainNavigation = (request) => {
+    try { return request.isNavigationRequest() && request.frame() === page.mainFrame(); } catch { return false; }
+  };
+  const onRequest = (request) => {
+    watched.asked.add(hostOf(request.url()));
+    if (isMainNavigation(request)) watched.lastNavigation = request.url();
+  };
+  watchPage(page);
+  if (session.context && typeof session.context.on === 'function') {
+    session.context.on('request', onRequest);
+    session.context.on('page', watchPage);
+  }
+  return watched;
+}
+
+// A refused tunnel leaves the page on chrome-error, with no address of its own.
+function offMachineHost(page, watched) {
+  let url = '';
+  try { url = page.url(); } catch { /* the page is gone */ }
+  if (/^chrome-error:/i.test(url)) url = watched.lastNavigation;
+  return /^https?:/i.test(url) && !isLoopbackUrl(url) ? hostOf(url) : '';
+}
+
+// A main frame off this machine is on a page the proxy refused, so the step that left
+// it there fails, once, naming the host. A new tab is not the page under test.
+function containedStepFailure(record, page, refusalProxy, watched) {
+  const host = offMachineHost(page, watched);
+  const justLeft = host && host !== watched.reported;
+  watched.reported = host;
+  if (justLeft) {
+    const refusal = `the browser could not reach ${host}: this run only reaches loopback, and the request was refused before it left the machine`;
+    return { ok: false, error: record.error ? `${refusal} (${record.error})` : refusal };
+  }
+  const refused = refusalProxy.hosts().filter((name) => watched.asked.has(name));
+  if (!record.ok && refused.length > 0) return { error: `${record.error || record.detail} (the pages of this run were refused ${refused.join(', ')}: it only reaches loopback)` };
+  return null;
 }
 
 function injectionWarning(injection) {
@@ -253,6 +299,9 @@ async function runWalkthrough(options) {
   if (stateRefusal) return stateRefusal;
   let savedState = '';
   const handlesCredential = usesValueEnv(script);
+  // Only loopback from here on: every other channel a page has is refused, with no
+  // race to win. It closes with the run.
+  const refusalProxy = handlesCredential || stateFiles.save ? await startRefusalProxy() : null;
 
   // `--slow-mo` wins over the script's `slow_mo`; both only pace a run.
   const pace = slowMo === null || slowMo === undefined ? script.slow_mo : clampSlowMo(slowMo);
@@ -260,8 +309,9 @@ async function runWalkthrough(options) {
   const videoTarget = videoPath({ video, targetDir, artifactDir, name: script.name });
   const videoTmp = videoTarget ? await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-video-')) : null;
   const recordVideo = videoTmp ? { recordVideo: { dir: videoTmp, size: script.viewport || DEFAULT_VIDEO_SIZE } } : {};
-  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo, ...(stateFiles.load ? { storageState: stateFiles.load } : {}) });
+  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo, ...(stateFiles.load ? { storageState: stateFiles.load } : {}), ...(refusalProxy ? { refusalProxy } : {}) });
   if (!session.ok) {
+    if (refusalProxy) await refusalProxy.close();
     if (videoTmp) await fs.rm(videoTmp, { recursive: true, force: true }).catch(() => {});
     return { ok: false, error: session.error, detail: session.detail || '', hint: session.hint || '' };
   }
@@ -287,13 +337,12 @@ async function runWalkthrough(options) {
   const rowsByRequest = new WeakMap();
   const warnings = lintScript(script);
   if (handlesCredential && videoTarget) warnings.push('value_env_on_video: a recording shows what is typed into a text field, and nothing can scrub a video; keep the value in a password field or drop --video');
-  const externalHosts = new Set();
-  let guard = null;
   const executed = [];
   const ariaSeen = [];
   let stoppedAt = null;
   let page = null;
   let recording = null;
+  let watchedHosts = null;
 
   try {
     // Inside the try: whatever happens here, the session still closes. A
@@ -308,9 +357,8 @@ async function runWalkthrough(options) {
         warnings.push(`previous artifacts: ${cleared.kept} file(s) in ${toRel(targetDir, artifactDir)}/ could not be cleared (${cleared.code || cleared.error}) — close whatever holds them; this run's artifacts are written beside them`);
       }
     }
-    if (handlesCredential || stateFiles.save) guard = await installNavigationGuard(session);
     page = await session.newPage();
-    if (guard) guard.watch(page);
+    if (refusalProxy) watchedHosts = watchPageHosts(session, page);
     if (videoTmp && typeof page.video === 'function') recording = page.video();
     if (typeof page.on === 'function') {
       page.on('console', (msg) => {
@@ -326,8 +374,6 @@ async function runWalkthrough(options) {
       });
       page.on('request', (request) => {
         const row = { method: String(request.method()).toUpperCase(), url: String(request.url()), status: null, failed: false, _request: request };
-        // Only after the value was typed: nothing sent before it can carry it.
-        if (scenario.valueTyped && /^https?:/i.test(row.url) && !isLoopbackUrl(row.url)) externalHosts.add(hostOf(row.url));
         const capture = network.activeBoundary;
         const matchesBoundary = capture && boundaryHit(capture.boundary, row);
         if (network.rows.length >= MAX_NETWORK_ROWS && !matchesBoundary) return;
@@ -361,14 +407,10 @@ async function runWalkthrough(options) {
     // One executed step → one record: run, diagnose a failure, scrub the
     // secrets the run resolved, collect what the page said.
     const runRecord = async (step, scope, index, extra) => {
-      const record = scrubRecord(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index, watched: headed || Boolean(videoTarget), guard }), scenario.secrets);
+      const record = scrubRecord(await executeStep({ page, step, script, baseUrl, artifactDir, artifactPrefix: script.name, network, clock, writeFile, scenario, scope, index, watched: headed || Boolean(videoTarget) }), scenario.secrets);
       Object.assign(record, extra);
-      // A blocked navigation fails the step that met it, whatever the step itself saw.
-      if (guard && guard.blocked && !guard.reported) {
-        guard.reported = true;
-        record.ok = false;
-        record.error = record.error || `the page tried to leave for ${guard.blocked}, and the navigation guard stopped it`;
-      }
+      const failure = refusalProxy ? containedStepFailure(record, page, refusalProxy, watchedHosts) : null;
+      if (failure) Object.assign(record, scrub(failure, scenario.secrets));
       executed.push(record);
       if (record.snapshot && record.snapshot.preview) ariaSeen.push(record.snapshot.preview);
       if (record.warning === 'login_wall') {
@@ -450,7 +492,7 @@ async function runWalkthrough(options) {
     // Only a passing run: a session left by a failed login would make the next
     // run fail somewhere that says nothing about the login.
     if (stateFiles.save) {
-      if (stoppedAt !== null || (guard && guard.blocked) || !executed.every((record) => record.ok)) {
+      if (stoppedAt !== null || !executed.every((record) => record.ok)) {
         warnings.push('session state not saved: the run did not pass');
       } else {
         try {
@@ -463,11 +505,11 @@ async function runWalkthrough(options) {
     }
   } finally {
     await session.close().catch(() => {});
+    if (refusalProxy) await refusalProxy.close();
   }
   // The file is complete only once the context closes.
   const videoSaved = videoTarget ? await keepVideo({ recording, videoTmp, videoTarget, warnings }) : '';
 
-  if (externalHosts.size > 0) warnings.push(`value_env_external_request: after a value_env value was typed, the page sent requests to ${[...externalHosts].join(', ')}; a request to another host can carry it, so read what the page sends`);
   const ids = rollupUnreached(script, executed, rollupIds(executed, stoppedAt));
   const reached = new Set(executed.map((s) => s.index));
   const ok = stoppedAt === null && script.steps.every((s) => reached.has(s.index)) && executed.every((s) => s.ok);
@@ -502,7 +544,9 @@ async function runWalkthrough(options) {
       rows: network.rows.slice(0, MAX_NETWORK_ROWS).map((r) => ({ method: r.method, url: sanitizeUrl(r.url), status: r.status, failed: r.failed }))
     },
     warnings,
-    injection
+    injection,
+    blocked_hosts: refusalProxy ? refusalProxy.hosts() : [],
+    blocked_hosts_from_pages: refusalProxy ? refusalProxy.hosts().filter((name) => watchedHosts && watchedHosts.asked.has(name)) : []
   }, scenario.secrets);
   const report = {
     schema: SCHEMA,
@@ -527,6 +571,9 @@ async function runWalkthrough(options) {
     network: fromPage.network,
     warnings: fromPage.warnings,
     injection: fromPage.injection,
+    network_contained: Boolean(refusalProxy),
+    blocked_hosts: fromPage.blocked_hosts,
+    blocked_hosts_from_pages: fromPage.blocked_hosts_from_pages,
     scenario: scenario.counts,
     script: { path: scriptPath ? toRel(targetDir, path.resolve(targetDir, scriptPath)) : '', sha256: sha256(scriptRaw || JSON.stringify(script)) },
     replay: replayParts.join(' '),

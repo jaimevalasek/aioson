@@ -1382,6 +1382,7 @@ module.exports = {
     chromium_missing_fallback: 'Chromium empacotado não encontrado - usando {label}.'
   },
   browser_run: {
+    blocked_hosts: 'Hosts recusados, esta execução só alcança loopback: {hosts}',
     script_missing: 'Nenhum script de walkthrough informado.',
     script_missing_hint: 'Passe --script=<walkthrough.json> (gramática dos passos em .aioson/docs/qa/browser-walkthrough.md).',
     script_invalid: 'Script de walkthrough inválido: {errors}',

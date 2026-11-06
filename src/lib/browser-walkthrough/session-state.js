@@ -2,7 +2,7 @@
 
 /**
  * What a walkthrough may do with a session and a test account, checked before
- * any page opens, and the guard that holds while the pages run.
+ * any page opens. `refusal-proxy.js` is what holds while the pages run.
  *
  * Logging in by hand on every run cost a Dev minutes per flow, so nobody used the
  * instrument. A seeded account on a local app may log in once (`value_env`), keep
@@ -44,7 +44,7 @@ function usesValueEnv(script) {
  * Where a `goto` of the script would land, read before any page opens: a script
  * variable is filled in and the url is resolved against the base, so `//host` and
  * `/\host` count. What depends on the run (`{{env.X}}`, a saved value) stays out,
- * and the navigation guard answers for it.
+ * and the refusal proxy answers for it.
  */
 function literalDestinations(script, baseUrl) {
   const vars = (script && script.vars) || {};
@@ -70,7 +70,7 @@ function firstOutside(script, baseUrl) {
 /**
  * Refuses a script with `value_env` when the target or a `goto` leaves the machine,
  * and under `--cdp`, where no credential travels in the script at all. What the run
- * decides later is the guard's and the step's to refuse.
+ * decides later is the refusal proxy's and the step's to refuse.
  */
 function valueEnvRefusal(script, baseUrl, { cdp = '', channel = '', env = process.env, config = null } = {}) {
   if (!usesValueEnv(script)) return null;
@@ -204,70 +204,22 @@ function resolveStateFiles({ targetDir, state, saveState, cdp, channel, env, con
  * Written beside the target and renamed over it, so a link planted after the path
  * check is replaced instead of followed, and an older file with wider permissions
  * does not keep them. Readable by this user alone where the platform honors the mode.
+ * A failed rename takes the temp file with it: that file holds the live cookies.
  */
 async function saveSessionState(session, file) {
   const state = await session.context.storageState();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(temp, `${JSON.stringify(state, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
-  fs.renameSync(temp, file);
-}
-
-function isMainFrameNavigation(request) {
-  if (!request.isNavigationRequest()) return false;
   try {
-    return request.frame().parentFrame() === null;
-  } catch {
-    // A popup's first navigation has no frame yet, and it is a main frame.
-    return true;
+    fs.renameSync(temp, file);
+  } catch (error) {
+    fs.rmSync(temp, { force: true });
+    throw error;
   }
-}
-
-/**
- * Holds the main frame of every page on this machine while a run handles a test
- * credential or keeps a session. The check of an address is not enough on its own:
- * a page can navigate between the check and the keystroke, and a local app that
- * redirects to an external sign-in after `load` is an ordinary shape.
- *
- * `route` aborts what it sees. A server redirect is not routed past its first url,
- * so `watch` catches a main frame that landed elsewhere anyway; the step that needs
- * the page refuses. Subresources are left alone: a page's own requests are its code.
- */
-async function installNavigationGuard(session) {
-  const guard = {
-    blocked: null,
-    reported: false,
-    waiters: [],
-    trip(url) {
-      if (!guard.blocked) guard.blocked = hostOf(url);
-      for (const resolve of guard.waiters.splice(0)) resolve();
-    },
-    whenBlocked() {
-      return guard.blocked ? Promise.resolve() : new Promise((resolve) => { guard.waiters.push(resolve); });
-    },
-    watch(page) {
-      if (typeof page.on !== 'function') return;
-      page.on('framenavigated', (frame) => {
-        if (typeof page.mainFrame === 'function' && frame !== page.mainFrame()) return;
-        const url = String(frame.url());
-        if (/^https?:/i.test(url) && !isLoopbackUrl(url)) guard.trip(url);
-      });
-    }
-  };
-  const context = session.context;
-  if (context && typeof context.route === 'function') {
-    await context.route((url) => !isLoopbackUrl(url.href), async (route) => {
-      const request = route.request();
-      if (!isMainFrameNavigation(request)) return route.fallback();
-      guard.trip(request.url());
-      return route.abort('blockedbyclient');
-    });
-  }
-  return guard;
 }
 
 module.exports = {
-  installNavigationGuard,
   resolveStateFiles,
   saveSessionState,
   stateTargetRefusal,

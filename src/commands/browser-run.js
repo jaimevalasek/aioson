@@ -111,6 +111,7 @@ async function runBrowserRun({ args, options = {}, logger, t }) {
       for (const [id, row] of ids) logger.log(t('browser_run.id_line', { id, status: row.status, steps: row.steps.join(',') }));
     }
     for (const warning of report.warnings) warn(logger, t('browser_run.warning', { warning }));
+    if (report.blocked_hosts_from_pages && report.blocked_hosts_from_pages.length > 0) logger.log(t('browser_run.blocked_hosts', { hosts: report.blocked_hosts_from_pages.join(', ') }));
     if (report.console.errors > 0 || report.console.page_errors > 0) {
       warn(logger, t('browser_run.console_summary', { errors: report.console.errors, page_errors: report.console.page_errors, warnings: report.console.warnings }));
     }

@@ -5,12 +5,15 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 
 const { normalizeScript, runWalkthrough } = require('../src/lib/browser-walkthrough');
 const { isLoopbackUrl } = require('../src/lib/browser-walkthrough/scenario');
-const { installNavigationGuard, saveSessionState } = require('../src/lib/browser-walkthrough/session-state');
+const { saveSessionState } = require('../src/lib/browser-walkthrough/session-state');
+const { containmentArgs, containmentFailure, startRefusalProxy } = require('../src/lib/browser-walkthrough/refusal-proxy');
+const { openBrowser } = require('../src/lib/browser-session');
 const { runBrowserRun } = require('../src/commands/browser-run');
 const { ensureProjectGitignorePolicy } = require('../src/installer');
 
@@ -129,13 +132,19 @@ test('value_env refuses any other host before a page opens', async (t) => {
   assert.equal((await runWalkthrough({ targetDir: root, script: plain, url: 'https://app.example.com', env, open, clock: fastClock, persist: false })).ok, true);
 });
 
-test('a page that redirected away gets nothing typed', async (t) => {
+test('a page that is not on this machine when the field resolves gets nothing typed', async (t) => {
   const root = await project(t);
   const page = fakePage();
-  page.state.redirect = 'https://accounts.example.com/signin?client=app';
+  const label = page.getByLabel;
+  page.getByLabel = (name) => {
+    const locator = label(name);
+    locator.waitFor = async () => { page.state.url = 'https://accounts.example.com/signin?client=app'; };
+    return locator;
+  };
   const report = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, open: opener(page), clock: fastClock, persist: false });
   assert.equal(report.ok, false);
   assert.match(report.steps[1].error, /value_env refused and nothing was typed: the page is on https:\/\/accounts\.example\.com\/signin, not on a loopback host/);
+  assert.match(report.steps[1].error, /could not reach accounts\.example\.com/);
   assert.equal(page.state.filled, undefined);
   assert.equal(page.trace.some((line) => line.startsWith('fill:')), false);
 });
@@ -359,7 +368,7 @@ test('the doc keeps the real-account rule and explains the exception', async () 
 });
 
 test('value_env refuses a name that reads like a production secret', () => {
-  for (const name of ['STRIPE_SECRET_KEY', 'OPENAI_API_KEY', 'JWT_PRIVATE_KEY', 'DATABASE_URL', 'database_url', 'my_secret']) {
+  for (const name of ['PAYMENT_SECRET_KEY', 'OPENAI_API_KEY', 'JWT_PRIVATE_KEY', 'DATABASE_URL', 'database_url', 'my_secret']) {
     assert.match(normalizeScript({ steps: [{ do: 'fill', target: 'label=A', value_env: name }] }).errors[0], /reads like a production secret/, name);
   }
   for (const name of ['E2E_PASSWORD', 'TEST_OWNER_EMAIL', 'SEEDED_USER']) {
@@ -440,13 +449,16 @@ test('the value is scrubbed in every form a page gives it', async (t) => {
   const forms = [
     special,
     encodeURIComponent(special),
+    encodeURIComponent(special).replace(/%[0-9A-F]{2}/g, (hex) => hex.toLowerCase()),
+    encodeURIComponent(encodeURIComponent(special)),
+    Buffer.from(special).toString('hex'),
     encodeURI(special),
     encodeURIComponent(special).replace(/%20/g, '+'),
     new URLSearchParams({ v: special }).toString().slice(2),
     JSON.stringify(special).slice(1, -1),
     Buffer.from(special).toString('base64')
   ];
-  assert.equal(new Set(forms).size, forms.length, 'seven different strings');
+  assert.equal(new Set(forms).size, forms.length, 'all different strings');
   const echo = forms.join(' | ');
   const page = fakePage({
     aria: `- text: ${echo}`,
@@ -540,123 +552,189 @@ test('a dangling link at the state file or on its way is refused, and the write 
   assert.deepEqual(fsSync.readdirSync(path.dirname(file)), ['owner.json'], 'no temp file stays behind');
 });
 
-test('the navigation guard stops a main frame and leaves a subresource alone', async () => {
-  let predicate = null;
-  let handler = null;
-  const context = { route: async (match, fn) => { predicate = match; handler = fn; } };
-  const guard = await installNavigationGuard({ context });
-  assert.equal(predicate(new URL('http://127.0.0.1:4100/x')), false, 'a local request is never routed');
-  assert.equal(predicate(new URL('https://cdn.example.com/x.js')), true);
-  const fakeRoute = (request) => {
-    const calls = [];
-    return { calls, request: () => request, fallback: async () => calls.push('fallback'), abort: async (reason) => calls.push(`abort:${reason}`) };
-  };
-  const main = { isNavigationRequest: () => true, url: () => 'https://sso.example.com/login?x=1', frame: () => ({ parentFrame: () => null }) };
-  const inner = { isNavigationRequest: () => true, url: () => 'https://ads.example.com/f', frame: () => ({ parentFrame: () => ({}) }) };
-  const asset = { isNavigationRequest: () => false, url: () => 'https://cdn.example.com/x.js' };
-  const popup = { isNavigationRequest: () => true, url: () => 'https://popup.example.com/', frame: () => { throw new Error('not available'); } };
-
-  const forAsset = fakeRoute(asset);
-  await handler(forAsset);
-  assert.deepEqual(forAsset.calls, ['fallback']);
-  const forInner = fakeRoute(inner);
-  await handler(forInner);
-  assert.deepEqual(forInner.calls, ['fallback'], 'an iframe is not the main frame');
-  assert.equal(guard.blocked, null);
-
-  const waiting = guard.whenBlocked();
-  const forMain = fakeRoute(main);
-  await handler(forMain);
-  assert.deepEqual(forMain.calls, ['abort:blockedbyclient']);
-  assert.equal(guard.blocked, 'sso.example.com');
-  await waiting;
-  await guard.whenBlocked();
-
-  const later = await installNavigationGuard({ context });
-  const forPopup = fakeRoute(popup);
-  await handler(forPopup);
-  assert.deepEqual(forPopup.calls, ['abort:blockedbyclient']);
-  assert.equal(later.blocked, 'popup.example.com');
-
-  // A server redirect is not routed past its first url: the frame gives it away.
-  const listeners = {};
-  const frame = { url: () => 'https://sso.example.com/after-302' };
-  const other = { url: () => 'https://ads.example.com/iframe' };
-  const watched = await installNavigationGuard({});
-  watched.watch({ on: (event, fn) => { listeners[event] = fn; }, mainFrame: () => frame });
-  listeners.framenavigated(other);
-  assert.equal(watched.blocked, null, 'an iframe does not trip it');
-  listeners.framenavigated({ url: () => 'about:blank' });
-  assert.equal(watched.blocked, null);
-  listeners.framenavigated(frame);
-  assert.equal(watched.blocked, 'sso.example.com');
-});
-
-test('a blocked navigation fails the step that met it, and no session is saved', async (t) => {
+test('a video of a value_env run warns: nothing can scrub it', async (t) => {
   const root = await project(t);
-  const page = fakePage({ elements: { 'role=button[name=Leave]': {} } });
-  let trip = null;
-  const original = page.on;
-  page.on = (event, fn) => { if (event === 'framenavigated') trip = fn; return original(event, fn); };
-  const leave = { do: 'click', target: 'role=button[name="Leave"]' };
-  const open = opener(page);
-  const steps = [{ do: 'goto', url: '/' }, leave, { do: 'goto', url: '/still-here' }];
-  const clicking = page.getByRole;
-  page.getByRole = (role, options) => {
-    const locator = clicking(role, options);
-    const click = locator.click;
-    locator.click = async (...args) => { await click(...args); trip({ url: () => 'https://sso.example.com/' }); };
-    return locator;
-  };
-  const report = await runWalkthrough({ targetDir: root, script: script(steps), url: 'http://127.0.0.1:4100', saveState: STATE, env: {}, open, clock: fastClock, persist: false });
-  assert.equal(report.ok, false);
-  assert.equal(report.steps.length, 2, 'the run stopped there');
-  assert.match(report.steps[1].error, /tried to leave for sso\.example\.com, and the navigation guard stopped it/);
-  assert.equal(fsSync.existsSync(path.join(root, STATE)), false);
-  assert.match(report.warnings.join('\n'), /session state not saved/);
-});
-
-test('value_env waits for the field, then refuses when the page tried to leave meanwhile', async (t) => {
-  const root = await project(t);
-  let trip = null;
-  const page = fakePage();
-  const original = page.on;
-  page.on = (event, fn) => { if (event === 'framenavigated') trip = fn; return original(event, fn); };
-  const label = page.getByLabel;
-  page.getByLabel = (name) => {
-    const locator = label(name);
-    locator.waitFor = () => new Promise((resolve, reject) => {
-      setTimeout(() => trip({ url: () => 'https://sso.example.com/' }), 1);
-      setTimeout(() => reject(new Error('never appeared')), 20);
-    });
-    return locator;
-  };
-  const report = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, open: opener(page), clock: fastClock, persist: false });
-  assert.equal(report.ok, false);
-  assert.match(report.steps[1].error, /value_env refused and nothing was typed: the page tried to leave for sso\.example\.com/);
-  assert.equal(page.state.filled, undefined);
-  await new Promise((resolve) => { setTimeout(resolve, 30); });
-});
-
-test('a request to another host warns only after the value was typed, and a video warns too', async (t) => {
-  const root = await project(t);
-  const external = { method: () => 'GET', url: () => 'https://cdn.example.com/font.woff' };
-  const before = fakePage();
-  before.goto = async (target) => { before.state.url = target; before.emit('request', external); };
-  const quiet = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, open: opener(before), clock: fastClock, persist: false });
-  assert.deepEqual(quiet.warnings, [], 'nothing sent before the value can carry it');
-
-  const after = fakePage({ onFill: (value, p) => p.emit('request', { method: () => 'GET', url: () => 'https://collect.example.com/c' }) });
-  const warned = await runWalkthrough({ targetDir: root, script: script([...LOGIN.slice(0, 2)]), url: 'http://127.0.0.1:4100', env, open: opener(after), clock: fastClock, persist: false });
-  assert.equal(warned.ok, true, 'a warning only');
-  assert.match(warned.warnings.join('\n'), /value_env_external_request: after a value_env value was typed, the page sent requests to collect\.example\.com/);
-
-  const noEnv = fakePage({ onFill: (value, p) => p.emit('request', external) });
-  const plain = await runWalkthrough({ targetDir: root, script: script([{ do: 'fill', target: 'label=A', value: 'x' }]), url: 'http://127.0.0.1:4100', env: {}, open: opener(noEnv), clock: fastClock, persist: false });
-  assert.deepEqual(plain.warnings, []);
-
   const recorded = fakePage();
   recorded.video = () => ({ path: async () => { throw new Error('no file in a fake'); } });
   const filmed = await runWalkthrough({ targetDir: root, script: script(), url: 'http://127.0.0.1:4100', env, video: true, open: opener(recorded), clock: fastClock, persist: false });
   assert.match(filmed.warnings.join('\n'), /value_env_on_video/);
+});
+
+test('a run with value_env or --save-state is contained, and the others are not', async (t) => {
+  const root = await project(t);
+  await fs.mkdir(path.dirname(path.join(root, STATE)), { recursive: true });
+  await fs.writeFile(path.join(root, STATE), JSON.stringify({ cookies: [], origins: [] }));
+  const plain = script([{ do: 'goto', url: '/' }]);
+  const base = { targetDir: root, url: 'http://127.0.0.1:4100', clock: fastClock, persist: false };
+  const contained = async (extra, used = plain) => {
+    const open = opener(fakePage());
+    const report = await runWalkthrough({ ...base, script: used, env, open, ...extra });
+    return { report, proxy: open.calls[0].refusalProxy };
+  };
+  const withEnv = await contained({}, script());
+  assert.equal(withEnv.report.network_contained, true);
+  assert.ok(withEnv.proxy.port > 0);
+  const saving = await contained({ saveState: STATE });
+  assert.equal(saving.report.network_contained, true);
+  assert.ok(saving.proxy.port > 0);
+  for (const extra of [{}, { state: STATE }]) {
+    const open = await contained(extra);
+    assert.equal(open.report.network_contained, false, JSON.stringify(extra));
+    assert.deepEqual(open.report.blocked_hosts, []);
+    assert.equal(open.proxy, undefined);
+  }
+  // It closes with the run, and with a browser that never opened.
+  await assert.rejects(request(withEnv.proxy.port, 'GET', 'http://example.test/'));
+  let refused = null;
+  const failing = async (options) => { refused = options.refusalProxy; return { ok: false, error: 'browser_unavailable' }; };
+  const unopened = await runWalkthrough({ ...base, script: script(), env, open: failing });
+  assert.equal(unopened.error, 'browser_unavailable');
+  await assert.rejects(request(refused.port, 'GET', 'http://example.test/'));
+});
+
+function request(port, method, target, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port, method, path: target, headers });
+    req.on('response', (res) => { res.resume(); resolve({ status: res.statusCode }); });
+    req.on('connect', (res, socket) => { socket.destroy(); resolve({ status: res.statusCode }); });
+    req.on('upgrade', (res, socket) => { socket.destroy(); resolve({ status: res.statusCode }); });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+test('the refusal proxy answers 403 to everything, keeps only the host, and closes', async (t) => {
+  const proxy = await startRefusalProxy();
+  t.after(proxy.close);
+  assert.deepEqual(await request(proxy.port, 'GET', 'http://sso.example.com/login?secret=hunter2'), { status: 403 });
+  assert.deepEqual(await request(proxy.port, 'POST', 'http://collect.example.com/c'), { status: 403 });
+  assert.deepEqual(await request(proxy.port, 'CONNECT', 'tunnel.example.com:443'), { status: 403 });
+  await request(proxy.port, 'GET', 'http://upgrade.example.com/ws', { connection: 'upgrade', upgrade: 'websocket' }).then(
+    (answer) => assert.equal(answer.status, 403),
+    (error) => assert.equal(error.code, 'ECONNRESET')
+  );
+  assert.deepEqual(proxy.hosts(), ['sso.example.com', 'collect.example.com', 'tunnel.example.com', 'upgrade.example.com']);
+  assert.equal(JSON.stringify(proxy.hosts()).includes('hunter2'), false);
+  assert.equal(proxy.probed(), false);
+  await request(proxy.port, 'GET', 'http://network-containment-check.invalid/');
+  assert.equal(proxy.probed(), true);
+  assert.equal(proxy.hosts().includes('network-containment-check.invalid'), false, 'the probe is not a refused host');
+  for (let i = 0; i < 80; i += 1) await request(proxy.port, 'GET', `http://h${i}.example.com/`);
+  assert.equal(proxy.hosts().length, 50, 'a page cannot grow the report without end');
+});
+
+test('the flags keep loopback the only way out, and name only the exact local hosts', () => {
+  const args = containmentArgs(4242);
+  assert.ok(args.includes('--proxy-server=http://127.0.0.1:4242'));
+  assert.ok(args.includes('--proxy-bypass-list=<-loopback>;localhost;127.0.0.1;[::1]'));
+  assert.ok(args.includes('--webrtc-ip-handling-policy=disable_non_proxied_udp'));
+  assert.ok(args.includes('--force-webrtc-ip-handling-policy=disable_non_proxied_udp'));
+  assert.ok(args.some((arg) => arg.startsWith('--host-resolver-rules=MAP * ~NOTFOUND')));
+});
+
+test('a browser the proxy cannot prove is not used', async () => {
+  const proxy = { port: 4242, udpPort: 4243, probed: () => false, udpSeen: () => false };
+  const closed = [];
+  const launches = [];
+  const context = {
+    newPage: async () => ({ goto: async () => { throw new Error('net::ERR_NAME_NOT_RESOLVED'); }, evaluate: async () => {}, close: async () => {} }),
+    close: async () => {}
+  };
+  const playwright = {
+    chromium: {
+      executablePath: () => __filename,
+      launch: async (options) => {
+        launches.push(options);
+        return { newContext: async () => context, close: async () => { closed.push('browser'); }, version: () => '1' };
+      }
+    }
+  };
+  const refused = await openBrowser({ playwright, env: {}, refusalProxy: proxy, exists: () => true });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error, 'network_containment_failed');
+  assert.match(refused.detail, /did not use the refusal proxy/);
+  assert.deepEqual(closed, ['browser']);
+  assert.deepEqual(launches[0].args, containmentArgs(4242));
+
+  const leaking = await openBrowser({ playwright, env: {}, refusalProxy: { ...proxy, probed: () => true, udpSeen: () => true }, exists: () => true });
+  assert.equal(leaking.error, 'network_containment_failed');
+  assert.match(leaking.detail, /WebRTC traffic past the refusal proxy/);
+
+  const proven = await openBrowser({ playwright, env: {}, refusalProxy: { ...proxy, probed: () => true }, exists: () => true });
+  assert.equal(proven.ok, true);
+
+  const plain = await openBrowser({ playwright, env: {}, exists: () => true });
+  assert.equal(plain.ok, true);
+  assert.equal(launches[3].args, undefined, 'no flags on a run with nothing to contain');
+
+  assert.match(await containmentFailure(context, proxy), /did not use the refusal proxy/);
+
+  const fetchJson = async () => ({ Browser: 'x' });
+  const attached = await openBrowser({ playwright: { chromium: { executablePath: () => __filename } }, env: {}, cdp: '9222', refusalProxy: proxy, exists: () => true, fetchJson });
+  assert.equal(attached.error, 'network_containment_failed', 'an attached browser cannot be contained');
+});
+
+test('in a contained run, a main frame off this machine fails the step that left it there, naming the host', async (t) => {
+  const root = await project(t);
+  const page = fakePage({ elements: { 'role=button[name=Leave]': {} } });
+  const clicking = page.getByRole;
+  page.getByRole = (role, options) => {
+    const locator = clicking(role, options);
+    const click = locator.click;
+    locator.click = async (...args) => { await click(...args); page.state.url = 'http://sso.example.com/after'; };
+    return locator;
+  };
+  const steps = [{ do: 'goto', url: '/' }, { do: 'click', target: 'role=button[name="Leave"]' }, { do: 'goto', url: '/still-here' }];
+  const report = await runWalkthrough({ targetDir: root, script: script(steps), url: 'http://127.0.0.1:4100', saveState: STATE, env: {}, open: opener(page), clock: fastClock, persist: false });
+  assert.equal(report.ok, false);
+  assert.equal(report.steps.length, 2, 'the run stopped there');
+  assert.match(report.steps[1].error, /the browser could not reach sso\.example\.com: this run only reaches loopback/);
+  assert.equal(fsSync.existsSync(path.join(root, STATE)), false);
+  assert.match(report.warnings.join('\n'), /session state not saved/);
+
+  // The same page in a run with nothing to contain is an ordinary navigation.
+  const free = fakePage({ elements: { 'role=button[name=Leave]': {} } });
+  const freeRole = free.getByRole;
+  free.getByRole = (role, options) => {
+    const locator = freeRole(role, options);
+    const click = locator.click;
+    locator.click = async (...args) => { await click(...args); free.state.url = 'http://sso.example.com/after'; };
+    return locator;
+  };
+  const plain = await runWalkthrough({ targetDir: root, script: script(steps.slice(0, 2)), url: 'http://127.0.0.1:4100', env: {}, open: opener(free), clock: fastClock, persist: false });
+  assert.equal(plain.ok, true);
+
+  // A blank page has not gone anywhere, and leaving fails the step that left, once.
+  const blank = fakePage();
+  blank.state.url = 'about:blank';
+  blank.goto = async () => {};
+  const untouched = await runWalkthrough({ targetDir: root, script: script([{ do: 'goto', url: '/' }]), url: 'http://127.0.0.1:4100', saveState: STATE, env: {}, open: opener(blank), clock: fastClock, persist: false });
+  assert.equal(untouched.ok, true);
+  const away = fakePage();
+  away.state.url = 'http://sso.example.com/signin';
+  away.goto = async () => {};
+  const twice = await runWalkthrough({ targetDir: root, script: script([{ do: 'goto', url: '/' }, { do: 'goto', url: '/x' }]), url: 'http://127.0.0.1:4100', saveState: STATE, env: {}, open: opener(away), clock: fastClock, persist: false, continueOnFailure: true });
+  assert.equal(twice.steps[0].ok, false);
+  assert.match(twice.steps[0].error, /could not reach sso\.example\.com/);
+  assert.equal(twice.steps[1].ok, true);
+});
+
+test('a failed rename takes the temp file with it, and a screenshot name does not carry the value', async (t) => {
+  const root = await project(t);
+  const target = path.join(root, '.aioson/runtime/owner.json');
+  await fs.mkdir(target, { recursive: true });
+  await assert.rejects(saveSessionState({ context: { storageState: async () => ({ cookies: [{ name: 'sid', value: 'live' }], origins: [] }) } }, target));
+  assert.deepEqual(fsSync.readdirSync(path.dirname(target)), ['owner.json'], 'no copy of the cookies stays behind');
+
+  const report = await runWalkthrough({ targetDir: root, script: script([{ do: 'goto', url: '/' }, { do: 'screenshot', name: '{{env.E2E_PASSWORD}}' }]), url: 'http://127.0.0.1:4100', slug: 'orders', env, open: opener(fakePage()), clock: fastClock });
+  assert.equal(JSON.stringify(report.steps).includes(SECRET), false);
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fsSync.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(path.join(dir, entry.name));
+      else files.push(entry.name);
+    }
+  };
+  walk(root);
+  assert.equal(files.join('\n').includes(SECRET), false);
 });
