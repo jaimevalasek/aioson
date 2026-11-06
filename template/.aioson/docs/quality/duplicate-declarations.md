@@ -14,11 +14,13 @@ An agent that starts on a new phase does not know what the earlier phases wrote,
 
 ## What counts as a copy
 
-The **name** and the **normalized body** both match. Normalization drops comments, whitespace, semicolons and trailing commas, and unifies quotes and numeric separators. A function is compared by its block alone, so two copies with different type annotations on the signature still match, and an arrow function matches a `function` with the same block.
+The **language family**, the **name** and the **normalized body** all match. Normalization drops comments, whitespace, semicolons and trailing commas, and unifies quotes and numeric separators; a regex literal is one token. A function is compared by its block, so two copies with different type annotations on the signature still match, and an arrow function matches a `function` with the same block. What the block means has to match too: the order and defaults of the parameters it uses, and the values of the file's own top-level names it reads.
 
-A same-name pair with different bodies is not a copy. That is what keeps `GET`, `Page` and a local `format` out of the report, and it also means a near-copy goes unreported: a helper that one phase rewrote with `useMemo` around the same expression is a different body. Read the neighbors before writing a helper.
+A same-name pair with different bodies is not a copy. That is what keeps `GET`, `Page` and a local `format` out of the report.
 
-Read lexically and build-free for JS/TS, Python, Go, Rust, PHP and Ruby: functions and constants in every language, classes where the language has them at the top level.
+**Known limit:** it also means a near-copy goes unreported, on purpose. A `useLicenseDate` that one phase rewrote with `useMemo` around the same expression is a different body, and so is a `byName` written once to sort a list and once as a comparator. Both were real duplicates a QA found by hand. Read the neighbors before writing a helper: the phase capsule lists them.
+
+Read lexically and build-free for JS/TS, Python, Go, Rust, PHP and Ruby: functions and constants in every language, classes in JS/TS, Python, PHP and Ruby. JS and TS are one family; no other language is compared across.
 
 ## What never counts
 

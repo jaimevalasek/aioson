@@ -186,7 +186,7 @@ test('the other languages read their own top level', () => {
   assert.deepEqual(flagged({ 'a.py': 'def f(x):\n    return 1\n', 'b.py': 'def f(x):\n    return 2\n' }), []);
   assert.deepEqual(flagged({
     'a.go': 'package a\n\nconst Limit = 10\n\nfunc Double(x int) int {\n\treturn x * 2\n}\n\nfunc (s *S) Method() int { return 1 }\n',
-    'b.go': 'package b\n\nconst Limit = 10\n\nfunc Double(y int) (int) {\n\treturn x * 2\n}\n\nfunc (t *T) Method() int { return 1 }\n'
+    'b.go': 'package b\n\nconst Limit = 10\n\nfunc Double(x int) (int) {\n\treturn x * 2\n}\n\nfunc (t *T) Method() int { return 1 }\n'
   }), ['Double', 'Limit'], 'a method is not a top-level function');
   assert.deepEqual(flagged({
     'a.rs': 'pub const LIMIT: u32 = 10;\n\npub fn double(x: u32) -> u32 {\n    x * 2\n}\n',
@@ -264,5 +264,115 @@ test('the framework ships the declaring doc: template, mirror and managed list a
   assert.equal(await fs.readFile(path.join(root, rel), 'utf8'), await fs.readFile(path.join(root, 'template', rel), 'utf8'));
   for (const file of ['template/.aioson/docs/dev/phase-loop.md', '.aioson/docs/dev/phase-loop.md']) {
     assert.match(await fs.readFile(path.join(root, file), 'utf8'), /duplicate-declaration/);
+  }
+});
+
+test('a copy stays inside its language family', () => {
+  assert.deepEqual(flagged({ 'a.py': 'MAX_RETRIES = 3\n', 'b.js': 'const MAX_RETRIES = 3;\n' }), [], 'nobody imports a Python constant from JS');
+  assert.deepEqual(flagged({ 'a.rs': 'pub const MAX_SIZE: u32 = 1024;\n', 'b.ts': 'export const MAX_SIZE = 1024;\n' }), []);
+  assert.deepEqual(flagged({ 'a.go': 'const MaxSize = 10\n', 'b.php': '<?php\nconst MaxSize = 10;\n' }), []);
+  assert.deepEqual(flagged({ 'a.ts': 'export const MAX_SIZE = 1024;\n', 'b.mjs': 'const MAX_SIZE = 1024;\n', 'c.jsx': 'const MAX_SIZE = 1024;\n' }), ['MAX_SIZE'], 'TS reads JS');
+});
+
+test('exact means exact: a regex is one token, and a floor division is no comment', () => {
+  const pair = (a, b) => flagged({ 'a.js': a, 'b.js': b });
+  assert.deepEqual(pair('function f(s){return s.replace(/\\/\\//, "a")}\n', 'function f(s){return s.replace(/\\/\\//, "b")}\n'), [], '// inside a regex');
+  assert.deepEqual(pair('function f(s){const r=s.replace(/\\/*/g,"");return r+1}\n', 'function f(s){const r=s.replace(/\\/*/g,"");return r+2}\n'), [], '/* inside a regex');
+  assert.deepEqual(pair('function f(s){\n  const r=s.replace(/\\/*/g,"");\n  return r+1;\n}\n', 'function f(s){\n  const r=s.replace(/\\/*/g,"");\n  return r+2;\n}\n'), [], 'across lines');
+  assert.deepEqual(pair('function f(s){return /^https?:\\/\\//.test(s) ? 1 : 2}\n', 'function f(s){return /^https?:\\/\\//.test(s) ? 1 : 3}\n'), []);
+  assert.deepEqual(pair('function f(s){return /a/.test(s)}\n', 'function f(s){return /b/.test(s)}\n'), [], 'two regexes differ');
+  assert.deepEqual(pair('function f(s){return /a  b/.test(s)}\n', 'function f(s){return /a b/.test(s)}\n'), [], 'spaces in a regex are content');
+  assert.deepEqual(pair('function f(s){return /[/]x/.test(s) ? 1 : 2}\n', 'function f(s){return /[/]x/.test(s) ? 1 : 3}\n'), [], 'a slash in a class closes nothing');
+  assert.deepEqual(pair('function f(s){return /a/g.test(s) ? 1 : 2}\n', 'function f(s) {\n  // a note\n  return /a/g.test(s) ? 1 : 2;\n}\n'), ['f'], 'an equal regex still matches');
+  assert.deepEqual(pair('function half(a, b) { return a / b / 2; }\n', 'function half(a, b) { return a / b / 3; }\n'), [], 'division is not a regex');
+  assert.equal(normalizeBody('a / b / c'), normalizeBody('a/b/c'));
+
+  // Text with a URL in JSX, on its own line.
+  const jsx = (host) => `export function Nav() {\n  return (\n    <a>\n      see http://${host}.test now\n    </a>\n  );\n}\n`;
+  assert.deepEqual(flagged({ 'a.tsx': jsx('a'), 'b.tsx': jsx('b') }), []);
+  assert.deepEqual(flagged({ 'a.tsx': jsx('a'), 'b.tsx': jsx('a') }), ['Nav']);
+  assert.equal(normalizeBody('x // a comment\ny'), normalizeBody('x y'));
+  assert.equal(normalizeBody('{ a: // note\n 1 }'), normalizeBody('{ a: 1 }'));
+
+  assert.deepEqual(flagged({ 'a.py': 'def f(a):\n    return a // 2\n', 'b.py': 'def f(a):\n    return a // 3\n' }), [], 'a floor division in Python');
+});
+
+test('a byte order mark does not hide the first line', () => {
+  assert.deepEqual(flagged({ 'a.js': '\uFEFFconst TABLE = [1, 2, 3];\n', 'b.js': 'const TABLE = [1, 2, 3];\n' }), ['TABLE']);
+  assert.deepEqual(flagged({ 'a.js': '\uFEFFfunction f(a){return a}\n', 'b.js': '\uFEFFfunction f(a){return a}\n' }), ['f']);
+  const [finding] = scan({ 'a.js': '\uFEFFconst TABLE = [1, 2, 3];\n', 'b.js': 'const TABLE = [1, 2, 3];\n' }, ['a.js']);
+  assert.equal(finding.snippet, 'const TABLE = [1, 2, 3];');
+});
+
+test('what the block means has to match: parameters and the file\'s own names', () => {
+  const pair = (a, b) => flagged({ 'a.js': a, 'b.js': b });
+  assert.deepEqual(pair('function sub(a,b){return a-b}\n', 'function sub(b,a){return a-b}\n'), [], 'parameters swapped');
+  assert.deepEqual(pair('function f(a){return 1}\n', 'function f(b){return 1}\n'), ['f'], 'an unused parameter is not part of it');
+  assert.deepEqual(pair('function f(a, s = 200){return s}\n', 'function f(a, s = 400){return s}\n'), [], 'another default');
+  assert.deepEqual(pair('function f(a, s = 200){return s}\n', 'function f(b, s = 200){return s;}\n'), ['f']);
+  assert.deepEqual(pair('const f = (a, b) => a - b;\n', 'const f = (b, a) => a - b;\n'), [], 'an arrow too');
+  assert.deepEqual(pair('const f = a => a + 1;\n', 'function f(a) { return a + 1; }\n'), [], 'an expression is not a block');
+  assert.deepEqual(flagged({ 'a.ts': 'function f(a: string, b: number): string { return a + b; }\n', 'b.ts': 'function f(a: unknown, b: Map<string, number>) { return a + b; }\n' }), ['f'], 'annotations of any shape');
+  assert.deepEqual(flagged({ 'a.ts': 'function f({ a, b }: Props) { return a + b; }\n', 'b.ts': 'function f({ a, b }: Other) { return a + b; }\n' }), ['f'], 'a destructured parameter');
+  assert.deepEqual(flagged({ 'a.go': 'package a\n\nfunc Sub(a int, b int) int {\n\treturn a - b\n}\n', 'b.go': 'package b\n\nfunc Sub(b int, a int) int {\n\treturn a - b\n}\n' }), []);
+  assert.deepEqual(flagged({ 'a.php': '<?php\nfunction sub(int $a, int $b) {\n    return $a - $b;\n}\n', 'b.php': '<?php\nfunction sub(int $b, int $a) {\n    return $a - $b;\n}\n' }), []);
+  assert.deepEqual(flagged({ 'a.py': 'def sub(a, b):\n    return a - b\n', 'b.py': 'def sub(b, a):\n    return a - b\n' }), []);
+
+  // A function over a constant of its own file: the value decides.
+  assert.deepEqual(pair('const LIMIT = 1;\nfunction f(){return LIMIT}\n', 'const LIMIT = 2;\nfunction f(){return LIMIT}\n'), [], 'another value, another function');
+  assert.deepEqual(pair('const limit = 1;\nfunction f(){return limit}\n', 'const limit = 2;\nfunction f(){return limit}\n'), [], 'a scalar that is not a candidate still counts as a value');
+  assert.deepEqual(pair('const LIMIT = 1;\nfunction f(){return LIMIT}\n', 'const LIMIT = 1;\nfunction f(){return LIMIT}\n').sort(), ['LIMIT', 'f'], 'the same value, two copies');
+  assert.deepEqual(pair('function g(){return 1}\nfunction f(){return g()}\n', 'function g(){return 2}\nfunction f(){return g()}\n'), [], 'a helper of its own');
+  // A word that is not a read: a regex flag, a property, a string.
+  assert.deepEqual(pair('function f(s){return s.replace(/a/g,"")}\nfunction g(){return 1}\n', 'function f(s){return s.replace(/a/g,"")}\nfunction g(){return 2}\n'), ['f'], 'a regex flag');
+  assert.deepEqual(pair('function f(s){return s.g}\nfunction g(){return 1}\n', 'function f(s){return s.g}\nfunction g(){return 2}\n'), ['f'], 'a property');
+  assert.deepEqual(pair('function f(){return "g"}\nfunction g(){return 1}\n', 'function f(){return "g"}\nfunction g(){return 2}\n'), ['f'], 'a string');
+  assert.deepEqual(pair('const P = 1;\nfunction f(){return `v${P}`}\n', 'const P = 2;\nfunction f(){return `v${P}`}\n'), [], 'a template does read');
+  assert.deepEqual(pair('function f(){return imported()}\n', 'function f(){return imported()}\n'), ['f'], 'a name from elsewhere is not the file\'s own');
+});
+
+test('classes are read where the doc says they are', () => {
+  assert.deepEqual(flagged({ 'a.rb': 'class Box\n  def x; 1; end\nend\n', 'b.rb': 'class Box\n  def x; 1; end\nend\n' }), ['Box']);
+  assert.deepEqual(flagged({ 'a.rb': 'class Box < A\n  def x; 1; end\nend\n', 'b.rb': 'class Box < B\n  def x; 1; end\nend\n' }), [], 'another parent');
+  assert.deepEqual(flagged({ 'a.php': '<?php\nclass Box { public $x = 1; }\n', 'b.php': '<?php\nclass Box { public $x = 1; }\n' }), ['Box']);
+  assert.deepEqual(flagged({ 'a.php': '<?php\nfinal class Box { public $x = 1; }\n', 'b.php': '<?php\nfinal class Box { public $x = 1; }\n' }), ['Box']);
+  assert.deepEqual(flagged({ 'a.php': '<?php\nclass A {\n  function f() { return 1; }\n}\n', 'b.php': '<?php\nclass B {\n  function f() { return 1; }\n}\n' }), [], 'a method is not top level');
+  assert.deepEqual(flagged({ 'a.py': 'class Box(A):\n    size = 1\n', 'b.py': 'class Box(B):\n    size = 1\n' }), []);
+});
+
+test('what used to take quadratic time stays linear', () => {
+  const timed = (a, b = a) => {
+    const started = Date.now();
+    const found = scan({ 'a.js': a, 'b.js': b });
+    return { found, ms: Date.now() - started };
+  };
+  const lines = (n, make) => Array.from({ length: n }, (_, i) => make(i)).join('\n');
+  // Each of these took tens of seconds or more.
+  const budget = 8000;
+  const noInit = timed(lines(20000, (i) => `let v_${i}`));
+  assert.ok(noInit.ms < budget, `let with no initializer: ${noInit.ms} ms`);
+  assert.equal(noInit.found.length, 0);
+  const manyFindings = timed(lines(15000, (i) => `export const NAME_${i} = [${i}];`));
+  assert.ok(manyFindings.ms < budget, `one split per finding: ${manyFindings.ms} ms`);
+  assert.equal(manyFindings.found.length, 30000);
+  const spaces = timed(`const DATA = "a"${' '.repeat(200000)}+ "b";`);
+  assert.ok(spaces.ms < budget, `a whitespace run: ${spaces.ms} ms`);
+  assert.equal(spaces.found.length, 2);
+  const suffix = extractDeclarations('a.ts', 'const A = [1] as const;\nconst B = { a: 1 } satisfies Thing;\n');
+  assert.equal(suffix[0].body, normalizeBody('[1]'));
+  assert.equal(suffix[1].body, normalizeBody('{ a: 1 }'));
+});
+
+test('the known limit is written where a reader meets it', async () => {
+  const repo = path.resolve(__dirname, '..');
+  // Same name, other body: the two the incident's QA found by hand, and this check does not.
+  assert.deepEqual(flagged({
+    'a.ts': 'function useLicenseDate() {\n  const locale = useLocale();\n  const format = useMemo(() => new Intl.DateTimeFormat(locale), [locale]);\n  return (iso: string) => format.format(new Date(iso));\n}\n',
+    'b.ts': 'function useLicenseDate() {\n  const locale = useLocale();\n  const format = new Intl.DateTimeFormat(locale);\n  return (iso: string) => format.format(new Date(iso));\n}\n'
+  }), []);
+  for (const rel of ['template/.aioson/docs/quality/duplicate-declarations.md', '.aioson/docs/quality/duplicate-declarations.md', '.aioson/learnings/gotchas/large-plan-ran-without-a-measure.md']) {
+    const text = await fs.readFile(path.join(repo, rel), 'utf8');
+    assert.match(text, /useLicenseDate/, rel);
+    assert.match(text, /byName/, rel);
   }
 });

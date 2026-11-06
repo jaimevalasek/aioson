@@ -28,7 +28,7 @@ Tudo é aviso, e nenhuma gate muda de resultado:
 
 ## Armadilhas
 
-- Comparar corpo exato não pega reescrita: um `useMemo` em volta da mesma expressão é outro corpo. A cápsula e o nome no relatório cobrem o resto, e afrouxar a comparação fica para decisão do dono.
+- Limite conhecido de `duplicate-declaration`: comparar corpo exato não pega reescrita. `useLicenseDate`, com `useMemo` em volta da mesma expressão, e `byName`, uma vez ordenando a lista e outra como comparador, têm corpos diferentes e não saem no aviso, embora o QA os tenha achado à mão. Dos 6 ajudantes do incidente, a repetição acha 4. A decisão é manter só corpo igual, sem nível de similaridade; a cápsula lista os dois para quem vai escrever o próximo.
 - `{{env.NAME}}` já limpava o valor dos passos, mas não das amostras de console. O relatório inteiro agora passa por `scrub` antes de sair.
 - `foldDiacritics` remove a crase, porque U+0060 é `\p{Diacritic}`. Não use essa função para comparar texto de doc em que a crase importa.
 - Um `+++ ` só é cabeçalho de `git diff` logo depois de um `--- `. Sozinho, é linha adicionada que começa com `++`.
