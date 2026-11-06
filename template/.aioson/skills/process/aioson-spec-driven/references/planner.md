@@ -14,7 +14,7 @@ Exactly one `implementation-plan-{slug}.md` with `status: approved` and `plan_co
 - Verify the PRD's current-system fit and classify every exact path as `reuse`, `modify`, `create`, or `retire` in `## Implementation Delta`.
 - Reuse inspected project/framework patterns before new abstractions.
 - Record only evidence-triggered compatibility, data/recovery, authorization, validation, concurrency, failure, observability, performance, accessibility/localization, or dependency controls in `## Engineering Controls`.
-- Name an exact automated command and a production-path smoke for runtime behavior.
+- Name an exact automated command and a production-path smoke for runtime behavior. A dev server (`next dev`, `vite`, `npm run dev`) is not the production path: streaming, status codes, caching and error handling differ on it, so point the smoke at the served build (`next start`, `vite preview`, the stack's equivalent). A plan that keeps a dev server for fast iteration names the production run on the same line. Gate C warns `runtime_on_dev_server` otherwise.
 - Put UI and its real state/backend boundary in the same earliest useful slice.
 
 Each numbered `## Phase N — outcome` names CAP/AC IDs, exact paths, `Verification:` with an inspected command, and `Done when:` with an observable result. Every AC must have a phase; delivery rows must reference existing phases. Historical v1 plans receive diagnostics without retroactive contract migration.

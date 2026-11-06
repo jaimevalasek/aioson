@@ -35,6 +35,7 @@ const { runTechnicalGate } = require('../workflow-gates');
 const { validateCurrentSheldonReview } = require('../lib/sheldon-review');
 const { resolveTargetDir } = require('../lib/project-root');
 const { evaluateFollowups, VERDICT: FOLLOWUP_VERDICT } = require('../lib/delivery-followups');
+const { lintPlanRuntime } = require('../lib/plan-runtime-lint');
 
 const BAR = '━'.repeat(35);
 
@@ -149,6 +150,13 @@ async function checkGate(targetDir, slug, gateLetter) {
       for (const err of harnessGate.errors || []) {
         missing.push(`harness contract [${err.code}]: ${err.message}`);
       }
+    }
+
+    // Advisory by construction: `ok` stays true and nothing reaches `missing`,
+    // so the gate's result is the same with or without these warnings.
+    const planRuntime = lintPlanRuntime(await readFileSafe(planPath));
+    if (planRuntime.warnings.length > 0) {
+      evidence.push({ type: 'plan_runtime', ok: true, advisory: true, runtime_lines: planRuntime.runtime_lines, warnings: planRuntime.warnings });
     }
   }
 
@@ -440,6 +448,14 @@ async function runGateCheck({ args, options = {}, logger }) {
         logger.log(`${measurementIcon} Technical verification: ${source}`);
       }
     }
+  }
+
+  for (const item of check.evidence.filter((e) => e.type === 'plan_runtime')) {
+    logger.log(`  ! Plan runtime: ${item.warnings.length} advisory warning(s), the result does not depend on them`);
+    for (const warning of item.warnings.slice(0, 5)) {
+      logger.log(`      - [${warning.code}] line ${warning.line}${warning.phase ? ` (Phase ${warning.phase})` : ''}: ${warning.message}`);
+    }
+    if (item.warnings.length > 5) logger.log(`      … ${item.warnings.length - 5} more (--json lists all)`);
   }
 
   logger.log('');

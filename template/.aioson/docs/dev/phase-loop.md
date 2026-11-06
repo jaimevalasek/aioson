@@ -15,7 +15,7 @@ Auto-continue is the default. A clean phase checkpoint advances directly to the 
 
 After finishing each phase:
 
-1. Run the focused automated command and production-path check declared by the phase.
+1. Run the focused automated command and production-path check declared by the phase. A dev server is not the production path: when the plan names only one, iterate on it, then repeat the flows on the served build before calling the phase verified, and report the plan's gap.
 2. Verify the project's own rules against what the phase just wrote:
 
    ```bash
