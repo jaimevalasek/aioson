@@ -88,37 +88,70 @@ function round(value) {
  * it covers instead of charging one phase with two, and stays one interval: without
  * a plan there is no numbering to trust, so it covers one.
  */
+const numericPhase = (key) => (/^\d+$/.test(key) ? Number(key) : null);
+
+// An interval stands for the phases it skipped only if none of them was stamped: a
+// phase stamped out of order took its own time, and `--phase=10` right after 1 does
+// not make phases 2 to 9 cheap.
+function phasesCovered(number, highest, stamped) {
+  if (number === null || highest === null || number <= highest) return 1;
+  for (let gap = highest + 1; gap < number; gap += 1) {
+    if (stamped.has(gap)) return 1;
+  }
+  return number - highest;
+}
+
+function plannedEntries(entries, planned, unplanned) {
+  return entries.filter((entry) => {
+    if (!planned || entry.phase === null) return true;
+    const key = phaseKey(entry.phase);
+    if (!planned.has(key)) unplanned.add(key);
+    return planned.has(key);
+  });
+}
+
+function recordStamp(run, entry, stamped) {
+  const key = phaseKey(entry.phase);
+  if (run.seen.has(key)) return;
+  run.seen.add(key);
+  run.finished.push(key);
+  const number = numericPhase(key);
+  const minutes = run.previousAt === null ? 0 : (entry.at - run.previousAt) / 60000;
+  const covers = stamped ? phasesCovered(number, run.highest, stamped) : 1;
+  if (minutes >= MIN_INTERVAL_MINUTES) run.durations.push({ phase: key, minutes: round(minutes), covers });
+  run.previousAt = entry.at;
+  if (number !== null) run.highest = run.highest === null ? number : Math.max(run.highest, number);
+}
+
 function measureDurations(entries, planIds) {
   const planned = planIds ? new Set(planIds) : null;
-  const seen = new Set();
-  const durations = [];
-  const finished = [];
   const unplanned = new Set();
-  let previousAt = null;
-  let highest = null;
-  for (const entry of entries) {
-    if (entry.phase === null) {
-      if (finished.length === 0) previousAt = entry.at;
-      continue;
-    }
-    const key = phaseKey(entry.phase);
-    if (planned && !planned.has(key)) {
-      unplanned.add(key);
-      continue;
-    }
-    if (seen.has(key)) continue;
-    seen.add(key);
-    finished.push(key);
-    const number = /^\d+$/.test(key) ? Number(key) : null;
-    if (previousAt !== null) {
-      const minutes = (entry.at - previousAt) / 60000;
-      const covers = planned && number !== null && highest !== null && number > highest ? number - highest : 1;
-      if (minutes >= MIN_INTERVAL_MINUTES) durations.push({ phase: key, minutes: round(minutes), covers });
-    }
-    previousAt = entry.at;
-    if (number !== null && (highest === null || number > highest)) highest = number;
+  const kept = plannedEntries(entries, planned, unplanned);
+  const stamped = new Set(kept.filter((entry) => entry.phase !== null).map((entry) => numericPhase(phaseKey(entry.phase))));
+  const run = { seen: new Set(), durations: [], finished: [], previousAt: null, highest: null };
+  for (const entry of kept) {
+    if (entry.phase !== null) recordStamp(run, entry, planned ? stamped : null);
+    else if (run.finished.length === 0) run.previousAt = entry.at;
   }
-  return { finished, durations, unplanned: [...unplanned] };
+  return { finished: run.finished, durations: run.durations, unplanned: [...unplanned] };
+}
+
+function forecast(durations, pending) {
+  if (durations.length < MIN_INTERVALS) return { mean_minutes: null, min_minutes: null, max_minutes: null, projected_remaining_minutes: null };
+  const measured = durations.reduce((sum, item) => sum + item.covers, 0);
+  const mean = durations.reduce((sum, item) => sum + item.minutes, 0) / measured;
+  const perPhase = durations.map((item) => item.minutes / item.covers);
+  return {
+    mean_minutes: round(mean),
+    min_minutes: round(Math.min(...perPhase)),
+    max_minutes: round(Math.max(...perPhase)),
+    projected_remaining_minutes: pending ? round(mean * pending.length) : null
+  };
+}
+
+function progressStatus(plan, pending, durations) {
+  if (plan && pending.length === 0) return 'complete';
+  return durations.length >= MIN_INTERVALS ? 'measured' : 'not_measured';
 }
 
 /**
@@ -133,14 +166,8 @@ function projectProgress(entries, planPhaseIds = null) {
   const finishedSet = new Set(finished);
   const pending = plan ? plan.filter((id) => !finishedSet.has(id)) : null;
   const highest = Math.max(0, ...finished.filter((id) => /^\d+$/.test(id)).map(Number));
-  const measured = durations.reduce((sum, item) => sum + item.covers, 0);
-  const totalMinutes = durations.reduce((sum, item) => sum + item.minutes, 0);
-  const perPhase = durations.map((item) => item.minutes / item.covers);
-  const enough = durations.length >= MIN_INTERVALS;
-  const mean = enough ? totalMinutes / measured : null;
-  const complete = Boolean(plan) && pending.length === 0;
   return {
-    status: complete ? 'complete' : enough ? 'measured' : 'not_measured',
+    status: progressStatus(plan, pending, durations),
     finished: finished.length,
     total: plan ? plan.length : null,
     remaining: pending ? pending.length : null,
@@ -148,12 +175,9 @@ function projectProgress(entries, planPhaseIds = null) {
     missing: pending ? pending.filter((id) => /^\d+$/.test(id) && Number(id) < highest) : [],
     unplanned,
     intervals: durations.length,
-    measured,
+    measured: durations.reduce((sum, item) => sum + item.covers, 0),
     needed_to_measure: MIN_INTERVALS,
-    mean_minutes: enough ? round(mean) : null,
-    min_minutes: enough ? round(Math.min(...perPhase)) : null,
-    max_minutes: enough ? round(Math.max(...perPhase)) : null,
-    projected_remaining_minutes: enough && pending ? round(mean * pending.length) : null
+    ...forecast(durations, pending)
   };
 }
 

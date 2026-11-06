@@ -254,3 +254,13 @@ test('dev:progress names what it left out, and gives no number on the same clock
   assert.ok(lines.some((line) => line.startsWith('  No measure yet: 0 real interval(s)')), lines.join('\n'));
   assert.doesNotMatch(lines.join('\n'), /\b0 min\b/);
 });
+
+test('a phase stamped out of order took its own time, and a real gap still spreads', () => {
+  const e = (minutes, phase) => ({ at: Date.UTC(2026, 0, 1, 0, minutes), phase });
+  const plan = Array.from({ length: 10 }, (_, i) => String(i + 1));
+  const outOfOrder = projectProgress([e(0, 1), e(10, 10), e(20, 2), e(30, 3)], plan);
+  assert.equal(outOfOrder.mean_minutes, 10, 'phases 2 and 3 were stamped later, so 10 did not cover them');
+  const gap = projectProgress([e(0, 1), e(30, 4), e(40, 5)], plan);
+  assert.equal(gap.measured, 4, 'nothing stamped 2 and 3, so the interval stands for 3 phases');
+  assert.equal(gap.mean_minutes, 10);
+});
