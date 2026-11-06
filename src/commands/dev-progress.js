@@ -4,8 +4,8 @@
  * aioson dev:progress [path] --feature=<slug> [--json]
  *
  * Phases finished, the mean per phase and the projection for the rest, from the
- * stamps `dev:state:write` left in this run. Below two measured phases it says
- * so and gives no number. See src/lib/dev-progress.js.
+ * stamps `dev:state:write` left in this run. Below two real intervals it says so
+ * and gives no number. See src/lib/dev-progress.js.
  */
 
 const { readFeatureArtifactSafe } = require('../preflight-engine');
@@ -26,7 +26,7 @@ function statusLine(progress) {
     if (progress.projected_remaining_minutes === null) return `${pace} No plan was found, so the rest cannot be projected.`;
     return `${pace} At this pace the remaining ${progress.remaining} phase(s) take about ${formatMinutes(progress.projected_remaining_minutes)} of wall clock, pauses included.`;
   }
-  return `No forecast yet: ${progress.measured} phase(s) measured, at least ${progress.needed_to_measure} are needed. A forecast below that would be invented.`;
+  return `No measure yet: ${progress.intervals} real interval(s) between checkpoints, at least ${progress.needed_to_measure} are needed, each of a minute or more. A forecast below that would be invented.`;
 }
 
 async function runDevProgress({ args = [], options = {}, logger } = {}) {
@@ -53,6 +53,9 @@ async function runDevProgress({ args = [], options = {}, logger } = {}) {
   logger.log(`  Finished: ${progress.finished}${progress.total === null ? '' : ` of ${progress.total}`} phase(s)`);
   if (progress.missing.length > 0) {
     logger.log(`  No checkpoint for phase(s) ${progress.missing.join(', ')}, already passed by a later one`);
+  }
+  if (progress.unplanned.length > 0) {
+    logger.log(`  Not counted, because the plan has no such phase: ${progress.unplanned.join(', ')}`);
   }
   logger.log(`  ${result.summary}`);
   return result;

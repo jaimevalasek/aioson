@@ -13,7 +13,11 @@
  * `--phase=<n>` on a checkpoint means phase n just finished (phase-loop.md). A
  * checkpoint with no phase, before the first finished one, marks the start, so
  * the first phase can be measured too. The forecast is wall clock: pauses count.
- * It needs two measured phases and invents nothing below that.
+ *
+ * A forecast needs two real intervals and invents nothing below that. An interval
+ * under a minute is not a measure: the report speaks in minutes, and a batch of
+ * writes on one clock would read as phases that take no time. A phase the plan does
+ * not have is not counted either, so one wrong `--phase=100` cannot move the mean.
  */
 
 const fs = require('node:fs/promises');
@@ -21,7 +25,8 @@ const path = require('node:path');
 const { isValidSlug } = require('../dossier/schema');
 const { parsePlanPhases } = require('./plan-document');
 
-const MIN_MEASURED_PHASES = 2;
+const MIN_INTERVALS = 2;
+const MIN_INTERVAL_MINUTES = 1;
 
 function ledgerPath(targetDir, slug) {
   return path.join(targetDir, '.aioson', 'runtime', 'dev-progress', `${slug}.jsonl`);
@@ -78,14 +83,17 @@ function round(value) {
 
 /**
  * First stamp per phase in time order, and the time since the previous stamp. A
- * later rewrite of a phase (a fix after QA) does not move it. A gap in the
- * numbering (a checkpoint skipped for phase 4) spreads the interval over the
- * phases it covers instead of charging one phase with two.
+ * later rewrite of a phase (a fix after QA) does not move it. A gap in the plan's
+ * numbering (a checkpoint skipped for phase 4) spreads the interval over the phases
+ * it covers instead of charging one phase with two, and stays one interval: without
+ * a plan there is no numbering to trust, so it covers one.
  */
-function measureDurations(entries) {
+function measureDurations(entries, planIds) {
+  const planned = planIds ? new Set(planIds) : null;
   const seen = new Set();
   const durations = [];
   const finished = [];
+  const unplanned = new Set();
   let previousAt = null;
   let highest = null;
   for (const entry of entries) {
@@ -94,36 +102,41 @@ function measureDurations(entries) {
       continue;
     }
     const key = phaseKey(entry.phase);
+    if (planned && !planned.has(key)) {
+      unplanned.add(key);
+      continue;
+    }
     if (seen.has(key)) continue;
     seen.add(key);
     finished.push(key);
     const number = /^\d+$/.test(key) ? Number(key) : null;
     if (previousAt !== null) {
-      const covers = number !== null && highest !== null && number > highest ? number - highest : 1;
-      durations.push({ phase: key, minutes: round((entry.at - previousAt) / 60000), covers });
+      const minutes = (entry.at - previousAt) / 60000;
+      const covers = planned && number !== null && highest !== null && number > highest ? number - highest : 1;
+      if (minutes >= MIN_INTERVAL_MINUTES) durations.push({ phase: key, minutes: round(minutes), covers });
     }
     previousAt = entry.at;
     if (number !== null && (highest === null || number > highest)) highest = number;
   }
-  return { finished, durations };
+  return { finished, durations, unplanned: [...unplanned] };
 }
 
 /**
- * `{ status, finished, total, remaining, missing, measured, mean_minutes,
- *    min_minutes, max_minutes, projected_remaining_minutes }`, status being
- * `not_measured` below two measured phases, `measured`, or `complete`. Forecast
+ * `{ status, finished, total, remaining, missing, unplanned, intervals, measured,
+ *    mean_minutes, min_minutes, max_minutes, projected_remaining_minutes }`, status
+ * being `not_measured` below two real intervals, `measured`, or `complete`. Forecast
  * fields stay null when the status gives no ground for them.
  */
 function projectProgress(entries, planPhaseIds = null) {
-  const { finished, durations } = measureDurations(entries);
   const plan = Array.isArray(planPhaseIds) && planPhaseIds.length > 0 ? planPhaseIds.map(phaseKey) : null;
+  const { finished, durations, unplanned } = measureDurations(entries, plan);
   const finishedSet = new Set(finished);
   const pending = plan ? plan.filter((id) => !finishedSet.has(id)) : null;
   const highest = Math.max(0, ...finished.filter((id) => /^\d+$/.test(id)).map(Number));
   const measured = durations.reduce((sum, item) => sum + item.covers, 0);
   const totalMinutes = durations.reduce((sum, item) => sum + item.minutes, 0);
   const perPhase = durations.map((item) => item.minutes / item.covers);
-  const enough = measured >= MIN_MEASURED_PHASES;
+  const enough = durations.length >= MIN_INTERVALS;
   const mean = enough ? totalMinutes / measured : null;
   const complete = Boolean(plan) && pending.length === 0;
   return {
@@ -133,8 +146,10 @@ function projectProgress(entries, planPhaseIds = null) {
     remaining: pending ? pending.length : null,
     // Passed by a later checkpoint and never stamped: the phase may be done, its time is not known.
     missing: pending ? pending.filter((id) => /^\d+$/.test(id) && Number(id) < highest) : [],
+    unplanned,
+    intervals: durations.length,
     measured,
-    needed_to_measure: MIN_MEASURED_PHASES,
+    needed_to_measure: MIN_INTERVALS,
     mean_minutes: enough ? round(mean) : null,
     min_minutes: enough ? round(Math.min(...perPhase)) : null,
     max_minutes: enough ? round(Math.max(...perPhase)) : null,
@@ -155,7 +170,6 @@ function planPhaseIds(content) {
 }
 
 module.exports = {
-  MIN_MEASURED_PHASES,
   appendPhaseCheckpoint,
   formatMinutes,
   ledgerPath,
