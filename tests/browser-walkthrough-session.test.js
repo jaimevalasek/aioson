@@ -590,6 +590,10 @@ test('a run with value_env or --save-state is contained, and the others are not'
   const unopened = await runWalkthrough({ ...base, script: script(), env, open: failing });
   assert.equal(unopened.error, 'browser_unavailable');
   await assert.rejects(request(refused.port, 'GET', 'http://example.test/'));
+  let thrownAt = null;
+  const throwing = async (options) => { thrownAt = options.refusalProxy; throw new Error('the browser died'); };
+  await assert.rejects(runWalkthrough({ ...base, script: script(), env, open: throwing }), /the browser died/);
+  await assert.rejects(request(thrownAt.port, 'GET', 'http://example.test/'), 'it does not hold the process either');
 });
 
 function request(port, method, target, headers = {}) {
@@ -668,6 +672,13 @@ test('a browser the proxy cannot prove is not used', async () => {
   assert.equal(launches[3].args, undefined, 'no flags on a run with nothing to contain');
 
   assert.match(await containmentFailure(context, proxy), /did not use the refusal proxy/);
+
+  const broken = { ...context, newPage: async () => { throw new Error('the page crashed'); } };
+  const brokenPlaywright = { chromium: { ...playwright.chromium, launch: async () => ({ newContext: async () => broken, close: async () => { closed.push('broken'); }, version: () => '1' }) } };
+  const unproven = await openBrowser({ playwright: brokenPlaywright, env: {}, refusalProxy: proxy, exists: () => true });
+  assert.equal(unproven.error, 'network_containment_failed');
+  assert.match(unproven.detail, /the page crashed/);
+  assert.ok(closed.includes('broken'));
 
   const fetchJson = async () => ({ Browser: 'x' });
   const attached = await openBrowser({ playwright: { chromium: { executablePath: () => __filename } }, env: {}, cdp: '9222', refusalProxy: proxy, exists: () => true, fetchJson });

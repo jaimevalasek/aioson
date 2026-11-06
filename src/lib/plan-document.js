@@ -28,6 +28,29 @@ function parsePlanPhases(content) {
   }));
 }
 
+const PHASE_OPENING = /^(#{2,3})\s+(?:Phase|Fase)\s+(\d+)(?:\s*[:—–-]\s*(.+)|\s*)$/i;
+
+function afterFrontmatter(lines) {
+  const close = lines[0] === '---' ? lines.indexOf('---', 1) : -1;
+  return close === -1 ? 0 : close + 1;
+}
+
+// True when this heading opened a phase or a section, or ended one with nothing to keep.
+function onPlanHeading(state, heading, line, rawLine) {
+  const level = heading[1].length;
+  if (state.phase && level <= state.phase.level) state.phase = null;
+  const opened = state.phase ? null : PHASE_OPENING.exec(line);
+  if (opened) {
+    state.phase = { id: String(Number(opened[2])), title: (opened[3] || '').trim(), level, lines: [rawLine] };
+    state.phases.push(state.phase);
+    return true;
+  }
+  if (state.phase || level > 2) return false;
+  state.section = level === 2 ? { title: heading[2].trim(), lines: [rawLine] } : null;
+  if (state.section) state.sections.push(state.section);
+  return true;
+}
+
 /**
  * The plan's text by section, fences intact: `phases` as `parsePlanPhases` reads
  * them, and `sections` for every other `##`, each with its heading line. A
@@ -37,39 +60,17 @@ function planSections(content) {
   const raw = String(content || '').replace(/\r\n/g, '\n');
   const rawLines = raw.split('\n');
   const lines = withoutFences(raw).split('\n');
-  let start = 0;
-  if (lines[0] === '---') {
-    const close = lines.indexOf('---', 1);
-    if (close !== -1) start = close + 1;
-  }
-  const phases = [];
-  const sections = [];
-  let phase = null;
-  let section = null;
-  for (let i = start; i < lines.length; i += 1) {
+  const state = { phases: [], sections: [], phase: null, section: null };
+  for (let i = afterFrontmatter(lines); i < lines.length; i += 1) {
     const heading = /^(#{1,6})\s+(.*)$/.exec(lines[i]);
-    if (heading) {
-      const level = heading[1].length;
-      if (phase && level <= phase.level) phase = null;
-      const opened = phase ? null : /^(#{2,3})\s+(?:Phase|Fase)\s+(\d+)(?:\s*[:—–-]\s*(.+)|\s*)$/i.exec(lines[i]);
-      if (opened) {
-        phase = { id: String(Number(opened[2])), title: (opened[3] || '').trim(), level, lines: [rawLines[i]] };
-        phases.push(phase);
-        continue;
-      }
-      if (!phase && level <= 2) {
-        section = level === 2 ? { title: heading[2].trim(), lines: [rawLines[i]] } : null;
-        if (section) sections.push(section);
-        continue;
-      }
-    }
-    if (phase) phase.lines.push(rawLines[i]);
-    else if (section) section.lines.push(rawLines[i]);
+    if (heading && onPlanHeading(state, heading, lines[i], rawLines[i])) continue;
+    const open = state.phase || state.section;
+    if (open) open.lines.push(rawLines[i]);
   }
   const text = (item) => item.lines.join('\n');
   return {
-    phases: phases.map((item) => ({ id: item.id, title: item.title, text: text(item) })),
-    sections: sections.map((item) => ({ title: item.title, text: text(item) }))
+    phases: state.phases.map((item) => ({ id: item.id, title: item.title, text: text(item) })),
+    sections: state.sections.map((item) => ({ title: item.title, text: text(item) }))
   };
 }
 

@@ -18,6 +18,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { declarationOnLine, declarationsInCode, isIndexable, SOURCE_GLOBS } = require('./duplicate-declarations');
+const { openForFeature } = require('./observations');
 const { planSections } = require('./plan-document');
 
 const CITED_ID = /\b[A-Z][A-Z0-9]{1,9}-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b/g;
@@ -390,4 +391,10 @@ function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observati
   };
 }
 
-module.exports = { buildPhaseCapsule, citedIdsOf, citedPrdRows, createdSince, phasesInCell, scopeSection };
+// A capsule without its open observations is still a capsule.
+function openObservations(targetDir, slug) {
+  return openForFeature(targetDir, slug).catch(() => []);
+}
+
+module.exports = {
+  buildPhaseCapsule, citedIdsOf, citedPrdRows, createdSince, openObservations, phasesInCell, scopeSection };

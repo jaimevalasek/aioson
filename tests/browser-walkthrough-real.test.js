@@ -218,6 +218,18 @@ test('real browser: the same channels do reach it with no value_env, so the zero
   await settle();
   assert.ok(app.external.seen.lines.slice(before).some((line) => line.startsWith('POST /post')), 'the 307 keeps the body');
 
+  for (const [route, line, steps] of [
+    ['/open-out', 'GET /open?v=plain', [typed, wait]],
+    ['/form-out', 'POST /post', [typed, click, wait]],
+    ['/late-redirect', 'GET /signin', [typed]],
+    ['/disabled', 'GET /signin', [typed]]
+  ]) {
+    const mark = app.external.seen.lines.length;
+    await run(root, app.url, { steps: via(route, ...steps) });
+    await settle();
+    assert.ok(app.external.seen.lines.slice(mark).some((seen) => seen.startsWith(line)), `${route} never sent ${line}`);
+  }
+
   // A proxy does not see these two: they count in UDP, on the same host.
   for (const route of ['/webrtc', '/webtransport']) {
     const packets = app.external.seen.udp;

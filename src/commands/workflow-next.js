@@ -1818,6 +1818,35 @@ async function buildExecutionActivationContext(targetDir, state, stageName) {
   }
 }
 
+function undecidedScaleNotice(slug, scale, large, largeNotice) {
+  const { formatPlanScale, formatRecommendation, recommendExecution } = require('../lib/plan-scale');
+  const recommendation = recommendExecution(scale);
+  return {
+    blocking: false,
+    advisory: true,
+    mode: 'single',
+    check: 'execution_scale',
+    scale,
+    recommendation,
+    ...(large ? { large } : {}),
+    message: `[Execution Scale] the plan for "${slug}" touches ${formatPlanScale(scale)} — a split candidate (floor ${scale.threshold.min_files} files for one context) — and records no execution choice. Ask the owner once: single DEV (recommended default) or orchestrated lanes. Recommendation: ${formatRecommendation(recommendation)}. Scale and availability never change it. Record the answer: \`execution: single\` in the plan frontmatter, or the \`## Development execution lanes\` table + aioson execution:configure . --feature=${slug} --json (explicit model/effort choices and confirmed summary).${large ? ` ${largeNotice}` : ''}`
+  };
+}
+
+// Orchestrated in name only: one unit per wave, or a unit one context cannot carry.
+function orchestratedFindings(content, scale) {
+  const { formatUnit } = require('../lib/plan-scale');
+  const { parseDevelopmentLanes } = require('../harness/plan-waves');
+  const over = scale.units.filter((unit) => unit.over_budget);
+  const serial = scale.parallelism.serial;
+  const lanesTable = serial ? parseDevelopmentLanes(content) : null;
+  const laneCount = lanesTable ? lanesTable.rows.length : 0;
+  const findings = [];
+  if (serial) findings.push(`serial by construction (${laneCount} lane(s), ${scale.parallelism.waves} wave(s) of one unit each, critical path ${scale.parallelism.critical_path_processes} processes)`);
+  if (over.length > 0) findings.push(`over the unit ceiling (${scale.ceiling.max_files} files / ${scale.ceiling.max_acs} ACs per context): ${over.map(formatUnit).join(', ')}`);
+  return findings;
+}
+
 /**
  * The planner's scale advisory under single-DEV execution: a plan at or above
  * the split floor (`AIOSON_EXECUTION_SPLIT_MIN_FILES`, 12 files) that records
@@ -1830,8 +1859,7 @@ async function buildExecutionActivationContext(targetDir, state, stageName) {
  */
 async function inspectExecutionScale(targetDir, slug) {
   const none = { blocking: false, advisory: false };
-  const { assessLargePlan, formatLargePlan, largePlanLimits, measurePlanScale, resolveExecutionChoice, splitMinFiles, formatPlanScale, formatRecommendation, formatUnit, recommendExecution, unitCeiling } = require('../lib/plan-scale');
-  const { parseDevelopmentLanes } = require('../harness/plan-waves');
+  const { assessLargePlan, formatLargePlan, largePlanLimits, measurePlanScale, resolveExecutionChoice, splitMinFiles, unitCeiling } = require('../lib/plan-scale');
   let content;
   try {
     content = await fs.readFile(path.join(targetDir, '.aioson', 'context', `implementation-plan-${slug}.md`), 'utf8');
@@ -1843,30 +1871,12 @@ async function inspectExecutionScale(targetDir, slug) {
   const large = assessLargePlan(scale, largePlanLimits(process.env));
   const largeNotice = large ? formatLargePlan(large, slug) : '';
   const largeAdvisory = (mode = 'single') => ({ blocking: false, advisory: true, mode, check: 'execution_scale', scale, large, message: `[Execution Scale] ${largeNotice}` });
-  if (!scale.split_candidate) return large ? largeAdvisory(choice.choice === 'orchestrated' ? 'orchestrated' : 'single') : none;
-  if (!choice.choice) {
-    const recommendation = recommendExecution(scale);
-    return {
-      blocking: false,
-      advisory: true,
-      mode: 'single',
-      check: 'execution_scale',
-      scale,
-      recommendation,
-      ...(large ? { large } : {}),
-      message: `[Execution Scale] the plan for "${slug}" touches ${formatPlanScale(scale)} — a split candidate (floor ${scale.threshold.min_files} files for one context) — and records no execution choice. Ask the owner once: single DEV (recommended default) or orchestrated lanes. Recommendation: ${formatRecommendation(recommendation)}. Scale and availability never change it. Record the answer: \`execution: single\` in the plan frontmatter, or the \`## Development execution lanes\` table + aioson execution:configure . --feature=${slug} --json (explicit model/effort choices and confirmed summary).${large ? ` ${largeNotice}` : ''}`
-    };
-  }
-  if (choice.choice !== 'orchestrated') return large ? largeAdvisory() : none;
-  // Orchestrated in name only: one unit per wave, or a unit one context cannot carry.
-  const over = scale.units.filter((unit) => unit.over_budget);
-  const serial = scale.parallelism.serial;
-  if (over.length === 0 && !serial) return large ? largeAdvisory('orchestrated') : none;
-  const lanesTable = parseDevelopmentLanes(content);
-  const laneCount = lanesTable ? lanesTable.rows.length : 0;
-  const findings = [];
-  if (serial) findings.push(`serial by construction (${laneCount} lane(s), ${scale.parallelism.waves} wave(s) of one unit each, critical path ${scale.parallelism.critical_path_processes} processes)`);
-  if (over.length > 0) findings.push(`over the unit ceiling (${scale.ceiling.max_files} files / ${scale.ceiling.max_acs} ACs per context): ${over.map(formatUnit).join(', ')}`);
+  const quiet = (mode = 'single') => (large ? largeAdvisory(mode) : none);
+  if (!scale.split_candidate) return quiet(choice.choice === 'orchestrated' ? 'orchestrated' : 'single');
+  if (!choice.choice) return undecidedScaleNotice(slug, scale, large, largeNotice);
+  if (choice.choice !== 'orchestrated') return quiet();
+  const findings = orchestratedFindings(content, scale);
+  if (findings.length === 0) return quiet('orchestrated');
   return {
     blocking: false,
     advisory: true,

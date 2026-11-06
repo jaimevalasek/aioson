@@ -78,6 +78,14 @@ async function fileExistsRel(targetDir, rel) {
   }
 }
 
+// The state file, then the stamped line `dev:progress` reads. A failed stamp never
+// fails the checkpoint.
+async function writeCheckpoint(targetDir, statePath, text, stamp, now, warnings) {
+  await fs.writeFile(statePath, text, 'utf8');
+  const checkpoint = await appendPhaseCheckpoint(targetDir, stamp, now);
+  if (!checkpoint.ok) warnings.push(`phase stamp not recorded (${checkpoint.reason}); dev:progress will not count this checkpoint`);
+}
+
 async function runStateSave({ args, options = {}, logger, now = Date.now }) {
   const targetDir = resolveTargetDir(args);
   const slug = options.feature ? String(options.feature) : null;
@@ -194,10 +202,7 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
   ].filter((l) => l !== null);
 
   await fs.mkdir(path.dirname(statePath), { recursive: true });
-  await fs.writeFile(statePath, lines.join('\n'), 'utf8');
-
-  const checkpoint = await appendPhaseCheckpoint(targetDir, { feature: slug, phase, next }, now);
-  if (!checkpoint.ok) warnings.push(`phase stamp not recorded (${checkpoint.reason}); dev:progress will not count this checkpoint`);
+  await writeCheckpoint(targetDir, statePath, lines.join('\n'), { feature: slug, phase, next }, now, warnings);
 
   const result = {
     ok: true,

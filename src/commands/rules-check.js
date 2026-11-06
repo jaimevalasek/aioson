@@ -490,6 +490,8 @@ function loadFiles(targetDir, absPaths) {
 
 // ─── run ──────────────────────────────────────────────────────────────────────
 
+const hasAdvisories = (bySeverity) => bySeverity.MED > 0 || bySeverity.LOW > 0;
+
 async function runRulesCheck({ args, options = {}, logger }) {
   // The module graph memo spans one check: a tree changes between checks.
   moduleGraphCache.clear();
@@ -800,7 +802,7 @@ async function runRulesCheck({ args, options = {}, logger }) {
 
   if (blocking) {
     logger.log('  RULES=FAIL (a project rule is being violated)');
-  } else if (bySeverity.MED > 0 || bySeverity.LOW > 0) {
+  } else if (hasAdvisories(bySeverity)) {
     logger.log('  RULES=OK (no rule broken; advisory findings from docs/skills are worth a look)');
   } else {
     logger.log('  RULES=OK');

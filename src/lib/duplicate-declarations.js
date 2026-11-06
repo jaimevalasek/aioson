@@ -771,21 +771,22 @@ function collectHolders(targetFiles, treePaths, read) {
   return { contents, holders, targetNames };
 }
 
+// A file redeclaring its own name (overload, conditional) is still one copy.
+function addCopy(groups, key, entry) {
+  if (!groups.has(key)) groups.set(key, []);
+  const group = groups.get(key);
+  if (!group.some((other) => other.rel === entry.rel)) group.push(entry);
+}
+
 function groupCopies({ contents, holders, targetNames }) {
   const repeated = (name) => targetNames.has(name) && holders.get(name).size >= 2;
-  const toParse = new Set();
-  for (const [name, files] of holders) {
-    if (repeated(name)) for (const rel of files) toParse.add(rel);
-  }
+  const toParse = new Set([...holders].filter(([name]) => repeated(name)).flatMap(([, files]) => [...files]));
   const groups = new Map();
   for (const rel of toParse) {
-    for (const item of extractDeclarations(rel, contents.get(rel))) {
-      if (!repeated(item.name)) continue;
+    const items = extractDeclarations(rel, contents.get(rel)).filter((item) => repeated(item.name));
+    for (const item of items) {
       const key = [familyOf(rel), item.name, item.signature, item.body, item.scope].join('\u0000');
-      if (!groups.has(key)) groups.set(key, []);
-      // A file redeclaring its own name (overload, conditional) is still one copy.
-      const group = groups.get(key);
-      if (!group.some((entry) => entry.rel === rel)) group.push({ rel, line: item.line, name: item.name, kind: item.kind });
+      addCopy(groups, key, { rel, line: item.line, name: item.name, kind: item.kind });
     }
   }
   return [...groups.values()].filter((group) => group.length >= 2);

@@ -216,6 +216,41 @@ function modeLabel(mode, details = {}) {
   return 'no browser';
 }
 
+async function attachSession({ pw, probe, mode, viewport, slowMo }) {
+  const pagesOpened = [];
+  let browser;
+  try {
+    browser = await pw.chromium.connectOverCDP(probe.modes.cdp.endpoint, slowMo > 0 ? { slowMo } : undefined);
+  } catch (error) {
+    return { ok: false, error: 'cdp_connect_failed', detail: String(error && error.message || error), hint: 'the endpoint answered /json/version but refused the DevTools connection' };
+  }
+  // The operator's live session lives in the default context; a fresh
+  // context would be an anonymous profile, which is not what attaching is for.
+  const existing = typeof browser.contexts === 'function' ? browser.contexts() : [];
+  const context = existing.length > 0 ? existing[0] : await browser.newContext(viewport ? { viewport } : {});
+  const ownedContext = existing.length === 0;
+  return {
+    ok: true,
+    mode,
+    label: modeLabel(mode, probe.modes.cdp),
+    browser,
+    context,
+    version: probe.modes.cdp.browser || (typeof browser.version === 'function' ? browser.version() : ''),
+    newPage: async () => {
+      const page = await context.newPage();
+      if (viewport && typeof page.setViewportSize === 'function') await page.setViewportSize(viewport).catch(() => {});
+      pagesOpened.push(page);
+      return page;
+    },
+    close: async () => {
+      for (const page of pagesOpened) await page.close().catch(() => {});
+      if (ownedContext) await context.close().catch(() => {});
+      // Disconnect only: the browser belongs to the operator.
+      await browser.close().catch(() => {});
+    }
+  };
+}
+
 /**
  * Open a browser session. Resolves the same way `probeBrowsers` reports, then
  * either attaches (CDP) or launches (channel / bundled).
@@ -248,44 +283,12 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
     return { ok: false, error: 'browser_unavailable', hint: 'install Google Chrome/Edge, run `npx playwright install chromium`, or attach with --cdp=http://127.0.0.1:9222' };
   }
 
-  const pagesOpened = [];
-  if (mode === 'cdp' && refusalProxy) {
-    return { ok: false, error: 'network_containment_failed', detail: 'an attached browser cannot be contained', hint: 'drop --cdp for a run with value_env or --save-state' };
-  }
   if (mode === 'cdp') {
-    let browser;
-    try {
-      browser = await pw.chromium.connectOverCDP(probe.modes.cdp.endpoint, slowMo > 0 ? { slowMo } : undefined);
-    } catch (error) {
-      return { ok: false, error: 'cdp_connect_failed', detail: String(error && error.message || error), hint: 'the endpoint answered /json/version but refused the DevTools connection' };
-    }
-    // The operator's live session lives in the default context; a fresh
-    // context would be an anonymous profile, which is not what attaching is for.
-    const existing = typeof browser.contexts === 'function' ? browser.contexts() : [];
-    const context = existing.length > 0 ? existing[0] : await browser.newContext(viewport ? { viewport } : {});
-    const ownedContext = existing.length === 0;
-    return {
-      ok: true,
-      mode,
-      label: modeLabel(mode, probe.modes.cdp),
-      browser,
-      context,
-      version: probe.modes.cdp.browser || (typeof browser.version === 'function' ? browser.version() : ''),
-      newPage: async () => {
-        const page = await context.newPage();
-        if (viewport && typeof page.setViewportSize === 'function') await page.setViewportSize(viewport).catch(() => {});
-        pagesOpened.push(page);
-        return page;
-      },
-      close: async () => {
-        for (const page of pagesOpened) await page.close().catch(() => {});
-        if (ownedContext) await context.close().catch(() => {});
-        // Disconnect only: the browser belongs to the operator.
-        await browser.close().catch(() => {});
-      }
-    };
+    if (refusalProxy) return { ok: false, error: 'network_containment_failed', detail: 'an attached browser cannot be contained', hint: 'drop --cdp for a run with value_env or --save-state' };
+    return attachSession({ pw, probe, mode, viewport, slowMo });
   }
 
+  const pagesOpened = [];
   const launchOptions = { headless, ...(slowMo > 0 ? { slowMo } : {}), ...(refusalProxy ? { args: containmentArgs(refusalProxy.port) } : {}) };
   if (mode === 'chrome' || mode === 'msedge') launchOptions.channel = mode;
   let browser;
@@ -295,7 +298,8 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
     return { ok: false, error: 'browser_launch_failed', detail: String(error && error.message || error), mode, hint: mode === 'bundled' ? 'npx playwright install chromium' : `Playwright could not launch channel=${mode}` };
   }
   const context = await browser.newContext({ ...(viewport ? { viewport } : {}), ...(recordVideo ? { recordVideo } : {}), ...(storageState ? { storageState } : {}) });
-  const uncontained = refusalProxy ? await containmentFailure(context, refusalProxy) : null;
+  // A proof that breaks is not a proof.
+  const uncontained = refusalProxy ? await containmentFailure(context, refusalProxy).catch((error) => String(error && error.message || error)) : null;
   if (uncontained) {
     await browser.close().catch(() => {});
     return { ok: false, error: 'network_containment_failed', detail: uncontained, hint: 'a browser policy or version may be overriding its network flags; use another browser or machine' };

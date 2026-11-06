@@ -437,3 +437,11 @@ describe('runDevResumeData CLI handler', () => {
     }
   });
 });
+
+it('--capsule takes no value, so the path after it stays the project', () => {
+  const { parseArgv } = require('../src/parser');
+  const parsed = parseArgv(['node', 'aioson', 'dev:resume-data', '--capsule', '.', '--feature=orders', '--phase=1']);
+  assert.equal(parsed.command, 'dev:resume-data');
+  assert.equal(parsed.options.capsule, true);
+  assert.deepEqual(parsed.args, ['.']);
+});

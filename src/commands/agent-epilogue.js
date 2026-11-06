@@ -38,6 +38,11 @@ function formatAutoAdvance(autoAdvance) {
   return `workflow skip: ${autoAdvance.skipped || 'not_advanced'}`;
 }
 
+function rulesAdvisoryReason({ by_severity: { MED: med = 0, LOW: low = 0 } }) {
+  const advisory = [med ? `${med} MED` : null, low ? `${low} LOW` : null].filter(Boolean).join(' / ');
+  return advisory ? `${advisory} worth a second look` : null;
+}
+
 async function runAgentEpilogue({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const agent = normalizeAgent(options.agent);
@@ -283,9 +288,7 @@ async function runAgentEpilogue({ args, options = {}, logger, t }) {
           reason: `${high} violation(s)${med ? ` / ${med} MED` : ''} of ${broken.join(', ')} in changed files (${samples}) — a rule outranks the PRD, the plan, and any recorded deviation. See .aioson/context/rules-check.json`
         });
       } else {
-        const low = rulesReport.by_severity.LOW || 0;
-        const advisory = [med ? `${med} MED` : null, low ? `${low} LOW` : null].filter(Boolean).join(' / ');
-        pushStep(steps, 'rules:check', { ok: true, reason: advisory ? `${advisory} worth a second look` : null });
+        pushStep(steps, 'rules:check', { ok: true, reason: rulesAdvisoryReason(rulesReport) });
       }
     }
   }

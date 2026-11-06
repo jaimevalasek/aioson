@@ -95,6 +95,20 @@ function regexCanStart(out) {
   return true;
 }
 
+// The offset of the slash closing the regex literal opened at `start`, on its line, or
+// -1, honoring escapes and character classes, so `/[{}]/` never unbalances a brace.
+function regexLiteralEnd(text, start) {
+  const limit = Math.min(text.length, start + MAX_REGEX_LITERAL);
+  let inClass = false;
+  for (let k = start + 1; k < limit && text[k] !== '\n'; k += 1) {
+    if (text[k] === '\\') k += 1;
+    else if (inClass) inClass = text[k] !== ']';
+    else if (text[k] === '[') inClass = true;
+    else if (text[k] === '/') return k;
+  }
+  return -1;
+}
+
 /**
  * Neutralize strings, template literals, regex literals and comments so the
  * brace scanner sees structure only. Line count is preserved.
@@ -142,17 +156,8 @@ function neutralizeBraceCode(text) {
     if (ch === '/' && regexCanStart(out)) {
       // a regex literal: skip to its closing slash on this line, honoring
       // escapes and character classes, so `/[{}]/` never unbalances a brace
-      let k = i + 1;
-      let inClass = false;
-      const limit = Math.min(text.length, i + MAX_REGEX_LITERAL);
-      while (k < limit && text[k] !== '\n') {
-        if (text[k] === '\\') { k += 2; continue; }
-        if (inClass) { if (text[k] === ']') inClass = false; k += 1; continue; }
-        if (text[k] === '[') { inClass = true; k += 1; continue; }
-        if (text[k] === '/') break;
-        k += 1;
-      }
-      if (k < limit && text[k] === '/') {
+      const k = regexLiteralEnd(text, i);
+      if (k !== -1) {
         for (let b = i; b <= k; b += 1) out.push(' ');
         i = k + 1;
         continue;

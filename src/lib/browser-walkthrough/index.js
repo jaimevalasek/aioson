@@ -108,32 +108,34 @@ function lintScript(script) {
     warnings.push(`step ${where}: reload_masks_stale_view — \`${pending.action}\` at step ${pending.where} reaches this \`${step.do}\` with no \`expect\` between them, and rebuilding the page hides a view that stayed stale; \`expect\` the result on screen first, then ${step.do} and \`expect\` that it persisted`);
     pending = null;
   };
-  // The turn of a loop: what the last item left pending meets the top of the next.
+  // The turn of a loop: what the last item left pending meets the top of the next. It
+  // stays pending, because the last item's action also reaches what follows the loop.
   const acrossTheTurn = (steps, label) => {
-    for (const step of steps) {
-      if (step.optional === true) continue;
-      if (checksTheView(step) || STATE_ACTIONS.has(step.do) || step.do === 'each') return;
-      if (VIEW_REPLACING.has(step.do)) {
-        charge(step, label(step.index));
-        return;
-      }
-    }
+    const decides = (step) => checksTheView(step) || STATE_ACTIONS.has(step.do) || step.do === 'each' || VIEW_REPLACING.has(step.do);
+    const first = steps.find((step) => step.optional !== true && decides(step));
+    if (!first || checksTheView(first) || !VIEW_REPLACING.has(first.do)) return;
+    const left = pending;
+    charge(first, label(first.index));
+    pending = left;
+  };
+  const visit = (step, where) => {
+    if (step.optional === true) return;
+    if (checksTheView(step)) pending = null;
+    else if (VIEW_REPLACING.has(step.do)) {
+      if (pending) charge(step, where);
+    } else if (STATE_ACTIONS.has(step.do)) pending = { action: step.do, where };
   };
   const walk = (steps, label) => {
     for (const step of steps || []) {
       const where = label(step.index);
-      if (step.do === 'each') {
-        const childLabel = (child) => `${where}.${child}`;
-        walk(step.steps, childLabel);
-        const single = Array.isArray(step.items) && step.items.length < 2;
-        if (pending && !single) acrossTheTurn(step.steps, childLabel);
+      if (step.do !== 'each') {
+        visit(step, where);
         continue;
       }
-      if (step.optional === true) continue;
-      if (checksTheView(step)) pending = null;
-      else if (VIEW_REPLACING.has(step.do)) {
-        if (pending) charge(step, where);
-      } else if (STATE_ACTIONS.has(step.do)) pending = { action: step.do, where };
+      const childLabel = (child) => `${where}.${child}`;
+      walk(step.steps, childLabel);
+      const single = Array.isArray(step.items) && step.items.length < 2;
+      if (pending && !single) acrossTheTurn(step.steps, childLabel);
     }
   };
   walk(script && script.steps, (index) => String(index));
@@ -183,6 +185,50 @@ function containedStepFailure(record, page, refusalProxy, watched) {
   const refused = refusalProxy.hosts().filter((name) => watched.asked.has(name));
   if (!record.ok && refused.length > 0) return { error: `${record.error || record.detail} (the pages of this run were refused ${refused.join(', ')}: it only reaches loopback)` };
   return null;
+}
+
+function stepWarningFor(record, savedSession) {
+  if (record.warning === 'login_wall') {
+    return savedSession
+      ? `step ${record.index}: landed on a login wall (${record.url}); the session saved at ${savedSession} may have expired, so run the login walkthrough with --save-state again`
+      : `step ${record.index}: landed on a login wall (${record.url}); attach to the operator's signed-in browser with --cdp instead of scripting credentials`;
+  }
+  if (record.warning === 'env_value_on_remote_host') return `step ${record.index}: env_value_on_remote_host — {{env.*}} was typed on ${hostOf(record.url)}, not on a local host; a real account belongs in --cdp, with no credential in the script`;
+  if (record.warning === 'judge_concern') return `step ${record.index}: Jev raised a semantic concern (${record.detail}) — review it and tie it to evidence before treating it as a defect`;
+  return '';
+}
+
+async function diagnoseFailedStep(record, index, { page, script, scenario, artifactDir, ariaSeen, writeFile }) {
+  // What the page actually showed — the directed-retry input.
+  try {
+    const text = scrub(await ariaSnapshot(page, null), scenario.secrets);
+    record.failure_snapshot = previewSnapshot(text, script.snapshot_lines);
+    ariaSeen.push(record.failure_snapshot.preview);
+    if (artifactDir) {
+      const ariaFile = path.join(artifactDir, `${script.name}-step-${pad(index)}-failed.aria.txt`);
+      await writeFile(ariaFile, `${text}\n`);
+      record.artifacts.push(ariaFile);
+    }
+  } catch { /* diagnosis is best effort */ }
+  if (artifactDir) {
+    try {
+      const pngFile = path.join(artifactDir, `${script.name}-step-${pad(index)}-failed.png`);
+      await fs.mkdir(artifactDir, { recursive: true });
+      await page.screenshot({ path: pngFile, fullPage: false });
+      record.artifacts.push(pngFile);
+    } catch { /* best effort */ }
+  }
+}
+
+// A browser that never opened must not leave the proxy holding the process.
+async function openOrClose(open, options, refusalProxy) {
+  let session = null;
+  try {
+    session = await open(options);
+    return session;
+  } finally {
+    if (refusalProxy && !(session && session.ok)) await refusalProxy.close();
+  }
 }
 
 function injectionWarning(injection) {
@@ -309,9 +355,8 @@ async function runWalkthrough(options) {
   const videoTarget = videoPath({ video, targetDir, artifactDir, name: script.name });
   const videoTmp = videoTarget ? await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-video-')) : null;
   const recordVideo = videoTmp ? { recordVideo: { dir: videoTmp, size: script.viewport || DEFAULT_VIDEO_SIZE } } : {};
-  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo, ...(stateFiles.load ? { storageState: stateFiles.load } : {}), ...(refusalProxy ? { refusalProxy } : {}) });
+  const session = await openOrClose(open, { projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo, ...(stateFiles.load ? { storageState: stateFiles.load } : {}), ...(refusalProxy ? { refusalProxy } : {}) }, refusalProxy);
   if (!session.ok) {
-    if (refusalProxy) await refusalProxy.close();
     if (videoTmp) await fs.rm(videoTmp, { recursive: true, force: true }).catch(() => {});
     return { ok: false, error: session.error, detail: session.detail || '', hint: session.hint || '' };
   }
@@ -413,34 +458,9 @@ async function runWalkthrough(options) {
       if (failure) Object.assign(record, scrub(failure, scenario.secrets));
       executed.push(record);
       if (record.snapshot && record.snapshot.preview) ariaSeen.push(record.snapshot.preview);
-      if (record.warning === 'login_wall') {
-        warnings.push(stateFiles.load
-          ? `step ${record.index}: landed on a login wall (${record.url}); the session saved at ${toRel(targetDir, stateFiles.load)} may have expired, so run the login walkthrough with --save-state again`
-          : `step ${record.index}: landed on a login wall (${record.url}); attach to the operator's signed-in browser with --cdp instead of scripting credentials`);
-      }
-      if (record.warning === 'env_value_on_remote_host') warnings.push(`step ${record.index}: env_value_on_remote_host — {{env.*}} was typed on ${hostOf(record.url)}, not on a local host; a real account belongs in --cdp, with no credential in the script`);
-      if (record.warning === 'judge_concern') warnings.push(`step ${record.index}: Jev raised a semantic concern (${record.detail}) — review it and tie it to evidence before treating it as a defect`);
-      if (!record.ok) {
-        // What the page actually showed — the directed-retry input.
-        try {
-          const text = scrub(await ariaSnapshot(page, null), scenario.secrets);
-          record.failure_snapshot = previewSnapshot(text, script.snapshot_lines);
-          ariaSeen.push(record.failure_snapshot.preview);
-          if (artifactDir) {
-            const ariaFile = path.join(artifactDir, `${script.name}-step-${pad(index)}-failed.aria.txt`);
-            await writeFile(ariaFile, `${text}\n`);
-            record.artifacts.push(ariaFile);
-          }
-        } catch { /* diagnosis is best effort */ }
-        if (artifactDir) {
-          try {
-            const pngFile = path.join(artifactDir, `${script.name}-step-${pad(index)}-failed.png`);
-            await fs.mkdir(artifactDir, { recursive: true });
-            await page.screenshot({ path: pngFile, fullPage: false });
-            record.artifacts.push(pngFile);
-          } catch { /* best effort */ }
-        }
-      }
+      const stepWarning = stepWarningFor(record, stateFiles.load ? toRel(targetDir, stateFiles.load) : '');
+      if (stepWarning) warnings.push(stepWarning);
+      if (!record.ok) await diagnoseFailedStep(record, index, { page, script, scenario, artifactDir, ariaSeen, writeFile });
       return record;
     };
 

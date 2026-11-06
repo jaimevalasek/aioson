@@ -866,6 +866,12 @@ async function performRunnerTransition(targetDir, suggestion, tool, requestedMod
   return { ok: false, reason: 'unsupported_suggestion_action', action: suggestion.action };
 }
 
+// Autopilot never pauses for these, so this payload is how the owner hears them.
+function noteOwnerNotice({ result }, notices) {
+  const notice = result && result.execution;
+  if (notice && notice.advisory && notice.message) notices.push(notice.message);
+}
+
 async function runWorkflowExecute({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const slug = options.feature ? String(options.feature).trim() : null;
@@ -1080,9 +1086,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     if (statusSnapshot && statusSnapshot.suggestion && statusSnapshot.suggestion.command) {
       logger.log(`Suggested command: ${statusSnapshot.suggestion.command}`);
     }
-    for (const line of formatAgenticPolicyLines(agenticPolicy)) {
-      logger.log(line);
-    }
+    for (const line of formatAgenticPolicyLines(agenticPolicy)) logger.log(line);
     logger.log('');
     return result;
   }
@@ -1206,16 +1210,10 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
       return failure;
     }
 
-    if (transitionResult.transition === 'complete' && !transitionResult.result) {
-      break;
-    }
+    if (transitionResult.transition === 'complete' && !transitionResult.result) break;
 
     activation = transitionResult.result || activation;
-    // Autopilot never pauses for these, so this payload is how the owner hears them.
-    const executionNotice = activation && activation.execution;
-    if (transitionResult.result && executionNotice && executionNotice.advisory && executionNotice.message) {
-      ownerNotices.push(executionNotice.message);
-    }
+    noteOwnerNotice(transitionResult, ownerNotices);
     executionTransitions.push({
       index: index + 1,
       transition: transitionResult.transition,

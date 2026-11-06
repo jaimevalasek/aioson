@@ -3,10 +3,9 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { buildDevResumeData } = require('../lib/dev-resume');
-const { buildPhaseCapsule } = require('../lib/phase-capsule');
+const { buildPhaseCapsule, openObservations } = require('../lib/phase-capsule');
 const { readFeatureArtifactSafe } = require('../preflight-engine');
 const { isValidSlug } = require('../dossier/schema');
-const { openForFeature } = require('../lib/observations');
 
 /**
  * aioson dev:resume-data .
@@ -27,9 +26,32 @@ function isInsideFolder(folder, file) {
   return rel !== '' && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }
 
+// A flag with no value parses as `true`, and that is no value here.
+function optionText(value) {
+  return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
+// The capsule is compiled from these folders and never replaces what is in them.
+async function writeCapsule(targetDir, target, text) {
+  const file = path.resolve(targetDir, target);
+  const sources = ['context', 'briefings'].map((folder) => path.resolve(targetDir, '.aioson', folder));
+  if (sources.some((folder) => isInsideFolder(folder, file))) return null;
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, text, 'utf8');
+  return path.relative(targetDir, file).split(path.sep).join('/');
+}
+
+function printCapsule(logger, capsule, out) {
+  if (!out) logger.log(capsule.capsule);
+  const { capsule: size, plan_and_prd: sources, percent_of_sources: percent } = capsule.bytes;
+  logger.log(`${out ? `Capsule written to ${out}: ` : 'Capsule: '}${size} bytes, against ${sources} bytes of plan plus PRD (${percent}%).`);
+  if (capsule.acs.missing.length > 0) logger.error(`No PRD row found for: ${capsule.acs.missing.join(', ')}.`);
+}
+
 async function runPhaseCapsule({ targetDir, options, logger }) {
-  const slug = options.feature ? String(options.feature).trim() : '';
-  const phase = options.phase === undefined || options.phase === true ? '' : String(options.phase).trim();
+  const slug = optionText(options.feature);
+  const phase = optionText(options.phase);
+  const target = optionText(options.out);
   const refuse = (reason, message, extra = {}) => {
     if (!options.json && logger) logger.error(message);
     return { ok: false, reason, ...extra };
@@ -41,7 +63,7 @@ async function runPhaseCapsule({ targetDir, options, logger }) {
   const plan = await readFeatureArtifactSafe(targetDir, slug, `implementation-plan-${slug}.md`);
   if (!plan) return refuse('plan_not_found', `No implementation plan for ${slug}.`);
   const prd = await readFeatureArtifactSafe(targetDir, slug, `prd-${slug}.md`);
-  const observations = await openForFeature(targetDir, slug).catch(() => []);
+  const observations = await openObservations(targetDir, slug);
   const capsule = buildPhaseCapsule({
     targetDir,
     slug,
@@ -49,29 +71,14 @@ async function runPhaseCapsule({ targetDir, options, logger }) {
     plan,
     prd: prd || '',
     observations,
-    base: options.base && options.base !== true ? String(options.base) : ''
+    base: optionText(options.base)
   });
   if (!capsule.ok) return refuse(capsule.reason, `Phase ${phase} is not in the plan. Phases: ${capsule.phases.join(', ') || 'none'}.`, { phases: capsule.phases });
 
-  let out = null;
-  if (options.out && options.out !== true) {
-    const file = path.resolve(targetDir, String(options.out));
-    // The capsule is compiled from these folders and never replaces what is in them.
-    const sources = ['context', 'briefings'].map((folder) => path.resolve(targetDir, '.aioson', folder));
-    if (sources.some((folder) => isInsideFolder(folder, file))) {
-      return refuse('out_inside_sources', `--out would write among the plan and the PRD it reads (${String(options.out)}). Name a file elsewhere.`);
-    }
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    await fs.writeFile(file, capsule.capsule, 'utf8');
-    out = path.relative(targetDir, file).split(path.sep).join('/');
-  }
+  const out = target ? await writeCapsule(targetDir, target, capsule.capsule) : null;
+  if (target && !out) return refuse('out_inside_sources', `--out would write among the plan and the PRD it reads (${target}). Name a file elsewhere.`);
   const result = { ...capsule, out };
-  if (options.json || !logger) return result;
-
-  if (!out) logger.log(capsule.capsule);
-  const { capsule: size, plan_and_prd: sources, percent_of_sources: percent } = capsule.bytes;
-  logger.log(`${out ? `Capsule written to ${out}: ` : 'Capsule: '}${size} bytes, against ${sources} bytes of plan plus PRD (${percent}%).`);
-  if (capsule.acs.missing.length > 0) logger.error(`No PRD row found for: ${capsule.acs.missing.join(', ')}.`);
+  if (!options.json && logger) printCapsule(logger, capsule, out);
   return result;
 }
 

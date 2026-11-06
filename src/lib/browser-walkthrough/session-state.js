@@ -155,13 +155,32 @@ function stateFile(targetDir, raw, flag) {
   return { file };
 }
 
+const isNamed = (value) => value !== undefined && value !== null && value !== '';
+
+// Why a saved session cannot be loaded, or null when it can.
+function unusableState(targetDir, load) {
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(load, 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { refusal: { ok: false, error: 'state_not_found', detail: `no state file at ${path.relative(targetDir, load).split(path.sep).join('/')}`, hint: 'run the login walkthrough with --save-state first' } };
+    }
+    return { refusal: { ok: false, error: 'state_invalid', detail: 'the state file is not valid JSON', hint: 'run the login walkthrough with --save-state again' } };
+  }
+  if (!parsed || !Array.isArray(parsed.cookies) || !Array.isArray(parsed.origins)) {
+    return { refusal: { ok: false, error: 'state_invalid', detail: 'the state file has no cookies and origins', hint: 'run the login walkthrough with --save-state again' } };
+  }
+  return null;
+}
+
 /**
  * `{ load, save }` absolute paths, or `{ refusal }`. Refused under `--cdp`, the
  * environment's or the project config's included: that session is the operator's.
  */
 function resolveStateFiles({ targetDir, state, saveState, cdp, channel, env, config }) {
-  const wantsState = state !== undefined && state !== null && state !== '';
-  const wantsSave = saveState !== undefined && saveState !== null && saveState !== '';
+  const wantsState = isNamed(state);
+  const wantsSave = isNamed(saveState);
   if (!wantsState && !wantsSave) return { load: null, save: null };
   if (resolveBrowserRequest({ cdp, channel, env, config }).cdp) {
     return {
@@ -173,31 +192,12 @@ function resolveStateFiles({ targetDir, state, saveState, cdp, channel, env, con
       }
     };
   }
-  let load = null;
-  let save = null;
-  if (wantsState) {
-    const resolved = stateFile(targetDir, state, '--state');
-    if (resolved.refusal) return resolved;
-    load = resolved.file;
-    let parsed;
-    try {
-      parsed = JSON.parse(fs.readFileSync(load, 'utf8'));
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        return { refusal: { ok: false, error: 'state_not_found', detail: `no state file at ${path.relative(targetDir, load).split(path.sep).join('/')}`, hint: 'run the login walkthrough with --save-state first' } };
-      }
-      return { refusal: { ok: false, error: 'state_invalid', detail: 'the state file is not valid JSON', hint: 'run the login walkthrough with --save-state again' } };
-    }
-    if (!parsed || !Array.isArray(parsed.cookies) || !Array.isArray(parsed.origins)) {
-      return { refusal: { ok: false, error: 'state_invalid', detail: 'the state file has no cookies and origins', hint: 'run the login walkthrough with --save-state again' } };
-    }
-  }
-  if (wantsSave) {
-    const resolved = stateFile(targetDir, saveState, '--save-state');
-    if (resolved.refusal) return resolved;
-    save = resolved.file;
-  }
-  return { load, save };
+  const load = wantsState ? stateFile(targetDir, state, '--state') : { file: null };
+  if (load.refusal) return load;
+  const unusable = wantsState ? unusableState(targetDir, load.file) : null;
+  if (unusable) return unusable;
+  const save = wantsSave ? stateFile(targetDir, saveState, '--save-state') : { file: null };
+  return save.refusal ? save : { load: load.file, save: save.file };
 }
 
 /**

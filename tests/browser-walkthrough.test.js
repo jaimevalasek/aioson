@@ -631,3 +631,12 @@ test('the walkthrough doc asks for the screen before the reload, in template and
     assert.match(doc, /reload_masks_stale_view/);
   }
 });
+
+test('after the turn of a loop, the last action still reaches what follows the loop', () => {
+  const { lintScript } = require('../src/lib/browser-walkthrough');
+  const steps = [{ do: 'each', items: [1, 2], steps: [{ do: 'goto', url: '/x' }, { do: 'click', target: 'text=Save' }] }, { do: 'reload' }];
+  const warnings = lintScript(normalizeScript({ name: 'x', steps }).script);
+  assert.equal(warnings.length, 2, warnings.join(' / '));
+  assert.match(warnings[0], /reload_masks_stale_view/);
+  assert.match(warnings[1], /step 1: reload_masks_stale_view/);
+});

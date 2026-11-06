@@ -151,13 +151,6 @@ async function checkGate(targetDir, slug, gateLetter) {
         missing.push(`harness contract [${err.code}]: ${err.message}`);
       }
     }
-
-    // Advisory by construction: `ok` stays true and nothing reaches `missing`,
-    // so the gate's result is the same with or without these warnings.
-    const planRuntime = lintPlanRuntime(await readFileSafe(planPath));
-    if (planRuntime.warnings.length > 0) {
-      evidence.push({ type: 'plan_runtime', ok: true, advisory: true, runtime_lines: planRuntime.runtime_lines, warnings: planRuntime.warnings });
-    }
   }
 
   // Check prerequisites
@@ -356,6 +349,29 @@ async function checkGate(targetDir, slug, gateLetter) {
   };
 }
 
+// Advisory by construction: `ok` stays true and nothing reaches `missing`, so the
+// gate's result is the same with or without these warnings.
+async function withPlanRuntime(check, targetDir, slug, gateLetter) {
+  if (gateLetter !== 'C') return check;
+  const planRuntime = lintPlanRuntime(await readFileSafe(path.join(contextDir(targetDir), `implementation-plan-${slug}.md`)));
+  if (planRuntime.warnings.length > 0) {
+    check.evidence.push({ type: 'plan_runtime', ok: true, advisory: true, runtime_lines: planRuntime.runtime_lines, warnings: planRuntime.warnings });
+  }
+  return check;
+}
+
+function endEvidenceBlock(check, logger) {
+  for (const item of check.evidence.filter((e) => e.type === 'plan_runtime')) {
+    logger.log(`  ! Plan runtime: ${item.warnings.length} advisory warning(s), the result does not depend on them`);
+    for (const warning of item.warnings.slice(0, 5)) {
+      logger.log(`      - [${warning.code}] line ${warning.line}${warning.phase ? ` (Phase ${warning.phase})` : ''}: ${warning.message}`);
+    }
+    if (item.warnings.length > 5) logger.log(`      … ${item.warnings.length - 5} more (--json lists all)`);
+  }
+
+  logger.log('');
+}
+
 async function runGateCheck({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const slug = options.feature ? String(options.feature) : (options.slug ? String(options.slug) : null);
@@ -386,7 +402,7 @@ async function runGateCheck({ args, options = {}, logger }) {
 
   const check = await checkGate(targetDir, slug, gateLetter);
 
-  const result = { ok: check.result === 'PASS', ...check };
+  const result = { ok: check.result === 'PASS', ...await withPlanRuntime(check, targetDir, slug, gateLetter) };
 
   if (options.json) return result;
 
@@ -450,15 +466,7 @@ async function runGateCheck({ args, options = {}, logger }) {
     }
   }
 
-  for (const item of check.evidence.filter((e) => e.type === 'plan_runtime')) {
-    logger.log(`  ! Plan runtime: ${item.warnings.length} advisory warning(s), the result does not depend on them`);
-    for (const warning of item.warnings.slice(0, 5)) {
-      logger.log(`      - [${warning.code}] line ${warning.line}${warning.phase ? ` (Phase ${warning.phase})` : ''}: ${warning.message}`);
-    }
-    if (item.warnings.length > 5) logger.log(`      … ${item.warnings.length - 5} more (--json lists all)`);
-  }
-
-  logger.log('');
+  endEvidenceBlock(check, logger);
   const resultIcon = check.result === 'PASS' ? '✓' : '✗';
   if (check.disposition) logger.log(`Disposition: ${check.disposition} — pending work is preserved in linked Simple Plans at close`);
   logger.log(`Result: ${resultIcon} ${check.result} — ${String(check.recommendation).replace(/^BLOCKED — /, '')}`);
