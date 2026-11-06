@@ -17,11 +17,15 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { declarationOnLine, isIndexable, SOURCE_GLOBS } = require('./duplicate-declarations');
+const { declarationOnLine, declarationsInCode, isIndexable, SOURCE_GLOBS } = require('./duplicate-declarations');
 const { planSections } = require('./plan-document');
 
 const CITED_ID = /\b[A-Z][A-Z0-9]{1,9}-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b/g;
+// `AC-1 a AC-3`, `AC-1 to AC-3`, `AC-1..AC-3`, `AC-1-AC-3`, and `AC-x-01 a AC-x-03`.
+const CITED_RANGE = /\b([A-Z][A-Z0-9]{1,9}-(?:[A-Za-z0-9]+-)*?)(\d+)\s*(?:a|to|at[eé]|through|\.\.\.?|–|—|-)\s*\1(\d+)\b/g;
+const MAX_RANGE = 200;
 const AC_ID = /^AC-/;
+const CAP_ID = /^CAP-/;
 const TABLE_SEPARATOR = /^\s*\|[\s:|-]+\|\s*$/;
 const PHASE_COLUMN = /^(?:phases?|fases?|etapas?)$/i;
 const CAP_COLUMN = /^cap$/i;
@@ -84,6 +88,40 @@ function scopeSection(text, phaseId, citedIds) {
   }
   const body = out.slice(1).join('\n').trim();
   return body ? `${out[0]}\n\n${body}\n` : '';
+}
+
+/** The ids a phase names, a range counted in full. */
+function citedIdsOf(text) {
+  const ids = new Set(String(text).match(CITED_ID) || []);
+  for (const match of String(text).matchAll(CITED_RANGE)) {
+    const [whole, prefix, from, to] = match;
+    const first = Number(from);
+    const last = Number(to);
+    if (last < first || last - first > MAX_RANGE) continue;
+    ids.delete(whole);
+    const width = from.startsWith('0') ? from.length : 0;
+    for (let n = first; n <= last; n += 1) ids.add(`${prefix}${String(n).padStart(width, '0')}`);
+  }
+  return ids;
+}
+
+// A phase that names only its capability still owes its criteria: the PRD's table
+// says which ones are that capability's.
+function criteriaOfCapabilities(prd, caps) {
+  const owned = new Set();
+  const lines = String(prd || '').replace(/\r\n/g, '\n').split('\n');
+  let capColumn = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!/^\s*\|/.test(lines[i])) {
+      capColumn = -1;
+    } else if (TABLE_SEPARATOR.test(lines[i])) {
+      capColumn = splitRow(lines[i - 1]).map(clean).findIndex((name) => CAP_COLUMN.test(name));
+    } else if (capColumn >= 0) {
+      const cells = splitRow(lines[i]).map(clean);
+      if (AC_ID.test(cells[0] || '') && caps.includes(cells[capColumn])) owned.add(cells[0]);
+    }
+  }
+  return owned;
 }
 
 /**
@@ -189,8 +227,9 @@ function collectFromDiff(diff, record) {
   let previous = '';
   for (const raw of diff.split('\n')) {
     // A `+++` header follows its `---`; alone it is an added line that starts with `++`.
+    // A path with a space ends in a tab there.
     if (raw.startsWith('+++ ') && previous.startsWith('--- ')) {
-      const target = raw.slice(4).replace(/\r$/, '');
+      const target = raw.slice(4).replace(/\r$/, '').replace(/\t.*$/, '');
       file = target === '/dev/null' ? null : target.replace(/^"?b\//, '').replace(/"$/, '');
     } else if (raw.startsWith('diff --git ')) {
       file = null;
@@ -199,6 +238,18 @@ function collectFromDiff(diff, record) {
     }
     previous = raw;
   }
+}
+
+// A line of a diff may be text in a template or a comment: the file decides.
+function declaredForReal(targetDir, item) {
+  let names = null;
+  try {
+    names = declarationsInCode(item.path, fs.readFileSync(path.join(targetDir, item.path), 'utf8'));
+  } catch {
+    names = null;
+  }
+  const keep = (list) => [...list].filter((name) => !names || names.has(name));
+  return { path: item.path, exports: keep(item.exports), local: keep(item.local) };
 }
 
 /**
@@ -222,7 +273,8 @@ function createdSince(targetDir, base) {
     byFile.get(rel)[declared.exported ? 'exports' : 'local'].add(declared.name);
   };
   try {
-    collectFromDiff(git(targetDir, ['diff', '-U0', '--no-color', '--no-ext-diff', resolved.commit, '--', ...SOURCE_GLOBS]), record);
+    // Named prefixes: `diff.noprefix` or `diff.mnemonicPrefix` in a user's config would change the paths.
+    collectFromDiff(git(targetDir, ['diff', '-U0', '--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/', resolved.commit, '--', ...SOURCE_GLOBS]), record);
     for (const rel of git(targetDir, ['ls-files', '--others', '--exclude-standard', '--', ...SOURCE_GLOBS]).split(/\r?\n/).filter(Boolean)) {
       if (!isIndexable(rel)) continue;
       let content;
@@ -234,7 +286,8 @@ function createdSince(targetDir, base) {
   }
   const files = [...byFile.values()]
     .sort((a, b) => a.path.localeCompare(b.path))
-    .map((item) => ({ path: item.path, exports: [...item.exports], local: [...item.local] }));
+    .map((item) => declaredForReal(targetDir, item))
+    .filter((item) => item.exports.length > 0 || item.local.length > 0);
   return { status: 'ok', base: resolved.commit, base_ref: resolved.ref, ...(resolved.note ? { note: resolved.note } : {}), files };
 }
 
@@ -289,7 +342,12 @@ function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observati
   const phase = phases.find((item) => item.id === id);
   if (!phase) return { ok: false, reason: 'phase_not_found', phases: phases.map((item) => item.id) };
 
-  const citedIds = new Set(phase.text.match(CITED_ID) || []);
+  const citedIds = citedIdsOf(phase.text);
+  const named = [...citedIds];
+  const viaCapability = !named.some((item) => AC_ID.test(item))
+    ? criteriaOfCapabilities(prd, named.filter((item) => CAP_ID.test(item)))
+    : new Set();
+  for (const item of viaCapability) citedIds.add(item);
   const { groups, found } = citedPrdRows(prd, citedIds);
   const citedAcs = [...citedIds].filter((item) => AC_ID.test(item)).sort();
   const created = createdSince(targetDir, base);
@@ -326,10 +384,10 @@ function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observati
       plan_and_prd: planBytes + prdBytes,
       percent_of_sources: planBytes + prdBytes > 0 ? Math.round((capsuleBytes / (planBytes + prdBytes)) * 1000) / 10 : null
     },
-    acs: { cited: citedAcs, found: citedAcs.filter((item) => found.has(item)), missing: citedAcs.filter((item) => !found.has(item)) },
+    acs: { cited: citedAcs, found: citedAcs.filter((item) => found.has(item)), missing: citedAcs.filter((item) => !found.has(item)), via_capability: viaCapability.size > 0 },
     created,
     observations: relevant.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary }))
   };
 }
 
-module.exports = { buildPhaseCapsule, citedPrdRows, createdSince, phasesInCell, resolveBase, scopeSection };
+module.exports = { buildPhaseCapsule, citedIdsOf, citedPrdRows, createdSince, phasesInCell, scopeSection };

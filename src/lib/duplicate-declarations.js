@@ -630,6 +630,24 @@ function declarationOnLine(rel, line) {
   return null;
 }
 
+/**
+ * The names a file really declares, read past its strings and comments. A diff is
+ * read line by line and cannot tell `export const X` in code from the same text in
+ * a template literal.
+ */
+function declarationsInCode(rel, content) {
+  const ext = path.extname(rel).toLowerCase();
+  const text = withoutBom(content).replace(/\r\n/g, '\n');
+  const language = LANGUAGES[ext];
+  const code = language && language.mode === 'indent' ? text : neutralizeBraceCode(text);
+  const names = new Set();
+  for (const line of code.split('\n')) {
+    const declared = declarationOnLine(rel, line);
+    if (declared) names.add(declared.name);
+  }
+  return names;
+}
+
 // `git` pathspecs of what the scanners read.
 const SOURCE_GLOBS = [...JS_EXTS, ...Object.keys(LANGUAGES)].map((ext) => `*${ext}`);
 
@@ -716,6 +734,7 @@ function findDuplicateDeclarations({ targets, treePaths, read }) {
 module.exports = {
   SOURCE_GLOBS,
   declarationOnLine,
+  declarationsInCode,
   extractDeclarations,
   findDuplicateDeclarations,
   isIndexable,

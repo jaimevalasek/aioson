@@ -22,6 +22,11 @@ const { openForFeature } = require('../lib/observations');
  * compiles the phase capsule instead: printed, or in the --json payload, and
  * written to the project only when --out names a file.
  */
+function isInsideFolder(folder, file) {
+  const rel = path.relative(folder, file);
+  return rel !== '' && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+
 async function runPhaseCapsule({ targetDir, options, logger }) {
   const slug = options.feature ? String(options.feature).trim() : '';
   const phase = options.phase === undefined || options.phase === true ? '' : String(options.phase).trim();
@@ -51,6 +56,11 @@ async function runPhaseCapsule({ targetDir, options, logger }) {
   let out = null;
   if (options.out && options.out !== true) {
     const file = path.resolve(targetDir, String(options.out));
+    // The capsule is compiled from these folders and never replaces what is in them.
+    const sources = ['context', 'briefings'].map((folder) => path.resolve(targetDir, '.aioson', folder));
+    if (sources.some((folder) => isInsideFolder(folder, file))) {
+      return refuse('out_inside_sources', `--out would write among the plan and the PRD it reads (${String(options.out)}). Name a file elsewhere.`);
+    }
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, capsule.capsule, 'utf8');
     out = path.relative(targetDir, file).split(path.sep).join('/');

@@ -9,7 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { planSections, parsePlanPhases } = require('../src/lib/plan-document');
-const { citedPrdRows, phasesInCell, scopeSection, createdSince } = require('../src/lib/phase-capsule');
+const { buildPhaseCapsule, citedIdsOf, citedPrdRows, phasesInCell, scopeSection, createdSince } = require('../src/lib/phase-capsule');
 const { declarationOnLine } = require('../src/lib/duplicate-declarations');
 const { runDevResumeData } = require('../src/commands/dev-resume');
 const { addObservation } = require('../src/lib/observations');
@@ -335,4 +335,101 @@ test('the phase loop tells a fresh Dev to compile the capsule', async () => {
   for (const rel of ['template/.aioson/docs/dev/continuity-recovery.md', '.aioson/docs/dev/continuity-recovery.md']) {
     assert.match(await fs.readFile(path.join(root, rel), 'utf8'), /--capsule/);
   }
+});
+
+test('phase 1 is not 10 or 11, in the phases, the PRD rows and the tables', async (t) => {
+  const root = await project(t, { plan: null, prd: null });
+  const phaseText = (n) => `## Phase ${n} — Step ${n}\n\n- CAP/AC: CAP-${n} (AC-${n})\n- Done when: step ${n} shows.\n`;
+  // Out of order on purpose: a prefix match would land on the first it meets.
+  const plan = [
+    '# Plan',
+    '## Capability Delivery Plan',
+    '',
+    '| CAP | Phase | Files | Verification |',
+    '|---|---|---|---|',
+    '| CAP-1 | 1 | src/one.js | t |',
+    '| CAP-10 | 10 | src/ten.js | t |',
+    '| CAP-11 | 11 | src/eleven.js | t |',
+    '| CAP-both | 1, 10 | src/both.js | t |',
+    '| CAP-range | 2-11 | src/range.js | t |',
+    '',
+    phaseText(10),
+    phaseText(11),
+    phaseText(1),
+    phaseText(2)
+  ].join('\n');
+  const prd = ['# PRD', '## Acceptance Criteria', '', '| AC | CAP | Observable behavior |', '|---|---|---|', ...[1, 2, 10, 11, 100].map((n) => `| AC-${n} | CAP-${n} | behavior ${n} |`), ''].join('\n');
+
+  const one = buildPhaseCapsule({ targetDir: root, slug: SLUG, phaseId: '1', plan, prd });
+  assert.match(one.capsule, /^## Phase 1 — Step 1$/m, 'the phase asked for');
+  assert.doesNotMatch(one.capsule, /^## Phase 1[01] /m);
+  assert.deepEqual(one.acs.cited, ['AC-1']);
+  assert.match(one.capsule, /\| AC-1 \| CAP-1 \| behavior 1 \|/);
+  assert.doesNotMatch(one.capsule, /behavior 1[01]|behavior 100/, 'AC-1 is not AC-10');
+  assert.match(one.capsule, /src\/one\.js/);
+  assert.match(one.capsule, /src\/both\.js/, 'a row that lists the phase');
+  assert.doesNotMatch(one.capsule, /src\/ten\.js|src\/eleven\.js|src\/range\.js/, 'a cell with 10 or 11 is not phase 1');
+
+  const ten = buildPhaseCapsule({ targetDir: root, slug: SLUG, phaseId: '10', plan, prd });
+  assert.match(ten.capsule, /^## Phase 10 — Step 10$/m);
+  assert.match(ten.capsule, /behavior 10 \|/);
+  assert.doesNotMatch(ten.capsule, /behavior 1 \|/);
+  assert.match(ten.capsule, /src\/ten\.js/);
+  assert.match(ten.capsule, /src\/both\.js/);
+  assert.match(ten.capsule, /src\/range\.js/, 'inside a range');
+});
+
+test('a range counts in full, and a phase that names only its capability still gets the criteria', async (t) => {
+  assert.deepEqual([...citedIdsOf('ACs: AC-1 a AC-3')].sort(), ['AC-1', 'AC-2', 'AC-3']);
+  assert.deepEqual([...citedIdsOf('ACs: AC-1 to AC-3')].sort(), ['AC-1', 'AC-2', 'AC-3']);
+  assert.deepEqual([...citedIdsOf('ACs: AC-1..AC-3')].sort(), ['AC-1', 'AC-2', 'AC-3']);
+  assert.deepEqual([...citedIdsOf('ACs: AC-1-AC-3')].sort(), ['AC-1', 'AC-2', 'AC-3']);
+  assert.deepEqual([...citedIdsOf('ACs: AC-x-08 até AC-x-10')].sort(), ['AC-x-08', 'AC-x-09', 'AC-x-10']);
+  assert.deepEqual([...citedIdsOf('AC-3 a AC-1')].sort(), ['AC-1', 'AC-3'], 'backwards is no range');
+  assert.deepEqual([...citedIdsOf('CAP-a a AC-3')].sort(), ['AC-3', 'CAP-a'], 'two different things');
+
+  const root = await project(t, { plan: null, prd: null });
+  const prd = ['# PRD', '## Acceptance Criteria', '', '| AC | CAP | Behavior |', '|---|---|---|', '| AC-1 | CAP-one | first |', '| AC-2 | CAP-one | second |', '| AC-3 | CAP-other | third |', ''].join('\n');
+  const capOnly = buildPhaseCapsule({ targetDir: root, slug: SLUG, phaseId: '1', plan: '## Phase 1 — x\n\n- CAP: CAP-one\n', prd });
+  assert.deepEqual(capOnly.acs.cited, ['AC-1', 'AC-2']);
+  assert.equal(capOnly.acs.via_capability, true);
+  assert.match(capOnly.capsule, /\| AC-2 \| CAP-one \| second \|/);
+  assert.doesNotMatch(capOnly.capsule, /third/);
+  const named = buildPhaseCapsule({ targetDir: root, slug: SLUG, phaseId: '1', plan: '## Phase 1 — x\n\n- CAP/AC: CAP-one (AC-1)\n', prd });
+  assert.deepEqual(named.acs.cited, ['AC-1'], 'a phase that names its criteria keeps its list');
+  assert.equal(named.acs.via_capability, false);
+});
+
+test('the created list survives a space, a user\'s diff prefixes, and text that only looks like code', async (t) => {
+  const root = await project(t, { git: true });
+  run(root, 'checkout', '-q', '-b', 'feature/orders');
+  await write(root, 'src/new file.ts', 'export const WITH_SPACE = 2;\n');
+  await write(root, 'src/(group)/[id]/page.tsx', 'export default function Page() { return null; }\nexport const metadata = { a: 1 };\nexport function pageHelper() { return 1; }\n');
+  await write(root, 'src/template.ts', 'const body = `\nexport const INSIDE_TEMPLATE = 1;\n`;\n/*\nexport const INSIDE_COMMENT = 1;\n*/\nexport const REAL_ONE = body;\n');
+  await write(root, 'src/only-a-comment.ts', '/*\nexport const NOTHING_REAL = 1;\n*/\n');
+  run(root, 'add', '.');
+  run(root, 'commit', '-q', '-m', 'phase');
+  const paths = async () => (await capsule(root)).created.files;
+  const expected = [
+    { path: 'src/(group)/[id]/page.tsx', exports: ['pageHelper'], local: [] },
+    { path: 'src/new file.ts', exports: ['WITH_SPACE'], local: [] },
+    { path: 'src/template.ts', exports: ['REAL_ONE'], local: ['body'] }
+  ];
+  assert.deepEqual(await paths(), expected);
+  run(root, 'config', 'diff.mnemonicPrefix', 'true');
+  assert.deepEqual(await paths(), expected, 'mnemonic prefixes');
+  run(root, 'config', '--unset', 'diff.mnemonicPrefix');
+  run(root, 'config', 'diff.noprefix', 'true');
+  assert.deepEqual(await paths(), expected, 'no prefixes');
+});
+
+test('--out never writes among the plan and the PRD it reads', async (t) => {
+  const root = await project(t);
+  for (const out of [`.aioson/context/implementation-plan-${SLUG}.md`, `.aioson/context/prd-${SLUG}.md`, '.aioson/context/capsule.md', '.aioson/briefings/orders/capsule.md']) {
+    const refused = await capsule(root, { out });
+    assert.equal(refused.ok, false, out);
+    assert.equal(refused.reason, 'out_inside_sources', out);
+  }
+  assert.equal(await fs.readFile(path.join(root, `.aioson/context/implementation-plan-${SLUG}.md`), 'utf8'), PLAN, 'the plan is intact');
+  assert.equal((await capsule(root, { out: '.aioson/runtime/capsule.md' })).ok, true);
 });
