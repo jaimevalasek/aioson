@@ -84,6 +84,8 @@ function buildMarkdown(report) {
   lines.push(`- Target: ${report.target.url} (${report.target.kind}, scope ${report.scope})`);
   lines.push(`- Browser: ${report.browser.label}${report.browser.version ? ` ${report.browser.version}` : ''}`);
   if (report.video) lines.push(`- Video: ${report.video}`);
+  if (report.session_state && report.session_state.loaded) lines.push(`- Session loaded from: ${report.session_state.loaded}`);
+  if (report.session_state && report.session_state.saved) lines.push(`- Session saved to: ${report.session_state.saved}`);
   lines.push(`- Script: ${report.script.path} (sha256 ${report.script.sha256.slice(0, 12)})`);
   lines.push(`- Replay: \`${report.replay}\``);
   const scenario = report.scenario;

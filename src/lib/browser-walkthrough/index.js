@@ -20,7 +20,9 @@
  *   - on failure, snapshot what the page actually showed (aria tree + PNG) so
  *     the next attempt is directed, not guessed;
  *   - stop at login walls — attach to the operator's signed-in browser
- *     (`--cdp`) rather than scripting credentials.
+ *     (`--cdp`) rather than scripting credentials. Only an account seeded on a
+ *     local app logs in from the script (`value_env`), and it may keep the
+ *     session for the next run (`--save-state`, `--state`).
  *
  * Everything browser-facing goes through the Playwright `Page` surface, so a
  * fake page drives the whole runner in tests.
@@ -37,6 +39,7 @@ const targets = require('./targets');
 const steps = require('./steps');
 const reports = require('./report');
 const { createScenario, interpolate, resolveStep, loadItems, scrub } = require('./scenario');
+const { resolveStateFiles, saveSessionState, valueEnvRefusal } = require('./session-state');
 const { clearDir, isContainedFolder } = require('../evidence-artifacts');
 const { isValidSlug } = require('../../dossier/schema');
 
@@ -104,6 +107,8 @@ const defaultJev = {
  * @param {boolean} [options.headed] show the window; captions hold for their `ms` only then
  * @param {number} [options.slowMo] ms between browser actions (overrides the script's `slow_mo`)
  * @param {boolean|string} [options.video] record the run: true → beside the report, a path → there; captions hold as for a headed run
+ * @param {string} [options.state] start in the session saved at this file, under .aioson/runtime/
+ * @param {string} [options.saveState] keep the session of a passing run at this file, under .aioson/runtime/
  * @param {Function} [options.open] browser opener (openBrowser-compatible), injectable
  * @param {object} [options.clock] { now, wait } injectable
  */
@@ -123,6 +128,8 @@ async function runWalkthrough(options) {
     headed = false,
     slowMo = null,
     video = false,
+    state = '',
+    saveState = '',
     cdp = '',
     channel = '',
     config = null,
@@ -177,13 +184,20 @@ async function runWalkthrough(options) {
   const artifactDir = dir ? path.join(dir, script.name) : null;
   const startedAt = new Date(clock.now()).toISOString();
 
+  // Both before any page opens: a refused run must not reach the browser at all.
+  const envRefusal = valueEnvRefusal(script, baseUrl);
+  if (envRefusal) return envRefusal;
+  const stateFiles = resolveStateFiles({ targetDir, state, saveState, cdp, channel, env, config });
+  if (stateFiles.refusal) return stateFiles.refusal;
+  let savedState = '';
+
   // `--slow-mo` wins over the script's `slow_mo`; both only pace a run.
   const pace = slowMo === null || slowMo === undefined ? script.slow_mo : clampSlowMo(slowMo);
   // A recorded run is watched later, so its captions hold as they do for a window.
   const videoTarget = videoPath({ video, targetDir, artifactDir, name: script.name });
   const videoTmp = videoTarget ? await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-video-')) : null;
   const recordVideo = videoTmp ? { recordVideo: { dir: videoTmp, size: script.viewport || DEFAULT_VIDEO_SIZE } } : {};
-  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo });
+  const session = await open({ projectDir: targetDir, cdp, channel, config, headless: !headed, viewport: script.viewport, ...(pace > 0 ? { slowMo: pace } : {}), ...recordVideo, ...(stateFiles.load ? { storageState: stateFiles.load } : {}) });
   if (!session.ok) {
     if (videoTmp) await fs.rm(videoTmp, { recursive: true, force: true }).catch(() => {});
     return { ok: false, error: session.error, detail: session.detail || '', hint: session.hint || '' };
@@ -281,7 +295,11 @@ async function runWalkthrough(options) {
       Object.assign(record, extra);
       executed.push(record);
       if (record.snapshot && record.snapshot.preview) ariaSeen.push(record.snapshot.preview);
-      if (record.warning === 'login_wall') warnings.push(`step ${record.index}: landed on a login wall (${record.url}); attach to the operator's signed-in browser with --cdp instead of scripting credentials`);
+      if (record.warning === 'login_wall') {
+        warnings.push(stateFiles.load
+          ? `step ${record.index}: landed on a login wall (${record.url}); the session saved at ${toRel(targetDir, stateFiles.load)} may have expired, so run the login walkthrough with --save-state again`
+          : `step ${record.index}: landed on a login wall (${record.url}); attach to the operator's signed-in browser with --cdp instead of scripting credentials`);
+      }
       if (record.warning === 'judge_concern') warnings.push(`step ${record.index}: Jev raised a semantic concern (${record.detail}) — review it and tie it to evidence before treating it as a defect`);
       if (!record.ok) {
         // What the page actually showed — the directed-retry input.
@@ -352,6 +370,20 @@ async function runWalkthrough(options) {
       try { loop.url = sanitizeUrl(page.url()); } catch { loop.url = ''; }
       if (!loop.ok && !keepGoing) { stoppedAt = step.index; break; }
     }
+    // Only a passing run: a session left by a failed login would make the next
+    // run fail somewhere that says nothing about the login.
+    if (stateFiles.save) {
+      if (stoppedAt !== null || !executed.every((record) => record.ok)) {
+        warnings.push('session state not saved: the run did not pass');
+      } else {
+        try {
+          await saveSessionState(session, stateFiles.save);
+          savedState = stateFiles.save;
+        } catch (error) {
+          warnings.push(`session state not saved: ${clip(String(error && error.message || error), 200)}`);
+        }
+      }
+    }
   } finally {
     await session.close().catch(() => {});
   }
@@ -374,8 +406,12 @@ async function runWalkthrough(options) {
   if (scope === 'prototype') replayParts.push('--prototype');
   if (cdp) replayParts.push(`--cdp=${cdp}`);
   if (channel) replayParts.push(`--browser=${channel}`);
+  if (stateFiles.load) replayParts.push(`--state=${toRel(targetDir, stateFiles.load)}`);
+  if (stateFiles.save) replayParts.push(`--save-state=${toRel(targetDir, stateFiles.save)}`);
 
-  const report = {
+  // The last pass over everything the report carries: a value the page echoed to
+  // the console, or into text read before it was resolved, leaves here too.
+  const report = scrub({
     schema: SCHEMA,
     name: script.name,
     feature: ownerSlug,
@@ -383,6 +419,7 @@ async function runWalkthrough(options) {
     target: { url: sanitizeUrl(baseUrl || (executed[0] && executed[0].url) || ''), kind: targetKind },
     browser: { mode: session.mode, label: session.label, version: session.version || '' },
     video: videoSaved ? reportPath(targetDir, videoSaved) : '',
+    session_state: { loaded: stateFiles.load ? toRel(targetDir, stateFiles.load) : '', saved: savedState ? toRel(targetDir, savedState) : '' },
     started_at: startedAt,
     finished_at: new Date(clock.now()).toISOString(),
     ok,
@@ -407,7 +444,7 @@ async function runWalkthrough(options) {
     persisted: false,
     report_path: '',
     markdown_path: ''
-  };
+  }, scenario.secrets);
 
   if (dir) {
     const jsonPath = path.join(dir, `${script.name}.json`);

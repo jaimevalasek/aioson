@@ -1,13 +1,13 @@
 ---
 name: browser-walkthrough
 description: Drive the real application in a real browser with a replayable walkthrough script — accessibility-tree-first location, act-then-verify, boundary proof, per-AC/PROM evidence the gates read; paths that start outside the page (webhooks, callbacks) replayed from their entry over fixture cases, with optional Jev judgments; narrated slow-motion demos a person can watch
-agents: [qa, tester, shakedown, refiner, dev, pentester, benchmark]
+agents: [qa, tester, shakedown, briefing, refiner, dev, pentester, benchmark]
 priority: 10
 version: 1.2.0
 modes: [executing]
 task_types: [qa, verification, smoke, e2e, browser, prototype, acceptance]
 load_tier: trigger
-triggers: [browser, chrome, walkthrough, production smoke, real application, click, e2e, playwright, cdp, prototype interaction, login wall, webhook, simulate external system, fixture cases, data-driven, jev judge, end to end simulation, browser demo, watch it happen, narrated walkthrough, slow motion]
+triggers: [browser, chrome, walkthrough, production smoke, real application, click, e2e, playwright, cdp, prototype interaction, login wall, test account, session reuse, webhook, simulate external system, fixture cases, data-driven, jev judge, end to end simulation, browser demo, watch it happen, narrated walkthrough, slow motion]
 paths: [app/**, src/**, pages/**, components/**, .aioson/briefings/**]
 ---
 
@@ -34,7 +34,7 @@ The instrument is `aioson browser:run`: a JSON script of steps the CLI executes 
 3. **Prove state, not toasts, in two checks.** A toast over unchanged state is a failure. First `expect` the result on the screen as the action left it: a header, counter or list that stays stale until the next load is a defect, and a `reload` right after the action hides it. Then `reload` (or navigate) and `expect` the persisted result, or `eval` the real value. The run warns `reload_masks_stale_view` when an action reaches a `reload` or `goto` with no check between them.
 4. **Tag what each step proves.** `"ac": "AC-02"` on a delivery step; `"ac": "PROM-03"` on a prototype step. The report's per-id roll-up is the evidence row. Untagged steps are scaffolding.
 5. **On failure, read what the page showed.** The runner stops at the first failed step and prints the aria snapshot plus a PNG of that moment; fix the target or the product, never the expectation, and replay. `--continue` runs every step when the goal is a full inventory. The artifact folder beside the report holds the latest run only — a replay clears what the previous run left, so a stale failure snapshot never survives a green run. Read the aria snapshot first; open the PNG only when the text cannot explain the failure, because every image read stays in the session's context for the rest of the run.
-6. **Stop at login walls.** A `goto` that lands on `/login`-like routes is flagged. Attach to the operator's signed-in browser with `--cdp` — never script credentials, never read them from chat, config, or source. Secret-looking `fill` targets (`password`, `senha`, `token`, …) are masked in the report.
+6. **Stop at login walls.** A `goto` that lands on `/login`-like routes is flagged. For a real account, attach to the operator's signed-in browser with `--cdp` — never script credentials, never read them from chat, config, or source. The one exception is an account the project seeds for testing, on a local app: see [A test account and a reused session](#a-test-account-and-a-reused-session). Secret-looking `fill` targets (`password`, `senha`, `token`, …) are masked in the report.
 
 Keep walkthroughs under `.aioson/qa/walkthroughs/{slug}/<name>.json` (delivery) or beside the briefing for prototypes; a reusable fragment written once serves the next feature — the same self-healing that turns one session's helper into the project's instrument.
 
@@ -60,7 +60,7 @@ Keep walkthroughs under `.aioson/qa/walkthroughs/{slug}/<name>.json` (delivery) 
 }
 ```
 
-Top-level: `name`, `feature` (slug), `url` or `file` (a local HTML, opened as `file://`), `scope: "prototype"`, `viewport`, `timeout` (ms per step, default 10000), `boundary_wait` (ms, default 3000), `continue`, `snapshot_lines` (default 80, max 400), `vars` (see [Paths that start outside the page](#paths-that-start-outside-the-page)), `slow_mo` (ms between browser actions, max 5000 — see [A run a person watches](#a-run-a-person-watches)). Command flags override: `--url`, `--file`, `--slug`, `--prototype`, `--continue`, `--out=<dir>`, `--no-persist`, `--slow-mo=<ms>`, `--video[=<file>]`.
+Top-level: `name`, `feature` (slug), `url` or `file` (a local HTML, opened as `file://`), `scope: "prototype"`, `viewport`, `timeout` (ms per step, default 10000), `boundary_wait` (ms, default 3000), `continue`, `snapshot_lines` (default 80, max 400), `vars` (see [Paths that start outside the page](#paths-that-start-outside-the-page)), `slow_mo` (ms between browser actions, max 5000 — see [A run a person watches](#a-run-a-person-watches)). Command flags override: `--url`, `--file`, `--slug`, `--prototype`, `--continue`, `--out=<dir>`, `--no-persist`, `--slow-mo=<ms>`, `--video[=<file>]`, `--state=<file>`, `--save-state=<file>`.
 
 ### Targets
 
@@ -84,7 +84,7 @@ Append `>>first`, `>>last`, or `>>nth=2` to pick one of several matches.
 | `goto` | `url` (absolute or relative to the base), `wait_until` |
 | `reload`, `back` | — |
 | `click`, `dblclick`, `hover`, `check`, `uncheck` | `target`, `force` |
-| `fill`, `type` | `target`, `value`, `mask` (force masking in the report) |
+| `fill`, `type` | `target`, `value` or `value_env` (see [A test account and a reused session](#a-test-account-and-a-reused-session)), `mask` (force masking in the report) |
 | `press` | `key` (`Enter`, `Control+S`…), optional `target` |
 | `select` | `target`, `value` |
 | `wait` | one of `ms`, `target` (+`state`), `url`, `text`, `idle: true` |
@@ -130,6 +130,35 @@ Many production paths begin where no user clicks: a WhatsApp provider calls the 
 - **`request`** — the runner, not the page, sends it. The default check is a status below 400; `status` (a code or a list), `contains` (text or `/regex/`), and `json` (`path → value`, a value may be `/regex/`) tighten it. `poll: true` repeats it until the checks pass or the step `timeout` ends — the way to wait for background work. `secret: true` makes the values it saves secrets (a session token from a login request): scrubbed like an env value. Only loopback hosts and the walkthrough's own origin are reachable; `"external": true` reaches another host on purpose. A request that answered is recorded as the derived smoke's trigger and real boundary.
 - **`each`** — one record for the loop and one per child step per item, indexed `{loop}.{item}.{child}` and labelled with `label`; a failing item stops the run like any step (`--continue` runs every item). Keep the fixture in the project — a test set with each case's expected outcome is the best one, because the walkthrough can check the outcome per case.
 - **`judge`** — Jev answers one question about the page (the aria tree of `target`, or the whole page) plus an optional `context`. `noul` passes at `min` (the project's Jev threshold by default), `score` at `min_score`, `choice` when the answer is in `equals` (and above `min_confidence`). Personal data — e-mails and digit runs of eight or more — is masked before sending unless `"pii": "keep"`, which is only for synthetic data. A judgment is a critic, never the authority: it never proves or fails an id, a deterministic step must. `soft: true` turns a failed judgment into a warning to review; without Jev configured the step is skipped, never passed, and fails only with `required: true`. See `.aioson/docs/jev-review.md` for when a semantic verdict becomes a finding.
+
+## A test account and a reused session
+
+Nothing here applies to a real account: that one goes through `--cdp`, with no credential in the script. For an account the project seeds for testing, on a local app, one walkthrough logs in and keeps the session, and the others start inside it:
+
+```json
+{
+  "name": "login-owner",
+  "url": "http://127.0.0.1:4100",
+  "steps": [
+    { "do": "goto", "url": "/login" },
+    { "do": "fill", "target": "label=Email", "value_env": "E2E_OWNER_EMAIL" },
+    { "do": "fill", "target": "label=Password", "value_env": "E2E_OWNER_PASSWORD" },
+    { "do": "click", "target": "role=button[name=\"Sign in\"]" },
+    { "do": "expect", "url": "/dashboard" }
+  ]
+}
+```
+
+```bash
+aioson browser:run . --script=.aioson/qa/walkthroughs/{slug}/login-owner.json --save-state=.aioson/runtime/browser-state/owner.json
+aioson browser:run . --script=.aioson/qa/walkthroughs/{slug}/orders-create.json --slug={slug} --state=.aioson/runtime/browser-state/owner.json
+```
+
+- **`value_env`** names a variable, read from the process environment and then the project `.env`, so the script holds no credential. It works only against a loopback host (`localhost`, `127.0.0.1`, `::1`). A script whose target or literal `goto` reaches another host is refused before any page opens, and a step whose page redirected elsewhere fails with nothing typed. The value needs at least 4 characters. It is masked in the step and scrubbed from the report, the aria artifacts, console samples and errors. A screenshot cannot be scrubbed: keep secrets in password fields.
+- **`--save-state`** keeps the session of a run that passed; a failed run saves nothing and warns. **`--state`** starts the next run inside it. If the session expired, the first `goto` lands on the login wall and is flagged: run the login walkthrough again.
+- A state file holds live session cookies. Both flags accept a file only under `.aioson/runtime/`, which stays out of git, and refuse one that git would track. Never copy it elsewhere.
+- `--cdp`, from the flag, the environment or the project config, refuses both flags: that session is the operator's, and it is never read or replaced.
+- An agent that only needs to see a logged-in screen, such as @briefing looking at the current product, uses this path with a `screenshot` step and never opens a credential source itself. Without a seeded account, ask the owner for a print or to attach with `--cdp`.
 
 ## A run a person watches
 

@@ -243,7 +243,7 @@ module.exports = {
     help_qa_scan:
       'aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] [--html] [--json] [--locale=fr]',
     help_browser_run:
-      'aioson browser:run [path] --script=<walkthrough.json> [--url=<url-app>|--file=<html>] [--slug=<feature>] [--prototype] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--continue] [--out=<dir>] [--no-persist] [--json] [--locale=fr]',
+      'aioson browser:run [path] --script=<walkthrough.json> [--url=<url-app>|--file=<html>] [--slug=<feature>] [--prototype] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--state=<file>] [--save-state=<file>] [--continue] [--out=<dir>] [--no-persist] [--json] [--locale=fr]',
     help_browser_snapshot:
       'aioson browser:snapshot [path] --url=<url-page>|--file=<html> [--target=<locator>] [--max-lines=80] [--cdp=<endpoint>] [--browser=chrome|msedge|chromium] [--headed] [--json] [--locale=fr]',
     help_qa_report:

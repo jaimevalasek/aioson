@@ -11,7 +11,7 @@ const path = require('node:path');
 const { clampLines, expectKind, sanitizeUrl, maskedValue, clip, until, LOGIN_WALL_RE, MAX_HOLD_MS } = require('./script');
 const { asMatcher, locatorFor, parseBoundary, boundaryHit } = require('./targets');
 const { stripHiddenChars } = require('../llm-content-sanitizer');
-const { resolveStep, scrub, runRequest, runJudge } = require('./scenario');
+const { isLoopbackUrl, resolveStep, scrub, secretEnvValue, runRequest, runJudge } = require('./scenario');
 
 // ---------------------------------------------------------------------------
 // Step execution
@@ -186,6 +186,16 @@ function renderCaption({ text, position }) {
   return 'shown';
 }
 
+// Checked on the page about to receive the value, not only on the script's target:
+// a local app can redirect to an external sign-in.
+function typedValue(step, scenario, page) {
+  if (step.value_env === undefined) return String(step.value);
+  let here = '';
+  try { here = page.url(); } catch { here = ''; }
+  if (!isLoopbackUrl(here)) throw new Error(`value_env refused and nothing was typed: the page is on ${sanitizeUrl(here) || 'no address'}, not on a loopback host`);
+  return secretEnvValue(step.value_env, scenario);
+}
+
 async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, artifactPrefix, network, clock, writeFile, scenario = null, scope = {}, index = rawStep.index, watched = false }) {
   const record = {
     index,
@@ -247,13 +257,13 @@ async function executeStep({ page, step: rawStep, script, baseUrl, artifactDir, 
       }
       case 'fill': {
         const locator = locatorFor(page, step.target);
-        await locator.fill(String(step.value), { timeout });
+        await locator.fill(typedValue(step, scenario, page), { timeout });
         record.detail = `filled ${step.target} with ${maskedValue(step) ? '(masked)' : `"${clip(step.value, 80)}"`}`;
         break;
       }
       case 'type': {
         const locator = locatorFor(page, step.target);
-        await locator.pressSequentially(String(step.value), { timeout, delay: Number(step.delay) || 0 });
+        await locator.pressSequentially(typedValue(step, scenario, page), { timeout, delay: Number(step.delay) || 0 });
         record.detail = `typed into ${step.target} ${maskedValue(step) ? '(masked)' : `"${clip(step.value, 80)}"`}`;
         break;
       }

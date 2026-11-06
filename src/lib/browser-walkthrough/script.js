@@ -62,7 +62,12 @@ function normalizeSteps(steps, errors, nested, label) {
     if (['click', 'dblclick', 'hover', 'fill', 'type', 'select', 'check', 'uncheck'].includes(action) && !step.target) {
       errors.push(`${where}: ${action} needs \`target\``);
     }
-    if (['fill', 'type', 'select'].includes(action) && step.value === undefined) errors.push(`${where}: ${action} needs \`value\``);
+    if (['fill', 'type', 'select'].includes(action) && step.value === undefined && step.value_env === undefined) errors.push(`${where}: ${action} needs \`value\``);
+    if (step.value_env !== undefined) {
+      if (!['fill', 'type'].includes(action)) errors.push(`${where}: \`value_env\` only works on fill and type`);
+      if (step.value !== undefined) errors.push(`${where}: use \`value\` or \`value_env\`, never both`);
+      if (typeof step.value_env !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(step.value_env)) errors.push(`${where}: \`value_env\` must name an environment variable`);
+    }
     if (action === 'press' && !step.key) errors.push(`${where}: press needs \`key\``);
     if (action === 'eval' && !step.expression) errors.push(`${where}: eval needs \`expression\``);
     if (action === 'expect' && !expectKind(step)) errors.push(`${where}: expect needs one of visible|hidden|text|contains|value|url|title|count|min|enabled|disabled|checked`);
@@ -225,7 +230,7 @@ function sanitizeUrl(value) {
 }
 
 function maskedValue(step) {
-  if (step.mask === true) return true;
+  if (step.mask === true || step.value_env !== undefined) return true;
   return SENSITIVE_TARGET_RE.test(String(step.target || '')) || SENSITIVE_TARGET_RE.test(String(step.note || ''));
 }
 

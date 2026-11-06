@@ -34,6 +34,12 @@ function videoOption(options) {
   return raw === true ? true : String(raw);
 }
 
+// `--state` alone arrives as `true`: a blank file lets the runner name what is missing.
+function stateOption(raw) {
+  if (raw === undefined || raw === null || raw === false) return '';
+  return raw === true ? ' ' : String(raw);
+}
+
 // The CLI logger has log/error only; warnings go to stderr without failing.
 function warn(logger, message) {
   if (typeof logger.warn === 'function') logger.warn(message);
@@ -48,7 +54,7 @@ function failure(logger, t, output, message) {
 
 /**
  * `aioson browser:run [path] --script=<walkthrough.json> [--url=] [--file=] [--slug=] [--prototype]
- *   [--cdp=] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--continue] [--out=<dir>] [--no-persist] [--json]`
+ *   [--cdp=] [--browser=chrome|msedge|chromium] [--headed] [--slow-mo=<ms>] [--video[=<file>]] [--state=<file>] [--save-state=<file>] [--continue] [--out=<dir>] [--no-persist] [--json]`
  */
 async function runBrowserRun({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
@@ -78,6 +84,8 @@ async function runBrowserRun({ args, options = {}, logger, t }) {
     config,
     slowMo: slowMoOption(options),
     video: videoOption(options),
+    state: stateOption(options.state),
+    saveState: stateOption(options['save-state'] ?? options.saveState),
     ...browserOptions(options)
   });
 

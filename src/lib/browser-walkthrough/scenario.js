@@ -287,6 +287,31 @@ function resolveRequestUrl(value, base) {
   try { return new URL(text, base).toString(); } catch { return text; }
 }
 
+/** `new URL` reads the real host, so `http://localhost@evil.test` is not local. */
+function isLoopbackUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return /^https?:$/.test(parsed.protocol) && LOOPBACK_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The value of a `value_env` step. Too short to scrub means it could not be kept
+ * out of the report, so it is refused instead of typed.
+ */
+function secretEnvValue(name, scenario) {
+  let value;
+  try {
+    value = envValue(name, scenario);
+  } catch {
+    throw new Error(`value_env ${name} is not set in the environment or the project .env`);
+  }
+  if (value.length < MIN_SECRET_LENGTH) throw new Error(`value_env ${name} is shorter than ${MIN_SECRET_LENGTH} characters, too short to keep out of the report`);
+  return value;
+}
+
 function refusedHost(url, baseUrl, external) {
   let parsed;
   try { parsed = new URL(url); } catch { return `request url is not absolute: ${sanitizeUrl(url)} (give an absolute url or a script \`url\`)`; }
@@ -528,6 +553,8 @@ module.exports = {
   createScenario,
   getPath,
   interpolate,
+  isLoopbackUrl,
+  secretEnvValue,
   resolveStep,
   scrub,
   maskPersonalData,

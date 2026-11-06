@@ -221,10 +221,12 @@ function modeLabel(mode, details = {}) {
  *
  * `recordVideo` ({ dir, size }) records a launched browser's pages; an attached
  * (CDP) session never records — the operator's browser is not ours to film.
+ * `storageState` (a file) starts a launched browser in a saved session; an attached
+ * one keeps its own.
  *
  * @returns {Promise<{ok: boolean, mode?: string, label?: string, browser?: object, context?: object, newPage?: Function, close?: Function, error?: string, hint?: string}>}
  */
-async function openBrowser({ projectDir = null, playwright = undefined, env = process.env, config = null, cdp = '', channel = '', headless = true, viewport = null, slowMo = 0, recordVideo = null, exists = fs.existsSync, fetchJson = defaultFetchJson, platform = process.platform } = {}) {
+async function openBrowser({ projectDir = null, playwright = undefined, env = process.env, config = null, cdp = '', channel = '', headless = true, viewport = null, slowMo = 0, recordVideo = null, storageState = null, exists = fs.existsSync, fetchJson = defaultFetchJson, platform = process.platform } = {}) {
   const pw = playwright === undefined ? loadPlaywright([projectDir]) : playwright;
   if (!pw) {
     return { ok: false, error: 'playwright_not_installed', hint: 'npm install -D playwright (the project) or run from a tree that has it' };
@@ -287,7 +289,7 @@ async function openBrowser({ projectDir = null, playwright = undefined, env = pr
   } catch (error) {
     return { ok: false, error: 'browser_launch_failed', detail: String(error && error.message || error), mode, hint: mode === 'bundled' ? 'npx playwright install chromium' : `Playwright could not launch channel=${mode}` };
   }
-  const context = await browser.newContext({ ...(viewport ? { viewport } : {}), ...(recordVideo ? { recordVideo } : {}) });
+  const context = await browser.newContext({ ...(viewport ? { viewport } : {}), ...(recordVideo ? { recordVideo } : {}), ...(storageState ? { storageState } : {}) });
   return {
     ok: true,
     mode,

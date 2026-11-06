@@ -114,3 +114,38 @@ test('the planner reference and the phase loop say a dev server is not the produ
     assert.match(await fs.readFile(path.join(root, rel), 'utf8'), /A dev server is not the production path/);
   }
 });
+
+test('runtime_without_walkthrough names the phases whose Runtime line points at no walkthrough', () => {
+  const without = (plan) => lintPlanRuntime(plan).warnings.filter((warning) => warning.code === 'runtime_without_walkthrough');
+  const plan = (...lines) => lines.join('\n');
+  const phaseAt = (n, runtime) => `## Phase ${n} — Step\n- Verification: node --test\n- Runtime: ${runtime}\n- Done when: it shows on screen.\n`;
+
+  const found = without(plan(phaseAt(1, '`npm run smoke -- --flow=orders`'), phaseAt(2, 'run the checkout flow by hand'), phaseAt(3, 'aioson browser:run . --script=.aioson/qa/walkthroughs/orders/list.json')));
+  assert.equal(found.length, 1, 'one decision, one warning');
+  assert.equal(found[0].count, 2);
+  assert.deepEqual(found[0].phases, [1, 2]);
+  assert.equal(found[0].line, 3);
+  assert.match(found[0].message, /2 `Runtime` line\(s\) \(Phase 1, 2\) name no walkthrough/);
+  assert.match(found[0].message, /no walkthrough: <reason>/);
+
+  assert.deepEqual(without(phaseAt(1, 'aioson browser:run . --script=x.json')), []);
+  assert.deepEqual(without(phaseAt(1, 'replay .aioson/qa/walkthroughs/orders/list.json on the served build')), []);
+  assert.deepEqual(without(phaseAt(1, '`node scripts/measure-paint.js` (no walkthrough: it reads paint timing)')), [], 'a stated reason answers it');
+  assert.deepEqual(without(phaseAt(1, 'no browser in this phase')), []);
+  assert.deepEqual(without(phaseAt(1, 'sem navegador nesta fase')), []);
+  assert.deepEqual(without('## Phase 1 — Step\n- Verification: node --test\n'), [], 'no Runtime line, nothing to name');
+  assert.deepEqual(without(`## Rules\n\n- Every \`Runtime\` line is a walkthrough under \`.aioson/qa/walkthroughs/orders/\`.\n\n${phaseAt(1, 'the orders flow')}`), [], 'a plan-wide rule answers for its lines');
+
+  const nested = without('## Phase 1 — Step\n- Runtime:\n  - aioson browser:run . --script=x.json\n');
+  assert.deepEqual(nested, [], 'the continuation is part of the field');
+});
+
+test('Gate C carries runtime_without_walkthrough as an advisory too', async (t) => {
+  const silent = { log() {}, error() {} };
+  const root = await project(t, '\n## Phase 1 — Save\n- Verification: node --test\n- Runtime: `node scripts/flow.js`\n- Done when: the saved result shows on screen.\n');
+  const result = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger: silent });
+  assert.equal(result.result, 'PASS');
+  const evidence = result.evidence.find((item) => item.type === 'plan_runtime');
+  assert.equal(evidence.ok, true);
+  assert.deepEqual(evidence.warnings.map((warning) => warning.code), ['runtime_without_walkthrough']);
+});
