@@ -214,3 +214,74 @@ test('a walkthrough is asked only of a line that shows a browser', () => {
   const namingOnly = ['## Rules', '', '- `Runtime` lines never use browser:run because it stops at login', '', smokeOnly].join('\n');
   assert.equal(without(namingOnly).length, 1);
 });
+
+test('a line built to backtrack ends in linear time', () => {
+  const lines = {
+    flags: `npm ${'--flag '.repeat(30000)}!`,
+    'flags and values': `npm ${'--flag value '.repeat(20000)}!`,
+    'repeated runners': 'npm '.repeat(50000),
+    'repeated servers': 'next dev '.repeat(25000),
+    'repeated negations': 'stop next dev '.repeat(15000),
+    'repeated reload': 'uvicorn '.repeat(25000),
+    'repeated rails': 'rails s '.repeat(25000),
+    'repeated release': 'dotnet run '.repeat(20000),
+    'a blank run': `never${' '.repeat(200000)}next dev`,
+    'a path': `node ${'a/'.repeat(100000)}`
+  };
+  for (const [label, line] of Object.entries(lines)) {
+    const started = Date.now();
+    lintPlanRuntime(phase(`- Runtime: ${line}`));
+    assert.ok(Date.now() - started < 1000, `${label} took ${Date.now() - started} ms`);
+  }
+});
+
+test('naming a dev server to depend on it is not forbidding it', () => {
+  for (const line of [
+    '`next dev` must be up: the flow fails without `next dev` running, browser:run',
+    'the flow fails without `next dev` running, browser:run',
+    'o fluxo quebra sem `next dev` no ar, browser:run'
+  ]) assert.equal(onDev(phase(`- Runtime: ${line}`)).length, 1, line);
+});
+
+test('production named to refuse it, or in passing, proves nothing', () => {
+  for (const lines of [
+    ['- Runtime: never `next start`; browser:run on `next dev`'],
+    ['- Runtime: não usar `next start`; browser:run em `next dev`'],
+    ['- Runtime: `next start` is stopped, browser:run on `next dev`'],
+    ['- Runtime: `next dev` behind nginx, browser:run'],
+    ['- Runtime: `next dev`, because the built app is slow to rebuild; browser:run'],
+    ['- Runtime: `next dev` + browser:run', '- Verification: unit tests, no need for `npm start`']
+  ]) assert.equal(onDev(phase(...lines)).length, 1, lines.join(' / '));
+});
+
+test('a production proof still answers for the phase', () => {
+  for (const lines of [
+    ['- Runtime: `next dev` for the loop, then browser:run on the built app'],
+    ['- Runtime: `next dev`, then the production build + browser:run'],
+    ['- Runtime: `npm run start:prod` + browser:run; `next dev` while iterating'],
+    ['- Runtime: `vite build`, served by nginx + browser:run', '- Verification: `vite` while iterating']
+  ]) assert.deepEqual(onDev(phase(...lines)), [], lines.join(' / '));
+});
+
+test('a script named for its dev mode is a dev server', () => {
+  for (const [text, command] of [
+    ['`npm run start:dev`', 'npm run start:dev'],
+    ['`pnpm start:debug`', 'pnpm start:debug'],
+    ['`yarn start:watch`', 'yarn start:watch'],
+    ['`node --watch server.js`', 'node --watch'],
+    ['`bun run --watch server.ts`', 'bun run --watch']
+  ]) {
+    assert.equal(devServerCommand(text), command, text);
+    assert.equal(onDev(phase(`- Runtime: ${text}, browser:run`)).length, 1, text);
+  }
+});
+
+test('a script name shows a browser, and a path or a flag does not', () => {
+  const asked = (line) => lintPlanRuntime(phase(`- Runtime: ${line}`)).warnings.some((warning) => warning.code === 'runtime_without_walkthrough');
+  for (const line of ['`node scripts/smoke-orders.mjs`', '`npm run smoke:orders`', '`npm run smoke`', '`npm run test:e2e`', '`npm run e2e`']) {
+    assert.equal(asked(line), true, line);
+  }
+  for (const line of ['`curl -f -X POST 127.0.0.1:8080/login`', '`node bin/tool.js --form=csv`', '`pytest tests/e2e`', 'smoke test of `node bin/tool.js --help`', '`pytest` covers the paging module']) {
+    assert.equal(asked(line), false, line);
+  }
+});
