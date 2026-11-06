@@ -16,6 +16,7 @@ const path = require('node:path');
 
 const { normalizeScript, runWalkthrough } = require('../src/lib/browser-walkthrough');
 const { probeBrowsers } = require('../src/lib/browser-session');
+const { runBrowserRun } = require('../src/commands/browser-run');
 
 const TYPED_VALUE = ['seeded', 'real', 'value', '9731'].join('-');
 const STATE = '.aioson/runtime/browser-state/owner.json';
@@ -204,4 +205,51 @@ test('real browser: what the page does with the value stays out of the report', 
   await walk(root);
   assert.ok(seen.length >= 3);
   for (const text of seen) for (const form of forms) assert.equal(text.includes(form), false, form);
+});
+
+test('real browser: browser:run from script files, the way a phase runs it', async (t) => {
+  if (!(await available())) return t.skip('no browser or no second loopback address here');
+  const root = await project(t);
+  const app = await servers();
+  t.after(app.close);
+  const previous = process.env.E2E_PASSWORD;
+  process.env.E2E_PASSWORD = TYPED_VALUE;
+  t.after(() => {
+    if (previous === undefined) delete process.env.E2E_PASSWORD;
+    else process.env.E2E_PASSWORD = previous;
+  });
+  const dir = path.join(root, '.aioson/qa/walkthroughs/orders');
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(dir, 'login.json'), JSON.stringify({ name: 'login', feature: 'orders', timeout: 4000, steps: [
+    { do: 'goto', url: '/login' },
+    { do: 'fill', target: 'label=Password', value_env: 'E2E_PASSWORD' },
+    { do: 'click', target: 'role=button[name="Sign in"]' },
+    { do: 'expect', url: '/orders' }
+  ] }));
+  await fs.writeFile(path.join(dir, 'orders.json'), JSON.stringify({ name: 'orders', feature: 'orders', timeout: 4000, steps: [
+    { do: 'goto', url: '/orders' },
+    { do: 'click', target: 'role=button[name="New order"]' },
+    { do: 'expect', text: '1 order', ac: 'AC-01' },
+    { do: 'reload' },
+    { do: 'expect', text: '0 orders', ac: 'AC-02' }
+  ] }));
+  const lines = [];
+  const logger = { log: (line) => lines.push(String(line)), error: (line) => lines.push(String(line)) };
+  const translate = (key, values = {}) => `${key} ${JSON.stringify(values)}`;
+  const script = (name) => `.aioson/qa/walkthroughs/orders/${name}.json`;
+
+  const login = await runBrowserRun({ args: [root], options: { script: script('login'), url: app.url, 'save-state': STATE }, logger, t: translate });
+  assert.equal(login.ok, true, lines.join('\n'));
+  assert.equal(login.persisted, true);
+  assert.equal(login.session_state.saved, STATE);
+  assert.match(login.replay, /--save-state=\.aioson\/runtime\/browser-state\/owner\.json/);
+
+  const reused = await runBrowserRun({ args: [root], options: { script: script('orders'), url: app.url, state: STATE }, logger, t: translate });
+  assert.equal(reused.ok, true, lines.join('\n'));
+  assert.deepEqual(Object.keys(reused.ids).sort(), ['AC-01', 'AC-02']);
+  assert.equal(reused.report_path, '.aioson/context/features/orders/browser/orders.json');
+
+  assert.equal(lines.join('\n').includes(TYPED_VALUE), false, 'nothing the command printed holds the value');
+  const written = await fs.readFile(path.join(root, login.report_path), 'utf8');
+  assert.equal(written.includes(TYPED_VALUE), false);
 });

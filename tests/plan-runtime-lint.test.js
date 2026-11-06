@@ -175,6 +175,7 @@ test('a phase answers for itself with a production run on any of its lines', () 
   // A plan-wide rule answers only for itself, whatever the phases or the evidence say.
   const rule = ['## Repository evidence', '- Production entry point: `npm run build && npm start`', '', '## Rules', '- **App up (`Runtime` lines).** `next dev` in the background.', '', '## Phase 21 — End', '- Runtime: `next start` and the smoke', ''].join('\n');
   assert.deepEqual(onDev(rule).map((warning) => warning.line), [5]);
+  assert.deepEqual(onDev('## Rules\n- **App up (`Runtime` lines).** `next dev` to iterate, and `next start` for every flow before a phase closes.\n'), [], 'a rule can answer in its own text');
 });
 
 test('prose about the runtime is not a rule about the Runtime lines', () => {
