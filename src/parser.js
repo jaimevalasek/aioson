@@ -109,7 +109,9 @@ const BOOLEAN_FLAGS = new Set([
   'enable', 'disable', 'allow-secondary',
   // `--resume` alone means "resume last"; `--resume=<id>` carries a value
   // and is handled by the `=` branch below.
-  'resume'
+  'resume',
+  // dev:resume-data — pure boolean; `--capsule .` must not swallow the path.
+  'capsule'
 ]);
 
 // Booleans whose value, when given, is a number: `live:status --watch 3` and
