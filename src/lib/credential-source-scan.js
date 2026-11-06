@@ -24,6 +24,8 @@ const MAX_TEXT = 200 * 1024;
 const MAX_LINE = 4000;
 const MAX_DEPTH = 6;
 const MAX_ARITHMETIC = 500;
+// How far into a command the shell it feeds can sit: `sudo -u x docker exec -i app sh <<EOF`.
+const MAX_RUNNER_WORDS = 8;
 
 // A template holds no secret, and `.envrc` is another file. A backslash is a folder only
 // after a path character: `\.env`, `^\.env` and `.*\.env` are patterns.
@@ -49,7 +51,7 @@ const SHELL_BODY = /^(?:-[a-z]*c|\/c|-command)$/i;
 const DOUBLE_QUOTE_ESCAPES = new Set(['"', '\\', '$', '`']);
 
 // `${ENV_FILE:-.env}` names the file when nothing else does.
-const isEnvPath = (word) => typeof word === 'string' && ENV_PATH.test(word.replace(/\$\{\w+:?-([^}]*)\}/g, '$1'));
+const isEnvPath = (word) => typeof word === 'string' && ENV_PATH.test(word.replace(/\$\{\w+:?-([^}]{0,500})\}/g, '$1'));
 const runsItsInput = (word) => SHELLS.has(baseName(word)) || baseName(word) === 'ssh';
 
 function append(state, text, quoted = false) {
@@ -64,7 +66,7 @@ function endWord(state) {
   state.word = null;
   state.redirect = null;
   if (redirect === 'input') state.inputs.push(word.text);
-  else if (redirect === 'heredoc') state.heredocs.push({ ...word, feedsShell: state.words.some(runsItsInput) });
+  else if (redirect === 'heredoc') state.heredocs.push({ ...word, feedsShell: state.words.slice(0, MAX_RUNNER_WORDS).some(runsItsInput) });
   else if (redirect !== 'skip') state.words.push(word.text);
 }
 

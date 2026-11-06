@@ -131,6 +131,7 @@ test('a shell command that reads a credential source is recognized', () => {
     'cat .env.${NODE_ENV}',
     'ssh prod <<\'EOF\'\ncat .env\nEOF',
     'bash <<EOF\ncat .env\nEOF',
+    'sudo -u deploy docker exec -i app sh <<EOF\ncat .env\nEOF',
     'sudo bash <<\'EOF\'\ncat .env\nEOF',
     'cat C:\\\\app\\\\.env',
     'wsl cat .env',
@@ -236,6 +237,8 @@ test('input built to be slow ends quickly', () => {
   readsCredentialSource(`.env ${'(('.repeat(90000)}`);
   readsCredentialSource(`.env ${'sudo '.repeat(40000)} x`);
   readsCredentialSource(`${'bash <<A\n'.repeat(20000)}.env`);
+  readsCredentialSource(`.env\ncat ${'a '.repeat(10000)}${'<<A '.repeat(10000)}`);
+  readsCredentialSource(`cat ${'${a:-'.repeat(40000)} .env`);
   readsCredentialSource(`.env ${'cat <<A\n$('.repeat(20000)}`);
   readsCredentialSource(`.env ${'${a'.repeat(60000)}`);
   assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);

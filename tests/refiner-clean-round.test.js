@@ -295,6 +295,15 @@ test('bookkeeping follows a decision, a line for a decision, and keeps every pro
   rewrite(sec(onlyAdded, 'sources'), `${sec(onlyAdded, 'sources').current_text}\n- One more line.`);
   assert.deepEqual(judge(onlyAdded).reasons, [{ code: 'text_outside_findings', ids: ['sources'] }], 'with no decision there is nothing to keep');
 
+  const reordered = cleanFeedback();
+  reordered.findings = [];
+  for (const section of reordered.sections) {
+    section.status = 'unchanged';
+    section.current_text = section.original_text;
+  }
+  rewrite(sec(reordered, 'open-questions'), '- Question three\n- Question two\n- Question one');
+  assert.deepEqual(judge(reordered).reasons, [{ code: 'text_outside_findings', ids: ['open-questions'] }], 'a new order loses no line, and nobody chose it');
+
   const twoLost = cleanFeedback();
   rewrite(sec(twoLost, 'open-questions'), '- Question three\n- Closed by the decisions.');
   assert.equal(judge(twoLost).required, false, 'two decisions close two questions');
