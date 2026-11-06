@@ -382,6 +382,11 @@ test('a large plan is named to the owner whatever the choice: it never blocks, a
   assert.deepEqual(named.large.reasons, ['phases']);
   assert.match(named.message, /The plan for "orders" has 8 phase\(s\)/);
   const wider = Array.from({ length: 8 }, (_, i) => files(`src/p${i + 1}`, 2));
+  const wideParallel = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ lanes: true, parallel: true, phases: wider }) });
+  const healthy = await inspectExecutionGate(wideParallel, SLUG, 'planner');
+  assert.equal(healthy.mode, 'orchestrated');
+  assert.deepEqual(healthy.large.reasons, ['phases'], 'a healthy orchestrated plan is still a long one');
+  assert.match(healthy.message, /^\[Execution Scale\] The plan for "orders" has 8 phase\(s\)/);
   const serialLarge = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ lanes: true, phases: wider }) });
   const both2 = await inspectExecutionGate(serialLarge, SLUG, 'planner');
   assert.match(both2.message, /is orchestrated but serial by construction/);
