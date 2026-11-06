@@ -74,9 +74,15 @@ function countLogicLines(lines, { hashComments = false } = {}) {
   return count;
 }
 
+// A literal this long is not one, and a blank run this long has nothing to say about
+// the slash after it. The bounds keep a line of `(/[` or `/ / /` from reading the whole
+// line once per slash.
+const MAX_REGEX_LITERAL = 2000;
+
 /** A slash starts a regex literal when the previous significant char cannot end an operand. */
 function regexCanStart(out) {
-  for (let j = out.length - 1; j >= 0; j -= 1) {
+  const stop = Math.max(0, out.length - MAX_REGEX_LITERAL);
+  for (let j = out.length - 1; j >= stop; j -= 1) {
     const c = out[j];
     if (c === ' ' || c === '\t' || c === '\n') continue;
     if (/[\w$)\]]/.test(c)) {
@@ -138,14 +144,15 @@ function neutralizeBraceCode(text) {
       // escapes and character classes, so `/[{}]/` never unbalances a brace
       let k = i + 1;
       let inClass = false;
-      while (k < text.length && text[k] !== '\n') {
+      const limit = Math.min(text.length, i + MAX_REGEX_LITERAL);
+      while (k < limit && text[k] !== '\n') {
         if (text[k] === '\\') { k += 2; continue; }
         if (inClass) { if (text[k] === ']') inClass = false; k += 1; continue; }
         if (text[k] === '[') { inClass = true; k += 1; continue; }
         if (text[k] === '/') break;
         k += 1;
       }
-      if (k < text.length && text[k] === '/') {
+      if (k < limit && text[k] === '/') {
         for (let b = i; b <= k; b += 1) out.push(' ');
         i = k + 1;
         continue;

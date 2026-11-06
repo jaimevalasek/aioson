@@ -392,3 +392,34 @@ test('agent:epilogue tells the Dev about a LOW copy, and does not fail for it', 
   assert.equal(step.ok, true);
   assert.match(step.reason, /2 LOW worth a second look/);
 });
+
+test('a line or a file built to backtrack stays linear, and real code is read whole', () => {
+  const rep = (text, size = 400000) => text.repeat(Math.ceil(size / text.length));
+  const inputs = {
+    'a.js': [`const A = ${rep('(/[')};\n`, `const A = ${rep('/ ')};\n`, `function a() { return \`${rep('${')}\`; }\n`, rep('function a(\n'), rep('function a<\n'), rep('const A = {\n'), rep('class A\n'), `const A =${rep(' ')}1;\n`],
+    'a.py': [`def a(${rep('(')}\n`, rep('def a(\n'), `A = ${rep('[')}\n`]
+  };
+  for (const [rel, cases] of Object.entries(inputs)) {
+    for (const text of cases) {
+      const started = Date.now();
+      extractDeclarations(rel, text);
+      assert.ok(Date.now() - started < 4000, `${rel} ${JSON.stringify(text.slice(0, 16))} took ${Date.now() - started} ms`);
+    }
+  }
+  const count = 5000;
+  const real = Array.from({ length: count }, (_, i) => `export function f${i}(a: string): string {\n  return a + ${i};\n}\n\nexport const C${i} = { a: ${i} };\n`).join('\n');
+  assert.equal(extractDeclarations('a.ts', real).length, count * 2, 'the budget never touches a balanced file');
+});
+
+test('a template reads what is inside its ${}, and not the $ of the opener', () => {
+  const copies = (one, two) => findDuplicateDeclarations({
+    targets: [{ rel: 'src/a.js', lines: one.split('\n') }],
+    treePaths: ['src/a.js', 'src/b.js'],
+    read: () => two
+  }).length;
+  const helper = 'const $ = (id) => document.getElementById(id);';
+  const body = 'function label(x) {\n  return `${x}!`;\n}';
+  assert.equal(copies(`${helper}\n${body}`, body), 1);
+  const reads = 'const prefix = compute();\nfunction label(x) {\n  return `${prefix}${x}`;\n}';
+  assert.equal(copies(reads, 'const prefix = other();\nfunction label(x) {\n  return `${prefix}${x}`;\n}'), 0);
+});
