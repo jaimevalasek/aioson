@@ -18,7 +18,7 @@ The **language family**, the **name** and the **normalized body** all match. Nor
 
 A same-name pair with different bodies is not a copy. That is what keeps `GET`, `Page` and a local `format` out of the report.
 
-**Known limit:** it also means a near-copy goes unreported, on purpose. A `useLicenseDate` that one phase rewrote with `useMemo` around the same expression is a different body, and so is a `byName` written once to sort a list and once as a comparator. Both were real duplicates a QA found by hand. Read the neighbors before writing a helper: the phase capsule lists them.
+**Known limit:** it also means a near-copy goes unreported, on purpose. A hook that one phase rewrote with `useMemo` around the same expression is a different body, and so is a sort helper written once to sort a list and once as a comparator. Both were real duplicates a QA found by hand. Read the neighbors before writing a helper: the phase capsule lists them.
 
 Read lexically and build-free for JS/TS, Python, Go, Rust, PHP and Ruby: functions and constants in every language, classes in JS/TS, Python, PHP and Ruby. JS and TS are one family; no other language is compared across.
 

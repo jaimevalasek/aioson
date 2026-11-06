@@ -370,8 +370,8 @@ test('the known limit is written where a reader meets it', async () => {
   }), []);
   for (const rel of ['template/.aioson/docs/quality/duplicate-declarations.md', '.aioson/docs/quality/duplicate-declarations.md', '.aioson/learnings/gotchas/large-plan-ran-without-a-measure.md']) {
     const text = await fs.readFile(path.join(repo, rel), 'utf8');
-    assert.match(text, /useLicenseDate/, rel);
-    assert.match(text, /byName/, rel);
+    assert.match(text, /useMemo/, rel);
+    assert.match(text, /compara(tor|dor)/, rel);
   }
 });
 

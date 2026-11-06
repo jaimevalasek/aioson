@@ -13,8 +13,8 @@
  * same-name pair with different bodies is not reported, which is what keeps `GET`,
  * `Page` and a local `format` out of the report. It also means a near-copy goes
  * unreported, and that is the known limit of this check: one helper rewritten with
- * `useMemo` around the same expression, or `byName` written once to sort a list and
- * once as a comparator, are different bodies.
+ * `useMemo` around the same expression, or a sort helper written once to sort a list
+ * and once as a comparator, are different bodies.
  *
  * For a function the body is the block, so a signature annotated differently
  * (`value: RawParam` and `value: string | string[]`) does not hide a copy. What the
