@@ -48,7 +48,7 @@ test('runtime_on_dev_server fires on the lines that set the proof, and only with
   assert.equal(warning.phase, null);
 
   const nested = onDev(phase('- Runtime:', '  - start `next dev`', '  - run the flow'))[0];
-  assert.equal(nested.line, 4, 'the continuation of a field belongs to the field');
+  assert.equal(nested.line, 3, 'the continuation of a field belongs to the field');
   assert.equal(nested.phase, 1);
   assert.equal(onDev('## Runtime proof\n\nUse `npm run dev` for every flow.\n\n## Other\n\nUse `npm run dev` to read the docs.\n').length, 1, 'a Runtime section ends at the next heading');
 
@@ -148,4 +148,68 @@ test('Gate C carries runtime_without_walkthrough as an advisory too', async (t) 
   const evidence = result.evidence.find((item) => item.type === 'plan_runtime');
   assert.equal(evidence.ok, true);
   assert.deepEqual(evidence.warnings.map((warning) => warning.code), ['runtime_without_walkthrough']);
+});
+
+test('a sentence that forbids the server does not charge it', () => {
+  for (const line of [
+    'do not use `next dev` here; browser:run against the built app',
+    'never `next dev`; browser:run against the built app',
+    'não usar `next dev`; browser:run contra o build servido',
+    'nunca em `next dev`; browser:run contra o app compilado',
+    'browser:run on the built app instead of `next dev`',
+    'browser:run; `next dev` must not be running',
+    'Stop `next dev` before the build, then browser:run on the build'
+  ]) assert.deepEqual(onDev(phase(`- Runtime: ${line}`)), [], line);
+  // Near the word is not enough: this one uses the server.
+  assert.equal(onDev(phase('- Runtime: click stop on `next dev`')).length, 1);
+  assert.equal(devServerCommand('click stop on `next dev`'), 'next dev');
+});
+
+test('a phase answers for itself with a production run on any of its lines', () => {
+  assert.deepEqual(onDev(phase('- Runtime: iterate on `next dev`', '  then `next start` + browser:run')), [], 'the continuation is the same proof');
+  assert.deepEqual(onDev(phase('- Runtime: `next dev` for the fast loop', '- Runtime: `next start` + browser:run for the proof')), []);
+  assert.deepEqual(onDev(phase('- Runtime: `next dev` + browser:run', '- Verification: `npm run build && next start` + browser:run')), []);
+  // Another phase does not answer for this one.
+  const two = [phase('- Runtime: `next dev` + browser:run'), '## Phase 2 — Later', '- Runtime: `next start` + browser:run', ''].join('\n');
+  assert.deepEqual(onDev(two).map((warning) => warning.phase), [1]);
+  // A plan-wide rule answers only for itself, whatever the phases or the evidence say.
+  const rule = ['## Repository evidence', '- Production entry point: `npm run build && npm start`', '', '## Rules', '- **App up (`Runtime` lines).** `next dev` in the background.', '', '## Phase 21 — End', '- Runtime: `next start` and the smoke', ''].join('\n');
+  assert.deepEqual(onDev(rule).map((warning) => warning.line), [5]);
+});
+
+test('prose about the runtime is not a rule about the Runtime lines', () => {
+  assert.deepEqual(onDev('## Phase 1 — x\n\nRuntime errors in the `next dev` overlay are ignored in this doc.\n'), []);
+  assert.deepEqual(onDev('## Notes\n\nRuntime is Node 20. Local work uses `npm run dev`.\n'), []);
+  assert.deepEqual(onDev(phase('- Runtime: the `vite` bundle served by nginx + browser:run')), []);
+  assert.deepEqual(onDev(phase('- Runtime: `vite build`, served by nginx + browser:run')), []);
+  assert.equal(onDev('## Rules\n\nThe linhas `Runtime` usam `npm run dev`.\n').length, 1);
+  assert.equal(onDev('## Rules\n\nAll Runtime lines start from `npm run dev`.\n').length, 1);
+});
+
+test('the shapes a dev server hides in still count', () => {
+  assert.equal(devServerCommand('pnpm --filter web dev'), 'pnpm --filter web dev');
+  assert.equal(devServerCommand('turbo run dev'), 'turbo run dev');
+  assert.equal(devServerCommand('turbo dev'), 'turbo dev');
+  assert.equal(onDev(phase('- Runtime: `docker compose up -d db && next dev` + browser:run')).length, 1, 'a database in docker is no production build');
+  assert.equal(onDev(phase('- Runtime:', '', '```bash', 'next dev', '```')).length, 1, 'a fence right below the field is the field');
+  assert.deepEqual(onDev('```bash\n- Runtime: next dev\n```\n'), [], 'a fence with the whole field in it is an example');
+  assert.deepEqual(onDev(phase('- Runtime: `npm run build`')), []);
+  assert.equal(devServerCommand('npm test -- dev'), null);
+});
+
+test('a walkthrough is asked only of a line that shows a browser', () => {
+  const without = (plan) => lintPlanRuntime(plan).warnings.filter((warning) => warning.code === 'runtime_without_walkthrough');
+  for (const line of ['`python -m tool --help` exits 0', '`go run ./cmd/api` and `curl -f localhost:8080/health`', '`cargo run --release -- --version`', '`node bin/tool.js --help`', '`pytest tests/e2e`', 'none', 'n/a']) {
+    assert.deepEqual(without(phase(`- Runtime: ${line}`)), [], line);
+  }
+  for (const line of ['`next start` + `node scripts/smoke.mjs`', '`next start`, `node scripts/smoke.mjs` until none fail', '`node scripts/check.js` on the orders page', '`npm run smoke -- --flow=orders`', 'run the checkout flow by hand', 'a tela de pedidos mostra o total']) {
+    assert.equal(without(phase(`- Runtime: ${line}`)).length, 1, line);
+  }
+  const smokeOnly = phase('- Runtime: `next start` + `node scripts/smoke.mjs`');
+  assert.deepEqual(without(phase('- Runtime: `next dev` for the fast loop', '- Runtime: `next start` + browser:run for the proof')), [], 'a walkthrough on one line of the phase answers for the phase');
+  assert.deepEqual(without(phase('- Runtime: `node dist/cli.js --help`')), [], 'a built CLI is no web server');
+  const forbidding = ['## Rules', '', '- `Runtime` lines never use .aioson/qa/walkthroughs/ because it stops at login', '', smokeOnly].join('\n');
+  assert.equal(without(forbidding).length, 1, 'a rule that forbids the instrument answers for nothing');
+  const namingOnly = ['## Rules', '', '- `Runtime` lines never use browser:run because it stops at login', '', smokeOnly].join('\n');
+  assert.equal(without(namingOnly).length, 1);
 });
