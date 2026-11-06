@@ -147,6 +147,49 @@ function expectKind(step) {
   return '';
 }
 
+// Actions that change what the page shows, and the steps that replace the view.
+const STATE_ACTIONS = new Set(['click', 'dblclick', 'fill', 'type', 'press', 'select', 'check', 'uncheck']);
+const VIEW_REPLACING = new Set(['reload', 'goto']);
+
+// A step that fails when the screen does not show the result. A `boundary`
+// proves the request, never the screen, and a `judge` proves nothing.
+function checksTheView(step) {
+  if (step.do === 'expect') return true;
+  if (step.do === 'eval') return step.equals !== undefined || step.contains !== undefined;
+  if (step.do === 'wait') return Boolean(step.target || step.text);
+  return false;
+}
+
+/**
+ * `reload_masks_stale_view`: an action reaching a `reload` or `goto` with no
+ * check between them. Rebuilding the page from the server hides a view that
+ * stayed stale after the action, so such a walkthrough passes over the defect
+ * it was written to catch. Advisory: the script may mean it (a login prelude),
+ * and only a reader can tell. `optional` steps may never run, so they neither
+ * arm nor clear it.
+ */
+function lintScript(script) {
+  const warnings = [];
+  let pending = null;
+  const walk = (steps, label) => {
+    for (const step of steps || []) {
+      const where = label(step.index);
+      if (step.do === 'each') {
+        walk(step.steps, (child) => `${where}.${child}`);
+        continue;
+      }
+      if (step.optional === true) continue;
+      if (checksTheView(step)) pending = null;
+      else if (VIEW_REPLACING.has(step.do)) {
+        if (pending) warnings.push(`step ${where}: reload_masks_stale_view — \`${pending.action}\` at step ${pending.where} reaches this \`${step.do}\` with no \`expect\` between them, and rebuilding the page hides a view that stayed stale; \`expect\` the result on screen first, then ${step.do} and \`expect\` that it persisted`);
+        pending = null;
+      } else if (STATE_ACTIONS.has(step.do)) pending = { action: step.do, where };
+    }
+  };
+  walk(script && script.steps, (index) => String(index));
+  return warnings;
+}
+
 async function loadScript(scriptPath) {
   let raw;
   try {
@@ -232,6 +275,7 @@ module.exports = {
   clampLines,
   clampSlowMo,
   expectKind,
+  lintScript,
   loadScript,
   sanitizeUrl,
   maskedValue,

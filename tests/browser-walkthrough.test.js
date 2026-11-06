@@ -575,3 +575,52 @@ test('a previous artifact the OS refuses to delete is a warning: the run reports
   assert.match(md, /1 file\(s\) from the previous run could not be cleared/);
   assert.doesNotMatch(md, /the folder holds this run only/);
 });
+
+// A QA found a header still showing the old name until the next load, after
+// the walkthrough had passed: the script reloaded right after the action, as
+// the doc told it to, and the reload rebuilt the stale view from the server.
+test('reload_masks_stale_view: an action reaching reload or goto with no check between them warns, and never fails the run', async () => {
+  const { lintScript } = require('../src/lib/browser-walkthrough');
+  const lint = (steps) => lintScript(normalizeScript({ steps }).script);
+  const save = { do: 'click', target: 'role=button[name="Save"]' };
+  const seen = { do: 'expect', text: 'Saved' };
+
+  assert.match(lint([save, { do: 'reload' }])[0], /^step 1: reload_masks_stale_view — `click` at step 0 reaches this `reload`/);
+  assert.match(lint([{ do: 'fill', target: 'label=Name', value: 'x' }, { do: 'goto', url: '/next' }])[0], /`fill` at step 0 reaches this `goto`/);
+  assert.equal(lint([save, { do: 'snapshot' }, { do: 'screenshot', name: 'x' }, { do: 'reload' }]).length, 1, 'looking is not checking');
+  assert.equal(lint([{ ...save, boundary: 'POST /api/orders -> 201' }, { do: 'reload' }]).length, 1, 'a boundary proves the request, not the screen');
+  // Each action is charged once, at the first view that replaces it.
+  assert.equal(lint([save, { do: 'reload' }, { do: 'reload' }]).length, 1);
+
+  assert.deepEqual(lint([save, seen, { do: 'reload' }, seen]), [], 'reload after expect is the method, not the defect');
+  assert.deepEqual(lint([save, { do: 'wait', text: 'Saved' }, { do: 'reload' }]), []);
+  assert.deepEqual(lint([save, { do: 'eval', expression: 'document.title', equals: 'Saved' }, { do: 'reload' }]), []);
+  assert.deepEqual(lint([{ do: 'goto', url: '/' }, { do: 'reload' }]), [], 'no action, nothing to mask');
+  assert.deepEqual(lint([{ do: 'hover', target: 'text=Menu' }, { do: 'reload' }]), []);
+  assert.deepEqual(lint([{ do: 'request', url: '/api/hook', method: 'POST' }, { do: 'reload' }]), [], 'the runner sent it: the page did not act');
+  assert.deepEqual(lint([{ ...save, optional: true }, { do: 'goto', url: '/next' }]), [], 'an optional step may never have run');
+  assert.equal(lint([save, { ...seen, optional: true }, { do: 'reload' }]).length, 1, 'an optional check may never have run');
+
+  // A loop's children are steps like any other, named by their own index.
+  assert.match(lint([{ do: 'each', items: [1], steps: [save, { do: 'reload' }] }])[0], /^step 0\.1: reload_masks_stale_view — `click` at step 0\.0/);
+  assert.deepEqual(lint([{ do: 'each', items: [1], steps: [save, seen, { do: 'reload' }] }]), []);
+
+  const root = await tmp();
+  const page = fakePage({ elements: { 'role=button[name=Save]': {}, 'text=Saved': {} } });
+  try {
+    const script = normalizeScript({ name: 'stale', steps: [save, { do: 'reload' }] }).script;
+    const report = await runWalkthrough({ targetDir: root, script, url: 'http://127.0.0.1:3000', slug: 'orders', open: fakeOpener(page), clock: fastClock });
+    assert.equal(report.ok, true, 'a warning never changes the verdict');
+    assert.match(report.warnings.join('\n'), /reload_masks_stale_view/);
+    assert.match(await fs.readFile(path.join(root, report.markdown_path), 'utf8'), /## Warnings[\s\S]*reload_masks_stale_view/);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('the walkthrough doc asks for the screen before the reload, in template and mirror', async () => {
+  const root = path.resolve(__dirname, '..');
+  for (const rel of ['template/.aioson/docs/qa/browser-walkthrough.md', '.aioson/docs/qa/browser-walkthrough.md']) {
+    const doc = await fs.readFile(path.join(root, rel), 'utf8');
+    assert.match(doc, /First `expect` the result on the screen as the action left it/);
+    assert.match(doc, /reload_masks_stale_view/);
+  }
+});

@@ -43,7 +43,7 @@ const { isValidSlug } = require('../../dossier/schema');
 const {
   SCHEMA, ACTIONS, DEFAULT_TIMEOUT_MS, DEFAULT_BOUNDARY_WAIT_MS, DEFAULT_SNAPSHOT_LINES,
   MAX_CONSOLE_SAMPLES, MAX_NETWORK_ROWS, LOGIN_WALL_RE,
-  idsOf, normalizeScript, clampLines, clampSlowMo, loadScript, sanitizeUrl, maskedValue, clip, sha256, sleep, until
+  idsOf, normalizeScript, clampLines, clampSlowMo, lintScript, loadScript, sanitizeUrl, maskedValue, clip, sha256, sleep, until
 } = scriptContract;
 const { parseTarget, locatorFor, parseBoundary, boundaryHit, urlMatches } = targets;
 const { runExpect, ariaSnapshot, previewSnapshot, executeStep, pad } = steps;
@@ -208,7 +208,7 @@ async function runWalkthrough(options) {
   const consoleLog = { errors: 0, warnings: 0, page_errors: 0, samples: [] };
   const network = { rows: [], failed: 0, supportsBoundaryCapture: true, activeBoundary: null };
   const rowsByRequest = new WeakMap();
-  const warnings = [];
+  const warnings = lintScript(script);
   const executed = [];
   const ariaSeen = [];
   let stoppedAt = null;
@@ -517,6 +517,7 @@ module.exports = {
   DEFAULT_SNAPSHOT_LINES,
   idsOf,
   normalizeScript,
+  lintScript,
   loadScript,
   parseTarget,
   locatorFor,
