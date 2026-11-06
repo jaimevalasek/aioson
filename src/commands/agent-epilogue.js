@@ -283,7 +283,9 @@ async function runAgentEpilogue({ args, options = {}, logger, t }) {
           reason: `${high} violation(s)${med ? ` / ${med} MED` : ''} of ${broken.join(', ')} in changed files (${samples}) — a rule outranks the PRD, the plan, and any recorded deviation. See .aioson/context/rules-check.json`
         });
       } else {
-        pushStep(steps, 'rules:check', { ok: true, reason: med ? `${med} MED worth a second look` : null });
+        const low = rulesReport.by_severity.LOW || 0;
+        const advisory = [med ? `${med} MED` : null, low ? `${low} LOW` : null].filter(Boolean).join(' / ');
+        pushStep(steps, 'rules:check', { ok: true, reason: advisory ? `${advisory} worth a second look` : null });
       }
     }
   }

@@ -153,6 +153,7 @@ const MANAGED_FILES = [
   '.aioson/docs/quality/performance.md',
   '.aioson/docs/quality/code-size-limits.md',
   '.aioson/docs/quality/coupling-limits.md',
+  '.aioson/docs/quality/duplicate-declarations.md',
   '.aioson/docs/qa/browser-walkthrough.md',
   '.aioson/docs/qa/accessibility-audit.md',
   '.aioson/docs/qa/scope-drift.md',

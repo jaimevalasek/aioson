@@ -39,6 +39,7 @@ const { listSourceFiles, readText, CODE_EXTS, IGNORE_DIRS } = require('./audit-c
 const { scanNamingLanguage } = require('../lib/naming-language');
 const { measureFile } = require('../lib/code-size');
 const { buildModuleGraph, cyclePath, MODULE_EXTS } = require('../lib/module-graph');
+const { findDuplicateDeclarations } = require('../lib/duplicate-declarations');
 const { resolveTargetDir } = require('../lib/project-root');
 
 const VERSION = '1.0.0';
@@ -272,6 +273,23 @@ const ENFORCERS = Object.freeze({
         });
       }
       return findings;
+    }
+  },
+
+  // A copy is a judgment call a text scan cannot make for the reader, so this
+  // reports LOW whoever binds it: never a block, not even under --strict.
+  'duplicate-declaration': {
+    id: 'duplicate-declaration',
+    surface: 'code',
+    reads: 'tree',
+    summary: 'a top-level helper is written once — the same name and body in two source files is a copy',
+    run({ targetDir, files }) {
+      const treePaths = [];
+      for (const abs of listSourceFiles(targetDir, SOURCE_EXTS, SOURCE_IGNORE_DIRS)) {
+        const rel = path.relative(targetDir, abs).split(path.sep).join('/');
+        if (!GENERATED_FILE.test(path.basename(rel)) && !GENERATED_PATH.test(rel)) treePaths.push(rel);
+      }
+      return findDuplicateDeclarations({ targets: files, treePaths, read: (rel) => readText(path.join(targetDir, rel)) });
     }
   }
 });
@@ -782,7 +800,7 @@ async function runRulesCheck({ args, options = {}, logger }) {
 
   if (blocking) {
     logger.log('  RULES=FAIL (a project rule is being violated)');
-  } else if (bySeverity.MED > 0) {
+  } else if (bySeverity.MED > 0 || bySeverity.LOW > 0) {
     logger.log('  RULES=OK (no rule broken; advisory findings from docs/skills are worth a look)');
   } else {
     logger.log('  RULES=OK');

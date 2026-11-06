@@ -84,7 +84,7 @@ Controls `aioson rules:check`, wired into the same tracked done-gate. Where `aud
 - **`advisory`** — persist `.aioson/context/rules-check.json` and emit a guard event without blocking.
 - **`off`** — skip the step entirely.
 
-Only `.aioson/rules/` produces blocking HIGH findings. A checker declared solely by a doc or a process skill reports `MED`: those surfaces carry procedure and craft rather than law, so falling short of one is advice, not a refused handoff.
+Only `.aioson/rules/` produces blocking HIGH findings. A checker declared solely by a doc or a process skill reports `MED`: those surfaces carry procedure and craft rather than law, so falling short of one is advice, not a refused handoff. `duplicate-declaration` reports `LOW` whoever declares it, because whether two copies should be one depends on context a text scan does not have.
 
 The honest way to switch this off for a project is the rule file itself — edit its scope or remove it, once and in the open. That keeps the override channel visible instead of letting each feature quietly decide the rule does not apply this time.
 

@@ -25,6 +25,8 @@ After finishing each phase:
    It is deterministic and scoped to the diff, so it costs almost nothing to repeat every phase — which is the point. A `HIGH` is a rule being broken, and a rule outranks the PRD, the plan, and any deviation recorded in the dossier: fix the code here, while the phase is still in hand, or stop and report the conflict for a human to resolve on the rule file. The same check runs again at DEV completion and blocks the stage gate, so a violation carried forward only costs a re-entry.
 
    If the report carries `divergence`, the project was already built against a different convention and this slice did not cause it. Do not migrate the tree and do not write a baseline: present the options the command prints and let the user choose.
+
+   A `LOW` from `duplicate-declaration` names a helper that already exists elsewhere, usually written by an earlier phase. Import it and delete the copy, or say in the phase report why the copy stays. It never blocks.
 3. Fix a failing check locally before advancing. Stop only after the configured retry limit or for a genuine product/security decision.
 4. Update the non-blocking dossier evidence and write the cold-start checkpoint (`--feature` and `--next` are required — a bare call fails with `missing_feature`):
 
