@@ -12,32 +12,39 @@
  * The flag is computed on the full command: the event keeps only its first 200
  * characters, and in that session `.env` began at character 200.
  *
- * The command is split the way a shell splits it, because a pattern cannot tell
- * `grep -E ".env|secret" list` from `grep SECRET .env`. Over the real commands of four
- * projects it flags reads and nothing else. Advisory: it reports, and a session still
+ * The command is read the way a shell reads it, because a pattern cannot tell
+ * `grep -E ".env|secret" list` from `grep SECRET .env`, nor a commit message that names
+ * the file from a command that opens it. Advisory: it reports, and a session still
  * closes. It sees the Bash tool only, the one the hooks record, and no plain file read.
+ * A file named through a variable (`for f in .env; do cat "$f"; done`) goes unseen.
  */
 
 const MAX_TEXT = 200 * 1024;
 const MAX_LINE = 4000;
-const MAX_DEPTH = 3;
+const MAX_DEPTH = 6;
 
 // A template holds no secret, and `.envrc` is another file. A backslash is a folder only
 // after a path character: `\.env`, `^\.env` and `.*\.env` are patterns.
-const ENV_PATH = /^(?:[^\s|;&()*^]*\/|[^\s|;&()*^]*[\w.-]\\)?\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_-]+)*$/i;
+const ENV_PATH = /^(?:[^|;&()^]*\/|[^|;&()*^]*[\w.-]\\)?\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_-]+)*$/i;
 // A script that opens the file by name, in the languages an agent reaches for.
-const SCRIPT_READ = /\b(?:readFileSync|readFile|ReadAllText|ReadAllLines|open|Path)\(\s*[^)]*?['"`][^'"`]*\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_-]+)*['"`]/i;
+const SCRIPT_READ = /\b(?:readFileSync|readFile|ReadAllText|ReadAllLines|open|fopen|read|Path|file_get_contents|parse_ini_file|dotenv_values)\(\s*[^)]*?['"`][^'"`]*\.env(?:\.(?!example\b|sample\b|template\b|dist\b)[A-Za-z0-9_-]+)*['"`]/i;
 
 // Tools that read every file they are given.
-const FILE_READERS = new Set(['cat', 'tac', 'nl', 'more', 'less', 'head', 'tail', 'cut', 'sort', 'strings', 'od', 'xxd', 'base64', 'type', 'source', '.', 'get-content', 'gc']);
+const FILE_READERS = new Set(['cat', 'bat', 'tac', 'nl', 'more', 'less', 'head', 'tail', 'cut', 'sort', 'strings', 'od', 'xxd', 'base64', 'type', 'source', '.', 'get-content', 'gc']);
 // Tools whose first plain argument is a pattern or a script: `grep .env .gitignore`
 // reads `.gitignore`, and `ls -a | grep .env` reads nothing.
 const PATTERN_READERS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack', 'sed', 'awk', 'gawk', 'findstr', 'select-string', 'sls']);
-const FILE_OPTIONS = new Set(['-f', '--file', '-path', '-literalpath']);
-const WRAPPERS = new Set(['sudo', 'command', 'builtin', 'time', 'nohup', 'exec', 'env']);
+const SCRIPT_OPTIONS = new Set(['-f', '--file']);
+const VALUE_OPTIONS = new Set(['-A', '-B', '-C', '-m', '-g', '-t', '--glob', '--type', '--include', '--exclude', '--max-count', '--context', '--after-context', '--before-context']);
+const GIVES_PATTERN = new Set(['script', 'pattern', 'attached']);
+const TAKES_NEXT = new Set(['script', 'path', 'pattern', 'value']);
+// Words a command starts behind, none with options of its own.
+const PREFIX_WORDS = new Set(['if', 'then', 'elif', 'else', 'while', 'until', 'do', '!', '{', 'time', 'command', 'builtin', 'nohup', 'exec']);
+// Tools that run a command given in their own arguments, after options of their own.
+const RUNNERS = new Set(['sudo', 'doas', 'env', 'timeout', 'nice', 'ionice', 'stdbuf', 'xargs', 'watch', 'ssh', 'docker', 'podman', 'kubectl']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh', 'cmd', 'pwsh', 'powershell']);
-const SHELL_BODY = new Set(['-c', '-lc', '/c', '-command']);
-const SEPARATORS = new Set([';', '|', '&', '(', ')', '`']);
+const SHELL_BODY = /^(?:-[a-z]*c|\/c|-command)$/i;
+const DOUBLE_QUOTE_ESCAPES = new Set(['"', '\\', '$', '`']);
 
 const isEnvPath = (word) => typeof word === 'string' && ENV_PATH.test(word);
 
@@ -53,7 +60,7 @@ function endWord(state) {
   state.word = null;
   state.redirect = null;
   if (redirect === 'input') state.inputs.push(word.text);
-  else if (redirect === 'heredoc') state.heredoc = word.text;
+  else if (redirect === 'heredoc') state.heredocs.push(word);
   else if (redirect !== 'skip') state.words.push(word.text);
 }
 
@@ -65,98 +72,172 @@ function endCommand(state) {
   state.redirect = null;
 }
 
-/** The bodies of `$(...)` and backticks inside quoted text, which the shell still runs. */
-function substitutions(text) {
-  const found = text.split('`').filter((_, index) => index % 2 === 1);
-  let at = text.indexOf('$(');
-  while (at !== -1) {
-    let depth = 1;
-    let end = at + 2;
-    while (end < text.length && depth > 0) {
-      if (text[end] === '(') depth += 1;
-      if (text[end] === ')') depth -= 1;
-      end += 1;
-    }
-    found.push(text.slice(at + 2, depth === 0 ? end - 1 : end));
-    at = text.indexOf('$(', end);
-  }
-  return found;
+/** `$(...)`, backticks and parentheses hold commands of their own, in the middle of this word. */
+function readNested(state, at, closer) {
+  if (state.depth >= MAX_DEPTH) return at;
+  const outer = { word: state.word, words: state.words, inputs: state.inputs, redirect: state.redirect };
+  Object.assign(state, { word: null, words: [], inputs: [], redirect: null, depth: state.depth + 1 });
+  const next = parseUntil(state, at, closer);
+  endCommand(state);
+  Object.assign(state, outer, { depth: state.depth - 1 });
+  return next;
 }
 
-function readQuoted(line, start, state) {
-  const mark = line[start];
-  let end = start + 1;
-  while (end < line.length && line[end] !== mark) end += mark === '"' && line[end] === '\\' ? 2 : 1;
-  const inner = line.slice(start + 1, end);
-  if (mark === '"') state.nested.push(...substitutions(inner));
-  append(state, inner, true);
+// Inside double quotes the shell still runs substitutions, and a backslash only escapes four characters.
+function stepDouble(state, at) {
+  const { text } = state;
+  if (text[at] === '\\') {
+    append(state, DOUBLE_QUOTE_ESCAPES.has(text[at + 1]) ? text[at + 1] : text.slice(at, at + 2));
+    return at + 2;
+  }
+  if (text.startsWith('$(', at)) return readNested(state, at + 2, ')');
+  if (text[at] === '`') return readNested(state, at + 1, '`');
+  append(state, text[at]);
+  return at + 1;
+}
+
+function readDouble(state, start) {
+  append(state, '', true);
+  let at = start + 1;
+  while (at < state.text.length && state.text[at] !== '"') at = stepDouble(state, at);
+  return at + 1;
+}
+
+function readSingle(state, start) {
+  const found = state.text.indexOf("'", start + 1);
+  const end = found === -1 ? state.text.length : found;
+  append(state, state.text.slice(start + 1, end), true);
   return end + 1;
 }
 
-function readInput(line, at, state) {
-  if (line[at + 1] === '(') {
-    endCommand(state);
-    return at + 2;
-  }
+function readInput(state, at) {
+  const { text } = state;
   endWord(state);
-  if (line[at + 1] === '<' && line[at + 2] === '<') {
+  if (text.startsWith('<<<', at)) {
     state.redirect = 'skip';
     return at + 3;
   }
-  if (line[at + 1] === '<') {
+  if (text.startsWith('<<', at)) {
     state.redirect = 'heredoc';
-    return line[at + 2] === '-' ? at + 3 : at + 2;
+    return text[at + 2] === '-' ? at + 3 : at + 2;
   }
   state.redirect = 'input';
   return at + 1;
 }
 
-function readOutput(line, at, state) {
+function readOutput(state, at) {
+  const { text } = state;
   // The digit of `2>` belongs to the redirect, and what it names is written, not read.
   if (state.word && !state.word.quoted && /^\d+$/.test(state.word.text)) state.word = null;
   endWord(state);
   state.redirect = 'skip';
   let next = at + 1;
-  if (line[next] === '>') next += 1;
-  if (line[next] === '&') {
+  if (text[next] === '>') next += 1;
+  if (text[next] === '&') {
     state.redirect = null;
     next += 1;
-    while (/\d/.test(line[next] || '')) next += 1;
+    while (/\d/.test(text[next] || '')) next += 1;
   }
   return next;
 }
 
-function step(line, at, state) {
-  const char = line[at];
-  if (char === '\\') {
-    append(state, line.slice(at, at + 2));
-    return at + 2;
+// A quoted terminator keeps the body as text. Unquoted, the shell runs what its `$(...)` holds.
+function runHeredocBody(state, body) {
+  const inner = { ...state, text: body, word: null, words: [], inputs: [], redirect: null, heredocs: [] };
+  let at = 0;
+  while (at < body.length) at = stepDouble(inner, at);
+}
+
+function readHeredoc(state, start, word) {
+  const { text } = state;
+  const terminator = word.text.replace(/\\/g, '');
+  let line = start;
+  while (line < text.length) {
+    const found = text.indexOf('\n', line);
+    const end = found === -1 ? text.length : found;
+    if (text.slice(line, end).trim() === terminator) break;
+    line = end + 1;
   }
-  if (char === "'" || char === '"') return readQuoted(line, at, state);
-  if (char === ' ' || char === '\t') {
-    endWord(state);
+  if (!word.quoted && terminator === word.text) runHeredocBody(state, text.slice(start, line));
+  const found = text.indexOf('\n', line);
+  return found === -1 ? text.length : found + 1;
+}
+
+function readNewline(state, at) {
+  endCommand(state);
+  let next = at + 1;
+  for (const word of state.heredocs) next = readHeredoc(state, next, word);
+  state.heredocs = [];
+  return next;
+}
+
+function readComment(state, at) {
+  if (state.word) {
+    append(state, '#');
     return at + 1;
   }
-  if (char === '$' && line[at + 1] === '(') {
-    endCommand(state);
-    return at + 2;
-  }
-  if (SEPARATORS.has(char)) {
-    endCommand(state);
-    return at + 1;
-  }
-  if (char === '<') return readInput(line, at, state);
-  if (char === '>') return readOutput(line, at, state);
-  append(state, char);
+  const found = state.text.indexOf('\n', at);
+  return found === -1 ? state.text.length : found;
+}
+
+function readDollar(state, at) {
+  if (state.text[at + 1] === '(') return readNested(state, at + 2, ')');
+  append(state, '$');
   return at + 1;
 }
 
-function parseLine(line) {
-  const state = { commands: [], words: [], inputs: [], word: null, redirect: null, nested: [], heredoc: null };
-  let at = 0;
-  while (at < line.length) at = step(line, at, state);
+function readEscape(state, at) {
+  append(state, state.text.slice(at, at + 2));
+  return at + 2;
+}
+
+function readParen(state, at) {
   endCommand(state);
-  return state;
+  return readNested(state, at + 1, ')');
+}
+
+function readBacktick(state, at) {
+  return readNested(state, at + 1, '`');
+}
+
+function readSpace(state, at) {
+  endWord(state);
+  return at + 1;
+}
+
+function readSeparator(state, at) {
+  endCommand(state);
+  return at + 1;
+}
+
+const READERS = new Map([
+  [' ', readSpace], ['\t', readSpace], ['\r', readSpace],
+  [';', readSeparator], ['|', readSeparator], ['&', readSeparator], [')', readSeparator],
+  ['\n', readNewline], ['\\', readEscape], ["'", readSingle], ['"', readDouble], ['#', readComment],
+  ['$', readDollar], ['`', readBacktick], ['(', readParen], ['<', readInput], ['>', readOutput]
+]);
+
+function parseUntil(state, start, closer) {
+  const { text } = state;
+  let at = start;
+  while (at < text.length) {
+    if (text[at] === closer) return at + 1;
+    const read = READERS.get(text[at]);
+    if (read) {
+      at = read(state, at);
+    } else {
+      append(state, text[at]);
+      at += 1;
+    }
+  }
+  return at;
+}
+
+function parseCommands(text) {
+  const state = { text, commands: [], words: [], inputs: [], word: null, redirect: null, heredocs: [], depth: 0 };
+  parseUntil(state, 0, null);
+  endCommand(state);
+  return state.commands;
 }
 
 function baseName(word) {
@@ -165,60 +246,69 @@ function baseName(word) {
 
 function commandIndex(words) {
   let at = 0;
-  while (at < words.length && (/^[A-Za-z_]\w*=/.test(words[at]) || WRAPPERS.has(baseName(words[at])))) at += 1;
+  while (at < words.length && (/^[A-Za-z_]\w*=/.test(words[at]) || PREFIX_WORDS.has(baseName(words[at])))) at += 1;
   return at;
 }
 
+function optionKind(arg) {
+  if (SCRIPT_OPTIONS.has(arg)) return 'script';
+  if (/^-(?:literal)?path$/i.test(arg)) return 'path';
+  if (/^-[A-Za-z]*e$/.test(arg) || ['--regexp', '-pattern'].includes(arg.toLowerCase())) return 'pattern';
+  if (/^-e.|^--regexp=/.test(arg)) return 'attached';
+  if (VALUE_OPTIONS.has(arg)) return 'value';
+  return arg.startsWith('-') ? 'flag' : 'plain';
+}
+
 function patternToolReads(args) {
-  let plain = 0;
-  return args.some((arg, index) => {
-    if (arg.startsWith('-')) return FILE_OPTIONS.has(arg.toLowerCase()) && isEnvPath(args[index + 1]);
-    plain += 1;
-    return plain > 1 && isEnvPath(arg);
-  });
+  const plain = [];
+  let patternGiven = false;
+  for (let at = 0; at < args.length; at += 1) {
+    const kind = optionKind(args[at]);
+    if (kind === 'plain') plain.push(args[at]);
+    if ((kind === 'script' || kind === 'path') && isEnvPath(args[at + 1])) return true;
+    patternGiven = patternGiven || GIVES_PATTERN.has(kind);
+    if (TAKES_NEXT.has(kind)) at += 1;
+  }
+  return plain.slice(patternGiven ? 0 : 1).some(isEnvPath);
+}
+
+function shellBodyReads(args, depth) {
+  const body = args.findIndex((arg) => SHELL_BODY.test(arg));
+  return body !== -1 && scan(args.slice(body + 1).join(' '), depth + 1);
+}
+
+const canBeRun = (name) => name !== '.' && (FILE_READERS.has(name) || PATTERN_READERS.has(name) || SHELLS.has(name));
+
+// `sudo -u www cat .env`, `timeout 5 cat .env`, `ssh prod "cat .env"`: the first word
+// that reads anything is the command, whatever options came before it.
+function runnerReads(args, depth) {
+  const words = args.flatMap((arg) => arg.split(/\s+/));
+  const at = words.findIndex((word) => canBeRun(baseName(word)));
+  return at !== -1 && toolReads(baseName(words[at]), words.slice(at + 1), depth);
+}
+
+function toolReads(name, args, depth) {
+  if (FILE_READERS.has(name)) return args.some(isEnvPath);
+  if (PATTERN_READERS.has(name)) return patternToolReads(args);
+  if (SHELLS.has(name)) return shellBodyReads(args, depth);
+  return RUNNERS.has(name) && runnerReads(args, depth);
 }
 
 function commandReads({ words, inputs }, depth) {
   if (inputs.some(isEnvPath)) return true;
   const at = commandIndex(words);
-  if (at >= words.length) return false;
-  const name = baseName(words[at]);
-  const args = words.slice(at + 1);
-  if (FILE_READERS.has(name)) return args.some(isEnvPath);
-  if (PATTERN_READERS.has(name)) return patternToolReads(args);
-  if (!SHELLS.has(name)) return false;
-  const body = args.findIndex((arg) => SHELL_BODY.has(arg.toLowerCase()));
-  return body !== -1 && scan(args.slice(body + 1).join(' '), depth + 1);
+  return at < words.length && toolReads(baseName(words[at]), words.slice(at + 1), depth);
 }
-
-function parsedLineReads(parsed, depth) {
-  return parsed.commands.some((command) => commandReads(command, depth)) || parsed.nested.some((body) => scan(body, depth + 1));
-}
-
-// A line with neither the name nor a heredoc cannot change the answer.
-const lineMatters = (line) => line.includes('.env') || line.includes('<<');
 
 function scan(text, depth) {
   if (depth > MAX_DEPTH) return false;
-  let terminator = null;
-  for (const raw of text.split('\n')) {
-    const line = raw.slice(0, MAX_LINE).replace(/\r$/, '');
-    if (SCRIPT_READ.test(line)) return true;
-    if (terminator !== null) {
-      if (line.trim() === terminator) terminator = null;
-      continue;
-    }
-    if (!lineMatters(line)) continue;
-    const parsed = parseLine(line);
-    if (parsedLineReads(parsed, depth)) return true;
-    terminator = parsed.heredoc;
-  }
-  return false;
+  return parseCommands(text).some((command) => commandReads(command, depth));
 }
 
 function readsCredentialSource(command) {
   const text = String(command || '').slice(0, MAX_TEXT).replace(/\\\r?\n/g, ' ');
-  return text.includes('.env') && scan(text, 0);
+  if (!/\.env/i.test(text)) return false;
+  return text.split('\n').some((line) => SCRIPT_READ.test(line.slice(0, MAX_LINE))) || scan(text, 0);
 }
 
 const MARKER = 'open credential sources';

@@ -1,8 +1,9 @@
 'use strict';
 
 const fs = require('node:fs/promises');
-const { hashText, parseBriefingSections, serializeBriefingSections } = require('./briefing-sections');
-const { validateFeedback, sanitizeText } = require('./feedback-schema');
+const { hashText, serializeBriefingSections } = require('./briefing-sections');
+const { validateFeedback } = require('./feedback-schema');
+const { planSectionWrites } = require('./section-writes');
 const { buildRefinementReport } = require('./refinement-report');
 const { resolveBriefingPath } = require('./briefing-paths');
 const {
@@ -94,14 +95,14 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
     return { ok: false, error: 'invalid_feedback', validation };
   }
 
-  const fileSections = new Map(parseBriefingSections(currentMarkdown).sections.map((section) => [section.id, section.original_text]));
-  const sections = feedback.sections.map((section) => ({ ...section, current_text: textToWrite(section, fileSections) }));
-  const nextMarkdown = serializeBriefingSections(currentMarkdown, sections);
+  const sections = planSectionWrites(currentMarkdown, feedback);
+  const serialized = serializeBriefingSections(currentMarkdown, sections);
+  // A round that changes no text leaves the file as it was, line endings and blank lines included.
+  const nextMarkdown = sections.every((section) => section.current_text === section.file_text) ? currentMarkdown : serialized;
   const appliedHash = hashText(nextMarkdown);
-  const unchanged = (section) => section.status === 'unchanged' && sanitizeText(section.current_text) === sanitizeText(section.original_text);
   const appliedChanges = sections
-    .filter((section) => !unchanged(section))
-    .map((section) => ({ section_id: section.id, title: section.title, summary: summarizeChange({ ...section, original_text: sanitizeText(section.original_text) }, sanitizeText(section.current_text)) }));
+    .filter((section) => section.file_text !== undefined && (section.status !== 'unchanged' || section.current_text !== section.file_text))
+    .map((section) => ({ section_id: section.id, title: section.title, summary: summarizeChange({ ...section, original_text: section.file_text }, section.current_text) }));
 
   await fs.writeFile(briefingPath, nextMarkdown, 'utf8');
 
@@ -157,15 +158,6 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
     pendingBlockingFindings: pendingBlockingFindings.length,
     reportData
   };
-}
-
-// The review works on sanitized text, which drops anything shaped like a tag. A section
-// nobody changed keeps its bytes, or `Map<string, User>` would leave with no type.
-function textToWrite(section, fileSections) {
-  if (section.status === 'remove_requested') return 'TBD';
-  const text = sanitizeText(section.current_text || section.original_text || '');
-  const body = fileSections.get(section.id);
-  return body !== undefined && sanitizeText(body) === text ? body : text;
 }
 
 module.exports = { applyConfirmedFeedback, applyDeclinedFeedback, writeRefinementReport };

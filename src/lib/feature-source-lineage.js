@@ -446,14 +446,20 @@ async function validateSourceLineage({
 }
 
 /** The promises a briefing holds, through the same table reading the validator uses. `not_applicable` is no promise. */
-function briefingPromiseIds(briefing) {
+function promiseRows(briefing) {
   const section = extractSection(briefing, ['Source Promise Map', 'Mapa de Promessas das Fontes']);
   const table = section ? parseFirstMarkdownTable(section) : null;
-  if (!table) return new Set();
+  if (!table) return [];
   const { indexes } = promiseMapColumns(table);
-  if (indexes.promise === -1) return new Set();
-  const held = table.rows.filter((row) => indexes.state === -1 || normalizeDecision(row[indexes.state]) !== 'not_applicable');
-  return new Set(held.map((row) => cleanCell(row[indexes.promise])).filter((id) => PROM_ID_EXACT_RE.test(id)));
+  if (indexes.promise === -1) return [];
+  const cell = (row, index) => (index === -1 ? '' : cleanCell(row[index]));
+  return table.rows
+    .map((row) => ({ id: cell(row, indexes.promise), intent: cell(row, indexes.intent), state: indexes.state === -1 ? '' : normalizeDecision(row[indexes.state]) }))
+    .filter((row) => PROM_ID_EXACT_RE.test(row.id));
+}
+
+function briefingPromiseIds(briefing) {
+  return new Set(promiseRows(briefing).filter((row) => row.state !== 'not_applicable').map((row) => row.id));
 }
 
 module.exports = {
@@ -462,5 +468,6 @@ module.exports = {
   inventoryColumns,
   pinsSources,
   promiseMapColumns,
+  promiseRows,
   validateSourceLineage
 };

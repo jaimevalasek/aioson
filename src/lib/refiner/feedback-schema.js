@@ -265,6 +265,7 @@ function validateFindingsInput(findings, { sectionIds = [], promiseIds = null } 
 
 function buildInitialFeedback({ slug, sourcePath, sourceHash, sections, findings = [], round = 1, exportMethod = 'manual-save', now = new Date() }) {
   const timestamp = now.toISOString();
+  const normalizedFindings = findings.map(normalizeFinding);
   return {
     schema_version: '1.2',
     briefing_slug: slug,
@@ -275,7 +276,11 @@ function buildInitialFeedback({ slug, sourcePath, sourceHash, sections, findings
     export_method: exportMethod,
     round: Number.isInteger(round) && round > 0 ? round : 1,
     sections: sections.map(normalizeSection),
-    findings: findings.map(normalizeFinding),
+    findings: normalizedFindings,
+    // Decided by whoever wrote the findings, which a later round does to carry earlier decisions.
+    arrived_decided: normalizedFindings
+      .filter((finding) => finding.status !== 'pending' || finding.selected_option_ids.length > 0)
+      .map((finding) => finding.id),
     comments: [],
     decisions: [],
     blocking_items: []

@@ -36,6 +36,7 @@ const { briefingPromiseIds } = require('../lib/feature-source-lineage');
 const { resolveBriefingPath } = require('../lib/refiner/briefing-paths');
 const { assessRoundConfirmation, describeConfirmationReasons, USER_EXPORT_METHODS } = require('../lib/refiner/clean-round');
 const { resolvePrototypeState } = require('../lib/refiner/prototype-resolution');
+const { planSectionWrites } = require('../lib/refiner/section-writes');
 const { validatePrototypeManifestQuality } = require('../lib/prototype-manifest-quality');
 const { readVisualEvidence, visualEvidenceBlock } = require('../lib/visual-evidence');
 const { writeReviewArtifacts } = require('../lib/refiner/review-html');
@@ -719,16 +720,16 @@ async function runBriefingReview({ args, options = {}, logger }) {
   };
 }
 
-function summarizeFeedback(feedback) {
-  const sections = feedback.sections || [];
+function summarizeFeedback(feedback, markdown) {
+  const sections = planSectionWrites(markdown, feedback);
   const findings = feedback.findings || [];
-  const changed = sections.filter((s) => s.status !== 'unchanged' || s.current_text !== s.original_text);
+  const changed = sections.filter((s) => s.status !== 'unchanged' || s.current_text !== s.file_text);
   const findingsByStatus = {};
   for (const finding of findings) {
     findingsByStatus[finding.status] = (findingsByStatus[finding.status] || 0) + 1;
   }
   return {
-    changed_sections: changed.map((s) => ({ id: s.id, status: s.status, text_changed: s.current_text !== s.original_text })),
+    changed_sections: changed.map((s) => ({ id: s.id, status: s.status, text_changed: s.current_text !== s.file_text })),
     blocked_sections: sections.filter((s) => s.status === 'blocked').map((s) => s.id),
     comments: (feedback.comments || []).length,
     findings_total: findings.length,
@@ -753,17 +754,12 @@ async function dryRunFeedback({ projectDir, slug, feedback, allowStale, logger }
     return { ok: false, error: 'briefing_not_found', slug };
   }
   const validation = validateFeedback(feedback, { slug, currentSourceHash: hashText(current), allowStale });
-  const summary = summarizeFeedback(feedback);
+  const summary = summarizeFeedback(feedback, current);
   if (!validation.ok) {
     for (const err of validation.errors) logger.error(`feedback: ${err}`);
     return { ok: false, error: 'invalid_feedback', slug, mode: 'dry-run', validation, summary };
   }
-  const inputFindings = await readOptionalJson(resolveBriefingPath(projectDir, slug, 'refinement-findings.json'));
-  const confirmation = assessRoundConfirmation(feedback, {
-    stale: validation.stale,
-    briefingSections: new Map(parseBriefingSections(current).sections.map((section) => [section.id, section.original_text])),
-    inputFindings: inputFindings.value
-  });
+  const confirmation = assessRoundConfirmation(feedback, { stale: validation.stale, briefing: current });
   logger.log(`Dry-run for "${slug}" (feedback round ${feedback.round || 1}):`);
   logger.log(`  changed sections: ${summary.changed_sections.map((c) => c.id).join(', ') || 'none'}`);
   logger.log(`  blocked sections: ${summary.blocked_sections.join(', ') || 'none'}`);

@@ -62,24 +62,28 @@ function assertMandatorySections(sections) {
   }
 }
 
-function serializeBriefingSections(originalMarkdown, sections) {
-  assertMandatorySections(sections);
-  const byTitle = new Map(sections.map((section) => [section.title, section]));
-  const content = String(originalMarkdown || '');
+// Reject duplicate headers: an injected `## ` line in a section body would
+// otherwise collapse onto the same title in byTitle, silently relocating or
+// dropping content during the round-trip. Fail closed before mutating.
+function headingMatches(content) {
   const matches = [...content.matchAll(/^##\s+(.+?)\s*$/gm)];
-  if (matches.length === 0) {
-    throw new Error('Cannot serialize briefing without Markdown sections');
-  }
-
-  // Reject duplicate headers: an injected `## ` line in a section body would
-  // otherwise collapse onto the same title in byTitle, silently relocating or
-  // dropping content during the round-trip. Fail closed before mutating.
   const titles = matches.map((match) => match[1].trim());
   const duplicates = [...new Set(titles.filter((title, index) => titles.indexOf(title) !== index))];
   if (duplicates.length > 0) {
     const error = new Error(`Duplicate briefing sections: ${duplicates.join(', ')}`);
     error.code = 'duplicate_sections';
     throw error;
+  }
+  return matches;
+}
+
+function serializeBriefingSections(originalMarkdown, sections) {
+  assertMandatorySections(sections);
+  const byTitle = new Map(sections.map((section) => [section.title, section]));
+  const content = String(originalMarkdown || '');
+  const matches = headingMatches(content);
+  if (matches.length === 0) {
+    throw new Error('Cannot serialize briefing without Markdown sections');
   }
 
   let output = '';
@@ -97,7 +101,10 @@ function serializeBriefingSections(originalMarkdown, sections) {
   }
 
   output += content.slice(cursor);
-  return output.replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+  const written = output.replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+  // New text is held to the same rule, or the next round could not read this file.
+  headingMatches(written);
+  return written;
 }
 
 module.exports = {

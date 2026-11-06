@@ -115,6 +115,7 @@ test('real browser: reopening the page leaves every section as it was', async (t
   await withPage(t, async (page) => {
     await page.goto(project.url);
     const first = JSON.parse(await exported(page));
+    assert.deepEqual(first.arrived_decided, [], 'the page carries the stamp through its save');
     await approve(page);
     await page.reload();
     const again = JSON.parse(await exported(page));
