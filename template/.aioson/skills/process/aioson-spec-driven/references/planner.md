@@ -21,6 +21,10 @@ Each numbered `## Phase N — outcome` names CAP/AC IDs, exact paths, `Verificat
 
 For runtime work, set `runtime_contract: required` and put the exact harness path, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check` in a phase assigned to DEV. Gate C checks the obligation; delivery checks the real contract.
 
+## Large plans
+
+`execution:offer` sets `plan.large_plan` and `workflow:next --complete=planner` prints `[Execution Scale]` at 8 phases or 80 files, whatever the execution choice. One measured run set those numbers: 37 minutes of Dev per phase and about 10 files per phase put 8 phases near 5 hours before QA. `AIOSON_EXECUTION_LARGE_MIN_PHASES` and `AIOSON_EXECUTION_LARGE_MIN_FILES` move them. Tell the owner the phase and file counts, offer to cut the plan into deliveries that each ship on their own, and go on with what they choose. Never turn the numbers into hours: `aioson dev:progress . --feature={slug}` projects the rest from the run itself once two phases are finished.
+
 ## Invalid plans
 
 - infrastructure-only phases followed by UI at the end;

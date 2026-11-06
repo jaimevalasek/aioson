@@ -337,3 +337,83 @@ test('a BLOCKED planner gate reaches stdout through agent:done — the kernel\'s
   // exist for the agent. The block must be on stdout.
   assert.ok(lines.some((l) => l.includes('[Execution Manifest BLOCKED]')), `stdout:\n${lines.join('\n')}\nstderr:\n${errors.join('\n')}`);
 });
+
+// A 21-phase plan ran with `execution: single` recorded, and the choice silenced
+// every scale check: the owner heard nothing until they asked 18 hours in.
+test('a large plan is named to the owner whatever the choice: it never blocks, and its limits move by environment', async (tt) => {
+  const manyPhases = Array.from({ length: 8 }, (_, i) => files(`src/p${i + 1}`, 1));
+  const recorded = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ frontmatter: ['status: draft', 'execution: single'], phases: manyPhases }) });
+  const gate = await inspectExecutionGate(recorded, SLUG, 'planner');
+  assert.equal(gate.blocking, false);
+  assert.equal(gate.advisory, true);
+  assert.equal(gate.check, 'execution_scale');
+  assert.deepEqual(gate.large.limits, { min_phases: 8, min_files: 80 });
+  assert.deepEqual(gate.large.reasons, ['phases']);
+  assert.match(gate.message, /^\[Execution Scale\] The plan for "orders" has 8 phase\(s\) and 8 file\(s\), at or above the large-plan limit \(8 phases or 80 files\)\. Tell the owner before execution starts, and offer to cut it into deliveries/);
+  assert.match(gate.message, /This blocks nothing and Autopilot does not pause for it\./);
+  assert.match(gate.message, /aioson dev:progress \. --feature=orders/);
+  assert.doesNotMatch(gate.message, /\bhours?\b|\bminutes?\b/i, 'an hour figure here would be invented');
+
+  // Under the limit the recorded choice stays silent: one phase less.
+  const below = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ frontmatter: ['status: draft', 'execution: single'], phases: manyPhases.slice(1) }) });
+  assert.deepEqual(await inspectExecutionGate(below, SLUG, 'planner'), { blocking: false, advisory: false });
+
+  // Files alone cross it too, in a plan of few phases.
+  const wide = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ frontmatter: ['status: draft', 'execution: single'], phases: [files('src/a', 40), files('src/b', 40)] }) });
+  const byFiles = await inspectExecutionGate(wide, SLUG, 'planner');
+  assert.deepEqual(byFiles.large.reasons, ['files']);
+
+  // No choice recorded: the existing question stays, and the notice joins it.
+  const unrecorded = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ phases: [files('src/a', 40), files('src/b', 40)] }) });
+  const both = await inspectExecutionGate(unrecorded, SLUG, 'planner');
+  assert.match(both.message, /and records no execution choice\. Ask the owner once/);
+  assert.match(both.message, /Tell the owner before execution starts/);
+
+  // No choice and below the split floor: the notice alone.
+  const fewFiles = await project(tt, { classification: 'MEDIUM', plan: bigPlan({ phases: manyPhases }) });
+  assert.match((await inspectExecutionGate(fewFiles, SLUG, 'planner')).message, /^\[Execution Scale\] The plan for "orders" has 8 phase/);
+
+  const previous = process.env.AIOSON_EXECUTION_LARGE_MIN_PHASES;
+  process.env.AIOSON_EXECUTION_LARGE_MIN_PHASES = '9';
+  try {
+    assert.deepEqual(await inspectExecutionGate(recorded, SLUG, 'planner'), { blocking: false, advisory: false });
+  } finally {
+    if (previous === undefined) delete process.env.AIOSON_EXECUTION_LARGE_MIN_PHASES;
+    else process.env.AIOSON_EXECUTION_LARGE_MIN_PHASES = previous;
+  }
+});
+
+test('the large-plan notice reaches the planner and the owner without moving the stage', async (tt) => {
+  const manyPhases = Array.from({ length: 8 }, (_, i) => files(`src/p${i + 1}`, 1));
+  const plan = bigPlan({ frontmatter: ['status: approved', 'execution: single'], phases: manyPhases });
+  const capRow = (i) => `| CAP-orders-p${i} | Phase ${i} outcome delivered | User acts | required | Core promise |`;
+  const acRow = (i) => `| AC-orders-0${i} | CAP-orders-p${i} | Behavior ${i} is observable in the app | test |`;
+  const prdContent = COMPLETION_PRD
+    .replace(capRow(4), [4, 5, 6, 7, 8].map(capRow).join('\n'))
+    .replace(acRow(4), [4, 5, 6, 7, 8].map(acRow).join('\n'));
+  const dir = await project(tt, { classification: 'MEDIUM', plan, current: true, prdContent });
+  const lines = [];
+  const capture = { log: (line) => lines.push(String(line)), error: (line) => lines.push(String(line)), warn: (line) => lines.push(String(line)) };
+  const payload = await activate(dir, { complete: 'planner' }, capture);
+  assert.equal(payload.next, 'dev', 'Autopilot does not pause for it');
+  assert.equal(payload.execution.advisory, true);
+  assert.deepEqual(payload.execution.large.reasons, ['phases']);
+  assert.ok(lines.some((line) => /^\[Execution Scale\] The plan for "orders" has 8 phase/.test(line)), lines.join('\n'));
+
+  const offerLines = [];
+  const { runExecution } = require('../src/commands/execution');
+  const offer = await runExecution({ args: [dir], options: { sub: 'offer', feature: SLUG }, logger: { log: (line) => offerLines.push(String(line)), error() {} } });
+  assert.deepEqual(offer.plan.large_plan.reasons, ['phases']);
+  assert.ok(offerLines.some((line) => /large plan: The plan for "orders" has 8 phase/.test(line)), offerLines.join('\n'));
+});
+
+test('the planner kernel, its reference and the Autopilot doc carry the relay', async () => {
+  const read = (rel) => fs.readFile(path.join(ROOT, rel), 'utf8');
+  assert.match(await read('template/.aioson/agents/planner.md'), /When `plan\.large_plan` is set, give the owner its numbers before handoff/);
+  const reference = await read('template/.aioson/skills/process/aioson-spec-driven/references/planner.md');
+  assert.match(reference, /AIOSON_EXECUTION_LARGE_MIN_PHASES/);
+  assert.match(reference, /Never turn the numbers into hours/);
+  for (const rel of ['template/.aioson/docs/autopilot-handoff.md', '.aioson/docs/autopilot-handoff.md']) {
+    assert.match(await read(rel), /## Notices that do not stop[\s\S]*`owner_notices`/);
+  }
+});

@@ -32,6 +32,9 @@
  *
  * When --context is omitted, auto-detect includes project context + reviewed PRD
  * + implementation plan when present.
+ *
+ * `--phase=<n>` means phase n just finished. Besides the rotating History below,
+ * each write appends a stamped line to the ledger `dev:progress` reads.
  */
 
 const fs = require('node:fs/promises');
@@ -39,6 +42,7 @@ const path = require('node:path');
 const { contextDir, readFileSafe, parseFrontmatter, scanArtifacts } = require('../preflight-engine');
 const { resolveTargetDir } = require('../lib/project-root');
 const { isUsableDesignDocFile } = require('../lib/design-doc-seed');
+const { appendPhaseCheckpoint } = require('../lib/dev-progress');
 
 const MAX_CONTEXT = 4;
 
@@ -74,7 +78,7 @@ async function fileExistsRel(targetDir, rel) {
   }
 }
 
-async function runStateSave({ args, options = {}, logger }) {
+async function runStateSave({ args, options = {}, logger, now = Date.now }) {
   const targetDir = resolveTargetDir(args);
   const slug = options.feature ? String(options.feature) : null;
   const phase = options.phase ? String(options.phase) : null;
@@ -191,6 +195,9 @@ async function runStateSave({ args, options = {}, logger }) {
 
   await fs.mkdir(path.dirname(statePath), { recursive: true });
   await fs.writeFile(statePath, lines.join('\n'), 'utf8');
+
+  const checkpoint = await appendPhaseCheckpoint(targetDir, { feature: slug, phase, next }, now);
+  if (!checkpoint.ok) warnings.push(`phase stamp not recorded (${checkpoint.reason}); dev:progress will not count this checkpoint`);
 
   const result = {
     ok: true,

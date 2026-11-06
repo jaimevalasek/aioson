@@ -30,6 +30,15 @@
  * turns those numbers into candidate lanes and rows: raw material the planner
  * turns into tables. Single DEV is always the recommended starting path;
  * scale informs an explicitly requested orchestration, never selects it.
+ *
+ * `assessLargePlan` answers a third question: is this plan so long that the
+ * owner should hear about it before it runs? Nothing ever said so, and the
+ * recorded `execution: single` made every other check silent. The limits come
+ * from the one run measured so far: 37 minutes of Dev per phase and about 10
+ * files per phase, against an owner expecting 3 to 4 hours. At that pace 8
+ * phases are about 5 hours of Dev before QA, past what was expected, and 80
+ * files are about 8 phases of work however the plan numbers them. One run is
+ * thin evidence, so the environment moves both limits. Crossing one only warns.
  */
 
 const {
@@ -53,6 +62,10 @@ const DEFAULT_UNIT_MAX_FILES = 10;
 const DEFAULT_UNIT_MAX_ACS = 6;
 const UNIT_MAX_FILES_ENV = 'AIOSON_EXECUTION_UNIT_MAX_FILES';
 const UNIT_MAX_ACS_ENV = 'AIOSON_EXECUTION_UNIT_MAX_ACS';
+const DEFAULT_LARGE_MIN_PHASES = 8;
+const DEFAULT_LARGE_MIN_FILES = 80;
+const LARGE_MIN_PHASES_ENV = 'AIOSON_EXECUTION_LARGE_MIN_PHASES';
+const LARGE_MIN_FILES_ENV = 'AIOSON_EXECUTION_LARGE_MIN_FILES';
 const MAX_AREAS = 8;
 const EXECUTION_CHOICES = ['single', 'orchestrated'];
 const DELIVERY_HEADINGS = ['Capability Delivery Plan', 'Plano de Entrega de Capacidades', 'Matriz de Entrega de Capacidades'];
@@ -86,6 +99,28 @@ function unitCeiling(env = process.env) {
     max_files: positiveInt(env[UNIT_MAX_FILES_ENV], DEFAULT_UNIT_MAX_FILES),
     max_acs: positiveInt(env[UNIT_MAX_ACS_ENV], DEFAULT_UNIT_MAX_ACS)
   };
+}
+
+/** `{ min_phases, min_files }` — when a plan counts as large, moved by the environment. */
+function largePlanLimits(env = process.env) {
+  return {
+    min_phases: positiveInt(env[LARGE_MIN_PHASES_ENV], DEFAULT_LARGE_MIN_PHASES),
+    min_files: positiveInt(env[LARGE_MIN_FILES_ENV], DEFAULT_LARGE_MIN_FILES)
+  };
+}
+
+/** `{ phases, files, limits, reasons }` when the measured plan crosses a limit, else null. */
+function assessLargePlan(scale, limits = largePlanLimits()) {
+  if (!scale) return null;
+  const reasons = [];
+  if (scale.phases >= limits.min_phases) reasons.push('phases');
+  if (scale.files >= limits.min_files) reasons.push('files');
+  return reasons.length > 0 ? { phases: scale.phases, files: scale.files, limits, reasons } : null;
+}
+
+/** What the owner hears before the plan runs. Numbers only: hours come from `dev:progress`. */
+function formatLargePlan(large, slug) {
+  return `The plan for "${slug}" has ${large.phases} phase(s) and ${large.files} file(s), at or above the large-plan limit (${large.limits.min_phases} phases or ${large.limits.min_files} files). Tell the owner before execution starts, and offer to cut it into deliveries that each ship on their own. This blocks nothing and Autopilot does not pause for it. After two finished phases, aioson dev:progress . --feature=${slug} projects the rest from this run.`;
 }
 
 /**
@@ -486,19 +521,26 @@ function formatSplitProposal(proposal) {
 }
 
 module.exports = {
+  DEFAULT_LARGE_MIN_FILES,
+  DEFAULT_LARGE_MIN_PHASES,
   DEFAULT_SPLIT_MIN_FILES,
   DEFAULT_UNIT_MAX_ACS,
   DEFAULT_UNIT_MAX_FILES,
   EXECUTION_CHOICES,
+  LARGE_MIN_FILES_ENV,
+  LARGE_MIN_PHASES_ENV,
   SPLIT_MIN_FILES_ENV,
   SURFACES,
   UNIT_MAX_ACS_ENV,
   UNIT_MAX_FILES_ENV,
+  assessLargePlan,
   classifySurface,
+  formatLargePlan,
   formatPlanScale,
   formatRecommendation,
   formatSplitProposal,
   formatUnit,
+  largePlanLimits,
   measurePlanScale,
   measureSurfaces,
   measureUnits,

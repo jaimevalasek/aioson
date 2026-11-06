@@ -38,7 +38,7 @@ const {
   installedExecutionHosts
 } = require('../lib/execution-roles');
 const { listExecutionHosts } = require('../lib/tool-capabilities');
-const { measurePlanScale, resolveExecutionChoice, formatPlanScale, formatRecommendation, formatUnit, formatSplitProposal, proposeSplit, recommendExecution, splitMinFiles, unitCeiling } = require('../lib/plan-scale');
+const { assessLargePlan, formatLargePlan, largePlanLimits, measurePlanScale, resolveExecutionChoice, formatPlanScale, formatRecommendation, formatUnit, formatSplitProposal, proposeSplit, recommendExecution, splitMinFiles, unitCeiling } = require('../lib/plan-scale');
 const { parseDevelopmentLanes, parseExecutionWaves } = require('../harness/plan-waves');
 const {
   compileFeatureExecution,
@@ -274,6 +274,8 @@ async function describePlanTables(projectDir, feature, { env, now }) {
     // graph too: one process is one context, and a plan whose only lane runs
     // one whole phase per wave is orchestrated in name only.
     scale,
+    // Past this the owner hears the numbers before the plan runs, whatever the choice.
+    large_plan: scale ? assessLargePlan(scale, largePlanLimits(env)) : null,
     execution_choice: content !== null ? resolveExecutionChoice(content).choice : null,
     // Candidate lanes and rows cut by surface — raw material, never a table.
     split_proposal: proposal,
@@ -422,6 +424,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
           if (result.plan.recommendation) {
             logger.log(`  recommendation: ${formatRecommendation(result.plan.recommendation)}`);
           }
+          if (result.plan.large_plan) logger.log(`  large plan: ${formatLargePlan(result.plan.large_plan, feature)}`);
         }
       }
     }

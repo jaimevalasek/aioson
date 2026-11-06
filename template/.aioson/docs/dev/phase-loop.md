@@ -34,6 +34,7 @@ After finishing each phase:
    aioson dev:state:write . --feature={slug} --phase={n} --next="{next concrete step}" --context=prd,impl-plan 2>/dev/null || true
    ```
 
+   `--phase` names the phase that just finished, and every write leaves a stamp. `aioson dev:progress . --feature={slug}` reads the stamps: phases finished, mean per phase, and the projection for the rest once two phases are measured. When the owner asks how long it will take, answer from this command. Below two measured phases, say there is no measure yet.
 5. Continue immediately. The checkpoint exists for crash recovery, not as a handoff or approval gate.
 
 After the last phase, run the full relevant build/tests and production-path smoke once, then hand off to QA:

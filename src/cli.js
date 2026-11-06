@@ -261,6 +261,7 @@ const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodem
 const { runDossierAddResearch } = lazy(() => { const { runDossierAddResearch } = require('./commands/dossier-add-research'); return { runDossierAddResearch }; });
 const { runDossierAudit } = lazy(() => { const { runDossierAudit } = require('./commands/dossier-audit'); return { runDossierAudit }; });
 const { runDevResumeData } = lazy(() => { const { runDevResumeData } = require('./commands/dev-resume'); return { runDevResumeData }; });
+const { runDevProgress } = lazy(() => { const { runDevProgress } = require('./commands/dev-progress'); return { runDevProgress }; });
 const { runRevisionOpen, runRevisionList, runRevisionResolve } = lazy(() => { const { runRevisionOpen, runRevisionList, runRevisionResolve } = require('./commands/revision'); return { runRevisionOpen, runRevisionList, runRevisionResolve }; });
 const { runAcTestAudit } = lazy(() => { const { runAcTestAudit } = require('./commands/ac-test-audit'); return { runAcTestAudit }; });
 const { runSddBenchmark } = lazy(() => { const { runSddBenchmark } = require('./commands/sdd-benchmark'); return { runSddBenchmark }; });
@@ -997,6 +998,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'dossier-compact',
   'dev:resume-data',
   'dev-resume-data',
+  'dev:progress',
+  'dev-progress',
   'revision:open',
   'revision-open',
   'revision:list',
@@ -1177,7 +1180,7 @@ const HELP_KEYS = [
   'cli.help_feature_close', 'cli.help_feature_archive', 'cli.help_gate_check', 'cli.help_gate_approve',
   'cli.help_prototype_check', 'cli.help_ac_test_audit', 'cli.help_preflight', 'cli.help_pulse_update',
   'cli.help_agent_done', 'cli.help_commit_prepare', 'cli.help_dossier_init', 'cli.help_dossier_show', 'cli.help_dossier_add_finding',
-  'cli.help_detect_test_runner', 'cli.help_dev_resume_data', 'cli.help_plan',
+  'cli.help_detect_test_runner', 'cli.help_dev_resume_data', 'cli.help_dev_progress', 'cli.help_plan',
   'cli.help_harness_init', 'cli.help_harness_validate', 'cli.help_harness_apply_validation', 'cli.help_harness_approve',
   'cli.help_harness_reject', 'cli.help_harness_status', 'cli.help_harness_check', 'cli.help_harness_retro',
   'cli.help_harness_preview', 'cli.help_verification_plan', 'cli.help_delegation_plan', 'cli.help_delegation_run',
@@ -2142,6 +2145,8 @@ async function main() {
       result = await runDossierCompact({ args, options, logger: commandLogger });
     } else if (command === 'dev:resume-data' || command === 'dev-resume-data') {
       result = await runDevResumeData({ args, options, logger: commandLogger });
+    } else if (command === 'dev:progress' || command === 'dev-progress') {
+      result = await runDevProgress({ args, options, logger: commandLogger });
     } else if (command === 'revision:open' || command === 'revision-open') {
       result = await runRevisionOpen({ args, options, logger: commandLogger });
     } else if (command === 'revision:list' || command === 'revision-list') {

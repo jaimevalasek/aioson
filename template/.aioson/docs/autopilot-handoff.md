@@ -49,6 +49,10 @@ Prototype ownership follows the same rule. An exact active-feature path plus mat
 
 The same rule applies to bounded Tester/Pentester corrections: `review-cycle:advance` and configured cycle limits control execution, not routine confirmation prompts.
 
+## Notices that do not stop
+
+A plan at or above the large-plan limit stops nothing. `workflow:next --complete=planner` prints `[Execution Scale]` with its phase and file counts, the payload carries it in `execution`, and `workflow:execute` lists it in `owner_notices`. Whoever runs the chain relays it to the owner before DEV starts, in the same message that reports the handoff, and continues. Once two phases are finished, `aioson dev:progress . --feature={slug}` answers how long the rest will take.
+
 ## Stop conditions
 
 Stop immediately for:

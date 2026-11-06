@@ -330,6 +330,8 @@ module.exports = {
       'aioson detect:test-runner [path] [--json] [--locale=pt-BR]',
     help_dev_resume_data:
       'aioson dev:resume-data [path] [--json] [--locale=pt-BR]',
+    help_dev_progress:
+      'aioson dev:progress [path] --feature=<slug> [--json] [--locale=pt-BR]',
     help_verification_plan:
       'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=pt-BR]',
     help_delegation_plan:

@@ -1164,6 +1164,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
   const executionTransitions = [];
   let activation = null;
   let currentStatus = statusSnapshot;
+  const ownerNotices = [];
 
   for (let index = 0; index < maxCheckpoints; index += 1) {
     const suggestion = currentStatus && currentStatus.suggestion ? currentStatus.suggestion : null;
@@ -1210,6 +1211,11 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     }
 
     activation = transitionResult.result || activation;
+    // Autopilot never pauses for these, so this payload is how the owner hears them.
+    const executionNotice = activation && activation.execution;
+    if (transitionResult.result && executionNotice && executionNotice.advisory && executionNotice.message) {
+      ownerNotices.push(executionNotice.message);
+    }
     executionTransitions.push({
       index: index + 1,
       transition: transitionResult.transition,
@@ -1271,6 +1277,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     autopilot_signal: autopilotSignal,
     orchestration_policy: orchestrationPolicy,
     stop_reason: stopReason,
+    owner_notices: ownerNotices,
     transitions: executionTransitions,
     active_stage: activation && activation.agent ? activation.agent : null,
     next_stage: activation && activation.next ? activation.next : null,

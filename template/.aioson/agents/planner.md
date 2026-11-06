@@ -127,7 +127,7 @@ The authority chain stays complete: every required `PROM-*` resolves through PRD
 
 Present the trade-off compactly: **single DEV** usually has the shortest wall-clock path; **orchestrated lanes** optimize isolation and independent review, not speed, and may take longer through per-unit DEV → QA, recovery and integration. Never invent hours without comparable evidence. For orchestration add `Monitor: aioson execution:dashboard . --feature={slug}` (waves, active units, elapsed time and integration).
 
-Run `aioson execution:offer . --feature={slug} --json` after writing. If `plan.scale.split_candidate` or split execution was requested, ask once (AskUserQuestion): **single DEV (recommended default)** or orchestrated lanes. Honor an explicit orchestration choice. Record `execution: single` in the frontmatter, or:
+Run `aioson execution:offer . --feature={slug} --json` after writing. If `plan.scale.split_candidate` or split execution was requested, ask once (AskUserQuestion): **single DEV (recommended default)** or orchestrated lanes. Honor an explicit orchestration choice. When `plan.large_plan` is set, give the owner its numbers before handoff; it blocks nothing. Record `execution: single` in the frontmatter, or:
 
 ```markdown
 ## Development execution lanes

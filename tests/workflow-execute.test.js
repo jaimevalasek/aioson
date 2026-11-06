@@ -1428,3 +1428,85 @@ test('workflow:execute --step alone is record-only (never drives stage transitio
   const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
   assert.equal(state.current, null, 'no stage activation happened');
 });
+
+// Autopilot never pauses for a large plan, and it reads the payload rather than
+// the log, so the payload is how the owner hears about it before DEV starts.
+test('workflow:execute lists a large plan in owner_notices and keeps going', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(
+    tmpDir,
+    '.aioson/context/project.context.md',
+    `---\nproject_name: "demo"\nproject_type: "api"\nprofile: "developer"\nframework: "Node.js"\nframework_installed: true\nclassification: "SMALL"\nconversation_language: "en"\naioson_version: "1.2.1"\n---\n`
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+---
+# PRD
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-checkout-01 | User completes checkout | User submits | required | Core |
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-checkout-01 | CAP-checkout-01 | Checkout succeeds | focused test |
+`);
+  await approveAndSealSheldonReview(tmpDir, 'checkout');
+  const plan = (phases) => `---
+status: approved
+execution: single
+---
+# Plan
+## Implementation Delta
+| CAP | Action | Existing evidence | Exact paths | Required change |
+|---|---|---|---|---|
+| CAP-checkout-01 | create | Nearest boundary inspected | src/checkout.js, tests/checkout.test.js | Add it |
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-checkout-01 | 1 | src/checkout.js, tests/checkout.test.js | node --test |
+${Array.from({ length: phases }, (_, i) => `\n## Phase ${i + 1} — Step ${i + 1}\n- Verification: node --test\n- Done when: step ${i + 1} shows on screen.\n`).join('')}`;
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', plan(8));
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', '# Pulse');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-06-02 | — |\n'
+  );
+  const state = JSON.stringify({
+    version: 1,
+    mode: 'feature',
+    classification: 'SMALL',
+    sequence: ['product', 'sheldon', 'planner', 'dev', 'qa'],
+    current: 'planner',
+    next: 'dev',
+    completed: ['product', 'sheldon'],
+    skipped: [],
+    featureSlug: 'checkout',
+    detour: null,
+    updatedAt: new Date().toISOString()
+  }, null, 2);
+  await writeFile(tmpDir, '.aioson/context/workflow.state.json', state);
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', tool: 'codex', 'max-checkpoints': 1 },
+    logger: makeLogger()
+  });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.active_stage, 'dev', 'the chain went on');
+  assert.equal(result.owner_notices.length, 1);
+  assert.match(result.owner_notices[0], /^\[Execution Scale\] The plan for "checkout" has 8 phase\(s\)/);
+
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', plan(3));
+  await writeFile(tmpDir, '.aioson/context/workflow.state.json', state);
+  const small = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', tool: 'codex', 'max-checkpoints': 1 },
+    logger: makeLogger()
+  });
+  assert.equal(small.ok, true, JSON.stringify(small));
+  assert.deepEqual(small.owner_notices, []);
+});
