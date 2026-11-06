@@ -51,7 +51,7 @@ After the final PRD edit, Sheldon records `sheldon_review: approved` and promote
 - Vision
 - Problem and users
 - `## Feature Capability Map`
-- `## Source Coverage` when the approved briefing contains `PROM-*`
+- `## Source Coverage` when the approved briefing contains `PROM-*`. A required `PROM-*` decided `deferred`, `rejected` or `not_applicable` needs the owner's approval in its rationale, and `verify:artifact --kind=sources` looks for one of these phrases, in any case and with or without accents: `user-approved`, `user approved`, `approved by user`, `approved by the user`, `user decision`, `usuário aprovou`, `aprovado pelo usuário`, `decisão do usuário`
 - `## Current System Fit`
 - MVP scope
 - Out of scope

@@ -121,7 +121,7 @@ Required sections:
 
 Every required capability appears exactly once in the Capability Delivery Plan; every listed file appears in `## Implementation Delta` for the same capability and every delta path in that delivery row. `reuse`, `modify` and `retire` paths must exist when Gate C runs; `create` paths must not exist yet; `retire` means the exact file is removed. Full paths only; no globs, ellipses, directory shorthand or guessed filenames.
 
-The authority chain stays complete: every required `PROM-*` resolves through PRD Source Coverage to `CAP-*`/`AC-*`, and every required `CAP-*` to exactly one delivery phase with executable verification. Never duplicate source prose in the plan.
+The authority chain stays complete: every required `PROM-*` resolves through PRD Source Coverage to `CAP-*`/`AC-*`, and every required `CAP-*` to one delivery row, listing each phase that delivers it, with executable verification. Never duplicate source prose in the plan.
 
 `## Engineering Controls` is required but proportional. Add one row per material concern and tie it to a phase verification; when no cross-cutting concern is triggered, say so with the exact boundaries inspected — never generic controls. Rows are coverage seeds for Dev, QA and any enabled Tester/Pentester — they activate no specialist and create no gate.
 
@@ -151,7 +151,7 @@ For orchestrated lanes or the compiled harness lane (`.aioson/plans/{slug}/harne
 
 Before writing or compiling this table, load `.aioson/docs/planner/orchestrated-execution.md`: mandatory rules for unit ownership, earliest safe waves, dependency evidence, local verification, context telemetry and continuous DEV → QA recovery.
 
-For runtime work (owned prototype or migrations), set `runtime_contract: required`. One phase assigns DEV `.aioson/plans/{slug}/harness-contract.json`, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check`. Gate C accepts this obligation; DEV/QA/close require the real contract and evidence. See the SDD Planner reference.
+For runtime work (owned prototype or migrations), set `runtime_contract: required`. One phase assigns DEV `.aioson/plans/{slug}/harness-contract.json`, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check`. Gate C accepts this obligation, or validates a contract already on disk; the planner writes none. DEV/QA/close require the real contract and evidence. See the SDD Planner reference.
 
 ## Feature dossier
 

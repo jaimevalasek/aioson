@@ -471,3 +471,61 @@ test('Gate C enforces v2 AC phases and content binding without retroactive legac
   assert.equal(result.ok, false);
   assert.match(result.missing.join(' '), /plan_source_stale/);
 });
+
+// A capability that crosses phases: the kernel said "exactly one delivery phase",
+// the gate asks for one row, and a planner had to choose which to believe.
+test('Gate C takes one row per capability, with every phase it crosses in the Phase cell', async () => {
+  const root = await tmp();
+  await seed(root);
+  const crossing = plan().replace('| CAP-demo-01 | 1 | src/demo.js, tests/demo.test.js | node --test |', '| CAP-demo-01 | 1, 2, 3 | src/demo.js, tests/demo.test.js | node --test |');
+  assert.notEqual(crossing, plan());
+  await write(root, '.aioson/context/implementation-plan-demo.md', crossing);
+  assert.equal((await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger })).result, 'PASS');
+
+  const twoRows = crossing.replace('| CAP-demo-01 | 1, 2, 3 | src/demo.js, tests/demo.test.js | node --test |', '| CAP-demo-01 | 1 | src/demo.js, tests/demo.test.js | node --test |\n| CAP-demo-01 | 2 | src/demo.js, tests/demo.test.js | node --test |');
+  await write(root, '.aioson/context/implementation-plan-demo.md', twoRows);
+  const refused = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
+  assert.equal(refused.result, 'BLOCKED');
+  assert.ok(refused.missing.some((item) => item.includes('capability_delivery_duplicate')), refused.missing.join('\n'));
+
+  const repo = path.resolve(__dirname, '..');
+  const read = (rel) => fs.readFile(path.join(repo, rel), 'utf8');
+  for (const rel of ['template/.aioson/agents/planner.md', '.aioson/agents/planner.md']) {
+    const kernel = await read(rel);
+    assert.match(kernel, /every required `CAP-\*` to one delivery row, listing each phase that delivers it/);
+    assert.doesNotMatch(kernel, /exactly one delivery phase/);
+  }
+  assert.match(await read('template/.aioson/skills/process/aioson-spec-driven/references/planner.md'), /lists them all in its Phase cell/);
+  for (const rel of ['template/.aioson/docs/feature-completeness-contract.md', '.aioson/docs/feature-completeness-contract.md']) {
+    assert.match(await read(rel), /lists them all in that row's Phase cell/);
+  }
+});
+
+// The kernel forbade harness artifacts, plans had seeded one, and the gate takes
+// both. The guidance now says what the gate does.
+test('Gate C accepts the harness obligation in a phase and validates a contract already on disk', async () => {
+  const contractPath = '.aioson/plans/demo/harness-contract.json';
+  const obligation = `## Phase 1 — Boot\n- Harness: ${contractPath}, RG-build, RG-migrate, RG-boot, RG-smoke, aioson harness:check\n`;
+  const planned = await tmp();
+  await seed(planned);
+  await write(planned, '.aioson/briefings/demo/prototype-manifest.md', '# Core interactions\n');
+  await write(planned, '.aioson/context/implementation-plan-demo.md', `${plan().replace('status: pending', 'status: pending\nruntime_contract: required')}\n${obligation}`);
+  const byObligation = (await runGateCheck({ args: [planned], options: { json: true, feature: 'demo', gate: 'C' }, logger })).evidence.find((item) => item.type === 'harness_contract');
+  assert.equal(byObligation.ok, true, JSON.stringify(byObligation.errors));
+  assert.equal(byObligation.planned, true);
+  assert.equal(byObligation.has_contract, false);
+
+  const seeded = await tmp();
+  await seed(seeded);
+  await write(seeded, '.aioson/briefings/demo/prototype-manifest.md', '# Core interactions\n');
+  const { runHarnessInit } = require('../src/commands/harness');
+  await runHarnessInit({ args: [seeded], options: { slug: 'demo' }, logger, t: () => undefined });
+  const byContract = (await runGateCheck({ args: [seeded], options: { json: true, feature: 'demo', gate: 'C' }, logger })).evidence.find((item) => item.type === 'harness_contract');
+  assert.equal(byContract.ok, true, JSON.stringify(byContract.errors));
+  assert.equal(byContract.has_contract, true);
+
+  const repo = path.resolve(__dirname, '..');
+  for (const rel of ['template/.aioson/agents/planner.md', '.aioson/agents/planner.md']) {
+    assert.match(await fs.readFile(path.join(repo, rel), 'utf8'), /Gate C accepts this obligation, or validates a contract already on disk; the planner writes none/);
+  }
+});

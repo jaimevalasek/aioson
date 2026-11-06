@@ -116,6 +116,15 @@ function withIdColumn(table, columns, name, aliases, idRe) {
   return columns;
 }
 
+// What a rationale must say for a required promise to be downgraded, read with
+// any case and any accents. The list is the contract: prd-contract.md prints it,
+// and the finding repeats it.
+const USER_APPROVAL_PHRASES = Object.freeze([
+  'user-approved', 'user approved', 'approved by user', 'approved by the user', 'user decision',
+  'usuario aprovou', 'aprovado pelo usuario', 'decisao do usuario'
+]);
+const USER_APPROVAL = new RegExp(USER_APPROVAL_PHRASES.join('|'), 'i');
+
 // The Source Inventory columns the validator reads — the migration's test of
 // "already canonical" too, so a table that verifies is never re-migrated.
 function inventoryColumns(table) {
@@ -355,12 +364,12 @@ async function validateSourceLineage({
           if (
             originalPromise?.state === 'required'
             && ['deferred', 'rejected', 'not_applicable'].includes(decision)
-            && !/(user[- ]approved|approved by (?:the )?user|user decision|usuario aprovou|aprovado pelo usuario|decisao do usuario)/i.test(foldDiacritics(rationale))
+            && !USER_APPROVAL.test(foldDiacritics(rationale))
           ) {
             findings.push(finding(
               'product',
               'source_required_promise_downgraded_without_user_approval',
-              `${promise} was required in the approved briefing; a non-required Product decision must cite explicit user approval`,
+              `${promise} was required in the approved briefing; a non-required Product decision must cite explicit user approval, with one of these in its rationale: ${USER_APPROVAL_PHRASES.join(', ')}`,
               prdArtifact
             ));
           }
@@ -437,6 +446,7 @@ async function validateSourceLineage({
 }
 
 module.exports = {
+  USER_APPROVAL_PHRASES,
   inventoryColumns,
   pinsSources,
   promiseMapColumns,

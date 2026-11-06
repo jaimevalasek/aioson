@@ -292,3 +292,44 @@ test('briefing:approve pins the approved text; an edit after approval warns, una
   entry = (await readBriefingRegistry(dir)).briefings.find((item) => item.slug === SLUG);
   assert.equal(entry.approved_sha256 || null, null);
 });
+
+// A discovery note that names a rich surface made the feature applicable, and the
+// applicable path skipped the at-birth filter: a briefing with no PRD yet was
+// charged with the PRD's Source Coverage by the very check it has to pass.
+for (const note of ['expansion-scout.md', 'solution-options.md']) {
+  test(`a ${note} that names a rich surface does not make Source Coverage due before the PRD`, async () => {
+    const { dir, write } = await project();
+    await write(`.aioson/briefings/${SLUG}/${note}`, '# Notes\n\nA kanban board could show the due dates, with a CRUD admin panel.\n');
+
+    const sources = await verify(dir, 'sources');
+    assert.equal(sources.metrics.applicable, true);
+    assert.deepEqual(sources.issues, [], sources.issues.join(' | '));
+    assert.equal(sources.metrics.coverage_checked, false);
+
+    const birth = await verify(dir, 'briefing');
+    assert.doesNotMatch(birth.issues.join('\n'), /source_coverage_missing/);
+
+    // A real defect at the same stage still answers: only the coverage waits.
+    await write(`plans/${SLUG}/idea.md`, `${SOURCE_TEXT}3. Edited later.\n`);
+    assert.match((await verify(dir, 'sources')).issues.join('\n'), /source_fingerprint_stale.*SRC-001/);
+  });
+}
+
+test('with those notes, Source Coverage is due again as soon as the PRD exists', async () => {
+  const { dir, write } = await project();
+  await write(`.aioson/briefings/${SLUG}/expansion-scout.md`, '# Notes\n\nA kanban board could show the due dates.\n');
+  await write(`.aioson/context/prd-${SLUG}.md`, PRD.replace(/## Source Coverage[\s\S]*?(?=## Feature Capability Map)/, ''));
+  const report = await verify(dir, 'sources');
+  assert.match(report.issues.join('\n'), /source_coverage_missing/);
+  assert.equal(report.metrics.coverage_checked, true);
+});
+
+test('the notes do not loosen a gate: with no PRD, Gate A and Gate C stay blocked', async () => {
+  const { runGateCheck } = require('../src/commands/gate-check');
+  const { dir, write } = await project();
+  await write(`.aioson/briefings/${SLUG}/expansion-scout.md`, '# Notes\n\nA kanban board could show the due dates.\n');
+  for (const gate of ['A', 'B', 'C']) {
+    const result = await runGateCheck({ args: [dir], options: { json: true, feature: SLUG, gate }, logger: quiet });
+    assert.equal(result.result, 'BLOCKED', gate);
+  }
+});

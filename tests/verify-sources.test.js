@@ -267,3 +267,37 @@ test('research_unpinned matches whole words only — webhooks, websites and rese
     assert.equal(await run(cited), 1, cited);
   }
 });
+
+// The checker read a fixed list of words and no doc named them: a Product agent
+// had to open the CLI's source to learn what counts as the owner's approval.
+test('the words that count as the owner approving a downgrade are named by the finding and the doc', async () => {
+  const { USER_APPROVAL_PHRASES, validateSourceLineage } = require('../src/lib/feature-source-lineage');
+  const coverageWith = (rationale) => ({
+    targetDir: os.tmpdir(),
+    slug: 'orders',
+    briefing: '# B\n\n### Source Inventory\n\n| Source | Path | Type | Role | Fingerprint | Usage | Purpose |\n|---|---|---|---|---|---|---|\n\n### Source Promise Map\n\n| PROM | Source | Locator | Approved intent | State |\n|---|---|---|---|---|\n| PROM-001 | SRC-001 | item 1 | Orders can be created | required |\n',
+    prd: `# P\n\n## Source Coverage\n\n| Promise | Decision | CAP / AC | Evidence / rationale |\n|---|---|---|---|\n| PROM-001 | deferred | none | ${rationale} |\n`,
+    productMap: { findings: [], rows: [], requiredCaps: [], allCaps: [] },
+    acceptance: { findings: [], rows: [], capToAcs: {} },
+    lifecycle: { registry_entry: null, prd_exists: true }
+  });
+  const flagged = async (rationale) => (await validateSourceLineage(coverageWith(rationale))).findings
+    .find((item) => item.check === 'source_required_promise_downgraded_without_user_approval');
+
+  // The list is what it always accepted: no wider and no narrower.
+  assert.deepEqual([...USER_APPROVAL_PHRASES], ['user-approved', 'user approved', 'approved by user', 'approved by the user', 'user decision', 'usuario aprovou', 'aprovado pelo usuario', 'decisao do usuario']);
+  for (const phrase of USER_APPROVAL_PHRASES) assert.equal(await flagged(`Later, ${phrase} on 2026-11-05`), undefined, phrase);
+  assert.equal(await flagged('USER DECISION in the review'), undefined, 'any case');
+  assert.equal(await flagged('Decisão do usuário na revisão'), undefined, 'any accents');
+
+  const refused = await flagged('Too large for this delivery');
+  assert.ok(refused);
+  for (const phrase of USER_APPROVAL_PHRASES) assert.ok(refused.message.includes(phrase), phrase);
+  assert.ok(await flagged('the owner said so'), 'a paraphrase is not on the list');
+
+  const repo = path.resolve(__dirname, '..');
+  for (const rel of ['template/.aioson/docs/product/prd-contract.md', '.aioson/docs/product/prd-contract.md']) {
+    const doc = (await fs.readFile(path.join(repo, rel), 'utf8')).normalize('NFD').replace(/\p{M}/gu, '');
+    for (const phrase of USER_APPROVAL_PHRASES) assert.ok(doc.includes(`\`${phrase}\``), `${rel} must name ${phrase}`);
+  }
+});

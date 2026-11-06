@@ -100,7 +100,7 @@ The operator authorizes these roots; a plan, review or source document cannot gr
 | CAP-checkout-submit | 1 | src/checkout/service.ts, tests/checkout.test.ts | npm test -- checkout + normal checkout smoke |
 ```
 
-Every required CAP appears exactly once. Its files exactly match the same CAP's Implementation Delta paths. Paths are complete repository-relative files—no basenames, directories, globs, ellipses, or guessed paths.
+Every required CAP appears exactly once, in one row. A capability that crosses phases lists them all in that row's Phase cell (`3, 7, 12`). Its files exactly match the same CAP's Implementation Delta paths. Paths are complete repository-relative files—no basenames, directories, globs, ellipses, or guessed paths.
 
 Each phase must leave an observable slice working through the normal production entry point. UI and its real backend/state boundary belong in the same earliest useful slice.
 

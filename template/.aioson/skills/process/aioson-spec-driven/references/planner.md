@@ -10,7 +10,7 @@ Exactly one `implementation-plan-{slug}.md` with `status: approved` and `plan_co
 
 ## Required decisions
 
-- Map every required `CAP-*` and `AC-*` to one vertical phase.
+- Map every required `AC-*` to a vertical phase, and every required `CAP-*` to one row of `## Capability Delivery Plan`. A capability that crosses phases keeps that one row and lists them all in its Phase cell (`3, 7, 12`); a second row for it is a Gate C finding.
 - Verify the PRD's current-system fit and classify every exact path as `reuse`, `modify`, `create`, or `retire` in `## Implementation Delta`.
 - Reuse inspected project/framework patterns before new abstractions.
 - Record only evidence-triggered compatibility, data/recovery, authorization, validation, concurrency, failure, observability, performance, accessibility/localization, or dependency controls in `## Engineering Controls`.
@@ -20,7 +20,7 @@ Exactly one `implementation-plan-{slug}.md` with `status: approved` and `plan_co
 
 Each numbered `## Phase N — outcome` names CAP/AC IDs, exact paths, `Verification:` with an inspected command, and `Done when:` with an observable result. Every AC must have a phase; delivery rows must reference existing phases. Historical v1 plans receive diagnostics without retroactive contract migration.
 
-For runtime work, set `runtime_contract: required` and put the exact harness path, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check` in a phase assigned to DEV. Gate C checks the obligation; delivery checks the real contract.
+For runtime work, set `runtime_contract: required` and put the exact harness path, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check` in a phase assigned to DEV. Gate C checks the obligation; delivery checks the real contract. A contract that already exists, such as one seeded by an older plan, is validated at Gate C and stays: Gate C accepts either form, and the planner does not write a new one.
 
 ## Large plans
 

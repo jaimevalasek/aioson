@@ -805,9 +805,17 @@ function validatePrdAcceptanceCriteria(content, artifact, productMap) {
 // Lineage at birth: before any PRD makes the feature applicable, a briefing
 // that pins sources is still re-hashed and parsed, so @briefing and @refiner see
 // a stale source or a broken map while the CLI can still rewrite the briefing.
-// Advisory to the gates: its findings stay off `findings`, and Source Coverage
-// is not due before a PRD exists. An applicable feature starts from the empty
-// lineage that the full check replaces.
+// Source Coverage is the PRD's section, so it is not due before a PRD exists,
+// whatever made the feature applicable: a discovery note naming a rich surface
+// does, with the briefing still on its way to Product.
+function lineageAtBirth(lineage, inputs) {
+  const prdWritten = Boolean(String(inputs.prd || '').trim());
+  const findings = prdWritten ? lineage.findings : lineage.findings.filter((item) => item.check !== 'source_coverage_missing');
+  return { ...lineage, findings, coverage_checked: prdWritten, at_birth: true };
+}
+
+// Advisory to the gates: its findings stay off `findings`. An applicable feature
+// starts from the empty lineage that the full check replaces.
 async function initialSourceLineage({ applicable, targetDir, slug, inputs, artifacts, registryEntry }) {
   const empty = { applicable: false, findings: [], inventory: [], promises: [], coverage: [] };
   if (applicable) return empty;
@@ -821,9 +829,7 @@ async function initialSourceLineage({ applicable, targetDir, slug, inputs, artif
     acceptance: { findings: [], rows: [], capToAcs: {} },
     lifecycle: { registry_entry: registryEntry, prd_exists: Boolean(artifacts.prd.exists) }
   });
-  const prdWritten = Boolean(String(inputs.prd || '').trim());
-  const findings = prdWritten ? lineage.findings : lineage.findings.filter((item) => item.check !== 'source_coverage_missing');
-  return { ...lineage, findings, coverage_checked: prdWritten, at_birth: true };
+  return lineageAtBirth(lineage, inputs);
 }
 
 async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
@@ -914,6 +920,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
         prd_exists: Boolean(artifacts.prd.exists)
       }
     });
+    if (!String(inputs.prd || '').trim()) sourceLineage = lineageAtBirth(sourceLineage, inputs);
     delivery = validateDeliveryPlan(inputs.plan, artifacts.implementation_plan.path || `implementation-plan-${slug}.md`, productMap);
     planContract = await validatePlanContract({ targetDir, slug, content: inputs.plan, acceptance, delivery });
     engineeringControls = validateEngineeringControls({
