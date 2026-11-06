@@ -120,6 +120,7 @@ test('a shell command that reads a credential source is recognized', () => {
     '((i<<2))\ncat .env',
     'for ((i=0;i<3;i++)); do cat .env; done',
     'x=$((cat .env) | wc -l)',
+    'x=$((cat .env) | (wc -l))',
     'x=$(cat <<EOF\nbody\nEOF)\ncat .env',
     'ssh prod \'cat "/srv/app/.env"\'',
     'ssh prod \'cat < /srv/app/.env\'',
@@ -234,6 +235,8 @@ test('input built to be slow ends quickly', () => {
   readsCredentialSource(`.env ${'$(('.repeat(60000)}`);
   readsCredentialSource(`.env ${'(('.repeat(90000)}`);
   readsCredentialSource(`.env ${'sudo '.repeat(40000)} x`);
+  readsCredentialSource(`${'bash <<A\n'.repeat(20000)}.env`);
+  readsCredentialSource(`.env ${'cat <<A\n$('.repeat(20000)}`);
   readsCredentialSource(`.env ${'${a'.repeat(60000)}`);
   assert.ok(Date.now() - started < 1500, `${Date.now() - started} ms`);
 });

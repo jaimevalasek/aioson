@@ -69,7 +69,7 @@ You > @refiner
 
 ### 2. Apply pending feedback
 
-The CLI validates (schema, slug, source hash). If you saved the page with no note and the recommended options, saving was the confirmation, and the round is applied with no other question. Any other round gets a **dry-run** with the summary, and the agent asks for explicit confirmation before touching the briefing:
+The CLI validates (schema, slug, source hash). If you saved the page with no note and the recommended options, saving was the confirmation, and the round is applied with no other question, unless the text would go beyond your decisions. Any other round gets a **dry-run** with the summary, and the agent asks for explicit confirmation before touching the briefing:
 
 ```
 @refiner > Pending feedback on marketplace-v1 (round 1):

@@ -12,6 +12,8 @@
 const { parseBriefingSections } = require('./briefing-sections');
 const { sanitizeText } = require('./feedback-schema');
 
+// Lines that read alike go back in file order, so deleting the first of two keeps the
+// wrong one. The clean-round rule asks in that case, because a line with markup is gone.
 function restoreLines(text, fileText) {
   const originals = new Map();
   for (const line of fileText.split(/\r?\n/)) {

@@ -96,7 +96,7 @@ function reshapesSection(section) {
 }
 
 function staysBookkeeping(section, decisions) {
-  if (!BOOKKEEPING_SECTIONS.has(section.file_id) || decisions.length === 0) return false;
+  if (!BOOKKEEPING_SECTIONS.has(section.file_id)) return false;
   const before = new Set(nonBlankLines(section.file_text));
   const after = new Set(nonBlankLines(section.current_text));
   const lost = [...before].filter((line) => !after.has(line)).length;

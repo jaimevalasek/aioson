@@ -69,7 +69,7 @@ Você > @refiner
 
 ### 2. Aplicar feedback pendente
 
-O CLI valida (schema, slug, hash da fonte). Se você salvou a página sem nota e com as opções recomendadas, salvar já foi a confirmação, e a rodada é aplicada sem outra pergunta. Nas demais rodadas há um **dry-run** com o resumo, e o agente pede confirmação explícita antes de tocar o briefing:
+O CLI valida (schema, slug, hash da fonte). Se você salvou a página sem nota e com as opções recomendadas, salvar já foi a confirmação, e a rodada é aplicada sem outra pergunta, a não ser que o texto vá além das suas decisões. Nas demais rodadas há um **dry-run** com o resumo, e o agente pede confirmação explícita antes de tocar o briefing:
 
 ```
 @refiner > Feedback pendente em marketplace-v1 (rodada 1):

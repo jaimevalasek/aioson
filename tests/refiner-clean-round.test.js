@@ -402,6 +402,12 @@ test('a section is found by title, the way the write finds it', () => {
   rewrite(themes, '- Replaced.');
   assert.deepEqual(judge(wrongId).reasons, [{ code: 'text_outside_findings', ids: ['risks'] }], 'F2 names the section with that title, not the id on this one');
 
+  const wrongBookkeeping = cleanFeedback();
+  const notSources = sec(wrongBookkeeping, 'themes');
+  notSources.id = 'sources';
+  rewrite(notSources, '- Theme one\n- One more line.');
+  assert.deepEqual(judge(wrongBookkeeping).reasons, [{ code: 'text_outside_findings', ids: ['sources'] }]);
+
   const homeless = cleanFeedback();
   homeless.sections.push({ id: 'ghost', title: 'Ghost', status: 'unchanged', original_text: 'x', current_text: 'x' });
   assert.deepEqual(judge(homeless).reasons, [{ code: 'section_action', ids: ['ghost'] }]);
@@ -422,6 +428,17 @@ test('headings that normalize alike keep their own ids, so a decision licenses o
   const second = sec(other, 'risks-2');
   rewrite(second, '- Rewritten.');
   assert.deepEqual(judge(other, { briefing }).reasons, [{ code: 'text_outside_findings', ids: ['risks-2'] }], 'F2 names the first of them');
+});
+
+test('line endings in the feedback are not markup, and a promise cited in prose may be reworded', () => {
+  const crlf = cleanFeedback();
+  rewrite(sec(crlf, 'proposed-solution'), 'Original solution.\r\nMore of it.\r\nDecided: yes.');
+  assert.deepEqual(judge(crlf).reasons, []);
+
+  const briefing = RICH.replace('And more.', 'And more, for PROM-777.');
+  const prose = cleanFeedback(briefing);
+  rewrite(sec(prose, 'proposed-solution'), 'Original solution.\nMore of it.\nDecided: yes, for PROM-777.');
+  assert.deepEqual(judge(prose, { briefing }).reasons, []);
 });
 
 test('a section the review shows empty stays clean while nobody writes in it', () => {
