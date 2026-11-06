@@ -395,6 +395,7 @@ test('a goto is read where it really lands before any page opens', async (t) => 
   };
   assert.deepEqual(await refused('//evil.test/login'), ['value_env_requires_loopback', 0]);
   assert.deepEqual(await refused('/\\evil.test/login'), ['value_env_requires_loopback', 0]);
+  assert.deepEqual(await refused(' //evil.test/login'), ['value_env_requires_loopback', 0], 'a url parser drops the space, and so does a browser');
   assert.deepEqual(await refused('{{next}}', { vars: { next: 'https://evil.test/login' } }), ['value_env_requires_loopback', 0]);
   assert.deepEqual(await refused('javascript:location="https://evil.test"'), ['value_env_requires_loopback', 0]);
   // What only the run can know is left to the guard and the step.
@@ -476,7 +477,7 @@ test('the value is scrubbed in every form a page gives it', async (t) => {
       assert.equal(text.includes(JSON.stringify(form).slice(1, -1)), false, `${form} leaked inside JSON`);
     }
   }
-  assert.match(report.console.samples[0].text, /^\[env\.E2E_PASSWORD\] \| /);
+  assert.equal(report.console.samples[0].text, forms.map(() => '[env.E2E_PASSWORD]').join(' | '), 'each form whole, with no piece of it left over');
 });
 
 test('the run\'s own names stay as they are when a value is an ordinary word of them', async (t) => {

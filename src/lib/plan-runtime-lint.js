@@ -165,7 +165,7 @@ function onDevServer(fields) {
   for (const field of fields) {
     const command = devServerCommand(field.text);
     if (!command || PRODUCTION_SERVER.test(field.text)) continue;
-    if (field.phase !== null && provenPhases.has(field.phase)) continue;
+    if (provenPhases.has(field.phase)) continue;
     warnings.push({
       code: 'runtime_on_dev_server',
       line: field.line,
