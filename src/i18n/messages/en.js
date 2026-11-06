@@ -327,7 +327,7 @@ module.exports = {
     help_detect_test_runner:
       'aioson detect:test-runner [path] [--json] [--locale=en]',
     help_dev_resume_data:
-      'aioson dev:resume-data [path] [--json] [--locale=en]',
+      'aioson dev:resume-data [path] [--feature=<slug> --phase=<n> --capsule [--base=<ref>] [--out=<file>]] [--json] [--locale=en]',
     help_dev_progress:
       'aioson dev:progress [path] --feature=<slug> [--json] [--locale=en]',
     help_verification_plan:

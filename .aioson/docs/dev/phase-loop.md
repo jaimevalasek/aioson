@@ -45,6 +45,16 @@ aioson verification:plan . --feature={slug} --trigger=end-of-feature
 
 QA is the only default reviewer. Tester, Pentester, and Validator appear in this plan only when explicitly enabled in `agent-execution-{slug}.json`; classification and phase count never enable them.
 
+## Starting a phase in a new context
+
+A Dev that starts fresh on a phase, or returns after compaction, compiles the capsule before reading the plan or the PRD:
+
+```bash
+aioson dev:resume-data . --feature={slug} --phase={n} --capsule
+```
+
+It prints the phase, the PRD rows it cites, what the branch already created (declarations per file since the merge-base with the default branch, or `--base=<commit>`), the open process and risk observations of the feature, and the plan's shared sections scoped to this phase. Check the created list before writing a helper. Open the full plan or PRD only for what the capsule leaves out. It writes no file unless `--out=<file>` names one, and it reports its bytes against plan plus PRD.
+
 ## Development execution lanes
 
 When the manifest explicitly enables split development lanes, DEV dispatches them sequentially before integration:

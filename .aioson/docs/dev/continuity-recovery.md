@@ -25,6 +25,8 @@ Build context in this order:
 
 If the user asks what happened recently, answer from memory and runtime first. Go to Git only if those sources are insufficient.
 
+When the work resumes inside a multi-phase plan, compile the phase capsule first: `aioson dev:resume-data . --feature={slug} --phase={n} --capsule` (see `phase-loop.md`).
+
 ## SDD bridge
 
 When continuation depends on spec or execution state:

@@ -441,6 +441,42 @@ function declaredNames(rel, content) {
   return names;
 }
 
+// A type vanishes at build but is still something a later phase would copy.
+const TYPE_OPENER = /^export\s+(?:declare\s+)?(?:const\s+)?(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/;
+const LOCAL_TYPE_OPENER = /^(?:declare\s+)?(?:const\s+)?(?:type|interface|enum)\s+([A-Za-z_$][\w$]*)/;
+
+function isExported(ext, line, name) {
+  if (JS_EXTS.has(ext)) return /^export\b/.test(line);
+  if (ext === '.rs') return /^pub\b/.test(line);
+  if (ext === '.go') return /^[A-Z]/.test(name);
+  return !name.startsWith('_');
+}
+
+/**
+ * `{ name, exported }` when one line of a file opens a top-level declaration.
+ * Framework exports and default exports answer null: no later phase would import
+ * a `GET` or a `Page`.
+ */
+function declarationOnLine(rel, line) {
+  const ext = path.extname(rel).toLowerCase();
+  const openers = openersFor(ext);
+  if (!openers) return null;
+  if (JS_EXTS.has(ext)) {
+    const typed = line.match(TYPE_OPENER) || line.match(LOCAL_TYPE_OPENER);
+    if (typed) return { name: typed[1], exported: /^export\b/.test(line) };
+  }
+  for (const opener of openers) {
+    const match = line.match(opener.re);
+    if (!match) continue;
+    if (CONVENTION_EXPORTS.has(match[1]) && /^export\b/.test(line)) return null;
+    return { name: match[1], exported: isExported(ext, line, match[1]) };
+  }
+  return null;
+}
+
+// `git` pathspecs of what the scanners read.
+const SOURCE_GLOBS = [...JS_EXTS, ...Object.keys(LANGUAGES)].map((ext) => `*${ext}`);
+
 const MAX_LOCATIONS = 4;
 
 /**
@@ -518,6 +554,8 @@ function findDuplicateDeclarations({ targets, treePaths, read }) {
 
 module.exports = {
   CONVENTION_EXPORTS,
+  SOURCE_GLOBS,
+  declarationOnLine,
   declaredNames,
   extractDeclarations,
   findDuplicateDeclarations,
