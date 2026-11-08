@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.79.0] - 2026-11-08
+
 ### Added
 
 - **A large plan is named before it runs, and its pace is measured while it runs.** A single-DEV plan of 21 phases ran for about 18 hours and nobody heard a number first: a recorded `execution: single` silenced every scale check, and the planner may not invent hours. `workflow:next --complete=planner`, `execution:offer` (`plan.large_plan`) and `workflow:execute` (`owner_notices`) now name a plan of 8 phases or 80 files, whatever the choice; `AIOSON_EXECUTION_LARGE_MIN_PHASES` and `AIOSON_EXECUTION_LARGE_MIN_FILES` move the limits, and it only warns. `dev:state:write` also stamps each phase in `.aioson/runtime/dev-progress/{slug}.jsonl`, and the new `dev:progress` gives the mean per phase and the projection for the rest from that run alone, with no number below two real intervals.
