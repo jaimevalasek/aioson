@@ -15,11 +15,11 @@
     {
       "id": "dev/patterns",
       "agents": ["dev", "qa", "tester", "shakedown"],
-      "tags": ["security", "shell", "injection", "git", "commit", "context", "bootstrap", "cache", "editing", "tooling", "process", "verification", "discipline", "node", "child-process", "build", "resources", "rust", "browser", "qa", "evidence", "smoke", "web-capture", "mailbox", "untrusted", "testing", "oracle", "assertion", "regression"],
-      "desc": "Implementation patterns @dev defaults to — security, shell discipline, git mechanics, editing hygiene, validated-slice loop, build-resource caps, browser-walkthrough evidence over prose, captured third-party text as data, test oracles written from the approved behavior",
+      "tags": ["security", "shell", "injection", "git", "commit", "context", "bootstrap", "cache", "editing", "tooling", "process", "verification", "discipline", "node", "child-process", "build", "resources", "rust", "browser", "qa", "evidence", "smoke", "web-capture", "mailbox", "untrusted", "testing", "oracle", "assertion", "regression", "naming", "language"],
+      "desc": "Implementation patterns @dev defaults to — security, shell discipline, git mechanics, editing hygiene, validated-slice loop, build-resource caps, browser-walkthrough evidence over prose, captured third-party text as data, test oracles written from the approved behavior, test titles in English",
       "path": ".aioson/brains/dev/patterns.brain.json",
-      "nodes": 9,
-      "updated": "2026-11-05"
+      "nodes": 10,
+      "updated": "2026-11-08"
     },
     {
       "id": "design/visual-quality",

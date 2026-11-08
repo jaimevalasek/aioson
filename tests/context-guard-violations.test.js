@@ -131,6 +131,33 @@ test('only the violations an edit introduces count: a legacy file does not repla
   }
 });
 
+test('a new violation is heard even in a file already full of old ones', async () => {
+  // The checker caps what it reports per file. Run capped on both sides of the
+  // edit, a legacy file with six findings hid the seventh — the one being
+  // written — so a translated test title slipped in with no warning at all.
+  const dir = await makeProject();
+  try {
+    const legacy = [
+      'describe("cadastro", () => {',
+      ...['abre a tela', 'fecha a janela', 'salva o rascunho', 'mostra o erro', 'cria o pedido', 'lista os itens', 'apaga o item']
+        .map((title) => `  it("${title} quando não há conta", () => {});`),
+      '});'
+    ].join('\n');
+    await writeFile(dir, 'src/__tests__/cadastro.test.js', legacy);
+    const lastTest = legacy.split('\n').slice(-2)[0];
+    const result = await guard(dir, 'dev', 'Edit', {
+      file_path: 'src/__tests__/cadastro.test.js',
+      old_string: lastTest,
+      new_string: `${lastTest}\n  it("devolve o pedido quando não há estoque", () => {});`
+    });
+    assert.ok(result.rules.includes(RULE_PATH), result.text);
+    assert.match(result.text, /test title "devolve o pedido quando não há estoque"/);
+    assert.doesNotMatch(result.text, /abre a tela/, 'the old titles are not this edit\'s');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('an LF edit anchor still replays inside a CRLF file (Windows checkouts)', async () => {
   const dir = await makeProject();
   try {

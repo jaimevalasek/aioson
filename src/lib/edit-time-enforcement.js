@@ -200,10 +200,13 @@ function uniqueFindings(findings) {
   });
 }
 
+// Uncapped: "new" is a set difference between before and after, and a display
+// cap made it lie — in a file already holding six findings, the seventh, the
+// one this edit adds, was never emitted on either side and so never fresh.
 function runChecker(enforcer, targetDir, files, documents) {
   if (files.length === 0) return [];
   try {
-    return enforcer.run({ targetDir, files, documents }) || [];
+    return enforcer.run({ targetDir, files, documents, uncapped: true }) || [];
   } catch {
     return []; // a broken checker never blocks an edit
   }

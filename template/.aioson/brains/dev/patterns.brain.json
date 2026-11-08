@@ -3,7 +3,7 @@
   "agent": "dev",
   "domain": "patterns",
   "desc": "Implementation patterns @dev should default to. Quality-scored, anti-pattern aware. Seed nodes — extend with new q≥4 patterns after each significant slice.",
-  "updated": "2026-11-05",
+  "updated": "2026-11-08",
   "nodes": [
     {
       "id": "dev-001",
@@ -130,6 +130,20 @@
       "not": "\"the function returns undefined here, so the test expects undefined\" — that is the bug, not the oracle; \"I marked it test.fail until Dev fixes it\" — a test written for the bug is green while the bug stands; \"toMatchSnapshot locks the behavior\" — it locks today's output, right or wrong",
       "warn": "a tautology (`expect(x).toBe(x)`, `assert.equal(a, a)`) and a literal in the actual position (`expect(true).toBe(true)`) are issues at the gate; snapshots, skips and bug-shaped values (`undefined`, `NaN`, `[object Object]`, `Invalid Date`, HTTP 5xx) are warnings with samples — resolve them or name them in `## Residual risk`",
       "see": ["dev-005", "dev-007"]
+    },
+    {
+      "id": "dev-010",
+      "title": "a test's title is its name — English like every identifier, even when the AC it covers is written in the project language",
+      "tags": ["testing", "naming", "language", "rules", "discipline", "qa"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "The runner prints the title, the AC audit indexes it and the next engineer greps for it, so a title is code, not product copy. When the PRD speaks Portuguese (or any project language), translating the acceptance criterion word for word into `it(...)` is the easiest path and the wrong one: keep the AC id, state the behavior in English, and quote UI copy exactly as it ships. The same holds for test function names in Rust, Python, Go or PHPUnit. A file already full of titles in another language is not a pattern to match — the rule says pattern never means language. `rules:check` reads every test title and decides its language from function words (`não`, `quando`, `os`, `mostra`): a title in another language is HIGH and refuses the stage; an English title carrying unquoted UI copy is MED, fixed by quoting it.",
+      "p": "AC-07 'Tentar de novo' reads the folder again — never `AC-07 tentar de novo lê a pasta outra vez`; `fn ac_07_retry_reads_the_folder_again` — never `fn ac_07_tentar_de_novo_le_a_pasta`",
+      "src": "AIOSON supervised session: one feature added 461 test titles, 37% of them in Portuguese copied from the acceptance criteria, while the installed rule said tests are English; the naming checker stripped strings before it looked, so every gate stayed green",
+      "date": "2026-11-08",
+      "not": "\"the AC is in Portuguese, so the title follows it\" — the AC binds behavior, not the language of code; \"the other tests in this file are in Portuguese\" — matching them is how the drift spreads; \"it is only a string\" — it is the test's name",
+      "warn": "touching a legacy test file puts its old titles in scope of the stage gate too: translate them, or ask the owner to record them as debt with `rules:check . --baseline`",
+      "see": ["dev-009"]
     }
   ]
 }

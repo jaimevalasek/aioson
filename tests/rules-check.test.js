@@ -18,7 +18,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { runRulesCheck, discoverGovernance, ENFORCERS } = require('../src/commands/rules-check');
-const { classifyIdentifier, splitWords } = require('../src/lib/naming-language');
+const { classifyIdentifier, classifyProse, extractTestTitles, splitWords } = require('../src/lib/naming-language');
 
 const silent = { log() {}, error() {} };
 
@@ -273,6 +273,123 @@ test('the naming rule reaches compiled languages, not just the web half of a pro
   assert.match(flagged, /EstadoPalco/, 'a Rust struct must be read');
   assert.match(flagged, /Gerenciador/, 'Kotlin must be read');
   assert.doesNotMatch(flagged, /create_block/, 'the English neighbour stays clean');
+});
+
+// ─── test titles ──────────────────────────────────────────────────────────────
+//
+// The failure behind these: a feature added 461 test titles and 37% of them
+// were Portuguese — "um banco que recusa não deixa os outros abertos" — while
+// the rule said tests are English. Titles are strings, the detector stripped
+// strings, and every gate stayed green. A title is the test's name.
+
+test('prose language is read from function words, and quoted UI copy is not prose', () => {
+  for (const title of [
+    'um banco que recusa não deixa os outros abertos, e a recusa volta para quem pediu',
+    'AC-play-36: PostgreSQL parado diz o motivo em palavras, e a janela continua',
+    '%s: o foco nasce em Cancelar, fica preso e Esc cancela',
+    'muestra el error cuando la conexión falla y no reintenta',
+    'zeigt den Fehler, wenn die Verbindung nicht klappt'
+  ]) {
+    const prose = classifyProse(title);
+    assert.ok(prose && prose.strength === 'strong', `${title} must read as foreign: ${JSON.stringify(prose)}`);
+  }
+  for (const title of [
+    'AC-41 opens the server in Consultas, only when it is on and only for the owner',
+    "AC-45 'Restaurar da última cópia' and \"Remover esta versão\" need the typed name",
+    'runs on every OS and handles DOS line endings in em units',
+    'renders sans-serif in the DES opt-in read-only panel',
+    'useErrorReportToasts'
+  ]) {
+    assert.equal(classifyProse(title), null, `${title} must read as English`);
+  }
+  // An English sentence carrying unquoted UI copy is worth a look, never a block.
+  for (const title of ['AC-18 Agora não skips without saving', 'shows Conferir com o código pendente instead of a count']) {
+    const prose = classifyProse(title);
+    assert.equal(prose && prose.strength, 'weak', `${title} is mixed, not foreign: ${JSON.stringify(prose)}`);
+  }
+});
+
+test('test titles are read from every common runner shape, and only from a test call', () => {
+  const titles = extractTestTitles([
+    'describe("lê a lista", () => {',
+    "  it('deve abrir', async () => {});",
+    '  it.each(cases)("%s: fecha", (_n, c) => {});',
+    '  test.skipIf(ci)(`renders ${x} ok`, () => {});',
+    '  it(',
+    '    "AC-09 título na linha seguinte",',
+    '    async () => {}',
+    '  );',
+    '  // it("comentário não é teste", () => {});',
+    '  notify("isso é texto de produto");',
+    '  t.Run("cria o pedido", func(t *testing.T) {})',
+    'it "mostra o erro" do',
+    'test "cria o pedido", %{conn: conn} do',
+    '@DisplayName("abre a tela")',
+    '[Fact(DisplayName = "grava o log")]',
+    'fun `fecha a janela`() {}',
+    'def "salva o rascunho"() {',
+    'const fixture = \'@DisplayName("dentro de uma string")\';'
+  ]);
+  assert.deepEqual(titles.map((t) => t.title), [
+    'lê a lista', 'deve abrir', '%s: fecha', 'renders ${x} ok', 'AC-09 título na linha seguinte',
+    'cria o pedido', 'mostra o erro', 'cria o pedido', 'abre a tela', 'grava o log', 'fecha a janela', 'salva o rascunho'
+  ]);
+  assert.equal(titles[4].line, 5, 'a wrapped title is reported on its call line');
+});
+
+test('a test function named like a sentence is read like one', () => {
+  for (const name of ['novo_filtro_passa_tudo_por_padrao_sem_reset', 'service_port_nao_toca_porta_fora_da_faixa']) {
+    const hit = classifyIdentifier(name);
+    assert.equal(hit && hit.kind, 'prose', `${name}: ${JSON.stringify(hit)}`);
+  }
+  for (const name of [
+    'submit_url_defaults_to_aioson_com', 'verdict_sem_compatibility_blocks_stable', 'parseDerEncodedKey',
+    'osEmFontSize', 'the_line_that_started_the_play_is_found_and_a_loop_ends'
+  ]) {
+    assert.equal(classifyIdentifier(name), null, `${name} must not be flagged`);
+  }
+});
+
+test('rules:check blocks a Portuguese test title and leaves English ones alone', async () => {
+  const dir = await scaffold({
+    '.aioson/rules/source-code-language-convention.md': LANGUAGE_RULE,
+    'src/__tests__/session.test.ts': [
+      'describe("RULE-07 sair da conta fecha os bancos", () => {',
+      '  it("um banco que recusa não deixa os outros abertos", async () => {});',
+      '  it("AC-41 opens the server in Consultas, only when it is on", async () => {});',
+      "  it(\"AC-45 'Tentar de novo' checks the folder again\", async () => {});",
+      '  it("AC-18 Agora não skips without saving", async () => {});',
+      '});'
+    ].join('\n')
+  });
+
+  const report = await runRulesCheck({ args: [dir], options: { json: true, suppressExitCode: true }, logger: silent });
+
+  assert.equal(report.ok, false);
+  const high = report.findings.filter((f) => f.severity === 'HIGH').map((f) => f.token);
+  assert.deepEqual(high.sort(), ['RULE-07 sair da conta fecha os bancos', 'um banco que recusa não deixa os outros abertos']);
+  const med = report.findings.filter((f) => f.severity === 'MED').map((f) => f.token);
+  assert.deepEqual(med, ['AC-18 Agora não skips without saving'], 'mixed copy is advisory');
+  assert.match(report.findings[0].message, /test title .*keep the AC id, state the behavior in English/);
+});
+
+test('the per-file cap trims what a human reads, never what blocks', async () => {
+  // Six advisory findings emitted first used to fill the cap, and the blocking
+  // title after them never reached the report — or the gate.
+  const dir = await scaffold({
+    '.aioson/rules/source-code-language-convention.md': LANGUAGE_RULE,
+    'src/__tests__/legacy.test.ts': [
+      'const migracao = 1;', 'const duracao = 2;', 'const identidade = 3;',
+      'const configuracao = 4;', 'const validacao = 5;', 'const navegacao = 6;', 'const integracao = 7;',
+      'it("deve abrir a janela quando não há conta", () => {});'
+    ].join('\n')
+  });
+
+  const report = await runRulesCheck({ args: [dir], options: { json: true, suppressExitCode: true }, logger: silent });
+
+  assert.equal(report.findings.length, 6, 'the display cap still holds');
+  assert.equal(report.by_severity.HIGH, 1, 'the title still blocks');
+  assert.equal(report.findings[0].severity, 'HIGH');
 });
 
 // ─── legacy projects ──────────────────────────────────────────────────────────

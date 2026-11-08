@@ -27,11 +27,12 @@ A product's canonical vocabulary binds **UI strings and domain nouns**. It never
 
 On conflict, stop and report it. The only legitimate resolution is a human editing this rule (or removing it for a genuinely locale-scoped project); an agent may never resolve it in favor of the feature artifact.
 
-Compliance is measured, not asserted: `aioson rules:check . --changed` verifies paths and declared identifiers deterministically. `HIGH` is a translated technical term; `MED` is a native-language morphology signal worth a second look.
+Compliance is measured, not asserted: `aioson rules:check . --changed` verifies paths, declared identifiers, and test titles deterministically. `HIGH` is a translated technical term or a title written in another language (its function words give it away: `não`, `quando`, `os`); `MED` is a native-language morphology signal, or an English title carrying unquoted UI copy, worth a second look.
 
 ## Required Behavior
 
 - Use English for source code identifiers: classes, methods, functions, variables, enums, constants, routes, migrations, factories, seeders, tests, services, jobs, events, listeners, policies, resources, repositories, query objects, and component names.
+- A test's title is its name. `describe`/`it`/`test` titles and test function names are English even when the acceptance criterion they cover is written in the project language: keep the AC id, state the behavior in English, and quote UI copy exactly as it ships — `AC-07 'Tentar de novo' reads the folder again`, never `AC-07 tentar de novo lê a pasta outra vez`.
 - Before inventing names, inspect nearby code and follow the project's naming pattern — casing, prefixes, and layer suffixes. Pattern never means language: surrounding code written in another language is not a licence to add more of it, and matching it is the one way a project drifts further from this rule while looking consistent.
 - If the project pattern is unclear, inspect `.aioson/context/bootstrap/how-it-works.md` and `.aioson/context/bootstrap/current-state.md` when selected by `context:select`; otherwise use the framework's official naming conventions.
 - Keep framework-generated names conventional. For Laravel, prefer standard names such as `OrderController`, `StoreOrderRequest`, `OrderPolicy`, `OrderResource`, `CreateOrdersTable`, and `OrderFactory`.
@@ -41,6 +42,7 @@ Compliance is measured, not asserted: `aioson rules:check . --changed` verifies 
 ## Review Checklist
 
 - New source files and identifiers are in English.
+- Test titles state the behavior in English; UI copy inside them is quoted.
 - Names match the local framework and project pattern.
 - User-facing text remains in the project language.
 - No implementation layer uses translated variable, class, method, or migration names.
