@@ -332,7 +332,7 @@ function findingLines(block) {
 
 function blockLines(block) {
   return [
-    `${block.authority === 'advisory' ? 'Guidance' : 'Rule'} ${block.path}:`,
+    `${block.authority === 'advisory' ? 'Guidance' : 'Rule'} ${block.path}${block.said ? ' (its lines were injected earlier this session)' : ''}:`,
     ...block.constraints.map((constraint) => `- ${constraint}`),
     ...block.forbidden.map((pattern) => `- (forbidden) ${pattern}`),
     ...findingLines(block)
@@ -467,6 +467,74 @@ function claimGuardEvent(event, claimDir = CLAIM_DIR) {
   return true;
 }
 
+// The hook fires before every write, and a session writes the same kind of
+// file again and again: the same rule's lines were injected on every one of
+// them. A rule is now said once per session (per project), and again only
+// after the conversation was compacted (hooks:recap forgets the session) or
+// SAID_TTL_MS later. A measured violation still speaks on every write it is
+// found in — its finding names the line to change — without the rule's lines
+// again. An event without a session identity is never remembered.
+const SAID_DIR = path.join(os.tmpdir(), 'aioson-guard-said');
+const SAID_TTL_MS = 60 * 60 * 1000;
+const SAID_FILE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function saidFile(dir, sessionId) {
+  const id = typeof sessionId === 'string' ? sessionId.trim() : '';
+  if (!id) return '';
+  return path.join(dir, `${crypto.createHash('sha256').update(id).digest('hex').slice(0, 32)}.json`);
+}
+
+function saidKey(targetDir, rulePath) {
+  return `${path.resolve(targetDir)}::${rulePath}`;
+}
+
+function pruneSaid(dir, now) {
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return; }
+  for (const name of names) {
+    const file = path.join(dir, name);
+    try {
+      if (now - fs.statSync(file).mtimeMs > SAID_FILE_TTL_MS) fs.unlinkSync(file);
+    } catch { /* a concurrent guard already pruned it */ }
+  }
+}
+
+/** What this session was already told in this project, best-effort. */
+function sessionReminders(event, targetDir, options = {}, now = Date.now()) {
+  const dir = options.saidDir || (options.claimDir ? path.join(options.claimDir, 'said') : SAID_DIR);
+  const file = saidFile(dir, event && event.session_id);
+  let said = {};
+  if (file) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (raw && typeof raw === 'object') said = raw;
+    } catch { said = {}; }
+  }
+  const fresh = (rulePath) => {
+    const at = Number(said[saidKey(targetDir, rulePath)]);
+    return Number.isFinite(at) && now - at < SAID_TTL_MS;
+  };
+  return {
+    has: fresh,
+    mark(rulePaths) {
+      if (!file || rulePaths.length === 0) return;
+      for (const rulePath of rulePaths) said[saidKey(targetDir, rulePath)] = now;
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(said));
+        if (path.basename(file).startsWith('0')) pruneSaid(dir, now);
+      } catch { /* an unwritable temp dir only costs a repeated reminder */ }
+    }
+  };
+}
+
+/** After a compaction the session holds no earlier injection: say every rule again. */
+function forgetSessionReminders(sessionId, options = {}) {
+  const file = saidFile(options.saidDir || SAID_DIR, sessionId);
+  if (!file) return false;
+  try { fs.unlinkSync(file); return true; } catch { return false; }
+}
+
 function formatForTool(tool, additionalContext) {
   // Only the Claude Code adapter exists today; other harnesses default to it
   // until their own extension point is wired.
@@ -488,14 +556,19 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   if (!target) return emptyResponse();
 
   const agent = options.agent || 'dev';
+  const reminders = sessionReminders(event, targetDir, options, options.now);
   const brief = await buildContextBrief(targetDir, { agent, mode: 'executing', task: target.query, paths: target.filePath });
-  const vocabulary = await vocabularyBlocksFor(targetDir, brief, target, gate);
+  // A rule already said this session is not judged or injected again by vocabulary.
+  const vocabulary = (await vocabularyBlocksFor(targetDir, brief, target, gate)).filter((block) => !reminders.has(block.path));
   const found = await violationsFor(targetDir, target, agent);
   const judged = await judgeVocabularyBlocks(targetDir, event, vocabulary, found.violations, {
     jevFilter: options.jevFilter, claimDir: options.claimDir, relPath: target.relPath, content: target.content
   });
-  const ruleBlocks = await withViolations(targetDir, judged.blocks, found.violations, gate, brief.intent && brief.intent.stack);
+  const ruleBlocks = (await withViolations(targetDir, judged.blocks, found.violations, gate, brief.intent && brief.intent.stack))
+    .map((block) => (reminders.has(block.path) ? { ...block, constraints: [], forbidden: [], said: true } : block))
+    .filter((block) => !block.said || block.findings.length + block.more > 0);
   if (ruleBlocks.length === 0) return emptyResponse();
+  reminders.mark(ruleBlocks.filter((block) => !block.said).map((block) => block.path));
 
   const response = formatForTool(options.tool || 'claude', formatInjectionText(target.filePath, ruleBlocks));
   response._guard = guardRecord({ ruleBlocks, brief, agent, target, found, judged });
@@ -567,6 +640,8 @@ function guardRecord({ ruleBlocks, brief, agent, target, found, judged }) {
 module.exports = {
   buildGuardResponse,
   claimGuardEvent,
+  forgetSessionReminders,
+  SAID_TTL_MS,
   deriveQuery,
   detectSurfaceKinds,
   isGovernanceArtifact,

@@ -162,6 +162,11 @@ async function canonicalArtifacts(agent, targetDir, workflow, resume) {
 async function buildRecapResponse(targetDir, payload, options = {}) {
   const onDemand = options.when === 'always';
   if (!onDemand && (!payload || payload.source !== 'compact')) return {};
+  // The compacted conversation lost the rule lines context:guard injected, so
+  // the guard says each rule again from here on.
+  if (payload && payload.source === 'compact') {
+    try { require('../context-guard').forgetSessionReminders(sessionIdOf(payload.session_id)); } catch { /* best-effort */ }
+  }
   const source = options.source || 'claude';
   const handle = hookAgentHandle(options.agent || 'dev');
   const { runtimeDir } = resolveRuntimePaths(targetDir);

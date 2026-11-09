@@ -77,7 +77,8 @@ test('a vocabulary-only injection the judge rejects is dropped, and the verdict 
   const dir = await makeProject();
   const claimDir = path.join(dir, 'claims');
   try {
-    const plain = await buildGuardResponse({ ...DOC_EDIT, tool_use_id: 'plain' }, dir, { tool: 'claude', agent: 'dev', claimDir });
+    // Another session: a rule said in session-jev would not be judged there again.
+    const plain = await buildGuardResponse({ ...DOC_EDIT, session_id: 'session-plain', tool_use_id: 'plain' }, dir, { tool: 'claude', agent: 'dev', claimDir });
     assert.ok(plain._guard && plain._guard.rules.includes('.aioson/rules/form-fields.md'), 'without JEV the vocabulary injection stands');
 
     const calls = [];

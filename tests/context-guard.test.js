@@ -677,9 +677,10 @@ test('one tool event injects once even when the hook is installed twice', async 
     const injected = [first, second].filter((response) => response._guard && response._guard.injected);
     assert.equal(injected.length, 1, 'exactly one of the two hook processes answers');
 
-    const nextEdit = { ...event, tool_use_id: 'toolu_2' };
-    const again = await buildGuardResponse(nextEdit, dir, { tool: 'claude', agent: 'dev', claimDir });
-    assert.equal(again._guard && again._guard.injected, true, 'a new tool call is a new event');
+    assert.equal(claimGuardEvent({ ...event, tool_use_id: 'toolu_2' }, claimDir), true, 'a new tool call is a new event');
+    const otherSession = { ...event, session_id: 'session-2', tool_use_id: 'toolu_3' };
+    const again = await buildGuardResponse(otherSession, dir, { tool: 'claude', agent: 'dev', claimDir });
+    assert.equal(again._guard && again._guard.injected, true, 'the claim is per event, not per rule');
 
     const anonymous = { tool_name: event.tool_name, tool_input: event.tool_input };
     assert.equal(claimGuardEvent(anonymous, claimDir), true);
