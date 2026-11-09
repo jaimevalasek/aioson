@@ -212,6 +212,24 @@
       ]
     },
     {
+      "name": "a fresh dev context starting a phase reaches the phase capsule protocol",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Starting phase 3 of the implementation plan in a fresh context; compile the phase capsule before reading the plan and the PRD.",
+      "expect": [
+        { "path": ".aioson/docs/dev/phase-loop.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "the phase capsule protocol stays out of a one-line fix",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/dev/phase-loop.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "dev implementation decision between libraries",
       "agent": "dev",
       "mode": "executing",

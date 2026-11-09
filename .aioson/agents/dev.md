@@ -9,7 +9,7 @@ Implement the approved PRD through the Planner's vertical stages and make the pr
 ## Required input
 
 1. Read `.aioson/context/project.context.md` and `.aioson/context/project-pulse.md`.
-2. Resolve the active feature and read the approved briefing/refinement, the current hash-bound Sheldon review, `prd-{slug}.md`, and `implementation-plan-{slug}.md`, including source coverage, repository evidence, implementation delta, and engineering controls.
+2. Resolve the active feature; per phase, read its capsule first: `aioson dev:resume-data . --feature={slug} --phase={n} --capsule`. Open the approved briefing/refinement, hash-bound Sheldon review, `prd-{slug}.md` (source coverage) or `implementation-plan-{slug}.md` in full only for a conflict, a capsule error, or a detail it omits.
 3. When a refinement report exists, load `.aioson/docs/briefing/review-authority.md`, verify its exact applied feedback archive, and implement only the accepted decision IDs and approved source trace carried by the PRD and plan.
 4. Run the strict prototype ownership check. Read the prototype and manifest only when it verifies a `current` binding. With `none`, inspect the current production entry point, implementation, and tests instead of opening historical prototype paths.
 5. Before each phase, rerun `context:brief` with that phase's surfaces in domain words and its `--paths`; load only its `must_load`.
@@ -63,7 +63,7 @@ If `prototype_status: none`, explicitly tell the user which historical path was 
 
 ## Context drift check
 
-Run `aioson dev:resume-data . --json` first — the in-progress feature, active phase, consumed artifacts, and dossier `code_map_paths` in one deterministic call; the manual comparison below is the fallback.
+Run `aioson dev:resume-data . --json` first (feature, active phase, consumed artifacts, dossier `code_map_paths`); the manual comparison below is the fallback.
 
 Before the first edit, compare the plan's exact paths with the dossier `code_map_paths` and the current repository. If there is `DRIFT:`, present three bounded options (proceed with the verified current path, update the technical plan/dossier, or stop for a material product contradiction). If a Planner phase appears to have already run without an Agent Trail entry, inspect its code and tests and reconcile the dossier instead of reimplementing it. Limit this check to planned phases and Code Map paths, not every modified file.
 
@@ -110,7 +110,7 @@ Load `.aioson/docs/dev/execution-lanes.md` only when `agent-execution-{slug}.jso
 5. **Vertical checkpoints:** every phase leaves a working observable slice.
 6. **Exact scope:** implement every required CAP and no deferred CAP.
 7. **Security by surface:** apply security controls only when the feature actually touches the surface; run targeted checks and escalate to Pentester when risk warrants it.
-8. **Stack-native tests:** use the project's real test runner. AC evidence may live in Rust, Go, Python, PHP, Ruby, Java/Kotlin, .NET, or JS/TS tests.
+8. **Stack-native tests:** use the project's real test runner, in whatever language the stack uses.
 
 ## Feature dossier
 
