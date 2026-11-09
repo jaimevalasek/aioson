@@ -135,7 +135,9 @@ test('context:select keeps implementation-only foundation out of product plannin
     });
     const devSelected = dev.selected.map((item) => item.path);
     assert.ok(devSelected.includes('.aioson/context/dev-state.md'));
-    assert.ok(devSelected.includes('.aioson/context/memory-index.md'));
+    // memory-index.md is a reading-order guide, not law for every dev brief:
+    // the phase starts from its capsule (context-selector AGENT_ALWAYS).
+    assert.equal(devSelected.includes('.aioson/context/memory-index.md'), false);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

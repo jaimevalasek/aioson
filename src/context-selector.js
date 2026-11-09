@@ -250,8 +250,13 @@ const UNIVERSAL_ALWAYS_CONTEXT_BASENAMES = new Set([
   'project-pulse.md'
 ]);
 
+// @dev always reads where work stopped. memory-index.md is a reading-order
+// guide (discovery → spec → architecture) that the capsule-first phase start
+// replaced: as `always` it put 5+ KB of navigation in front of every phase,
+// binding. It stays a normal candidate, and continuity-recovery.md names it
+// for brownfield orientation.
 const AGENT_ALWAYS_CONTEXT_BASENAMES = new Map([
-  ['dev', new Set(['dev-state.md', 'memory-index.md'])]
+  ['dev', new Set(['dev-state.md'])]
 ]);
 
 function normalizeSlashes(value) {
