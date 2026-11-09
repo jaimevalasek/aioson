@@ -1192,7 +1192,7 @@ const HELP_KEYS = [
   'cli.help_feature_close', 'cli.help_feature_archive', 'cli.help_gate_check', 'cli.help_gate_approve',
   'cli.help_prototype_check', 'cli.help_ac_test_audit', 'cli.help_preflight', 'cli.help_pulse_update',
   'cli.help_agent_done', 'cli.help_commit_prepare', 'cli.help_dossier_init', 'cli.help_dossier_show', 'cli.help_dossier_add_finding',
-  'cli.help_detect_test_runner', 'cli.help_dev_resume_data', 'cli.help_dev_progress', 'cli.help_plan',
+  'cli.help_detect_test_runner', 'cli.help_dev_resume_data', 'cli.help_dev_progress', 'cli.help_phase_next', 'cli.help_session_kickoff', 'cli.help_plan',
   'cli.help_harness_init', 'cli.help_harness_validate', 'cli.help_harness_apply_validation', 'cli.help_harness_approve',
   'cli.help_harness_reject', 'cli.help_harness_status', 'cli.help_harness_check', 'cli.help_harness_retro',
   'cli.help_harness_preview', 'cli.help_verification_plan', 'cli.help_delegation_plan', 'cli.help_delegation_run',

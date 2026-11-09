@@ -333,6 +333,10 @@ module.exports = {
       'aioson dev:resume-data [path] [--feature=<slug> --phase=<n> --capsule [--base=<ref>] [--out=<file>]] [--json] [--locale=pt-BR]',
     help_dev_progress:
       'aioson dev:progress [path] --feature=<slug> [--json] [--locale=pt-BR]',
+    help_phase_next:
+      'aioson phase:next [path] --feature=<slug> --finished=<n> --note=<texto|none> [--tool=<ferramenta>] [--json] [--locale=pt-BR]',
+    help_session_kickoff:
+      'aioson session:kickoff [path] --agent=<id> --feature=<slug> [--phase=<n>] [--tool=<ferramenta>] [--json] [--locale=pt-BR]',
     help_verification_plan:
       'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=pt-BR]',
     help_delegation_plan:

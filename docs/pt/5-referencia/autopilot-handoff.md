@@ -30,6 +30,12 @@ As faixas rodam sequencialmente no worktree compartilhado. Elas são workers de 
 
 O manifesto também roteia itens da Neural Chain. DEV recebe inspeções/correções; itens de teste e segurança vão para Tester/Pentester somente quando esses especialistas opt-in estão habilitados, caso contrário retornam ao DEV. A conclusão do DEV fica bloqueada enquanto houver itens acionáveis sob sua responsabilidade, e QA recebe supervisão somente leitura para revalidar correções.
 
+Cada fase do plano termina com `aioson phase:next . --feature={slug} --finished={n} --note="<decisões que não estão no disco>"`. A nota vai para o Agent Trail do dossiê, e o comando devolve a próxima fase, ou o QA depois da última. O que acontece depois depende de `phase_restart` no `project.context.md`:
+
+- `auto` (o padrão dentro do AIOSON Play): a conversa termina. O Play abre a próxima fase, ou o QA, numa conversa nova e digita o texto de retomada que vem de `aioson session:kickoff`. Cada fase começa pela própria cápsula, e não por tudo o que as fases anteriores leram.
+- `suggest` (o padrão no terminal): a cadeia segue na mesma conversa e cita o texto de retomada uma vez, para você reiniciar à mão se quiser.
+- `off`: a cadeia segue como antes.
+
 ## Revisão
 
 QA é o único revisor padrão e recebe orçamento proporcional:

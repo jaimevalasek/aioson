@@ -30,6 +30,12 @@ Lanes run sequentially in a shared worktree. They are runtime workers, not workf
 
 The manifest also routes Neural Chain work. DEV owns inspection/fix items. Test and security items route to Tester/Pentester only when those opt-in specialists are enabled; otherwise they fall back to DEV. DEV completion is blocked while its actionable items remain unresolved, and QA receives read-only oversight for independent revalidation.
 
+Every plan phase ends with `aioson phase:next . --feature={slug} --finished={n} --note="<decisions not on disk>"`. The note goes to the dossier Agent Trail, and the command returns the next phase, or QA after the last one. What happens next depends on `phase_restart` in `project.context.md`:
+
+- `auto` (the default inside AIOSON Play): the conversation ends. The Play opens the next phase, or QA, in a new conversation and types the kickoff from `aioson session:kickoff`. Each phase then starts from its capsule, not from everything earlier phases read.
+- `suggest` (the default in a plain terminal): the chain continues in the same conversation and quotes the kickoff once, so you can restart by hand.
+- `off`: the chain continues as before.
+
 ## Review
 
 QA is the single default reviewer and receives a proportional budget:

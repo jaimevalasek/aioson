@@ -331,6 +331,10 @@ module.exports = {
       'aioson dev:resume-data [path] [--feature=<slug> --phase=<n> --capsule [--base=<ref>] [--out=<file>]] [--json] [--locale=en]',
     help_dev_progress:
       'aioson dev:progress [path] --feature=<slug> [--json] [--locale=en]',
+    help_phase_next:
+      'aioson phase:next [path] --feature=<slug> --finished=<n> --note=<text|none> [--tool=<harness>] [--json] [--locale=en]',
+    help_session_kickoff:
+      'aioson session:kickoff [path] --agent=<id> --feature=<slug> [--phase=<n>] [--tool=<harness>] [--json] [--locale=en]',
     help_verification_plan:
       'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=en]',
     help_delegation_plan:
