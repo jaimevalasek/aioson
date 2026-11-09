@@ -77,7 +77,7 @@ Optional testing fields:
 
 Optional workflow fields:
 - `auto_handoff` (boolean, default `false`) — when `true`, the canonical feature chain advances `@product -> @sheldon -> @planner -> @dev -> @qa` until a real human decision or failed gate stops it. Other specialists run only through an explicit evidence-based detour. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`.
-- `phase_restart` (`auto` | `suggest` | `off`; absent means `auto` inside AIOSON Play, `suggest` elsewhere) — what `aioson phase:next` tells `@dev` at the end of each plan phase. `auto`: the conversation ends and the Play opens the next phase, and QA after the last one, in a new conversation. `suggest`: it continues here and quotes the kickoff once, for a manual restart. `off`: it continues as before. Protocol: `.aioson/docs/dev/phase-loop.md`.
+- `phase_restart` (`auto` | `suggest` | `off`; absent means `auto` inside AIOSON Play, `suggest` elsewhere) — what `aioson phase:next` tells `@dev` at the end of each plan phase. `auto`: the conversation ends and the Play continues with the next phase — and with QA after the last one, when Autopilot is on — in a new conversation or, while the context is still small, in the same one. Outside the Play `auto` behaves as `suggest`. `suggest`: it continues here and quotes the kickoff once, for a manual restart. `off`: it continues as before. Protocol: `.aioson/docs/dev/phase-loop.md`.
 
 Allowed `project_type` values:
 - `web_app`

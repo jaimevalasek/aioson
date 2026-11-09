@@ -32,9 +32,11 @@ The manifest also routes Neural Chain work. DEV owns inspection/fix items. Test 
 
 Every plan phase ends with `aioson phase:next . --feature={slug} --finished={n} --note="<decisions not on disk>"`. The note goes to the dossier Agent Trail, and the command returns the next phase, or QA after the last one. What happens next depends on `phase_restart` in `project.context.md`:
 
-- `auto` (the default inside AIOSON Play): the conversation ends. The Play opens the next phase, or QA, in a new conversation and types the kickoff from `aioson session:kickoff`. Each phase then starts from its capsule, not from everything earlier phases read.
+- `auto` (the default inside AIOSON Play): the conversation ends. The Play continues with the next phase and types the kickoff from `aioson session:kickoff` — in a new conversation, or in the same one while its context is still small. A phase that starts fresh starts from its capsule, not from everything earlier phases read. Outside the Play nobody reads the request, so `auto` behaves as `suggest`.
 - `suggest` (the default in a plain terminal): the chain continues in the same conversation and quotes the kickoff once, so you can restart by hand.
 - `off`: the chain continues as before.
+
+The step from the last phase to QA is a stage handoff, so it follows Autopilot, not `phase_restart`: with Autopilot off (or `--step` on that activation) `phase:next` records nothing and tells the agent to stop and show you the QA kickoff.
 
 ## Review
 

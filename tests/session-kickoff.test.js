@@ -128,6 +128,9 @@ test('session:kickoff refuses a phase the plan does not have, a non-number, an u
     const run = (options) => runSessionKickoff({ args: [dir], options: { json: true, tool: 'claude', ...options }, logger: silent });
     assert.deepEqual(await run({ agent: 'dev', feature: 'billing', phase: '2' }), { ok: false, reason: 'unknown_phase', phases: ['1', '3', '5'] });
     assert.equal((await run({ agent: 'dev', feature: 'billing', phase: 'next' })).reason, 'invalid_phase');
+    assert.equal((await run({ agent: 'dev', feature: 'billing', phase: true })).reason, 'invalid_phase', 'a bare --phase lost its number');
+    assert.equal((await run({ agent: 'dev', feature: 'billing', phase: '' })).reason, 'invalid_phase');
+    assert.equal((await run({ agent: 'qa', feature: 'billing', phase: true })).ok, true, '--phase counts only for @dev');
     assert.equal((await run({ agent: 'dev', feature: 'other', phase: '1' })).reason, 'plan_not_found');
     assert.equal((await run({ agent: 'nobody', feature: 'billing' })).reason, 'unknown_agent');
     assert.equal((await run({ agent: 'dev', feature: 'billing', tool: 'notepad' })).reason, 'unknown_tool');

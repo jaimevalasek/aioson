@@ -24,7 +24,7 @@ const {
   buildKickoff,
   knownTool,
   liveSessionTool,
-  readPlanPhaseIds
+  readPlanPhases
 } = require('../lib/session-kickoff');
 
 // A flag with no value parses as `true`, and that is no value here.
@@ -64,8 +64,14 @@ async function resolveKickoffTool(targetDir, option, live) {
 async function resolvePlanPhase(targetDir, feature, value, refuse, flag) {
   const raw = optionText(value);
   if (!/^\d+$/.test(raw)) return { refused: refuse(`invalid_${flag}`, `--${flag}=<n> must be a phase number of the plan.`) };
-  const phases = await readPlanPhaseIds(targetDir, feature);
-  if (!phases) return { refused: refuse('plan_not_found', `No implementation plan for ${feature}.`) };
+  const read = await readPlanPhases(targetDir, feature);
+  if (!read) return { refused: refuse('plan_not_found', `No implementation plan for ${feature}.`) };
+  const phases = read.ids;
+  // A phase the tools cannot see would be skipped in silence: the order is not trusted until the heading is fixed.
+  if (read.unparsed.length > 0) {
+    const headings = read.unparsed.map((item) => `"${item.heading}"`).join(', ');
+    return { refused: refuse('plan_heading_unparsed', `implementation-plan-${feature}.md has phase headings no phase tool reads: ${headings}. Write each as "## Phase <n> — title" (or ":" / "-") and run this again.`, { phases, unparsed: read.unparsed }) };
+  }
   const id = String(Number(raw));
   if (!phases.includes(id)) {
     return { refused: refuse('unknown_phase', `Phase ${id} is not in implementation-plan-${feature}.md. Phases: ${phases.join(', ') || 'none'}.`, { phases }) };
@@ -92,7 +98,8 @@ async function runSessionKickoff({ args = [], options = {}, logger } = {}) {
   }
 
   let phase = null;
-  if (agent.id === 'dev' && optionText(options.phase)) {
+  // A bare `--phase` is a phase that was meant and lost, not "no phase".
+  if (agent.id === 'dev' && options.phase !== undefined) {
     const checked = await resolvePlanPhase(targetDir, feature, options.phase, refuse, 'phase');
     if (checked.refused) return checked.refused;
     phase = checked.id;

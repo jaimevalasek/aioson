@@ -21,7 +21,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { getAgentDefinition, agentActivationLead } = require('../agents');
 const { listSupportedTools, getToolCapabilities } = require('./tool-capabilities');
-const { parsePlanPhases } = require('./plan-document');
+const { parsePlanPhases, unparsedPhaseHeadings } = require('./plan-document');
 const { readFeatureArtifactSafe } = require('../preflight-engine');
 
 const DEFAULT_KICKOFF_TOOL = 'claude';
@@ -91,8 +91,14 @@ function planPhaseIds(planText) {
 
 /** The feature's plan phase ids, or null when it has no implementation plan. */
 async function readPlanPhaseIds(targetDir, feature) {
+  const read = await readPlanPhases(targetDir, feature);
+  return read ? read.ids : null;
+}
+
+/** `{ ids, unparsed }` — the phase ids in plan order and the phase-like headings no tool reads; null without a plan. */
+async function readPlanPhases(targetDir, feature) {
   const plan = await readFeatureArtifactSafe(targetDir, feature, `implementation-plan-${feature}.md`);
-  return plan ? planPhaseIds(plan) : null;
+  return plan ? { ids: planPhaseIds(plan), unparsed: unparsedPhaseHeadings(plan) } : null;
 }
 
 module.exports = {
@@ -102,5 +108,6 @@ module.exports = {
   knownTool,
   liveSessionTool,
   planPhaseIds,
-  readPlanPhaseIds
+  readPlanPhaseIds,
+  readPlanPhases
 };

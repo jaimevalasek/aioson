@@ -28,6 +28,18 @@ function parsePlanPhases(content) {
   }));
 }
 
+/**
+ * `##`/`###` headings that name a phase number no phase tool reads — `## Phase
+ * 2 (API)`, `## Phase 3. Filters`. The plan looks whole to a reader while
+ * phase:next, the capsule and dev:progress skip those phases.
+ */
+function unparsedPhaseHeadings(content) {
+  const known = new Set(parsePlanPhases(content).map((phase) => phase.id));
+  return [...withoutFences(content).matchAll(/^#{2,3}[ \t]+(?:Phase|Fase)[ \t]+(\d+)\b.*$/gim)]
+    .map((match) => ({ id: String(Number(match[1])), heading: match[0].trim() }))
+    .filter((item) => !known.has(item.id));
+}
+
 const PHASE_OPENING = /^(#{2,3})\s+(?:Phase|Fase)\s+(\d+)(?:\s*[:—–-]\s*(.+)|\s*)$/i;
 
 function afterFrontmatter(lines) {
@@ -122,4 +134,4 @@ async function planSourceStatus(root, slug, content) {
   }
 }
 
-module.exports = { parsePlanPhases, planSections, withoutFences, setPlanField, readProjectFile, sourcePrdPath, contentHash, planSourceStatus };
+module.exports = { parsePlanPhases, unparsedPhaseHeadings, planSections, withoutFences, setPlanField, readProjectFile, sourcePrdPath, contentHash, planSourceStatus };

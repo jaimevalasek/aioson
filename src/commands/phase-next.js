@@ -21,9 +21,15 @@
  *     kickoff of the next agent for every registered harness. The Play's
  *     runtime watcher reads it and reopens the harness in a new conversation.
  *
- * `auto` means "stop here, the Play takes over". With no live session to carry
- * the event, or a note that could not be recorded, nobody would take over, so
- * the effective policy drops to `suggest` and says why (`downgrade_reason`).
+ * `auto` means "stop here, the Play takes over". Outside the Play, with no live
+ * session to carry the event, or with a note that could not be recorded, nobody
+ * would take over, so the effective policy drops to `suggest` and says why
+ * (`downgrade_reason`).
+ *
+ * After the last phase the next step is another agent's stage, and a stage
+ * handoff belongs to Autopilot (src/autopilot-signal.js; pass the activation's
+ * `--auto` or `--step` when it had one). With Autopilot off no event is
+ * recorded and the directive stops DEV here, with the QA kickoff for the person.
  * The JSON `directive` is what the agent does next, per the effective policy.
  */
 
@@ -36,10 +42,17 @@ const { openRuntimeDb, appendRunEvent } = require('../runtime-store');
 const { buildKickoffMap } = require('../lib/session-kickoff');
 const { listSupportedTools } = require('../lib/tool-capabilities');
 const { resolveKickoffTool, resolvePlanPhase, launcherLiveSession, optionText } = require('./session-kickoff');
+const { resolveAutopilotSignal } = require('../autopilot-signal');
 
 const EVENT_TYPE = 'phase_restart_requested';
 const PHASE_RESTART_POLICIES = ['auto', 'suggest', 'off'];
+// YAML reads a bare `off` or `no` as a boolean in some editors' rewrites.
+const POLICY_ALIASES = { false: 'off', no: 'off' };
 const NO_NOTE = /^(none|nenhuma|nenhum)$/i;
+
+function flagOn(value) {
+  return value === true || value === 'true';
+}
 
 function insidePlay(env) {
   const value = String((env && env.AIOSON_PLAY) || '').trim().toLowerCase();
@@ -58,7 +71,8 @@ async function resolvePhaseRestartPolicy(targetDir, env = process.env) {
   } catch {
     raw = undefined;
   }
-  const value = raw === undefined || raw === null ? '' : String(raw).trim().toLowerCase();
+  const written = raw === undefined || raw === null ? '' : String(raw).trim().toLowerCase();
+  const value = POLICY_ALIASES[written] || written;
   if (PHASE_RESTART_POLICIES.includes(value)) return { policy: value, source: 'project', warning: null };
   const warning = value ? `project.context.md phase_restart: "${raw}" is not auto, suggest or off; ignored.` : null;
   if (insidePlay(env)) return { policy: 'auto', source: 'play', warning };
@@ -119,8 +133,14 @@ function nextTarget(nextId) {
   return nextId ? `phase ${nextId}` : 'QA';
 }
 
-function buildDirective({ policy, finished, nextId, kickoff }) {
+function buildDirective({ policy, finished, nextId, kickoff, handoffStops, repeated }) {
   const target = nextTarget(nextId);
+  if (handoffStops) {
+    return `Phase ${finished} was the last one and Autopilot is off for this feature, so the handoff to QA is the person's: do not start QA in this conversation. Say DEV is complete and quote this once so they can start QA: ${kickoff}`;
+  }
+  if (policy === 'auto' && repeated) {
+    return `Phase ${finished} was already closed in this run and the Play serves that request once. If this is a retry within the same reply, end your reply now: the Play continues with ${target}. If the conversation already went on after that request, continue with ${target} here.`;
+  }
   if (policy === 'auto') {
     return `Phase ${finished} is done; the Play continues with ${target}. End your reply now with that one sentence and do no further work in this conversation.`;
   }
@@ -131,13 +151,38 @@ function buildDirective({ policy, finished, nextId, kickoff }) {
 }
 
 /** The auto policy with what it needs to be honored: an event the Play will read. */
-async function honorAuto({ targetDir, live, note, payload, message }) {
+async function honorAuto({ targetDir, live, note, payload, message, env }) {
   if (!note.recorded && note.text !== 'none') return { downgrade: 'note_not_recorded', event: null };
+  // Only the Play reads the event: a terminal's live session would stop and wait for nobody.
+  if (!insidePlay(env)) return { downgrade: 'not_in_play', event: null };
   if (!live) return { downgrade: 'no_live_session', event: { recorded: false, reason: 'no_live_session' } };
   const event = await recordRestartEvent(targetDir, live, payload, message)
     .catch((error) => ({ recorded: false, reason: 'event_write_failed', error: error.message }));
   if (event.recorded || event.reason === 'already_recorded') return { downgrade: null, event };
   return { downgrade: event.reason || 'event_not_recorded', event };
+}
+
+/**
+ * The effective policy of this phase end: the project's, the Play's or the
+ * default one, dropped to `suggest` when `auto` has nobody to take over, and
+ * the Autopilot verdict when the next step is QA.
+ */
+async function decide({ targetDir, options, env, live, note, payload }) {
+  const { feature, finished, next_phase: nextPhase, next_stage: nextStage } = payload;
+  // DEV → QA is a stage handoff, so Autopilot decides it; a phase inside DEV never asks.
+  const autopilot = nextStage === 'qa'
+    ? await resolveAutopilotSignal(targetDir, { slug: feature, auto: flagOn(options.auto), step: flagOn(options.step) })
+    : null;
+  const handoffStops = Boolean(autopilot && !autopilot.enabled);
+
+  const resolved = await resolvePhaseRestartPolicy(targetDir, env);
+  if (resolved.policy !== 'auto') return { resolved, policy: resolved.policy, event: null, downgrade: null, autopilot, handoffStops };
+  if (handoffStops) return { resolved, policy: 'suggest', event: null, downgrade: 'autopilot_off', autopilot, handoffStops };
+
+  const message = `Phase ${finished} of ${feature} done; next: ${nextTarget(nextPhase)}`;
+  const { downgrade, event } = await honorAuto({ targetDir, live, note, payload, message, env });
+  if (event && event.recorded) await appendLiveRecord(live, { ts: new Date().toISOString(), type: EVENT_TYPE, message, feature, finished, next_phase: nextPhase, next_stage: nextStage });
+  return { resolved, policy: downgrade ? 'suggest' : 'auto', event, downgrade, autopilot, handoffStops };
 }
 
 function logResult(logger, result) {
@@ -175,7 +220,8 @@ async function runPhaseNext({ args = [], options = {}, logger, env = process.env
     return refuse('unknown_tool', `Unknown harness: ${tool.error}. Known: ${listSupportedTools().join(', ')}.`, { tools: listSupportedTools() });
   }
 
-  const noteText = NO_NOTE.test(noteInput) ? 'none' : noteInput;
+  // One Agent Trail entry, one line: a line break in the note would open headings and entries of its own.
+  const noteText = NO_NOTE.test(noteInput) ? 'none' : noteInput.replace(/\s*[\r\n]+\s*/g, ' ');
   const note = { text: noteText, ...(await recordNote(targetDir, feature, `Phase ${finished} closed; next: ${nextTarget(nextId)}. Decisions not on disk: ${noteText}`)) };
 
   const kickoffs = buildKickoffMap({ targetDir, agent: nextStage, feature, phase: nextId });
@@ -187,16 +233,7 @@ async function runPhaseNext({ args = [], options = {}, logger, env = process.env
     kickoff: kickoffs
   };
 
-  const resolved = await resolvePhaseRestartPolicy(targetDir, env);
-  let policy = resolved.policy;
-  let event = null;
-  let downgrade = null;
-  if (policy === 'auto') {
-    const message = `Phase ${finished} of ${feature} done; next: ${nextTarget(nextId)}`;
-    ({ downgrade, event } = await honorAuto({ targetDir, live, note, payload, message }));
-    if (downgrade) policy = 'suggest';
-    if (event && event.recorded) await appendLiveRecord(live, { ts: new Date().toISOString(), type: EVENT_TYPE, message, feature, finished: payload.finished, next_phase: payload.next_phase, next_stage: nextStage });
-  }
+  const { resolved, policy, event, downgrade, autopilot, handoffStops } = await decide({ targetDir, options, env, live, note, payload });
 
   const kickoff = kickoffs[tool.tool];
   const result = {
@@ -212,7 +249,8 @@ async function runPhaseNext({ args = [], options = {}, logger, env = process.env
     kickoff,
     note,
     event,
-    directive: buildDirective({ policy, finished, nextId, kickoff }),
+    ...(autopilot ? { autopilot: { enabled: autopilot.enabled, source: autopilot.source } } : {}),
+    directive: buildDirective({ policy, finished, nextId, kickoff, handoffStops, repeated: Boolean(event && event.reason === 'already_recorded') }),
     warnings: resolved.warning ? [resolved.warning] : []
   };
   if (!options.json && logger) logResult(logger, result);

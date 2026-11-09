@@ -8,7 +8,9 @@
  * nothing. Each one then wrote helpers the earlier phases had already written,
  * because nothing told it they existed. The capsule compiles the phase itself,
  * the PRD rows it cites, the plan's shared sections scoped to it, what the branch
- * already created, and the open process and risk observations of the feature.
+ * already created, the decisions earlier phases left off disk (the notes
+ * `phase:next` wrote to the dossier Agent Trail, which a phase that starts from
+ * its capsule never opens), and the open process and risk observations.
  *
  * It writes nothing to the project unless the caller names a file.
  */
@@ -18,6 +20,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { declarationOnLine, declarationsInCode, isIndexable, SOURCE_GLOBS } = require('./duplicate-declarations');
+const { DOSSIER_FILENAME, FEATURES_SUBDIR } = require('../dossier/store');
 const { openForFeature } = require('./observations');
 const { planSections } = require('./plan-document');
 
@@ -321,6 +324,37 @@ function renderCreated(created) {
   return `${title}\n\nImport what is here instead of writing it again. Move a local one to a shared module when this phase needs it too.${note}\n\n${rows.join('\n')}`;
 }
 
+// ─── what earlier phases decided and left off disk ───────────────────────────
+
+// The line `phase:next` writes; `none` is a phase with nothing to carry.
+const PHASE_NOTE = /^Phase (\d+) closed; next: [^.]*\. Decisions not on disk: (.+)$/;
+const TRAIL_FILES = ['dossier-trail-archive.md', DOSSIER_FILENAME];
+
+/** `[{ phase, text }]` in the order the phases closed, each note once. Never throws. */
+function phaseNotes(targetDir, slug) {
+  const notes = new Map();
+  for (const name of TRAIL_FILES) {
+    let raw;
+    try {
+      raw = fs.readFileSync(path.join(targetDir, '.aioson', 'context', FEATURES_SUBDIR, slug, name), 'utf8');
+    } catch {
+      continue;
+    }
+    for (const line of raw.split(/\r?\n/)) {
+      const match = PHASE_NOTE.exec(line.trim());
+      if (!match || /^none$/i.test(match[2].trim())) continue;
+      const note = { phase: String(Number(match[1])), text: match[2].trim() };
+      notes.set(`${note.phase}\0${note.text}`, note);
+    }
+  }
+  return [...notes.values()];
+}
+
+function renderNotes(notes) {
+  if (notes.length === 0) return '';
+  return `## Decisions earlier phases left off disk\n\nWritten by the phase that made them; they are in no file of the tree.\n\n${notes.map((note) => `- Phase ${note.phase}: ${note.text}`).join('\n')}`;
+}
+
 function renderObservations(items) {
   if (items.length === 0) return '';
   return `## Open process and risk observations\n\n${items.map((item) => `- ${item.id} (${item.kind}): ${item.summary}`).join('\n')}`;
@@ -335,9 +369,10 @@ function renderObservations(items) {
  * @param {string} [input.prd] PRD text
  * @param {Array} [input.observations] open observations of the feature
  * @param {string} [input.base] `--base`
+ * @param {Array} [input.notes] phase notes; read from the dossier when absent
  * @returns the capsule text with its measures, or `{ ok: false, reason, phases }`
  */
-function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observations = [], base = '' }) {
+function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observations = [], base = '', notes }) {
   const { phases, sections } = planSections(plan);
   const id = String(Number(phaseId));
   const phase = phases.find((item) => item.id === id);
@@ -353,6 +388,8 @@ function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observati
   const citedAcs = [...citedIds].filter((item) => AC_ID.test(item)).sort();
   const created = createdSince(targetDir, base);
   const relevant = observations.filter((item) => OBSERVATION_KINDS.has(item.kind));
+  // A phase run again keeps its own earlier note; a later phase's note is not this one's past.
+  const carried = (notes || phaseNotes(targetDir, slug)).filter((note) => Number(note.phase) <= Number(id));
   const shared = sections
     .filter((section) => !DROPPED_SECTION.test(section.title))
     .map((section) => scopeSection(section.text, id, citedIds))
@@ -365,6 +402,8 @@ function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observati
   ];
   if (groups.length > 0) parts.push(`## What the PRD says about the ids this phase cites\n\n${renderRows(groups)}`);
   parts.push(renderCreated(created));
+  const noteText = renderNotes(carried);
+  if (noteText) parts.push(noteText);
   const observationText = renderObservations(relevant);
   if (observationText) parts.push(observationText);
   if (shared.length > 0) parts.push(`# Shared plan sections\n\n${shared.map((text) => text.trim()).join('\n\n')}`);
@@ -387,6 +426,7 @@ function buildPhaseCapsule({ targetDir, slug, phaseId, plan, prd = '', observati
     },
     acs: { cited: citedAcs, found: citedAcs.filter((item) => found.has(item)), missing: citedAcs.filter((item) => !found.has(item)), via_capability: viaCapability.size > 0 },
     created,
+    notes: carried,
     observations: relevant.map((item) => ({ id: item.id, kind: item.kind, summary: item.summary }))
   };
 }
@@ -397,4 +437,4 @@ function openObservations(targetDir, slug) {
 }
 
 module.exports = {
-  buildPhaseCapsule, citedIdsOf, citedPrdRows, createdSince, openObservations, phasesInCell, scopeSection };
+  buildPhaseCapsule, citedIdsOf, citedPrdRows, createdSince, openObservations, phaseNotes, phasesInCell, scopeSection };

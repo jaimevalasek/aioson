@@ -26,11 +26,12 @@ test('the phase loop ends every phase at phase:next and follows its directive pe
     const doc = read(file);
     assert.match(doc, /aioson phase:next \. --feature=\{slug\} --finished=\{n\} --note="\{decisions not on disk\}" --json/, file);
     assert.match(doc, /`--note=none` when there are none/, file);
-    assert.match(doc, /- `auto` — end the reply with one sentence: phase \{n\} is done and the Play opens the next one\. Then stop\./, file);
+    assert.match(doc, /- `auto` — end the reply with one sentence: phase \{n\} is done and the Play continues with the next one\. Then stop\./, file);
     assert.match(doc, /- `suggest` — continue in this conversation, and quote `kickoff` once/, file);
     assert.match(doc, /- `off` — continue in this conversation\./, file);
-    assert.match(doc, /only then run step 5 for the last phase\. It returns `next_stage: qa`/, file);
+    assert.match(doc, /only then run step 5 for the last phase, adding the `--auto` or `--step` this activation was given\. It returns `next_stage: qa`, and that handoff follows Autopilot: with Autopilot off the `directive` stops DEV here/, file);
     assert.doesNotMatch(doc, /Continue immediately/, `${file}: the old unconditional chaining is gone`);
+    assert.match(doc, /run with `aioson browser:run` \([^)]+\)\. Write your own browser script only for what the instrument cannot express\./, `${file}: the walkthrough stays the default instrument`);
     assert.match(doc, /aioson dev:resume-data \. --feature=\{slug\} --phase=\{n\} --capsule/, `${file}: the new-session entry stays the capsule`);
   }
 });

@@ -1,7 +1,7 @@
 'use strict';
 
 const { parseFrontmatter } = require('../preflight-engine');
-const { parsePlanPhases, planSourceStatus, withoutFences, readProjectFile } = require('./plan-document');
+const { parsePlanPhases, unparsedPhaseHeadings, planSourceStatus, withoutFences, readProjectFile } = require('./plan-document');
 
 const COMMAND = /(?:\b(?:node|npm|npx|pnpm|yarn|bun|cargo|pytest|python3?|go|dotnet|make|mvn|gradle|php|composer|ruby|bundle|rspec|pest|vitest|jest|playwright|ctest|cmake|swift|xcodebuild|bash|sh|pwsh|powershell|aioson)\b[ \t]+[^\n]+|\.\.?[/\\][\w./\\-]+)/i;
 const AC = /\bAC-[a-z0-9]+(?:-[a-z0-9]+)*\b/gi;
@@ -14,6 +14,7 @@ async function validatePlanContract({ targetDir, slug, content, acceptance, deli
   const add = (check, message) => issues.push({ stage: 'plan', check, message, artifact });
   const phases = parsePlanPhases(content);
   if (phases.length === 0) add('plan_phases_missing', 'Declare at least one numbered implementation phase');
+  for (const item of unparsedPhaseHeadings(content)) add('plan_phase_heading_unparsed', `"${item.heading}" is not read as a phase: write the heading as "## Phase ${item.id} — title" (or ":" / "-")`);
   let scripts = null;
   try { scripts = JSON.parse(await readProjectFile(targetDir, 'package.json')).scripts || {}; }
   catch (error) { if (error.code !== 'ENOENT') add('plan_package_unreadable', 'Cannot inspect package.json verification scripts'); }

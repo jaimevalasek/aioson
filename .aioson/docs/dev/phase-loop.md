@@ -21,7 +21,7 @@ It carries the phase, the PRD rows it cites, what the branch already created (ch
 
 ## After each phase
 
-1. Run the phase's focused automated command and production-path check. A dev server is not the production path: iterate on it if the plan names only one, then repeat the flows on the served build before calling the phase verified, and report the plan's gap. A `Runtime` line is a walkthrough under `.aioson/qa/walkthroughs/{slug}/`, run with `aioson browser:run` (write it once from `.aioson/docs/qa/browser-walkthrough.md`; log a seeded account in once with `--save-state`, start the others with `--state`).
+1. Run the phase's focused automated command and production-path check. A dev server is not the production path: iterate on it if the plan names only one, then repeat the flows on the served build before calling the phase verified, and report the plan's gap. A `Runtime` line is a walkthrough under `.aioson/qa/walkthroughs/{slug}/`, run with `aioson browser:run` (write it once from `.aioson/docs/qa/browser-walkthrough.md`; log a seeded account in once with `--save-state`, start the others with `--state`). Write your own browser script only for what the instrument cannot express.
 2. Check the project rules against what the phase wrote: `aioson rules:check . --changed`. A `HIGH` is a rule being broken and outranks the PRD, the plan, and any dossier deviation: fix it now or stop and report the conflict for a human to resolve on the rule file (it blocks the stage gate later anyway). With `divergence`, the tree already followed another convention: do not migrate or baseline; present the options the command prints. A `LOW` `duplicate-declaration` names an existing helper: import it and delete the copy, or say in the phase report why it stays.
 3. Fix a failing check before advancing. Stop only after the configured retry limit or for a genuine product/security decision.
 4. Update the dossier evidence and write the checkpoint (`--feature` and `--next` are required; `--phase` is the phase just finished):
@@ -39,7 +39,7 @@ It carries the phase, the PRD rows it cites, what the branch already created (ch
 
    It refuses a phase the plan does not have, records the note in the dossier Agent Trail, and returns `next_phase` (or `next_stage: qa`), `policy`, `kickoff` and `directive`. Do what `directive` says:
 
-   - `auto` — end the reply with one sentence: phase {n} is done and the Play opens the next one. Then stop. Do no further work in this conversation, not even the next phase's preflight.
+   - `auto` — end the reply with one sentence: phase {n} is done and the Play continues with the next one. Then stop. Do no further work in this conversation, not even the next phase's preflight.
    - `suggest` — continue in this conversation, and quote `kickoff` once so the person can restart in a new conversation instead.
    - `off` — continue in this conversation.
 
@@ -47,6 +47,6 @@ It carries the phase, the PRD rows it cites, what the branch already created (ch
 
 ## After the last phase
 
-Run the full relevant build/tests and production-path smoke once, then `aioson verification:plan . --feature={slug} --trigger=end-of-feature`. Complete the DEV stage as the kernel says, through `agent:done`, and only then run step 5 for the last phase. It returns `next_stage: qa`; under `auto`, QA starts in a new conversation with its own kickoff and never inherits this one.
+Run the full relevant build/tests and production-path smoke once, then `aioson verification:plan . --feature={slug} --trigger=end-of-feature`. Complete the DEV stage as the kernel says, through `agent:done`, and only then run step 5 for the last phase, adding the `--auto` or `--step` this activation was given. It returns `next_stage: qa`, and that handoff follows Autopilot: with Autopilot off the `directive` stops DEV here and quotes the QA kickoff for the person; with it on, under `auto`, QA starts in a new conversation with its own kickoff and never inherits this one.
 
 QA is the only default reviewer; Tester, Pentester, and Validator join only when explicitly enabled in `agent-execution-{slug}.json`, never by classification or phase count. Split development lanes follow `.aioson/docs/dev/execution-lanes.md`. Small project, small solution: no per-phase QA loop, no synthesized spec checkpoint, and no mandatory harness unless the approved plan deliberately requires one.

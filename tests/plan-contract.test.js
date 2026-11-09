@@ -30,6 +30,15 @@ test('missing verification mechanism and duplicate phase are rejected', async t 
   assert.ok(result.findings.some(f => f.check === 'plan_phase_duplicate'));
   assert.ok(result.findings.some(f => f.check === 'plan_phase_verification_missing'));
 });
+test('a phase heading no phase tool reads is a finding, never a silent skip', async t => {
+  const extra = '\n## Phase 2 (API)\n- Verification: node --test\n\n### Fase 3. Filtros\n\n#### Phase 4 notes\n\n### Phase 1 follow-ups\n\n```md\n## Phase 9 in an example\n```\n';
+  const result = await check(t, valid + extra);
+  const found = result.findings.filter(f => f.check === 'plan_phase_heading_unparsed').map(f => f.message);
+  assert.equal(found.length, 2, found.join(' | '));
+  assert.match(found[0], /^"## Phase 2 \(API\)" is not read as a phase: write the heading as "## Phase 2 — title"/);
+  assert.match(found[1], /^"### Fase 3\. Filtros"/);
+  assert.equal((await check(t)).findings.some(f => f.check === 'plan_phase_heading_unparsed'), false);
+});
 test('legacy findings are advisory and new source hashes are enforced', async t => {
   const result = await check(t, valid.replace('plan_contract: 2', 'plan_contract: 1').replace('AC-error', 'AC-ghost'));
   assert.equal(result.findings.length, 0);

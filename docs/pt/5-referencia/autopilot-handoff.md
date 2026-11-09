@@ -32,9 +32,11 @@ O manifesto também roteia itens da Neural Chain. DEV recebe inspeções/correç
 
 Cada fase do plano termina com `aioson phase:next . --feature={slug} --finished={n} --note="<decisões que não estão no disco>"`. A nota vai para o Agent Trail do dossiê, e o comando devolve a próxima fase, ou o QA depois da última. O que acontece depois depende de `phase_restart` no `project.context.md`:
 
-- `auto` (o padrão dentro do AIOSON Play): a conversa termina. O Play abre a próxima fase, ou o QA, numa conversa nova e digita o texto de retomada que vem de `aioson session:kickoff`. Cada fase começa pela própria cápsula, e não por tudo o que as fases anteriores leram.
+- `auto` (o padrão dentro do AIOSON Play): a conversa termina. O Play segue com a próxima fase e digita o texto de retomada que vem de `aioson session:kickoff` — numa conversa nova, ou na mesma enquanto o contexto ainda é pequeno. A fase que começa do zero parte da própria cápsula, e não de tudo o que as fases anteriores leram. Fora do Play ninguém lê o pedido, então `auto` vale como `suggest`.
 - `suggest` (o padrão no terminal): a cadeia segue na mesma conversa e cita o texto de retomada uma vez, para você reiniciar à mão se quiser.
 - `off`: a cadeia segue como antes.
+
+A passagem da última fase para o QA é troca de etapa, então segue o Autopilot, e não o `phase_restart`: com o Autopilot desligado (ou `--step` naquela ativação) o `phase:next` não grava nada e manda o agente parar e mostrar o texto de retomada do QA.
 
 ## Revisão
 
