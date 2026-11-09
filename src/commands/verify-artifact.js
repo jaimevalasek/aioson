@@ -1352,12 +1352,14 @@ const ADAPTERS = {
 
     const result = analyzePrd({ prd: prdText, briefing: briefingText, targetDir: ctx.targetDir });
     const ok = result.issues.length === 0;
+    // Advisory: a PRD past its size budget is re-read whole by Sheldon, Planner and QA.
+    const oversize = require('../lib/artifact-size').sizeAdvisory({ kind: 'prd', text: prdText, file: rel });
     return {
       ok,
       issues: result.issues,
-      warnings: result.warnings,
+      warnings: oversize ? [...result.warnings, oversize.message] : result.warnings,
       checks: [{ id: 'prd', ok, detail: result.issues.join('; ') || null }],
-      metrics: { ...result.metrics, file: rel, briefing_read: briefingText.length > 0 }
+      metrics: { ...result.metrics, file: rel, briefing_read: briefingText.length > 0, bytes: Buffer.byteLength(prdText, 'utf8') }
     };
   },
 

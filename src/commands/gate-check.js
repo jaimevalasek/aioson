@@ -353,10 +353,19 @@ async function checkGate(targetDir, slug, gateLetter) {
 // gate's result is the same with or without these warnings.
 async function withPlanRuntime(check, targetDir, slug, gateLetter) {
   if (gateLetter !== 'C') return check;
-  const planRuntime = lintPlanRuntime(await readFileSafe(path.join(contextDir(targetDir), `implementation-plan-${slug}.md`)));
+  const planText = await readFileSafe(path.join(contextDir(targetDir), `implementation-plan-${slug}.md`));
+  const planRuntime = lintPlanRuntime(planText);
   if (planRuntime.warnings.length > 0) {
     check.evidence.push({ type: 'plan_runtime', ok: true, advisory: true, runtime_lines: planRuntime.runtime_lines, warnings: planRuntime.warnings });
   }
+  // The two documents every later agent opens: past their size budget, a number and a directed rewrite.
+  const { sizeAdvisory } = require('../lib/artifact-size');
+  const prdRel = `.aioson/context/prd-${slug}.md`;
+  const oversized = [
+    sizeAdvisory({ kind: 'prd', text: await readFileSafe(path.join(targetDir, prdRel)), file: prdRel }),
+    sizeAdvisory({ kind: 'plan', text: planText, file: `.aioson/context/implementation-plan-${slug}.md` })
+  ].filter(Boolean);
+  if (oversized.length > 0) check.evidence.push({ type: 'artifact_size', ok: true, advisory: true, warnings: oversized });
   return check;
 }
 
@@ -367,6 +376,9 @@ function endEvidenceBlock(check, logger) {
       logger.log(`      - [${warning.code}] line ${warning.line}${warning.phase ? ` (Phase ${warning.phase})` : ''}: ${warning.message}`);
     }
     if (item.warnings.length > 5) logger.log(`      … ${item.warnings.length - 5} more (--json lists all)`);
+  }
+  for (const item of check.evidence.filter((e) => e.type === 'artifact_size')) {
+    for (const warning of item.warnings) logger.log(`  ! Size (advisory, the result does not depend on it): ${warning.message}`);
   }
 
   logger.log('');
