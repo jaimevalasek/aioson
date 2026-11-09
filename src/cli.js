@@ -265,6 +265,7 @@ const { runDossierAudit } = lazy(() => { const { runDossierAudit } = require('./
 const { runDevResumeData } = lazy(() => { const { runDevResumeData } = require('./commands/dev-resume'); return { runDevResumeData }; });
 const { runDevProgress } = lazy(() => { const { runDevProgress } = require('./commands/dev-progress'); return { runDevProgress }; });
 const { runSessionKickoff } = lazy(() => { const { runSessionKickoff } = require('./commands/session-kickoff'); return { runSessionKickoff }; });
+const { runPhaseNext } = lazy(() => { const { runPhaseNext } = require('./commands/phase-next'); return { runPhaseNext }; });
 const { runRevisionOpen, runRevisionList, runRevisionResolve } = lazy(() => { const { runRevisionOpen, runRevisionList, runRevisionResolve } = require('./commands/revision'); return { runRevisionOpen, runRevisionList, runRevisionResolve }; });
 const { runAcTestAudit } = lazy(() => { const { runAcTestAudit } = require('./commands/ac-test-audit'); return { runAcTestAudit }; });
 const { runSddBenchmark } = lazy(() => { const { runSddBenchmark } = require('./commands/sdd-benchmark'); return { runSddBenchmark }; });
@@ -1009,6 +1010,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'dev-progress',
   'session:kickoff',
   'session-kickoff',
+  'phase:next',
+  'phase-next',
   'revision:open',
   'revision-open',
   'revision:list',
@@ -2162,6 +2165,8 @@ async function main() {
       result = await runDevProgress({ args, options, logger: commandLogger });
     } else if (command === 'session:kickoff' || command === 'session-kickoff') {
       result = await runSessionKickoff({ args, options, logger: commandLogger });
+    } else if (command === 'phase:next' || command === 'phase-next') {
+      result = await runPhaseNext({ args, options, logger: commandLogger });
     } else if (command === 'revision:open' || command === 'revision-open') {
       result = await runRevisionOpen({ args, options, logger: commandLogger });
     } else if (command === 'revision:list' || command === 'revision-list') {
