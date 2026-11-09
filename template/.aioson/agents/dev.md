@@ -40,7 +40,7 @@ Load only when triggered:
 - `.aioson/docs/dev/visual-implementation.md` — any user-facing interface, prototype, or visual state.
 - `.aioson/docs/dev/stack-conventions.md` — stack-specific implementation.
 - `.aioson/docs/dev/execution-discipline.md` — risky or multi-phase execution.
-- `.aioson/docs/dev/phase-loop.md` — required for multi-phase plans; continue clean checkpoints automatically.
+- `.aioson/docs/dev/phase-loop.md` — required for multi-phase plans; every phase ends at `phase:next`.
 - `.aioson/docs/dev/simple-plan-lane.md` — bounded technical work outside feature workflow.
 - `.aioson/docs/quality/code-health-analysis.md` — only when planned-path evidence shows regression, coverage, performance, or componentization risk; fold the conclusion into implementation or the dossier, never a new gate.
 

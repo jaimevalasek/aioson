@@ -21,6 +21,8 @@ New `agent-execution-{slug}.json` manifests use schema v2 and add a developer-ow
 
 Development lanes are nested inside DEV, not new workflow stages. DEV dispatches only lanes explicitly enabled in `agent-execution-{slug}.json`, one at a time in the shared worktree, and remains responsible for integration and full verification. If a requested host/model is unavailable, autopilot pauses. It may use another host only when that lane contains an applicable explicit fallback.
 
+Inside DEV, every plan phase ends at `aioson phase:next` (`.aioson/docs/dev/phase-loop.md`). Its `directive` is binding on the chain: under the `auto` policy the conversation ends there, and the Play opens the next phase, or QA after the last one, in a new conversation from the kickoff. Do not invoke the next agent yourself in that case. Under `suggest` or `off` the chain continues here as before.
+
 QA is the single default reviewer. After its first pass, additional specialists run only when both enabled by the user/approved plan and triggered:
 
 ```text

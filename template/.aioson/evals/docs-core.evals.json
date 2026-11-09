@@ -221,6 +221,24 @@
       ]
     },
     {
+      "name": "dev closing a verified phase reaches the phase:next protocol",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Phase 2 is verified and checkpointed; close it with phase:next so the next phase starts in a new session.",
+      "expect": [
+        { "path": ".aioson/docs/dev/phase-loop.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "a pt-BR request to end the phase and continue in a new session reaches the phase loop",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fase 3 concluída e verificada; feche a fase com phase:next e continue a próxima numa sessão nova.",
+      "expect": [
+        { "path": ".aioson/docs/dev/phase-loop.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "the phase capsule protocol stays out of a one-line fix",
       "agent": "dev",
       "mode": "executing",

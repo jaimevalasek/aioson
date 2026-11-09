@@ -34,6 +34,8 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete defect 
 
 ## Deterministic preflight
 
+New QA sessions start here (`session:kickoff --agent=qa`).
+
 ```bash
 aioson context:brief . --agent=qa --mode=executing --feature={slug} --task="verify <delivered surfaces, domain words>" 2>/dev/null || true
 aioson preflight . --agent=qa --feature={slug}
@@ -74,7 +76,7 @@ For a delivery with a visual or rich operational surface, run `aioson brain:quer
 - Do not invoke Tester, Pentester, Validator, browser automation, or full-suite stress work merely because of classification. Require a concrete trigger.
 - Run focused AC evidence and the production smoke while investigating. On PASS, `gate:check --gate=D` owns the one comprehensive project verification and caches it by implementation fingerprint; `gate:approve` and `workflow:next --complete=qa` consume that evidence — never rerun the same unchanged full suite by hand around them.
 
-The goal is a fast trustworthy verdict. Small work should normally receive a small verification pass.
+Small work should normally receive a small verification pass.
 
 Get the PROM→CAP→AC→phase→files chain precomputed — never re-derive it by re-reading briefing+PRD+plan:
 
@@ -176,7 +178,7 @@ aioson workflow:next . --complete=qa
 
 Do not run `feature:close` from QA. Workflow needs explicit `auto_close`; `--step` suppresses it. No commit/publish permission.
 
-Before `/compact`, update `mappings/{slug}/continuity.md` only when material session evidence is not already preserved in canonical artifacts. Follow `.aioson/docs/feature-continuity-mapping.md`; the mapping is temporary, is never proof, and cannot change a QA verdict.
+Before `/compact`, update `mappings/{slug}/continuity.md` only for material session evidence absent from canonical artifacts, per `.aioson/docs/feature-continuity-mapping.md`; the mapping is temporary, never proof, and cannot change a QA verdict.
 
 ## Observability
 

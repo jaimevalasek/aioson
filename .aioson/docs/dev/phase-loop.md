@@ -1,8 +1,8 @@
 ---
-description: "Lean DEV phase loop — continuous implementation, focused checks, one post-DEV QA."
+description: "Lean DEV phase loop — focused checks, a phase:next checkpoint per phase (next phase here or in a new session), one post-DEV QA."
 agents: [dev]
 task_types: [implementation, verification]
-triggers: [phase loop, auto-continue phases, implementation checkpoints]
+triggers: [phase loop, auto-continue phases, implementation checkpoints, phase:next, new session per phase]
 ---
 
 # Lean DEV phase loop
@@ -11,7 +11,7 @@ Use this loop when `implementation-plan-{slug}.md` contains more than one vertic
 
 ## The loop
 
-Auto-continue is the default. A clean phase checkpoint advances directly to the next phase without launching QA or asking the user to continue.
+A clean phase checkpoint never asks the user to continue and never launches QA early. Whether the next phase runs in this conversation or in a new one is decided by `phase:next` (step 5), not here.
 
 After finishing each phase:
 
@@ -37,7 +37,19 @@ After finishing each phase:
    ```
 
    `--phase` names the phase that just finished, and every write leaves a stamp. `aioson dev:progress . --feature={slug}` reads the stamps: phases finished, mean per phase, and the projection for the rest once there are two real intervals between checkpoints. An interval under a minute and a phase the plan does not have are not counted. When the owner asks how long it will take, answer from this command. When it says there is no measure yet, say that.
-5. Continue immediately. The checkpoint exists for crash recovery, not as a handoff or approval gate.
+5. Close the phase (the last one waits for the end of DEV, below) with what only this conversation knows — decisions, rejected options and gotchas that are not already in the code, `dev-state.md` or the dossier; `--note=none` when there are none:
+
+   ```bash
+   aioson phase:next . --feature={slug} --finished={n} --note="{decisions not on disk}" --json
+   ```
+
+   It refuses a phase the plan does not have and records the note in the dossier Agent Trail. It returns `next_phase` (or `next_stage: qa` after the last phase), `policy`, `kickoff` and `directive`. Do what `directive` says:
+
+   - `auto` — end the reply with one sentence: phase {n} is done and the Play opens the next one. Then stop. Do no further work in this conversation, not even the next phase's preflight.
+   - `suggest` — continue in this conversation, and quote `kickoff` once so the person can restart in a new conversation instead.
+   - `off` — continue in this conversation.
+
+   The checkpoint is never a handoff or approval gate. It is crash recovery and the starting point of the next conversation.
 
 After the last phase, run the full relevant build/tests and production-path smoke once, then hand off to QA:
 
@@ -45,11 +57,13 @@ After the last phase, run the full relevant build/tests and production-path smok
 aioson verification:plan . --feature={slug} --trigger=end-of-feature
 ```
 
+Complete the DEV stage as the kernel says, through `agent:done`, and only then run step 5 for the last phase. It returns `next_stage: qa`; under `auto`, QA starts in a new conversation with its own kickoff and never inherits this one.
+
 QA is the only default reviewer. Tester, Pentester, and Validator appear in this plan only when explicitly enabled in `agent-execution-{slug}.json`; classification and phase count never enable them.
 
 ## Starting a phase in a new context
 
-A Dev that starts fresh on a phase, or returns after compaction, compiles the capsule before reading the plan or the PRD:
+A Dev that starts fresh on a phase — from a `phase:next` kickoff, `aioson session:kickoff . --agent=dev --feature={slug} --phase={n}`, or after compaction — compiles the capsule before reading the plan or the PRD:
 
 ```bash
 aioson dev:resume-data . --feature={slug} --phase={n} --capsule

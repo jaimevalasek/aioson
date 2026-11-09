@@ -11,7 +11,7 @@ PRD + implementation plan + repository. The prototype is binding only when the s
 3. Add stack-native focused tests citing AC IDs.
 4. Run the focused check and prove triggered engineering controls.
 5. Exercise the default application entry point and observe the promised result.
-6. Record evidence, update Dev state, and advance immediately. A clean phase checkpoint is recovery state, not a request for user confirmation.
+6. Record evidence, update Dev state, and close the phase with `aioson phase:next`, then follow its `directive` (under `auto`, stop: the next phase starts in a new conversation). A clean phase checkpoint is recovery state, not a request for user confirmation.
 
 Do not self-certify with compile success, mocks, static UI, an alternate binary, or a test-only route. Stop for product contradiction; resolve ordinary technical choices from evidence.
 
