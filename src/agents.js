@@ -141,15 +141,22 @@ function buildAgentPrompt(agent, tool, options = {}) {
     scopeBoundary,
   ].join('\n');
 
-  if (safeTool === 'claude') {
-    return `Read ${instructionPath} and execute ${agent.command}. ${dependencyText}${activationBlock}\n\nWrite output to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
-  }
+  const outputVerb = safeTool === 'claude' ? 'Write' : 'Save';
+  return `${agentActivationLead(agent, safeTool, instructionPath)} ${dependencyText}${activationBlock}\n\n${outputVerb} output to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
+}
 
-  if (safeTool === 'opencode') {
-    return `Use agent "${agent.id}" from ${instructionPath}. ${dependencyText}${activationBlock}\n\nSave output to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
-  }
-
-  return `Read AGENTS.md and execute ${agent.command} using ${instructionPath}. ${dependencyText}${activationBlock}\n\nSave output to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
+/**
+ * The first sentence that starts an agent in one harness: Claude Code reads
+ * the instruction file it is named, OpenCode is told the agent by id, and
+ * every other harness goes through the AGENTS.md gateway. agent:prompt opens
+ * every prompt with it, and session:kickoff (src/lib/session-kickoff.js) types
+ * it into a new conversation — one table, so the two never disagree.
+ */
+function agentActivationLead(agent, tool, instructionPath = agent.path) {
+  const safeTool = String(tool || 'codex').toLowerCase();
+  if (safeTool === 'claude') return `Read ${instructionPath} and execute ${agent.command}.`;
+  if (safeTool === 'opencode') return `Use agent "${agent.id}" from ${instructionPath}.`;
+  return `Read AGENTS.md and execute ${agent.command} using ${instructionPath}.`;
 }
 
 module.exports = {
@@ -162,5 +169,6 @@ module.exports = {
   getAgentDefinition,
   listAgentDefinitions,
   resolveInstructionPath,
-  buildAgentPrompt
+  buildAgentPrompt,
+  agentActivationLead
 };
