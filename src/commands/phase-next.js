@@ -122,7 +122,7 @@ function nextTarget(nextId) {
 function buildDirective({ policy, finished, nextId, kickoff }) {
   const target = nextTarget(nextId);
   if (policy === 'auto') {
-    return `Phase ${finished} is done; the Play opens ${target} in a new session. End your reply now with that one sentence and do no further work in this conversation.`;
+    return `Phase ${finished} is done; the Play continues with ${target}. End your reply now with that one sentence and do no further work in this conversation.`;
   }
   if (policy === 'suggest') {
     return `Continue with ${target} in this conversation. Quote this once so the person can restart it in a new session instead: ${kickoff}`;
@@ -192,7 +192,7 @@ async function runPhaseNext({ args = [], options = {}, logger, env = process.env
   let event = null;
   let downgrade = null;
   if (policy === 'auto') {
-    const message = `Phase ${finished} of ${feature} done; next: ${nextTarget(nextId)} in a new session`;
+    const message = `Phase ${finished} of ${feature} done; next: ${nextTarget(nextId)}`;
     ({ downgrade, event } = await honorAuto({ targetDir, live, note, payload, message }));
     if (downgrade) policy = 'suggest';
     if (event && event.recorded) await appendLiveRecord(live, { ts: new Date().toISOString(), type: EVENT_TYPE, message, feature, finished: payload.finished, next_phase: payload.next_phase, next_stage: nextStage });

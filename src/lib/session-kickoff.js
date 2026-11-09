@@ -39,15 +39,15 @@ function activation(targetDir, agent, tool) {
 
 function startInstruction(agent, feature, phase) {
   if (agent.id === 'dev' && phase) {
-    return `Continue feature ${feature} at phase ${phase} in this new session: first run \`aioson dev:resume-data . --feature=${feature} --phase=${phase} --capsule\` and start from that capsule.`;
+    return `Continue feature ${feature} at phase ${phase}: first run \`aioson dev:resume-data . --feature=${feature} --phase=${phase} --capsule\` and start from that capsule.`;
   }
   if (agent.id === 'dev') {
-    return `Continue feature ${feature} in this new session: first run \`aioson dev:resume-data . --json\` and resume from its checkpoint.`;
+    return `Continue feature ${feature}: first run \`aioson dev:resume-data . --json\` and resume from its checkpoint.`;
   }
   if (agent.id === 'qa') {
     return `Verify feature ${feature} in this new session: start at your Deterministic preflight with --feature=${feature}; Dev's conversation does not carry over.`;
   }
-  return `Continue feature ${feature} in this new session from its artifacts on disk.`;
+  return `Continue feature ${feature} from its artifacts on disk.`;
 }
 
 /**

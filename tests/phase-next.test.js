@@ -179,7 +179,7 @@ test('auto records one phase_restart_requested on the live session\'s running ru
     const result = phaseNext(dir, ['--finished=3', '--note=filters persist per user'], env);
     assert.deepEqual([result.ok, result.policy, result.policy_source, result.tool], [true, 'auto', 'play', 'claude']);
     assert.deepEqual(result.event, { recorded: true, id: result.event.id, run_key: live.runKey, session_key: live.sessionKey });
-    assert.match(result.directive, /the Play opens phase 5 in a new session\. End your reply now/);
+    assert.match(result.directive, /the Play continues with phase 5\. End your reply now/);
 
     const rows = await restartEvents(dir);
     assert.equal(rows.execution.length, 1);
