@@ -35,6 +35,8 @@ const BOOLEAN_FLAGS = new Set([
   'check',
   // harness:validate — pure boolean; `--no-diff .` must not swallow the path.
   'no-diff',
+  // context:brief — `--full .` prints the full brief; it never takes a value.
+  'full',
   // audit:code / harness:check / rules:check — pure booleans; `--changed .` /
   // `--strict .` / `--baseline .` must not swallow the trailing path positional.
   'changed', 'strict', 'baseline',
