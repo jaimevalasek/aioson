@@ -173,10 +173,10 @@ test('runOpList --titles-only strips decision bodies from the JSON items (sessio
 
   const titles = await runOpList({ args: [], options: { json: true, 'titles-only': true }, logger: silentLogger() });
   assert.equal(titles.ok, true);
-  assert.equal(titles.items.length, full.items.length);
-  for (const item of titles.items) {
-    assert.ok(item.slug, 'titles-only item keeps slug');
-    assert.ok(!('body' in item) && !('quotes' in item) && !('proposal' in item), 'titles-only item must not carry decision content');
+  assert.deepEqual(Object.keys(titles.items).sort(), full.items.map((item) => item.slug).sort());
+  for (const [slug, title] of Object.entries(titles.items)) {
+    assert.ok(slug, 'titles-only keys each decision by its slug (what op:show takes)');
+    assert.equal(typeof title, 'string', 'titles-only carries the title alone, never the decision content');
   }
 });
 

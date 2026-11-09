@@ -63,7 +63,7 @@ async function inDir(dir, fn) {
 const capture = (dir, options) => inDir(dir, () => runOpCapture({ args: [], options: { json: true, 'source-agent': 'dev', ...options }, logger: silent() }));
 const listSlugs = async (dir, options = {}) => {
   const result = await inDir(dir, () => runOpList({ args: [], options: { json: true, 'titles-only': true, ...options }, logger: silent() }));
-  return result.items.map((item) => item.slug);
+  return Object.keys(result.items);
 };
 
 test('namesCrossProjectScope: explicit every-project phrasing in pt-BR, en and es', () => {
@@ -543,7 +543,7 @@ test('op:* commands resolve the project from their [path] argument, the working 
   const sets = projectSets(readDecision(IDENTITY, captured.slug));
   assert.deepEqual(sets, [resolveProjectScope(api).keys], 'bound to the project the path names, not to the folder the shell is in');
 
-  const listFrom = async (args) => (await inDir(parent, () => runOpList({ args, options: { json: true, 'titles-only': true }, logger: silent() }))).items.map((item) => item.slug);
+  const listFrom = async (args) => Object.keys((await inDir(parent, () => runOpList({ args, options: { json: true, 'titles-only': true }, logger: silent() }))).items);
   assert.ok((await listFrom(['todo-api'])).includes(captured.slug));
   assert.ok(!(await listFrom([])).includes(captured.slug), 'the parent folder is another project');
 
@@ -573,17 +573,20 @@ test('op:* commands resolve the project from their [path] argument, the working 
   }
 });
 
-test('op:list --titles-only is lean: no empty field, dates as days, one compact line on stdout', () => {
+test('op:list --titles-only is lean: one slug: title pair per decision, one compact line on stdout', () => {
   const dir = makeCheckout('lean', 'https://github.com/acme/lean.git');
   const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'aioson.js'), 'op:list', '.', '--json', '--titles-only'], { cwd: dir, env: process.env, encoding: 'utf8' });
   assert.equal(res.status, 0, res.stderr);
   assert.equal(res.stdout.trim().split('\n').length, 1, 'compact JSON: one line');
   const parsed = JSON.parse(res.stdout);
-  assert.ok(parsed.items.length > 0);
-  for (const item of parsed.items) {
-    assert.ok(item.slug);
-    for (const [key, value] of Object.entries(item)) assert.ok(value !== null && value !== '', `${item.slug}.${key} is empty`);
-    if (item.last_reinforced) assert.match(item.last_reinforced, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(parsed.feature, undefined, 'no null envelope field');
+  assert.equal(parsed.tier, undefined, 'the active tier goes without saying');
+  const pairs = Object.entries(parsed.items);
+  assert.ok(pairs.length > 0);
+  for (const [slug, title] of pairs) {
+    assert.ok(slug);
+    assert.equal(typeof title, 'string');
+    assert.ok(title.length > 0, `${slug} has an empty title`);
   }
 });
 

@@ -67,7 +67,34 @@ async function inDir(dir, fn) {
 }
 
 const list = (options, dir = TEST_HOME) => inDir(dir, () => runOpList({ args: [], options: { json: true, ...options }, logger: silent() }));
-const slugs = (result) => result.items.map((item) => item.slug);
+// --titles-only items are one `slug: title` map; every other shape lists objects.
+const slugs = (result) => (Array.isArray(result.items) ? result.items.map((item) => item.slug) : Object.keys(result.items));
+
+test('the session-start recall is one slug: title pair per decision, under a byte budget for 40', () => {
+  const identity = useIdentity('recall-budget-bot');
+  // Index-length titles (the index keeps 80 characters) under realistic slugs.
+  for (let i = 0; i < DEFAULT_RECALL_LIMIT + 10; i += 1) {
+    const body = `Keep the deploy pipeline on the managed runner for service number ${String(i).padStart(3, '0')} always`;
+    seed(identity, `keep-deploy-pipeline-managed-runner-${String(i).padStart(2, '0')}`, { daysAgo: i, body });
+  }
+  regenerateIndex(identity);
+  const res = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'aioson.js'), 'op:list', '--json', '--titles-only'], { cwd: TEST_HOME, env: process.env, encoding: 'utf8' });
+  assert.equal(res.status, 0, res.stderr);
+  const parsed = JSON.parse(res.stdout);
+  const pairs = Object.entries(parsed.items);
+  assert.equal(pairs.length, DEFAULT_RECALL_LIMIT);
+  for (const [slug, title] of pairs) {
+    assert.match(slug, /^keep-deploy-pipeline-managed-runner-\d{2}$/);
+    assert.equal(typeof title, 'string', 'a title, no per-decision object');
+    assert.match(title, /^Keep the deploy pipeline/);
+  }
+  const bytes = Buffer.byteLength(res.stdout.trim());
+  const payload = pairs.reduce((sum, [slug, title]) => sum + slug.length + title.length, 0);
+  // Measured on a real 544-decision store: 10.3 KB before (seven index fields
+  // per decision), 5.0 KB after. The slug and the title are all there is.
+  assert.ok(bytes - payload <= DEFAULT_RECALL_LIMIT * 6 + 320, `overhead ${bytes - payload} B beyond slugs and titles`);
+  assert.ok(bytes <= 5200, `recall of ${DEFAULT_RECALL_LIMIT} decisions is ${bytes} B (budget 5200)`);
+});
 
 test('the session-start recall lists the decisions ranked first and counts the rest', async () => {
   const identity = useIdentity('recall-cap-bot');
@@ -140,7 +167,7 @@ test('a decision said in this project heads the recall, however old', async () =
 
   const recall = await list({ 'titles-only': true }, api);
   assert.equal(slugs(recall)[0], captured.slug);
-  assert.equal(recall.items[0].scope, 'project');
+  assert.doesNotMatch(recall.items[captured.slug], /\[only in/, 'a decision said here reads as one that applies here');
   assert.equal(recall.omitted, 1, 'one fresh unscoped decision gave way');
 });
 
@@ -226,6 +253,9 @@ test('--all keeps "this project\'s" for decisions said here, not for every scope
   assert.equal(fromHere.omitted, 1);
   const fromOther = await list({ 'titles-only': true, all: true }, other);
   assert.equal(slugs(fromOther)[0], captured.slug, 'where it was said, it heads the recall');
+  assert.doesNotMatch(fromOther.items[captured.slug], /\[only in/);
+  const everything = await list({ 'titles-only': true, all: true, limit: '0' }, here);
+  assert.match(everything.items[captured.slug], /\[only in: /, 'listed from another project, its title says where it applies');
 });
 
 test('the default head is the activation recall only; an explicit --limit applies to every shape, with its counts', async () => {

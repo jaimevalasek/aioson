@@ -10,9 +10,9 @@
  * Flags:
  *   --proposals          show pending proposals instead of decisions
  *   --include-archived   include MEMORY-archive.md entries
- *   --titles-only        strip decision bodies/quotes from --format=json items —
- *                        the session-start recall path (kernel) lists titles and
- *                        lazy-loads matching bodies via op:show; capped at
+ *   --titles-only        the session-start recall path (kernel): `items` is one
+ *                        `slug: title` map — no body, quote or index field —
+ *                        and matching bodies lazy-load via op:show; capped at
  *                        DEFAULT_RECALL_LIMIT ranked decisions (table output too),
  *                        unless --feature or --proposals asks for another shape
  *   --match=<words>      only decisions whose title or body shares a word (two
@@ -45,15 +45,7 @@ const PROHIBITIVE_SIGNALS = new Set(['exclusion', 'correction']);
 // almost every decision. CI, PR, UI, QA, DB, JS and Go stay task words.
 const SHORT_STOPWORDS = new Set(['am', 'at', 'by', 'do', 'he', 'if', 'it', 'me', 'my', 'so', 'up', 'us', 'we', 'ao', 'da', 'eu', 'ja', 'ou', 'se', 'te', 'tu', 'al', 'el', 'en', 'es', 'ha', 'la', 'le', 'lo', 'mi', 'ni', 'si', 'su', 'un', 'ya', 'yo']);
 
-const HELP = `op:list [path] [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--match=<words>] [--limit=<n>] [--titles-only] [--format=table|json] — list active decisions that apply in this project (--all: every project). --titles-only lists the ${DEFAULT_RECALL_LIMIT} ranked first (this project's first, prohibitions before permissions, then the freshest) unless --limit says otherwise (0 = all); --feature and --proposals list everything unless --limit is given.`;
-
-function dayOf(value) {
-  return value ? String(value).slice(0, 10) : null;
-}
-
-function leanTitle(fields) {
-  return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== ''));
-}
+const HELP = `op:list [path] [--proposals] [--include-archived] [--all] [--feature=<slug>] [--agent=<name>] [--match=<words>] [--limit=<n>] [--titles-only] [--format=table|json] — list active decisions that apply in this project (--all: every project). --titles-only lists the ${DEFAULT_RECALL_LIMIT} ranked first (this project's first, prohibitions before permissions, then the freshest) as one slug: title map unless --limit says otherwise (0 = all); --feature and --proposals list everything unless --limit is given.`;
 
 // The shape every agent runs at activation: --titles-only decisions, not a
 // feature's record (--feature) or the pending queue (--proposals).
@@ -146,7 +138,7 @@ function selectRecall(items, options, limit, project) {
 }
 
 function moreHint(omitted) {
-  return `${omitted} more decision(s) ranked lower — aioson op:list --json --titles-only --match="<task words>" finds them; --limit=0 lists all`;
+  return `${omitted} more decision(s): op:list --json --titles-only --match="<task words>"; --limit=0 lists all`;
 }
 
 /** Pending proposals, each with its slug. */
@@ -200,23 +192,23 @@ function applyFilters(items, project, options) {
   return kept;
 }
 
-// --titles-only: the cheap session-start recall shape — index fields without
-// bodies/quotes, so a large operator memory costs one small JSON instead of
-// every decision body. Load a matching body with op:show <slug>. It is read
-// on every agent activation: empty fields are left out and dates are days.
-function titleOnly(item) {
-  return leanTitle({
-    slug: item.slug,
-    title: item.title,
-    signal_type: item.signal_type,
-    category: item.category,
-    feature_slug: item.feature_slug,
-    source_agent: item.source_agent,
-    last_detected: dayOf(item.last_detected),
-    last_reinforced: dayOf(item.last_reinforced),
-    scope: item.scope,
-    tier: item.tier
-  });
+// --titles-only: the session-start recall every agent activation reads, so
+// each decision is one `slug: title` pair — the slug is what op:show takes,
+// the title is what the agent matches its task against. Signal, category,
+// agent and dates stay in op:show and the table (the order already puts
+// prohibitions first): 40 decisions went from 10.3 KB to under 5 KB. Only what
+// changes how a title reads is said, after it: an archived decision, or one
+// bound to another project (listed under --all).
+function recallTitle(item, project) {
+  const title = item.title || String(item.proposal || item.body || '').split('\n')[0].slice(0, 80).trim() || item.slug;
+  const notes = [];
+  if (item.tier === 'archive') notes.push('archive');
+  if (!appliesInProject(item, project)) notes.push(`only in: ${parseList(item.project_names).join(', ') || 'another project'}`);
+  return notes.length > 0 ? `${title} [${notes.join('; ')}]` : title;
+}
+
+function recallMap(items, project) {
+  return Object.fromEntries(items.map((item) => [item.slug, recallTitle(item, project)]));
 }
 
 // BR-AO-09: the structured shape of --feature.
@@ -247,10 +239,22 @@ function recallFields(recall) {
   return fields;
 }
 
-function jsonResult(items, recall, resolved, options) {
+function jsonResult(items, recall, resolved, options, project) {
   if (options.feature) {
     const decisions = items.map(featureDecision);
     return { ok: true, feature: String(options.feature), decisions, total: decisions.length, ...recallFields(recall) };
+  }
+  if (options['titles-only']) {
+    const tier = tierLabel(options);
+    return {
+      ok: true,
+      identity: resolved.identity,
+      identity_source: resolved.source,
+      ...(tier === 'active' ? {} : { tier }),
+      count: items.length,
+      ...recallFields(recall),
+      items: recallMap(items, project)
+    };
   }
   return {
     ok: true,
@@ -275,7 +279,7 @@ function tableRow(item, showProposals) {
   const category = item.category || (showProposals ? 'proposal' : 'default');
   const tier = item.tier === 'archive' ? '[archive] ' : '';
   const only = item.scope === SCOPE_PROJECT ? `  only in: ${parseList(item.project_names).join(', ') || 'one project'}` : '';
-  return `  ${tier}${item.slug.padEnd(40)}  ${item.signal_type.padEnd(14)}  ${category.padEnd(10)}  ${dateOnly}${only}`;
+  return `  ${tier}${item.slug.padEnd(40)}  ${String(item.signal_type || '').padEnd(14)}  ${category.padEnd(10)}  ${dateOnly}${only}`;
 }
 
 function printTable(logger, items, recall, identity, showProposals) {
@@ -308,10 +312,10 @@ async function runOpList({ args = [], options = {}, logger }) {
   const loaded = loadItems(resolved.identity, options);
   const project = currentProjectFor(where.dir, loaded);
   const recall = selectRecall(applyFilters(loaded, project, options), options, limit, project);
-  const items = options['titles-only'] ? recall.items.map(titleOnly) : recall.items;
+  const items = recall.items;
 
   if (options.format === 'json' || options.json) {
-    const result = jsonResult(items, recall, resolved, options);
+    const result = jsonResult(items, recall, resolved, options, project);
     // The recall is read on every activation: one compact line.
     if (!options.json && logger) logger.log(options['titles-only'] && !options.feature ? JSON.stringify(result) : JSON.stringify(result, null, 2));
     return result;
