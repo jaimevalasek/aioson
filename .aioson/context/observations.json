@@ -752,6 +752,284 @@
       "created_at": "2026-11-06T20:29:52.562Z",
       "updated_at": "2026-11-06T20:29:52.562Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-87e497",
+      "kind": "risk",
+      "summary": "O lock do registro pode expirar com o escritor ainda vivo se a acao ultrapassar 30 segundos",
+      "detail": "Revisao fora da janela recente: src/lib/feature-registry-storage.js, isStaleEntry, considera o marcador obsoleto por mtime mesmo com PID vivo; withRegistryLock nao renova o marcador durante action(). Verificar em dois processos uma acao longa antes de propor correcao.",
+      "paths": [
+        "src/lib/feature-registry-storage.js"
+      ],
+      "feature": null,
+      "origin_feature": null,
+      "agent": "aioson-audit",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-06T21:26:52.535Z",
+      "updated_at": "2026-11-06T21:26:52.535Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-25a130",
+      "kind": "process",
+      "summary": "quality:static ja falha no HEAD com 114 apontamentos fora da baseline de 20 de outubro",
+      "detail": "Comparacao isolada de 68bf2116 e workspace: ambos 3131 achados, 3017 baseline e 114 novos para a baseline; nenhum achado adicionado ou removido pelas correcoes desta varredura. A unica metrica diferente fica em src/lib/system-runtime-inputs.js, alterado antes da sessao. Revisar a divida e os barrels intencionais sem regravar a baseline para esconder problemas. Evidencia: .aioson/runtime/quality/last-days-static-comparison.json.",
+      "paths": [
+        ".quality/fallow-baseline.json"
+      ],
+      "feature": null,
+      "origin_feature": null,
+      "agent": "aioson-audit",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-06T21:31:39.895Z",
+      "updated_at": "2026-11-06T21:31:39.895Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-4990c9",
+      "kind": "risk",
+      "summary": "The framework's own tests carry 187 non-English test titles that rules:check now reports as HIGH (edit-time flags only new ones); translate them or record them with rules:check --baseline",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-08T19:25:43.377Z",
+      "updated_at": "2026-11-08T19:25:43.377Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-1ce1be",
+      "kind": "risk",
+      "summary": "A consumer's rules gate blocked @dev 8 times on whole-tree legacy debt through the changed-to-full fallback (empty diff after commit), and the feature still closed; find how the gate was passed and whether the fallback should charge debt t…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-08T19:25:44.911Z",
+      "updated_at": "2026-11-08T19:25:44.911Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-0a2276",
+      "kind": "defect",
+      "summary": "system:package input filter exempts gitignored output folders only at the project root: a nested one (server/dist/) is dropped from the package",
+      "detail": "Uncommitted change of another session, reviewed 2026-11-09. Its new test also leaves two 1 GiB files in the temp dir on every Windows run (no cleanup), and the fingerprint change makes an in-flight Play publish fail once.",
+      "paths": [
+        "src/lib/system-runtime-inputs.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "dev",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:36:50.130Z",
+      "updated_at": "2026-11-09T20:36:50.130Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-92c390",
+      "kind": "question",
+      "summary": "system:package no longer lets the build see a gitignored .env: intended, or should build-time env files stay visible?",
+      "detail": null,
+      "paths": [
+        "src/lib/system-runtime-inputs.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "dev",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:36:50.279Z",
+      "updated_at": "2026-11-09T20:36:50.279Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-4dce38",
+      "kind": "risk",
+      "summary": "context:digest shows 16 operator-memory titles (8 ranked first + 8 matched) where the old recall showed 40; a project with more than 8 prohibitions of its own loses some without a count by kind",
+      "detail": "Measured on this store: 525 decisions, 269 operator-wide prohibitions, only 3 project-scoped. Breadth against session-start bytes is the owner's call.",
+      "paths": [
+        "src/lib/session-digest.js",
+        "src/commands/op-list.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "dev",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:36:50.458Z",
+      "updated_at": "2026-11-09T20:36:50.458Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-835162",
+      "kind": "defect",
+      "summary": "browser-walkthrough-real 'every mode launches with the flags as written' fails with net::ERR_INVALID_URL at chrome://version on the installed browser",
+      "detail": "Fails alone and with the tree untouched in that area (2026-11-09); the other 28 real-browser tests pass.",
+      "paths": [
+        "tests/browser-walkthrough-real.test.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "dev",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:36:50.609Z",
+      "updated_at": "2026-11-09T20:36:50.609Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-f29d47",
+      "kind": "process",
+      "summary": "kernel-binding-retention pins only hard-constraint bullets and commands: a directive sentence outside those can leave a kernel or routed doc during a diet and nothing fails",
+      "detail": "2026-11-09 review of the kernel and phase-loop diet found three such sentences gone: the browser-script fallback and the PRD visual-identity binding (both restored, now pinned), and the dev kernel completion sentence (still out; dev.md has 56 chars of slack).",
+      "paths": [
+        "tests/kernel-binding-retention.test.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:06.736Z",
+      "updated_at": "2026-11-09T20:38:06.736Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-31bbfe",
+      "kind": "risk",
+      "summary": "routed docs that received the procedure moved out of the kernels have no byte ceiling: QA grew 783 B and Planner 1,621 B in the diet wave",
+      "detail": null,
+      "paths": [
+        "template/.aioson/docs"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:06.868Z",
+      "updated_at": "2026-11-09T20:38:06.868Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-5074aa",
+      "kind": "defect",
+      "summary": "memory-index.md is described as an ordinary context:select candidate for @dev, but it scores 20 against a threshold of 30 and is reachable only by name",
+      "detail": null,
+      "paths": [
+        "src/context-selector.js",
+        "template/.aioson/docs/dev/continuity-recovery.md"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:07.028Z",
+      "updated_at": "2026-11-09T20:38:07.028Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-d67106",
+      "kind": "defect",
+      "summary": "index and recall titles are cut mid-word at a fixed length instead of at a word boundary",
+      "detail": null,
+      "paths": [
+        "src/lib/index-md.js",
+        "src/commands/op-list.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:07.156Z",
+      "updated_at": "2026-11-09T20:38:07.156Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-593bbb",
+      "kind": "defect",
+      "summary": "dossier compaction splits a hand-written trail entry at its bullets when the entry opens with a level-3 heading",
+      "detail": null,
+      "paths": [
+        "src/dossier/dossier-compact.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:07.294Z",
+      "updated_at": "2026-11-09T20:38:07.294Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-19e42e",
+      "kind": "defect",
+      "summary": "compact context:brief says read each in full on a list whose entries carry a lens line range",
+      "detail": null,
+      "paths": [
+        "src/commands/context-brief.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:07.433Z",
+      "updated_at": "2026-11-09T20:38:07.433Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-49a370",
+      "kind": "defect",
+      "summary": "Gate C reads the PRD size advisory only from prd-{slug}.md; a project whose PRD is .aioson/context/prd.md never gets it, while kind=prd falls back to that file",
+      "detail": null,
+      "paths": [
+        "src/commands/gate-check.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:07.575Z",
+      "updated_at": "2026-11-09T20:38:07.575Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-894142",
+      "kind": "process",
+      "summary": "a commit that edits template/.aioson/docs can leave the tracked root copy stale and no test compares the two trees: execution-lanes.md stayed one release behind after 49737653",
+      "detail": "Found by a byte scan of the 215 tracked root copies on 2026-11-09; that one was the only drift and is mirrored again.",
+      "paths": [
+        "template/.aioson/docs/dev/execution-lanes.md",
+        ".aioson/docs/dev/execution-lanes.md"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "resolved",
+      "seen": 1,
+      "created_at": "2026-11-09T20:38:07.704Z",
+      "updated_at": "2026-11-09T20:38:39.021Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": null,
+        "why": "tests/template-docs-mirror.test.js compares every workspace copy of a template doc or agent with its template",
+        "by": "improve",
+        "at": "2026-11-09T20:38:39.021Z"
+      }
     }
   ]
 }
