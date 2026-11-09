@@ -89,12 +89,6 @@ function planPhaseIds(planText) {
   return [...new Set(parsePlanPhases(planText).map((phase) => phase.id))];
 }
 
-/** The feature's plan phase ids, or null when it has no implementation plan. */
-async function readPlanPhaseIds(targetDir, feature) {
-  const read = await readPlanPhases(targetDir, feature);
-  return read ? read.ids : null;
-}
-
 /** `{ ids, unparsed }` — the phase ids in plan order and the phase-like headings no tool reads; null without a plan. */
 async function readPlanPhases(targetDir, feature) {
   const plan = await readFeatureArtifactSafe(targetDir, feature, `implementation-plan-${feature}.md`);
@@ -108,6 +102,5 @@ module.exports = {
   knownTool,
   liveSessionTool,
   planPhaseIds,
-  readPlanPhaseIds,
   readPlanPhases
 };
