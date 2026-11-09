@@ -197,6 +197,25 @@
       ]
     },
     {
+      "name": "squad-gateway-registration-one-line-entry",
+      "agent": "squad",
+      "mode": "executing",
+      "task": "The new squad package is done; register it in CLAUDE.md and AGENTS.md so every session can find it.",
+      "expect": [
+        { "path": ".aioson/docs/squad/package-contract.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "squad-gateway-contract-stays-out-of-dev-work",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix the timezone bug in the invoice date helper and add a regression test.",
+      "paths": ["src/lib/dates.ts"],
+      "absent": [
+        { "path": ".aioson/docs/squad/package-contract.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "squad-persona-grounding-competency",
       "agent": "squad",
       "mode": "executing",

@@ -339,6 +339,8 @@ module.exports = {
       'aioson squad:repair-genomes <manifest.json> [--write] [--no-backup] [--json] [--locale=fr]',
     help_squad_validate:
       'aioson squad:validate [path] --squad=<slug> [--strict] [--json] [--locale=fr]',
+    help_squad_gateway:
+      'aioson squad:gateway [path] --squad=<slug> [--dry-run] [--json] [--locale=fr]',
     help_squad_eval:
       'aioson squad:eval [chemin] --squad=<slug> [--no-persist] [--json] [--locale=fr]',
     help_squad_preflight:

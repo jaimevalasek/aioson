@@ -224,18 +224,14 @@ When a generated software executor validates a session ID or another path bounda
 
 ## Gateway registration
 
-Register the squad in both root gateway files:
-
-- `CLAUDE.md`
-- `AGENTS.md`
-
-Use `.aioson/squads/{squad-slug}/agents/{role}.md` paths.
+Run `aioson squad:gateway . --squad={squad-slug}` after the manifest is final. It writes the squad's entry in both root gateway files (`CLAUDE.md`, `AGENTS.md`) as one line between `<!-- AIOSON-SQUAD:{squad-slug}:START -->` and `...:END -->`: the squad name, the package path, and the mission's first sentence. Every session re-reads both files, so the entry never lists roles (they live in `agents/agents.md`) or usage prose.
 
 Rules:
 
-- do not remove official framework agents
-- append or update only the squad section
-- if the squad already exists, update only its own section
+- never hand-write or extend the entry; change the manifest and rerun the command
+- session-usage notes (when to call the squad, what not to do with it) go in `docs/gateway-note.md`; the entry then says to read it first
+- `aioson update` rewrites a legacy multi-line entry the same way and moves its prose to `docs/gateway-note.md`
+- do not remove official framework agents; outside its markers the gateway files stay untouched
 
 ## Squad metadata
 

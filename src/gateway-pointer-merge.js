@@ -93,6 +93,10 @@ async function mergeGatewayPointer({ templatePath, targetPath, backupRoot, targe
     }
   }
 
+  // A squad entry is one line (src/squad/gateway-entry.js): an update rewrites
+  // a legacy multi-line one in place, outside the managed block.
+  next = require('./squad/gateway-entry').compactSquadBlocks(next, path.dirname(targetPath), { dryRun }).content;
+
   if (next === existing) return { action: 'unchanged' };
 
   let backupPath = null;

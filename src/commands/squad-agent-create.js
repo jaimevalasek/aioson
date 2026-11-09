@@ -676,9 +676,11 @@ async function runSquadAgentCreate({ args = [], options = {}, logger = console, 
     }
   }
 
-  // Register in CLAUDE.md and AGENTS.md
-  const registeredClaude = await registerInClaudeMd(projectDir, slug, agentRelPath, resolvedScope);
-  const registeredAgents = await registerInAgentsMd(projectDir, slug, agentRelPath, resolvedScope);
+  // Register in CLAUDE.md and AGENTS.md: a my-agents prompt by its own line. A
+  // squad role is reached through its squad's one-line entry (written below,
+  // once the manifest lists the role) — never one gateway line per role.
+  const registeredClaude = resolvedScope === 'my-agents' && await registerInClaudeMd(projectDir, slug, agentRelPath, resolvedScope);
+  const registeredAgents = resolvedScope === 'my-agents' && await registerInAgentsMd(projectDir, slug, agentRelPath, resolvedScope);
 
   // Update squad manifest if scope=squad
   let manifestUpdated = false;
@@ -714,6 +716,9 @@ async function runSquadAgentCreate({ args = [], options = {}, logger = console, 
       } catch { /* manifest parse error — skip */ }
     }
   }
+  const squadGateway = resolvedScope === 'squad'
+    ? require('../squad/gateway-entry').writeSquadGatewayEntry(projectDir, squadSlug)
+    : null;
 
   // Output
   logger.log('');
@@ -725,6 +730,7 @@ async function runSquadAgentCreate({ args = [], options = {}, logger = console, 
   logger.log(`  Slug: @${slug}`);
   if (registeredClaude) logger.log('  Registered in CLAUDE.md');
   if (registeredAgents) logger.log('  Registered in AGENTS.md');
+  if (squadGateway && squadGateway.ok && squadGateway.files.length > 0) logger.log(`  Squad entry (one line) in: ${squadGateway.files.join(', ')}`);
   if (manifestUpdated) logger.log(`  Added to squad manifest: ${squadSlug}`);
   if (infraFiles.length > 0) {
     logger.log(`  Infrastructure stubs: ${infraFiles.join(', ')}`);
@@ -763,6 +769,7 @@ async function runSquadAgentCreate({ args = [], options = {}, logger = console, 
     squad: squadSlug,
     registeredClaude,
     registeredAgents,
+    squadGateway,
     manifestUpdated,
     infraFiles,
     maturity

@@ -90,6 +90,7 @@ const { runSquadStatus } = lazy(() => { const { runSquadStatus } = require('./co
 const { runSquadDoctor } = lazy(() => { const { runSquadDoctor } = require('./commands/squad-doctor'); return { runSquadDoctor }; });
 const { runSquadRepairGenomes } = lazy(() => { const { runSquadRepairGenomes } = require('./commands/squad-repair-genomes'); return { runSquadRepairGenomes }; });
 const { runSquadValidate } = lazy(() => { const { runSquadValidate } = require('./commands/squad-validate'); return { runSquadValidate }; });
+const { runSquadGateway } = lazy(() => { const { runSquadGateway } = require('./commands/squad-gateway'); return { runSquadGateway }; });
 const { runSquadEval } = lazy(() => { const { runSquadEval } = require('./commands/squad-eval'); return { runSquadEval }; });
 const { runSquadPilotApprove } = lazy(() => { const { runSquadPilotApprove } = require('./commands/squad-pilot-approve'); return { runSquadPilotApprove }; });
 const { runSquadRoleScan } = lazy(() => { const { runSquadRoleScan } = require('./commands/squad-role-scan'); return { runSquadRoleScan }; });
@@ -550,6 +551,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'squad-repair-genomes',
   'squad:validate',
   'squad-validate',
+  'squad:gateway',
+  'squad-gateway',
   'squad:eval',
   'squad-eval',
   'squad:pilot-approve',
@@ -1188,7 +1191,7 @@ const HELP_KEYS = [
   'cli.help_web_discover', 'cli.help_web_collect', 'cli.help_jev_judge', 'cli.help_jev_review',
   'cli.help_jev_agent_review', 'cli.help_scan_project', 'cli.help_config', 'cli.help_genome_doctor',
   'cli.help_genome_approve', 'cli.help_genome_migrate', 'cli.help_squad_status', 'cli.help_squad_doctor',
-  'cli.help_squad_repair_genomes', 'cli.help_squad_validate', 'cli.help_squad_eval', 'cli.help_squad_preflight',
+  'cli.help_squad_repair_genomes', 'cli.help_squad_validate', 'cli.help_squad_gateway', 'cli.help_squad_eval', 'cli.help_squad_preflight',
   'cli.help_squad_pilot_approve', 'cli.help_squad_export', 'cli.help_squad_pipeline', 'cli.help_squad_plan', 'cli.help_squad_agent_create',
   'cli.help_squad_investigate', 'cli.help_squad_dashboard', 'cli.help_squad_worker', 'cli.help_squad_daemon',
   'cli.help_squad_mcp', 'cli.help_squad_roi', 'cli.help_squad_score', 'cli.help_squad_learning',
@@ -1667,6 +1670,8 @@ async function main() {
       result = await runSquadRepairGenomes({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:validate' || command === 'squad-validate') {
       result = await runSquadValidate({ args, options, logger: commandLogger, t });
+    } else if (command === 'squad:gateway' || command === 'squad-gateway') {
+      result = await runSquadGateway({ args, options, logger: commandLogger });
     } else if (command === 'squad:eval' || command === 'squad-eval') {
       result = await runSquadEval({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:pilot-approve' || command === 'squad-pilot-approve') {

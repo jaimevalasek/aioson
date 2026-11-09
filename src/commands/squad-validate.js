@@ -28,6 +28,15 @@ function normalizeRelPath(relPath) {
   return String(relPath || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
 }
 
+// Every session re-reads the gateway files: a squad entry longer than its one
+// line (src/squad/gateway-entry.js) is paid on every call.
+function legacyGatewayWarnings(file, content, slug) {
+  const { legacySquadEntries } = require('../squad/gateway-entry');
+  return legacySquadEntries(content)
+    .filter((entry) => entry.slug === slug)
+    .map((entry) => `${file} lists squad "${slug}" in ${entry.lines} lines (${entry.bytes} B) re-read by every session — \`aioson squad:gateway . --squad=${slug}\` rewrites it as one line`);
+}
+
 function isLocaleSpecific(localeScope) {
   return Boolean(localeScope && localeScope !== 'universal');
 }
@@ -180,6 +189,7 @@ async function validateSemanticDeep(projectDir, slug, manifest) {
     if (!claudeContent.includes(slug)) {
       warnings.push(`CLAUDE.md does not reference squad "${slug}"`);
     }
+    warnings.push(...legacyGatewayWarnings('CLAUDE.md', claudeContent, slug));
   } catch { warnings.push('CLAUDE.md not found'); }
 
   try {
@@ -187,6 +197,7 @@ async function validateSemanticDeep(projectDir, slug, manifest) {
     if (!agentsContent.includes(slug)) {
       warnings.push(`AGENTS.md does not reference squad "${slug}"`);
     }
+    warnings.push(...legacyGatewayWarnings('AGENTS.md', agentsContent, slug));
   } catch { warnings.push('AGENTS.md not found'); }
 
   // 5. Output strategy validation

@@ -97,7 +97,7 @@ If `uiCapability.mode = executor`, include routing guidance that visual demands 
 - `docs/readiness.md`: readiness state derived from the blueprint
 
 ### Step 8 - Register In Gateways
-Update root `CLAUDE.md` and `AGENTS.md` according to `.aioson/docs/squad/package-contract.md`, section `Gateway registration`.
+Run `aioson squad:gateway . --squad=<slug>`: it writes the squad's one-line entry in root `CLAUDE.md` and `AGENTS.md` (`.aioson/docs/squad/package-contract.md`, section `Gateway registration`). Never hand-write role lists there.
 
 ### Step 9 - Save Metadata
 Save `.aioson/squads/<slug>/squad.md` according to `.aioson/docs/squad/package-contract.md`, section `Squad metadata`.
