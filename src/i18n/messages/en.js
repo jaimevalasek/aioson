@@ -99,7 +99,7 @@ module.exports = {
     help_context_select:
       'aioson context:select [path] [--explain=<path[,path2]>] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=en]',
     help_context_brief:
-      'aioson context:brief [path] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--no-semantic] [--no-recall] [--json] [--locale=en]',
+      'aioson context:brief [path] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--no-semantic] [--no-recall] [--full] [--json] [--locale=en]',
     help_context_guard:
       'aioson context:guard [path] [--tool=claude] [--agent=<agent>] [--event=<json>] [--event-file=<path>] [--json] [--locale=en]',
     help_context_evals:

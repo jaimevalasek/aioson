@@ -33,6 +33,7 @@
 |---|---|---|
 | `setup:context` | Cria ou atualiza `.aioson/context/project.context.md` | Logo após instalar o framework |
 | `context:validate` | Valida o `project.context.md` | Depois de editar o contexto manualmente |
+| `context:brief` | O pacote que cada agente lê ao ativar e antes de cada fase: os arquivos obrigatórios (`must_load`, cada um com o motivo em uma linha), os opcionais com tamanho e as linhas a ler, e só as restrições que não estão num arquivo obrigatório. `--full` imprime todos os motivos e linhas; `--json` traz o pacote inteiro | Os agentes rodam sozinhos; você usa `--full` para ver por que cada arquivo entrou |
 | `context:pack` | Monta um pacote mínimo de contexto para uma tarefa específica | Quando você quer enviar para a IA só a memória relevante |
 | `locale:apply` | Reaplica um pack de idioma nos agentes gerenciados pelo AIOSON | Quando quer trocar o idioma em que os agentes do framework operam no projeto |
 | `locale:diff` | Compara um agente com o pack de idioma esperado | Quando quer detectar drift de tradução |

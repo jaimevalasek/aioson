@@ -769,6 +769,15 @@ async function buildContextBrief(targetDir, options = {}) {
     return mustLoadPaths.has(item.path) || item.surface === 'docs';
   });
   const extracted = constraintsFromDocuments(documents, constraintSources, stack);
+  // Lines the agent reads anyway in their own must_load file: the compact
+  // print omits them (lib/context-brief-format.js). Non-enumerable, so the
+  // JSON package and every programmatic caller see the same object as before.
+  const quotedFromMustLoad = new Set();
+  for (const item of constraintSources) {
+    if (!mustLoadPaths.has(item.path)) continue;
+    const doc = extractDocConstraints(documents.get(item.path) || '');
+    for (const line of [...doc.constraints, ...doc.forbidden_patterns, ...doc.verification_hints]) quotedFromMustLoad.add(line);
+  }
   const structure = suggestedStructure(concerns);
   const profileHints = profileVerificationHints(profile, concerns);
   const constraints = dedupe([...concernConstraints(concerns), ...extracted.constraints, ...structure], 18);
@@ -794,7 +803,7 @@ async function buildContextBrief(targetDir, options = {}) {
     : [];
   if (related.length > 0) fallbackUsed.push('broad_recall');
 
-  return {
+  const brief = {
     ok: true,
     agent: selection.agent,
     mode: selection.mode,
@@ -830,6 +839,8 @@ async function buildContextBrief(targetDir, options = {}) {
     gaps,
     fallback_used: fallbackUsed
   };
+  Object.defineProperty(brief, 'quotedFromMustLoad', { value: quotedFromMustLoad, enumerable: false });
+  return brief;
 }
 
 module.exports = {

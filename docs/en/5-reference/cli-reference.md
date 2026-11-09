@@ -196,6 +196,16 @@ aioson context:digest . --task="<the request>" --json
 
 ---
 
+## context:brief
+
+What a concrete agent runs at activation and before each phase: the rules and docs this task must load, the optional ones, matching skills, constraints, gaps, recall and the observations addressed to the agent. The default print is compact, because it stays in the agent's conversation: every `must_load` path with a one-line reason, optional files as paths with their size and the lines to read, and only the constraint lines that are not already in a `must_load` file (about 4–5 KB instead of 7–9 KB on real projects). `--full` prints every selection reason, section outline and constraint line; `--json` is the whole package, unchanged.
+
+```bash
+aioson context:brief . --agent=dev --mode=executing --feature=<slug> --task="<surfaces this phase builds>" [--paths=<files>] [--full] [--json]
+```
+
+---
+
 ## context:validate
 
 Validate the existing `project.context.md` file — checks YAML frontmatter structure, required fields, and allowed values.
