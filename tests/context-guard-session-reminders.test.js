@@ -105,6 +105,54 @@ test('a rule is said once per session: twenty form writes inject its lines once'
   }
 });
 
+test('a subagent shares the session id and none of the context: each agent_id hears the rule once', async () => {
+  const dir = await makeProject();
+  const claimDir = path.join(dir, 'claims');
+  try {
+    const session = `said-subagent-${Date.now()}`;
+    const write = (file, agentId) => buildGuardResponse({ ...formWrite(session, file), ...(agentId ? { agent_id: agentId } : {}) }, dir, { tool: 'claude', agent: 'dev', claimDir });
+    assert.match(textOf(await write('app/forms/parent.html')), /Every structured field/);
+    assert.match(textOf(await write('app/forms/child-a.html', 'agent-a')), /Every structured field/, 'the subagent was never told');
+    assert.deepEqual(await write('app/forms/child-a2.html', 'agent-a'), {}, 'and is told once');
+    assert.match(textOf(await write('app/forms/child-b.html', 'agent-b')), /Every structured field/, 'a second subagent hears it too');
+    assert.deepEqual(await write('app/forms/parent-2.html'), {}, 'the parent is not told again');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a rule edited during the session is said again, in its new words', async () => {
+  const dir = await makeProject();
+  const claimDir = path.join(dir, 'claims');
+  try {
+    const session = `said-edited-${Date.now()}`;
+    const write = (file) => buildGuardResponse(formWrite(session, file), dir, { tool: 'claude', agent: 'dev', claimDir });
+    assert.match(textOf(await write('app/forms/a.html')), /Error messages sit under the field/);
+    assert.deepEqual(await write('app/forms/b.html'), {});
+    await fs.writeFile(path.join(dir, '.aioson/rules/form-ui.md'), FORM_RULE.replace('Error messages sit under the field they belong to.', 'Error messages sit above the submit button.'), 'utf8');
+    assert.match(textOf(await write('app/forms/c.html')), /Error messages sit above the submit button/);
+    assert.deepEqual(await write('app/forms/d.html'), {}, 'the new text is said once too');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('the same session in another project hears that project\'s rule', async () => {
+  const first = await makeProject();
+  const second = await makeProject();
+  const saidDir = path.join(first, 'said');
+  try {
+    const session = `said-projects-${Date.now()}`;
+    const write = (dir, file) => buildGuardResponse(formWrite(session, file), dir, { tool: 'claude', agent: 'dev', saidDir, claimDir: path.join(dir, 'claims') });
+    assert.match(textOf(await write(first, 'app/forms/a.html')), /form-ui\.md/);
+    assert.match(textOf(await write(second, 'app/forms/a.html')), /form-ui\.md/, 'one session, two projects: both are told');
+    assert.deepEqual(await write(first, 'app/forms/b.html'), {});
+  } finally {
+    await fs.rm(first, { recursive: true, force: true });
+    await fs.rm(second, { recursive: true, force: true });
+  }
+});
+
 test('a measured violation speaks on every write, without the rule lines it already said', async () => {
   const dir = await makeProject();
   const claimDir = path.join(dir, 'claims');

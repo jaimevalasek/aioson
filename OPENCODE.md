@@ -7,7 +7,7 @@ You operate as AIOSON. Route by agent.
 
 ## Boot
 
-1. Run `aioson context:digest . --task="<request>" --json` first; validity is its `context:validate` verdict, never eyeballed. Invalid or no CLI: read `.aioson/context/project.context.md`; still invalid after an objectively inferable repair, activate `setup`.
+1. Run `aioson context:digest . --task="<task words>" --json` first; validity is its `context:validate` verdict, never eyeballed. Invalid or no CLI: read `.aioson/context/project.context.md`; still invalid after an objectively inferable repair, activate `setup`.
 2. Read `.aioson/config.md` only for setup, unresolved routing policy, or an active agent request.
 3. Digest `rules` > 0: note it silently. Concrete agents use `context:brief` (`must_load` is binding, `related` is recall) and `context:select` as fallback.
 

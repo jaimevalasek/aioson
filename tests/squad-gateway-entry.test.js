@@ -112,6 +112,18 @@ test('aioson update rewrites legacy squad entries as one line each, moves their 
   assert.equal(fs.readFileSync(path.join(dir, '.aioson', 'squads', 'publication-editor', ...NOTE_REL.split('/')), 'utf8'), note);
 });
 
+test('a sentence that ends at a role path, and a heading inside the entry, move to the note with the prose', () => {
+  const dir = makeProject({ 'copy-forge': { name: 'Copy Forge', mission: 'One idea in, one auditable copy package out.' } });
+  const rule = '- Never route review work to the critic outside a review cycle: `.aioson/squads/copy-forge/agents/critic.md`';
+  const usage = '### When not to use it\n\nA one-line caption does not need the squad.';
+  const content = legacyBlock('copy-forge', 'Copy Forge', `- **Fact Checker** — \`.aioson/squads/copy-forge/agents/fact-checker.md\`\n${rule}\n\n${usage}`);
+  const [note] = compactSquadBlocks(content, dir, { dryRun: true }).notes;
+  assert.equal(note.text, `${rule}\n\n${usage}`, 'the title and the role handles stay out; what someone wrote stays in');
+
+  const headingsOnly = legacyBlock('copy-forge', 'Copy Forge', '### Roles');
+  assert.deepEqual(compactSquadBlocks(headingsOnly, dir, { dryRun: true }).notes, [], 'headings alone are nothing to move');
+});
+
 test('a dry-run update reports the rewrite and writes no note', () => {
   const dir = makeProject({ 'copy-forge': { name: 'Copy Forge', mission: 'One idea in, one auditable copy package out.' } });
   const content = legacyBlock('copy-forge', 'Copy Forge', 'Route here for copy.');

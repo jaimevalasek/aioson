@@ -131,6 +131,45 @@ test('learnings: the lines the task matches are shown, the rest counted with the
   assert.match(digest.learnings.rest, /read \.aioson\/learnings\/INDEX\.md when the task or files change \(9 line\(s\) not shown\)/);
 });
 
+test('learnings: the line sharing the most task words comes first, and a linked line is its link alone', () => {
+  const dir = makeProject();
+  const description = 'x'.repeat(900);
+  const lines = [
+    ...Array.from({ length: 8 }, (_, i) => `- [Deploy note ${i}](gotchas/deploy-${i}.md) — ${description}`),
+    '1. [The dokploy volume was lost on deploy](gotchas/dokploy-volume.md) — the uploads volume must stay mounted',
+    `- ${'plain deploy line without a link '.repeat(8)}end`
+  ];
+  fs.writeFileSync(path.join(dir, '.aioson', 'learnings', 'INDEX.md'), `# Project learnings\n\n${lines.join('\n')}\n`);
+  const { digest, bytes } = digestOf(dir, 'deploy the app with dokploy and its uploads volume');
+  assert.equal(digest.learnings.total, 10, 'a numbered line is a line of the index');
+  assert.equal(digest.learnings.matched.length, 6);
+  assert.equal(digest.learnings.matched[0], '- [The dokploy volume was lost on deploy](gotchas/dokploy-volume.md)', 'four shared words outrank one, wherever the line sits');
+  assert.deepEqual(digest.learnings.matched.slice(1), [0, 1, 2, 3, 4].map((i) => `- [Deploy note ${i}](gotchas/deploy-${i}.md)`), 'ties keep the order of the index');
+  assert.match(digest.learnings.rest, /\(4 line\(s\) not shown\)/);
+  assert.ok(bytes <= 3072, `six matched lessons with 900-char descriptions still fit: ${bytes} B`);
+
+  fs.writeFileSync(path.join(dir, '.aioson', 'learnings', 'INDEX.md'), `# Project learnings\n\n${lines[9]}\n`);
+  const [plain] = digestOf(dir, 'deploy').digest.learnings.matched;
+  assert.ok(plain.length <= 161 && plain.endsWith('…') && !/\s…$/.test(plain), `a line without a link is cut at a word: ${plain}`);
+});
+
+test('rules in subfolders count, and a fenced heading is not a section', () => {
+  const dir = makeProject(CONTEXT.replace('## Notes', '```md\n## Not a section\n```\n\n## Notes'));
+  fs.mkdirSync(path.join(dir, '.aioson', 'rules', 'backend', '.drafts'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.aioson', 'rules', 'backend', 'queues.md'), '# queues\n');
+  fs.writeFileSync(path.join(dir, '.aioson', 'rules', 'backend', 'README.md'), '# readme\n');
+  fs.writeFileSync(path.join(dir, '.aioson', 'rules', 'backend', '.drafts', 'draft.md'), '# draft\n');
+  const { digest } = digestOf(dir, 'x');
+  assert.equal(digest.rules, 3, 'the selector loads rules recursively: the count is the same set');
+  assert.deepEqual(digest.project.sections, ['Stack', 'Services', 'Notes']);
+
+  const nested = makeProject();
+  for (const rule of ['naming.md', 'forms.md']) fs.rmSync(path.join(nested, '.aioson', 'rules', rule));
+  fs.mkdirSync(path.join(nested, '.aioson', 'rules', 'ui'));
+  fs.writeFileSync(path.join(nested, '.aioson', 'rules', 'ui', 'forms.md'), '# forms\n');
+  assert.equal(digestOf(nested, 'x').digest.rules, 1, 'rules only in a subfolder are still announced');
+});
+
 test('an invalid or missing context is a verdict that names setup, never a silent pass', async () => {
   const invalid = await buildSessionDigest(makeProject(CONTEXT.replace('framework: "Laravel"\n', '').replace('classification: "SMALL"\n', 'classification: "HUGE"\n')), { task: 'x' });
   assert.equal(invalid.valid, false);
@@ -152,7 +191,9 @@ test('AIOSON_OPERATOR_MEMORY=false keeps memory out', async () => {
 test('every gateway starts the session at the digest and keeps the setup and validation binding', () => {
   for (const name of ['CLAUDE.md', 'AGENTS.md', 'OPENCODE.md']) {
     const content = fs.readFileSync(path.join(__dirname, '..', 'template', name), 'utf8');
-    assert.match(content, /^1\. Run `aioson context:digest \. --task="<request>" --json` first; validity is its `context:validate` verdict, never eyeballed\./m, name);
+    assert.match(content, /^1\. Run `aioson context:digest \. --task="<task words>" --json` first; validity is its `context:validate` verdict, never eyeballed\./m, name);
+    // The request verbatim inside double quotes runs its backticks and $( ) in the shell.
+    assert.doesNotMatch(content, /="<(?:request|prompt|message)>"/, `${name}: a flag never takes the raw request`);
     assert.match(content, /Invalid or no CLI: read `\.aioson\/context\/project\.context\.md`; still invalid after an objectively inferable repair, /, name);
     assert.match(content, /`must_load` is binding/, name);
     assert.match(content, /--titles-only --match="<words>"/, name);

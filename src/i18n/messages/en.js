@@ -91,7 +91,7 @@ module.exports = {
       discovered: 'Discovered {packs} source pack(s) and {loose} loose source file(s).'
     },
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
-    help_context_digest: 'aioson context:digest [path] [--task="<request>"] [--json] [--locale=en]',
+    help_context_digest: 'aioson context:digest [path] [--task="<task words>"] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
     help_context_search:

@@ -470,10 +470,12 @@ function claimGuardEvent(event, claimDir = CLAIM_DIR) {
 // The hook fires before every write, and a session writes the same kind of
 // file again and again: the same rule's lines were injected on every one of
 // them. A rule is now said once per session (per project), and again only
-// after the conversation was compacted (hooks:recap forgets the session) or
-// SAID_TTL_MS later. A measured violation still speaks on every write it is
-// found in — its finding names the line to change — without the rule's lines
-// again. An event without a session identity is never remembered.
+// after the conversation was compacted (hooks:recap forgets the session),
+// SAID_TTL_MS later, or once its file changed. A subagent shares its parent's
+// session_id and none of its context, so each `agent_id` is told on its own.
+// A measured violation still speaks on every write it is found in — its
+// finding names the line to change — without the rule's lines again. An event
+// without a session identity is never remembered.
 const SAID_DIR = path.join(os.tmpdir(), 'aioson-guard-said');
 const SAID_TTL_MS = 60 * 60 * 1000;
 const SAID_FILE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -484,8 +486,18 @@ function saidFile(dir, sessionId) {
   return path.join(dir, `${crypto.createHash('sha256').update(id).digest('hex').slice(0, 32)}.json`);
 }
 
-function saidKey(targetDir, rulePath) {
-  return `${path.resolve(targetDir)}::${rulePath}`;
+function saidKey(targetDir, rulePath, agentId) {
+  const agent = typeof agentId === 'string' ? agentId.trim() : '';
+  return `${path.resolve(targetDir)}::${agent ? `${agent}::` : ''}${rulePath}`;
+}
+
+/** The rule file as it is now: what was said is that text, not that path. */
+function ruleStamp(targetDir, rulePath) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(path.resolve(targetDir, rulePath))).digest('hex').slice(0, 16);
+  } catch {
+    return '';
+  }
 }
 
 function pruneSaid(dir, now) {
@@ -510,15 +522,17 @@ function sessionReminders(event, targetDir, options = {}, now = Date.now()) {
       if (raw && typeof raw === 'object') said = raw;
     } catch { said = {}; }
   }
+  const key = (rulePath) => saidKey(targetDir, rulePath, event && event.agent_id);
   const fresh = (rulePath) => {
-    const at = Number(said[saidKey(targetDir, rulePath)]);
-    return Number.isFinite(at) && now - at < SAID_TTL_MS;
+    const entry = said[key(rulePath)];
+    const at = Number(entry && entry.at);
+    return Number.isFinite(at) && now - at < SAID_TTL_MS && entry.rule === ruleStamp(targetDir, rulePath);
   };
   return {
     has: fresh,
     mark(rulePaths) {
       if (!file || rulePaths.length === 0) return;
-      for (const rulePath of rulePaths) said[saidKey(targetDir, rulePath)] = now;
+      for (const rulePath of rulePaths) said[key(rulePath)] = { at: now, rule: ruleStamp(targetDir, rulePath) };
       try {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(file, JSON.stringify(said));

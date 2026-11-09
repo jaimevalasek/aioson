@@ -75,17 +75,34 @@ function renderSquadBlock(slug, manifest, { note = false, eol = '\n' } = {}) {
   return `<!-- AIOSON-SQUAD:${slug}:START -->${eol}${renderSquadLine(slug, manifest, { note })}${eol}<!-- AIOSON-SQUAD:${slug}:END -->`;
 }
 
-// A legacy entry's lines that only point at a role's prompt, or its heading:
-// the package already lists them. Everything else is authored prose.
-function isPointerOrHeading(line, slug) {
-  const text = line.trim();
-  if (/^#{1,6}\s/.test(text)) return true;
-  if (text.startsWith('- Squad ') && text.includes(packageRel(slug))) return true;
-  return /^[-*]\s/.test(text) && /\.aioson\/squads\/[^`\s]+\/agents\/[^`\s]+\.md`?\s*$/.test(text);
+const ROLE_PATH = /`?\.aioson\/squads\/[^`\s]+\/agents\/[^`\s]+\.md`?\s*$/;
+const POINTER_LABEL_WORDS = 4;
+
+function isHeading(line) {
+  return /^#{1,6}\s/.test(line.trim());
 }
 
+// A legacy entry's line that only points at a role's prompt (`@role → path`),
+// or the one line itself: the package already lists them. A bullet that says
+// more than a role's handle before the path is a sentence someone wrote.
+function isPointer(line, slug) {
+  const text = line.trim();
+  if (text.startsWith('- Squad ') && text.includes(packageRel(slug))) return true;
+  if (!/^[-*]\s/.test(text) || !ROLE_PATH.test(text)) return false;
+  const label = text.replace(ROLE_PATH, '').replace(/^[-*]\s+/, '');
+  return (label.match(/[\p{L}\p{N}]+(?:[-_'][\p{L}\p{N}]+)*/gu) || []).length <= POINTER_LABEL_WORDS;
+}
+
+/**
+ * What a legacy entry says beyond its title and role list. The entry's first
+ * line, when a heading, is its title; a later heading stays with the prose it
+ * introduces. Headings alone are nothing to move.
+ */
 function legacyNotes(inner, slug) {
-  const kept = String(inner || '').split(/\r?\n/).filter((line) => !isPointerOrHeading(line, slug));
+  const lines = String(inner || '').split(/\r?\n/);
+  const title = lines.findIndex((line) => line.trim());
+  const kept = lines.filter((line, index) => !isPointer(line, slug) && !(index === title && isHeading(line)));
+  if (!kept.some((line) => line.trim() && !isHeading(line))) return '';
   return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 

@@ -188,11 +188,13 @@ aioson setup:context --defaults --framework="CodeIgniter 3" --backend="PHP" --da
 
 ## context:digest
 
-The session-start read the gateway block (`CLAUDE.md`, `AGENTS.md`, `OPENCODE.md`) points at: one compact JSON line (about 2–3 KB) with the `context:validate` verdict, the project's frontmatter essentials and the names of its `project.context.md` sections, the Markdown rule count, the learnings-index lines and the operator-memory titles that match `--task` plus the top-ranked ones, the active feature, and the command or path that opens each full version. An invalid or missing context is a verdict (`valid: false`, `issues`, `next` naming setup), never a failure.
+The session-start read the gateway block (`CLAUDE.md`, `AGENTS.md`, `OPENCODE.md`) points at: one compact JSON line (about 2–3 KB) with the `context:validate` verdict, the project's frontmatter essentials and the names of its `project.context.md` sections, the Markdown rule count (subfolders of `.aioson/rules/` included), the learnings that match `--task` (up to six, the ones sharing the most words first, each as its `[title](path)` alone), the operator-memory titles that match `--task` plus the eight ranked first, the active feature, and the command or path that opens each full version. An invalid or missing context is a verdict (`valid: false`, `issues`, `next` naming setup), never a failure.
 
 ```bash
-aioson context:digest . --task="<the request>" --json
+aioson context:digest . --task="<task words>" --json
 ```
+
+Pass the task as a few plain words, never the request verbatim: inside double quotes a shell still runs the backticks and `$( )` a pasted request may hold.
 
 ---
 
@@ -1262,7 +1264,7 @@ aioson op:forget <slug>
 
 Every `op:*` command takes an optional `[path]` first (`aioson op:list ../client-app --json --titles-only`; a slug command also reads `<slug> [path]`, so `op:show <slug> .` works): the project a decision is scoped to is resolved from that path, and from the working directory only when no path is given. `--locale` wins over the project's language for the lines `op:capture` and `op:promote` print. A decision binds the project it was said in (`scope: project`) and widens to every project when the same signal is detected in a second distinct project or when the user's own quote names every project; `op:list` lists what applies in the current project, `--all` lists every project's.
 
-`op:list --json --titles-only` is the recall every agent runs at activation, so it lists the 40 decisions ranked first — this project's, then every other's; within each group exclusions and corrections before authorizations and confirmations (a forgotten prohibition is a failure the agent cannot see, a forgotten permission only costs a question), then the freshest by the decay model (reinforcements raise a decision, its category's half-life lowers it with age) — and always reports `total` and `omitted` (0 when nothing is cut) plus the way to the rest: `--match="<words>"` keeps only the decisions whose title or body shares a word of two letters or more (grammar words aside; `match_ignored: true` says when no usable word was left), `--limit=<n>` sets the head (`0` = all). The head applies only to that activation shape: `--feature` and `--proposals` listings are cut only by an explicit `--limit`, which then reports the same counts.
+`op:list --json --titles-only` is the recall shape (a session reads it through `context:digest`, which asks for the eight ranked first plus the eight that best match the task; run it directly for a new subject), so by default it lists the 40 decisions ranked first — this project's, then every other's; within each group exclusions and corrections before authorizations and confirmations (a forgotten prohibition is a failure the agent cannot see, a forgotten permission only costs a question), then the freshest by the decay model (reinforcements raise a decision, its category's half-life lowers it with age) — and always reports `total` and `omitted` (0 when nothing is cut) plus the way to the rest: `--match="<words>"` keeps only the decisions whose title or body shares a word of two letters or more (grammar words aside; `match_ignored: true` says when no usable word was left), `--limit=<n>` sets the head (`0` = all). The head applies only to that activation shape: `--feature` and `--proposals` listings are cut only by an explicit `--limit`, which then reports the same counts.
 
 See [Operator memory](./operator-memory.md).
 

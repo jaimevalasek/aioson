@@ -27,6 +27,8 @@ const ESSENTIAL_FIELDS = [
 const MEMORY_MATCHED = 8;
 const MEMORY_TOP = 8;
 const LEARNINGS_MAX = 6;
+// A line of the index without a link is its own title: it is cut here.
+const LEARNING_LINE_MAX = 160;
 const ISSUES_MAX = 6;
 
 function taskWords(text) {
@@ -38,7 +40,8 @@ function readText(file) {
 }
 
 function bodySections(content) {
-  const body = String(content || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+  // A `##` inside a code fence is an example, not a section of the file.
+  const body = String(content || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').replace(/^(```|~~~)[\s\S]*?^\1.*$/gm, '');
   return [...body.matchAll(/^##\s+(.+?)\s*$/gm)].map((match) => match[1].replace(/\s*\(.*\)$/, '').trim()).filter(Boolean);
 }
 
@@ -71,24 +74,45 @@ async function validationPart(targetDir) {
   };
 }
 
-function rulesCount(targetDir) {
-  try {
-    return fs.readdirSync(path.join(targetDir, '.aioson', 'rules')).filter((name) => name.endsWith('.md') && name.toLowerCase() !== 'readme.md').length;
-  } catch {
-    return 0;
+// The rules the context selector loads: every Markdown file under the folder,
+// its subfolders included, README and dot entries aside.
+function rulesCount(dir) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return 0; }
+  let count = 0;
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+    if (entry.isDirectory()) count += rulesCount(path.join(dir, entry.name));
+    else if (entry.isFile() && entry.name.endsWith('.md') && entry.name.toLowerCase() !== 'readme.md') count += 1;
   }
+  return count;
+}
+
+// The digest names a lesson; its file tells it. A line that opens with a link
+// keeps the link alone — the index's own description after it cost 4.6 KB for
+// five lines on a real project, more than the rest of the digest together.
+function learningTitle(line) {
+  const link = /^[-*\d.)\s]*(\[[^\]]+\]\([^)]+\))/.exec(line);
+  if (link) return `- ${link[1]}`;
+  return line.length > LEARNING_LINE_MAX ? `${line.slice(0, LEARNING_LINE_MAX).replace(/\s+\S*$/, '')}…` : line;
 }
 
 function learningsPart(targetDir, words) {
   const rel = '.aioson/learnings/INDEX.md';
   const content = readText(path.join(targetDir, rel));
   if (content === null) return null;
-  const lines = content.split(/\r?\n/).filter((line) => /^\s*[-*]\s+\S/.test(line)).map((line) => line.trim());
+  const lines = content.split(/\r?\n/).filter((line) => /^\s*(?:[-*]|\d+[.)])\s+\S/.test(line)).map((line) => line.trim());
   if (lines.length === 0) return { total: 0 };
-  const matched = words.length === 0 ? [] : lines.filter((line) => {
-    const own = new Set(taskWords(line));
-    return words.some((word) => own.has(word));
-  }).slice(0, LEARNINGS_MAX);
+  // The lines sharing the most task words come first; the index's order breaks ties.
+  const matched = lines
+    .map((line, order) => {
+      const own = new Set(taskWords(line));
+      return { line, order, hits: words.filter((word) => own.has(word)).length };
+    })
+    .filter((entry) => entry.hits > 0)
+    .sort((a, b) => b.hits - a.hits || a.order - b.order)
+    .slice(0, LEARNINGS_MAX)
+    .map((entry) => learningTitle(entry.line));
   return {
     total: lines.length,
     ...(matched.length > 0 ? { matched } : {}),
@@ -142,7 +166,7 @@ async function buildSessionDigest(targetDir, { task = '', env = process.env } = 
   const learnings = learningsPart(targetDir, words);
   const memory = await memoryPart(targetDir, task, env);
   const feature = await activeFeature(targetDir);
-  const rules = rulesCount(targetDir);
+  const rules = rulesCount(path.join(targetDir, '.aioson', 'rules'));
   return {
     ok: true,
     ...validation,
