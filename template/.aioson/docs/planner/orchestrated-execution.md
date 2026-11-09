@@ -24,3 +24,13 @@ Single DEV is always the recommended default, at every plan size. Orchestration 
 - There is no AIOSON token or wall-clock cutoff. Keep each unit focused by behavior and ownership anyway: the engine stops four identical structured actions or 24 consecutive read-only actions so an authorized fallback can take over, permits only one automatic retry of an equivalent failure with no measured source change, and stops after five QA → DEV returns for one unit. A genuinely larger unit must be split; elapsed time and context use remain telemetry.
 - For large existing files, `Read ranges` may declare bounded initial reads as `src/editor.ts:1-60; src/editor.ts:400-480` (owned files, inclusive valid lines). Inspect the relevant functions first; the compiler measures selected bytes and keeps full file size, while workers resolve moved symbols with focused searches and expand as required to finish and verify the unit.
 - For authorized Autopilot, make technical repair ownership explicit with separate DEV and QA roles. The engine defaults to continuous DEV → QA recovery; use `--bounded-recovery` only when finite retries are requested. Both backend and frontend inherit the DEV lane profile and their configured models. When `integration_dev` is configured, the engine automatically runs one final correcting integration supervisor over the combined result and then the shared independent QA; without that role, unowned integration rows remain with the supervising session. Do not force product decisions or unavailable capacity into technical retries.
+
+## Execution Sequence shape
+
+```markdown
+## Execution Sequence
+| Phase | Wave | Files | Scope | Done when |
+|---|---|---|---|---|
+| 1-backend | 1 | src/api/real.ext, tests/api/real.test.ext | CAP-{slug}-main | api command passes |
+| 1-frontend | 1 | src/ui/Real.ext, tests/ui/Real.test.ext | CAP-{slug}-ui | ui command passes against IF-001 |
+```

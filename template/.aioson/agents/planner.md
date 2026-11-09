@@ -61,63 +61,9 @@ Inspect the repository after preflight — artifact presence answers no implemen
 
 ## Output contract
 
-Write frontmatter:
-
-```yaml
----
-feature: {slug}
-status: approved
-plan_contract: 2
-source_prd: .aioson/context/prd-{slug}.md
-source_briefing: .aioson/briefings/{slug}/briefings.md
-sheldon_review: required
-prototype: .aioson/briefings/{slug}/prototype.html
-prototype_status: current
-prototype_feature: {slug}
----
-```
+Load `.aioson/docs/planner/plan-contract.md` immediately before writing: the exact frontmatter (`feature: {slug}`, `status: approved`, `plan_contract: 2`, `source_prd`, `source_briefing`, `sheldon_review: required`, and `prototype`, `prototype_status`, `prototype_feature` copied exactly from the verified PRD — null/none/null when no prototype binds this feature) and the section templates: `## Objective`, `## Repository evidence` (production entry point, reused patterns, test runner from `aioson detect:test-runner`), `## Engineering Controls`, `## Implementation Delta`, `## Capability Delivery Plan`, and one `## Phase N — [observable user result]` per stage (CAP/AC, user-visible outcome, implementation, create/modify/reuse/retire as exact repository-relative paths, Verification, Done when).
 
 Reconcile the current Sheldon-approved PRD, then run `aioson plan:bind . --feature={slug}` to record `source_prd_sha256`. Never rebind without reviewing the delta.
-
-Copy `prototype`, `prototype_status` and `prototype_feature` exactly from the verified PRD; null/none/null when no prototype binds this feature.
-
-Required sections:
-
-```markdown
-# Implementation Plan — {slug}
-
-## Objective
-[One observable outcome sentence.]
-
-## Repository evidence
-- Production entry point: [path/command]
-- Existing patterns to reuse: [exact paths/packages]
-- Test runner: [command — resolved with `aioson detect:test-runner`; convention-guessing only as fallback. QA reuses it]
-
-## Engineering Controls
-| Concern | Evidence / trigger | Planned control | Verification | Recovery |
-|---|---|---|---|---|
-| compatibility | `src/current/contract.ext` is consumed by ... | Preserve the contract while extending ... in Phase 1 | exact integration command | revert the additive boundary; no migration |
-
-## Implementation Delta
-| CAP | Action | Existing evidence | Exact paths | Required change |
-|---|---|---|---|---|
-| CAP-{slug}-main | modify | `src/current/path.ext` currently handles ... | src/current/path.ext | Preserve ... and add ... |
-| CAP-{slug}-main | create | No adapter after inspecting `src/current/registry.ext` | src/new/adapter.ext | Add the boundary |
-
-## Capability Delivery Plan
-| CAP | Phase | Files | Verification |
-|---|---|---|---|
-| CAP-{slug}-main | 1 | src/real-path.ext, tests/real-test.ext | exact command + production-path smoke |
-
-## Phase 1 — [observable user result]
-- CAP/AC: [IDs]
-- User-visible outcome: [what works from the normal entry point]
-- Implementation: [short technical sequence]
-- Create/modify/reuse/retire: [exact repository-relative paths, matching Implementation Delta]
-- Verification: [exact automated command and real runtime path]
-- Done when: [binary observable result]
-```
 
 Every required capability appears exactly once in the Capability Delivery Plan; every listed file appears in `## Implementation Delta` for the same capability and every delta path in that delivery row. `reuse`, `modify` and `retire` paths must exist when Gate C runs; `create` paths must not exist yet; `retire` means the exact file is removed. Full paths only; no globs, ellipses, directory shorthand or guessed filenames.
 
@@ -139,17 +85,7 @@ Run `aioson execution:offer . --feature={slug} --json` after writing. If `plan.s
 
 Lanes are the model axis: backend/frontend when measured, disjoint code/tests (`plan.split_proposal` is raw material). Open `aioson execution:configure . --feature={slug} --json` in the main monitoring chat: ask **model and effort per role**, QA and integration supervisor included. Follow `.aioson/docs/dev/execution-lanes.md`; defaults never answer the wizard. After confirmation, `aioson execution:compile . --feature={slug}` derives lanes and prompts from the tables; never hand-edit them.
 
-For orchestrated lanes or the compiled harness lane (`.aioson/plans/{slug}/harness-contract.json` exists or the user requests `@forge-run`), add one `## Execution Sequence` table to the plan — `execution:compile` and `forge:compile` refuse without it; the plain Dev lane never needs it:
-
-```markdown
-## Execution Sequence
-| Phase | Wave | Files | Scope | Done when |
-|---|---|---|---|---|
-| 1-backend | 1 | src/api/real.ext, tests/api/real.test.ext | CAP-{slug}-main | api command passes |
-| 1-frontend | 1 | src/ui/Real.ext, tests/ui/Real.test.ext | CAP-{slug}-ui | ui command passes against IF-001 |
-```
-
-Before writing or compiling this table, load `.aioson/docs/planner/orchestrated-execution.md`: mandatory rules for unit ownership, earliest safe waves, dependency evidence, local verification, context telemetry and continuous DEV → QA recovery.
+For orchestrated lanes or the compiled harness lane (`.aioson/plans/{slug}/harness-contract.json` exists or the user requests `@forge-run`), add one `## Execution Sequence` table (`| Phase | Wave | Files | Scope | Done when |`) to the plan — `execution:compile` and `forge:compile` refuse without it; the plain Dev lane never needs it. Before writing or compiling this table, load `.aioson/docs/planner/orchestrated-execution.md`: mandatory rules for unit ownership, earliest safe waves, dependency evidence, local verification, context telemetry and continuous DEV → QA recovery.
 
 For runtime work (owned prototype or migrations), set `runtime_contract: required`. One phase assigns DEV `.aioson/plans/{slug}/harness-contract.json`, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check`. Gate C accepts this obligation, or validates a contract already on disk; the planner writes none. DEV/QA/close require the real contract and evidence. See the SDD Planner reference.
 

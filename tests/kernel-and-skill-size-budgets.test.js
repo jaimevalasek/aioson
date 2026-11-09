@@ -33,12 +33,13 @@ const SKILLS_DIR = path.join(ROOT, 'template', '.aioson', 'skills');
 // Kernel ceilings in chars. Pinned elsewhere → the same number; unpinned and
 // within the class target → the target; unpinned and over it → ratchet.
 const KERNEL_CEILINGS = {
-  // canonical chain (tests/agent-contracts.test.js)
-  'product.md': 14592,
-  'sheldon.md': 14592,
-  'planner.md': 14592,
-  'dev.md': 14592,
-  'qa.md': 14592,
+  // canonical chain (tests/agent-contracts.test.js): ratcheted per kernel on
+  // 2026-11-09 after conditional procedure moved to routed docs
+  'product.md': 12032,
+  'sheldon.md': 14080,
+  'planner.md': 13056,
+  'dev.md': 12800,
+  'qa.md': 13312,
   // pinned in their own kernel tests
   'deyvin.md': 16384,
   'benchmark.md': 14000,
@@ -102,7 +103,7 @@ test('every agent kernel stays under its ceiling — pinned, class target, or ra
 test('a ratcheted kernel ceiling is never looser than one rounding step above the current size', () => {
   // The ratchet exists to stop growth, so a ceiling that drifted far above
   // the file is a ceiling nobody is watching. 256 chars of slack, no more.
-  for (const name of ['site-forge.md', 'squad.md', 'committer.md', 'validator.md', 'design-hybrid-forge.md', 'profiler-researcher.md', 'discover.md', 'tester.md']) {
+  for (const name of ['product.md', 'sheldon.md', 'planner.md', 'dev.md', 'qa.md', 'site-forge.md', 'squad.md', 'committer.md', 'validator.md', 'design-hybrid-forge.md', 'profiler-researcher.md', 'discover.md', 'tester.md']) {
     const chars = size(path.join(AGENTS_DIR, name));
     const ceiling = KERNEL_CEILINGS[name];
     assert.ok(ceiling - chars <= 256, `${name}: ceiling ${ceiling} sits ${ceiling - chars} chars above the file — lower it to ${Math.ceil(chars / 256) * 256}`);

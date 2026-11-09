@@ -9,6 +9,8 @@ const { AGENT_DEFINITIONS, MANAGED_FILES, REQUIRED_FILES } = require('../src/con
 const ROOT = path.resolve(__dirname, '..');
 const TEMPLATE = path.join(ROOT, 'template');
 const read = (rel) => fs.readFile(path.join(TEMPLATE, rel), 'utf8');
+// Canonical chain kernel ceilings (chars); kernel-and-skill-size-budgets.test.js repeats them.
+const CHAIN_KERNEL_BUDGETS = { product: 12032, sheldon: 14080, planner: 13056, dev: 12800, qa: 13312 };
 
 test('template ships every registered agent and the new Planner', async () => {
   for (const agent of AGENT_DEFINITIONS) {
@@ -35,7 +37,13 @@ test('canonical prompts expose compact decision contracts', async () => {
     // workspace copy and the workspace was stale; the token-economy sync made
     // parity honest and the overrun surfaced. Rebased to current canonical size
     // with ~2% slack — further growth must go to routed docs, not here.
-    assert.ok(content.length < 14592, `${name} prompt grew beyond the compact kernel budget (${content.length})`);
+    // 14592 -> per kernel on 2026-11-09: conditional procedure moved to routed
+    // docs behind one-line triggers (NC queue, drift events, security-findings
+    // adjudication, the QA evidence shape, the plan and PRD templates). Each
+    // ceiling is the new size rounded up to 256 so the gain stays locked;
+    // tests/kernel-binding-retention.test.js proves no hard constraint or gate
+    // left with it.
+    assert.ok(content.length < CHAIN_KERNEL_BUDGETS[name], `${name} prompt grew beyond the compact kernel budget (${content.length} >= ${CHAIN_KERNEL_BUDGETS[name]})`);
   }
 });
 

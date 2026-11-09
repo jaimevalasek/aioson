@@ -14,9 +14,9 @@ Implement the approved PRD through the Planner's vertical stages and make the pr
 4. Run the strict prototype ownership check. Read the prototype and manifest only when it verifies a `current` binding. With `none`, inspect the current production entry point, implementation, and tests instead of opening historical prototype paths.
 5. Before each phase, rerun `context:brief` with that phase's surfaces in domain words and its `--paths`; load only its `must_load`.
 6. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/dev.md` for tracked feature work.
-7. If the concrete paths handle authentication, authorization, payments, secrets, PII, cryptography, file uploads, webhooks, or untrusted input, load `.aioson/skills/process/secure-tdd/SKILL.md`. Apply it only to that sensitive slice; it does not widen feature scope or create another gate.
-8. For a bounded Simple Plan, follow `.aioson/rules/simple-plan-lane.md` (binding budget gate; links `.aioson/docs/dev/simple-plan-lane.md`) instead of the feature workflow.
-9. Read `.aioson/context/agent-execution-{slug}.json` when present. It may define optional development execution lanes and post-DEV reviewers.
+7. Paths handling authentication, authorization, payments, secrets, PII, cryptography, file uploads, webhooks, or untrusted input: load `.aioson/skills/process/secure-tdd/SKILL.md` for that slice only; it widens no scope and adds no gate.
+8. A bounded Simple Plan follows `.aioson/rules/simple-plan-lane.md` (binding budget gate) instead of the feature workflow.
+9. Read `.aioson/context/agent-execution-{slug}.json` when present (optional execution lanes, post-DEV reviewers).
 
 ## Hard constraints
 
@@ -42,6 +42,9 @@ Load only when triggered:
 - `.aioson/docs/dev/execution-discipline.md` — risky or multi-phase execution.
 - `.aioson/docs/dev/phase-loop.md` — required for multi-phase plans; every phase ends at `phase:next`.
 - `.aioson/docs/dev/simple-plan-lane.md` — bounded technical work outside feature workflow.
+- `.aioson/docs/dev/execution-lanes.md` — only when `agent-execution-{slug}.json` declares `development_lanes.strategy: split` with an enabled lane (classification never enables one; without it, implement here).
+- `.aioson/docs/dev/neural-chain-queue.md` — the activation context lists `NC-*` work items.
+- `.aioson/docs/dev/continuity-recovery.md` — resuming a checkpoint, plan/dossier drift, or stale state.
 - `.aioson/docs/quality/code-health-analysis.md` — only when planned-path evidence shows regression, coverage, performance, or componentization risk; fold the conclusion into implementation or the dossier, never a new gate.
 
 ## Session start protocol
@@ -59,32 +62,15 @@ Then inspect the production entry point and the active phase's files before edit
 
 If PRD and plan conflict, stop and report the exact conflict. If the repository differs only in implementation detail, update the plan's technical note or document the deviation in the dossier without creating another specification artifact.
 
-If `prototype_status: none`, explicitly tell the user which historical path was excluded (if any), then compare the approved PRD/plan against the real code and tests. Correct bounded implementation drift directly when product behavior is already clear; route to Product only when the desired behavior itself is ambiguous. Do not pause Autopilot merely to confirm the evidence-backed exclusion.
+With `prototype_status: none`, tell the user which historical path was excluded (if any) and compare the PRD/plan with the real code and tests: correct bounded drift directly when product behavior is clear, route to Product only when the desired behavior itself is ambiguous, and do not pause Autopilot merely to confirm the evidence-backed exclusion.
 
 ## Context drift check
 
-Run `aioson dev:resume-data . --json` first (feature, active phase, consumed artifacts, dossier `code_map_paths`); the manual comparison below is the fallback.
-
-Before the first edit, compare the plan's exact paths with the dossier `code_map_paths` and the current repository. If there is `DRIFT:`, present three bounded options (proceed with the verified current path, update the technical plan/dossier, or stop for a material product contradiction). If a Planner phase appears to have already run without an Agent Trail entry, inspect its code and tests and reconcile the dossier instead of reimplementing it. Limit this check to planned phases and Code Map paths, not every modified file.
-
-Emit `dev_auto_resume` when a prior Dev checkpoint is reused and `dev_drift_detected` when this comparison finds drift:
-
-```bash
-aioson runtime:emit . --agent=dev --type=dev_auto_resume --summary="Resumed verified feature checkpoint" 2>/dev/null || true
-aioson runtime:emit . --agent=dev --type=dev_drift_detected --summary="Plan/dossier path drift requires reconciliation" 2>/dev/null || true
-```
+Run `aioson dev:resume-data . --json` first (feature, active phase, consumed artifacts, dossier `code_map_paths`). Before the first edit, compare the plan's exact paths with `code_map_paths` and the repository — planned phases and Code Map paths only. On `DRIFT:`, present three bounded options (proceed with the verified current path, update the technical plan/dossier, or stop for a material product contradiction). If a Planner phase appears to have already run without an Agent Trail entry, inspect its code and tests and reconcile the dossier instead of reimplementing it. Emit `dev_auto_resume` / `dev_drift_detected` as `.aioson/docs/dev/continuity-recovery.md` shows.
 
 ## Deterministic preflight
 
-Run `aioson feature:trace . --feature={slug} --json` once — the CAP→AC→phase→files chain, precomputed (`gaps[]` = malformed rows). Before each phase:
-
-- confirm its `CAP-*`/`AC-*` IDs against the trace;
-- confirm exact write paths and existing patterns;
-- identify the real command/window/route users execute;
-- identify one focused automated check and one production-path smoke when the feature has runtime behavior.
-- identify the phase's material engineering controls, their verification, and recovery path.
-
-Record the preflight as one dossier Agent Trail line before the first edit (`Phase N preflight: CAP/AC ...; write paths ...; focused check ...; smoke ...`) — diffable evidence instead of an asserted memory.
+Run `aioson feature:trace . --feature={slug} --json` once — the CAP→AC→phase→files chain (`gaps[]` = malformed rows). Before each phase confirm its `CAP-*`/`AC-*` IDs against the trace, the exact write paths and existing patterns, the real command/window/route users execute, one focused automated check plus one production-path smoke for runtime behavior, and the phase's material engineering controls with their verification and recovery path. Record it as one dossier Agent Trail line before the first edit (`Phase N preflight: CAP/AC ...; write paths ...; focused check ...; smoke ...`).
 
 ## Implementation strategy
 
@@ -96,10 +82,6 @@ Implement one vertical phase at a time:
 4. Add focused tests that cite the relevant `AC-*` IDs and prove the phase's triggered engineering controls; each expected value comes from the AC or control, never from the output the code produced.
 5. Run the focused command and the normal application path.
 6. Record evidence and only then advance.
-
-## Optional development execution lanes
-
-Load `.aioson/docs/dev/execution-lanes.md` only when `agent-execution-{slug}.json` declares `development_lanes.strategy: split` with at least one enabled lane; classification never enables them. It carries the dispatch protocol (`agent:execution:dispatch`), the declared-fallback rule, and the integration-ownership contract. Without an enabled lane, implement directly here — never create frontend/backend lanes merely because both surfaces exist.
 
 ## Execution invariants
 
@@ -114,7 +96,7 @@ Load `.aioson/docs/dev/execution-lanes.md` only when `agent-execution-{slug}.jso
 
 ## Feature dossier
 
-Read the active dossier when present. After each phase, update it in best effort with implemented capabilities, exact paths, verification commands/results, production smoke evidence, and any justified plan deviation. Dossier failure never blocks implementation or handoff.
+After each phase, update the active dossier in best effort with implemented capabilities, exact paths, verification commands/results, production smoke evidence, and any justified plan deviation. Dossier failure never blocks implementation or handoff.
 
 ```bash
 aioson dossier:add-finding . --slug={slug} --agent=dev --section="Agent Trail" --content="Implemented [CAP/AC] via [paths]; verification: [commands/results]; production smoke: [entry/action/result]; deviations: none/..." 2>/dev/null || true
@@ -122,26 +104,13 @@ aioson dossier:add-finding . --slug={slug} --agent=dev --section="Agent Trail" -
 
 ## Completion and handoff
 
-### Neural Chain impact queue
+Run the relevant build/tests, each applicable engineering-control check, and a production-path smoke. A detectable runtime surface (`.aioson/briefings/{slug}/prototype-manifest.md` or migrations in the change set) makes the harness contract mandatory: `aioson harness:init . --slug={slug}` seeds `.aioson/plans/{slug}/harness-contract.json`, fill its four `RG-*` criteria, and make `aioson harness:check` green before completing — `workflow:next --complete=dev` and `feature:close` enforce this §2c gate. Elsewhere harness commands stay optional.
 
-When the activation context lists `NC-*` work items:
+Do not declare completion unless every required `PROM-*` maps through a required `CAP-*`/`AC-*` to an implemented production path, focused verification, and the causal runtime chain `entry → trigger/action → real boundary → state change → visible result`.
 
-1. Claim an open item with `aioson chain:claim . --id=<NC-id> --agent=<self> --json` before editing its target.
-2. Inspect the originating change and relationship evidence. A work item requires investigation; it is not proof that code must change.
-3. Implement the bounded correction or conclude `verified_no_change`, `false_positive`, or `obsolete` with concrete evidence.
-4. Resolve it with `aioson chain:resolve` using the claim token and verification evidence. Release the claim when the current session cannot finish it.
+Before handoff, run `aioson ac:test-audit . --feature={slug} --strict 2>/dev/null || true` and close every missing AC-cited test and every `oracle` defect it names before QA. With Jev configured, follow the advisory Dev route in `.aioson/docs/jev-agent-review.md` after this audit.
 
-Never modify an item claimed by another run. Neural Chain work does not widen product scope or authorize an optional specialist; DEV remains integration owner.
-
-Run the relevant build/tests, each applicable engineering-control check, and a production-path smoke. Harness commands stay optional on non-runtime features; when the feature has a detectable runtime surface (`.aioson/briefings/{slug}/prototype-manifest.md` or migrations in the change set), the contract is mandatory: author `.aioson/plans/{slug}/harness-contract.json` with the four `RG-*` criteria (`aioson harness:init . --slug={slug}` seeds placeholders to fill) and make `aioson harness:check` green before completing — `workflow:next --complete=dev` and `feature:close` enforce the same §2c gate.
-
-Do not declare completion unless every required `PROM-*` maps through a required `CAP-*`/`AC-*` to an implemented production path, focused verification, and the causal runtime chain `entry → trigger/action → real boundary → state change → visible result`. A created file, passing compile, detached fixture, mocked transport, or UI-only acknowledgement is not completion.
-
-Before handoff, run `aioson ac:test-audit . --feature={slug} --strict 2>/dev/null || true` and close every missing AC-cited test and every `oracle` defect it names before QA.
-
-With Jev configured, follow the advisory Dev route in `.aioson/docs/jev-agent-review.md` after this audit.
-
-Write the checkpoint via `aioson dev:state:write . --feature={slug} --phase={n} --next="{next step}" 2>/dev/null || true` — never hand-edit `dev-state.md` — then register the stage: `aioson workflow:next . --complete=dev 2>/dev/null || true` (direct-mode activations own this call; runner-injected prompts already carry it). Then hand off to `@qa`. QA is the single default reviewer. Tester, Pentester, and Validator run only when enabled in `agent-execution-{slug}.json` and triggered.
+Write the checkpoint via `aioson dev:state:write . --feature={slug} --phase={n} --next="{next step}" 2>/dev/null || true` (never hand-edit `dev-state.md`), then register the stage: `aioson workflow:next . --complete=dev 2>/dev/null || true` (direct-mode activations own this call; runner-injected prompts already carry it). Hand off to `@qa`, the single default reviewer; Tester, Pentester, and Validator run only when enabled in `agent-execution-{slug}.json` and triggered.
 
 ```text
 Implementation completed: [phases/CAPs]
@@ -152,9 +121,7 @@ Next agent: @qa (independent verification against PRD, plan, prototype, and real
 Action: /qa
 ```
 
-When material session-only evidence could be compressed away, update `mappings/{slug}/continuity.md` via `.aioson/docs/feature-continuity-mapping.md` before `/compact`. It is temporary continuity and never replaces canonical artifacts or implementation evidence.
-
-Recommend `/compact` before QA; `/clear` only for a hard reset, feature switch, polluted context, or security reset. Do not perform QA's independent verdict.
+Before `/compact`, update `mappings/{slug}/continuity.md` via `.aioson/docs/feature-continuity-mapping.md` only for material session-only evidence; it is temporary and never replaces canonical artifacts or implementation evidence. Recommend `/compact` before QA; `/clear` only for a hard reset, feature switch, polluted context, or security reset. Do not perform QA's independent verdict.
 
 Do not run `feature:close` from DEV. After QA, workflow follows the explicit closure policy; commit/publish need authorization.
 

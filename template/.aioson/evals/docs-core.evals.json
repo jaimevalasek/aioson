@@ -248,6 +248,120 @@
       ]
     },
     {
+      "name": "dev with NC-* items in its activation reaches the Neural Chain queue protocol",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "The activation lists two Neural Chain impact items, NC-3 and NC-4; claim each with chain:claim before editing and resolve it with evidence.",
+      "expect": [
+        { "path": ".aioson/docs/dev/neural-chain-queue.md", "in": "selected" }
+      ],
+      "max_must_bytes": 41000
+    },
+    {
+      "name": "the Neural Chain queue protocol stays out of a one-line fix",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/dev/neural-chain-queue.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "dev resuming with plan drift against the code map reaches continuity recovery",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Resuming phase 4 from the last checkpoint: dev:resume-data shows plan drift against the dossier code map paths; reconcile it before the first edit.",
+      "expect": [
+        { "path": ".aioson/docs/dev/continuity-recovery.md", "in": "selected" }
+      ],
+      "max_must_bytes": 33500
+    },
+    {
+      "name": "continuity recovery stays out of a one-line fix",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/dev/continuity-recovery.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "qa with a pentester findings file reaches the security-findings adjudication",
+      "agent": "qa",
+      "mode": "executing",
+      "task": "The pentester left security-findings for this feature; adjudicate each finding as fixed, false positive or accepted risk before the verdict.",
+      "expect": [
+        { "path": ".aioson/docs/qa/security-findings.md", "in": "selected" }
+      ],
+      "max_must_bytes": 38500
+    },
+    {
+      "name": "the security-findings adjudication stays out of a one-line fix",
+      "agent": "qa",
+      "mode": "executing",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/qa/security-findings.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "qa writing its verdict reaches the QA evidence shape",
+      "agent": "qa",
+      "mode": "executing",
+      "task": "All ACs verified; now writing the QA report with the CAP/AC evidence table and the production smoke fields for the verdict.",
+      "expect": [
+        { "path": ".aioson/docs/qa/evidence-shape.md", "in": "selected" }
+      ],
+      "max_must_bytes": 20600
+    },
+    {
+      "name": "the QA evidence shape stays out of a one-line fix",
+      "agent": "qa",
+      "mode": "executing",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/qa/evidence-shape.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "planner writing the plan reaches the implementation plan contract",
+      "agent": "planner",
+      "mode": "planning",
+      "task": "Writing the implementation plan now: the frontmatter, the Implementation Delta and the Capability Delivery Plan tables for each phase.",
+      "expect": [
+        { "path": ".aioson/docs/planner/plan-contract.md", "in": "selected" }
+      ],
+      "max_must_bytes": 45500
+    },
+    {
+      "name": "the implementation plan contract stays out of a one-line fix",
+      "agent": "planner",
+      "mode": "planning",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/planner/plan-contract.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "product writing the PRD frontmatter and tables reaches the PRD contract",
+      "agent": "product",
+      "mode": "executing",
+      "task": "Writing the PRD now: the frontmatter with the prototype binding, Source Coverage and the Current System Fit rows.",
+      "expect": [
+        { "path": ".aioson/docs/product/prd-contract.md", "in": "selected" }
+      ],
+      "max_must_bytes": 16800
+    },
+    {
+      "name": "the PRD contract stays out of a one-line fix",
+      "agent": "product",
+      "mode": "executing",
+      "task": "Rename the footer CSS class and fix the typo in the README badge.",
+      "absent": [
+        { "path": ".aioson/docs/product/prd-contract.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "dev implementation decision between libraries",
       "agent": "dev",
       "mode": "executing",

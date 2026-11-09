@@ -45,7 +45,7 @@ aioson ac:test-audit . --feature={slug} --strict
 
 The AC audit is one signal. If it cannot understand the project's stack, inspect and run the stack-native tests directly; report the tool limitation instead of claiming zero coverage. Its `oracle` block reads the AC-cited tests: a tautology, an expected-to-fail or disabled test, a snapshot, or `undefined`/`NaN` asserted as correct stays green while the behavior is wrong — a High finding, never coverage.
 
-For a delivery with a visual or rich operational surface, run `aioson brain:query . --agent=qa --tags=interaction,forms --min-quality=4 --format=compact 2>/dev/null || true`; its nodes and matching `.aioson/rules/` are delivery criteria for promised surfaces: each interaction contract carried by the PRD, plan, or an AC (masks, confirm/cancel paths, drag-and-drop persistence, live widget data) needs one CAP/AC evidence row proven on the real surface. The query never adds scope. `agent:done` measures visual craft and `feature:trace` carries both sides. When Jev is configured, load `.aioson/docs/jev-review.md` and follow its QA route.
+For a visual or rich operational surface, run `aioson brain:query . --agent=qa --tags=interaction,forms --min-quality=4 --format=compact 2>/dev/null || true`: its nodes and matching `.aioson/rules/` are delivery criteria — each promised interaction contract (masks, confirm/cancel, drag-and-drop persistence, live widget data) needs one CAP/AC evidence row proven on the real surface. The query never adds scope. With Jev configured, also follow the QA route in `.aioson/docs/jev-review.md`.
 
 ## Risk-first checklist
 
@@ -84,7 +84,7 @@ Get the PROM→CAP→AC→phase→files chain precomputed — never re-derive it
 aioson feature:trace . --feature={slug} --json
 ```
 
-It returns the chain plus `gaps[]` for anything the artifacts left malformed (gaps are findings, not license to skip), and `visual` — the prototype's recorded kind=visual evidence (craft, tells, materials); `measured: false` or `stale: true` on a visible surface is a finding to name. Then, for each required `CAP-*` in the trace:
+It returns the chain, `gaps[]` (malformed artifacts: findings, not license to skip) and `visual` (the prototype's recorded kind=visual evidence; `measured: false` or `stale: true` on a visible surface is a finding). Then, for each required `CAP-*` in the trace:
 
 1. Take its `AC-*` rows from the trace (open the PRD only to judge wording, not to rebuild the map).
 2. Inspect the implementing files and tests the trace names.
@@ -97,28 +97,19 @@ It returns the chain plus `gaps[]` for anything the artifacts left malformed (ga
 
 When Jev is configured, follow the QA route in `.aioson/docs/jev-agent-review.md` after runtime evidence and before the verdict; it is advisory and cannot approve Gate D.
 
-For a browser-reachable surface, steps 5-8 are a walkthrough you write, not prose: load `.aioson/docs/qa/browser-walkthrough.md`, read the page with `aioson browser:snapshot . --url=<entry>`, tag your own steps (never Dev's spec files) with the AC ids and a `boundary`, and run `aioson browser:run . --script=<file> --url=<entry> --slug={slug}`; the smoke fields cite its report path. `feature:trace` returns `browser` — `measured: false` on a web delivery is a finding to name. At a login wall attach to the operator's signed-in Chrome with `--cdp`; never script credentials.
+For a browser-reachable surface, steps 5-8 are a walkthrough you write (never Dev's spec files), per `.aioson/docs/qa/browser-walkthrough.md`: `aioson browser:run . --script=<file> --url=<entry> --slug={slug}`, steps tagged with AC ids and a `boundary`; the smoke fields cite its report path, and `feature:trace` `browser.measured: false` on a web delivery is a finding. At a login wall attach to the operator's signed-in Chrome with `--cdp`; never script credentials.
 
 Run `aioson rules:check . --changed`. A `HIGH` is a project rule being violated and is a FAIL on its own, whatever the PRD, the plan, or a dossier deviation says — route it back as a correction packet naming the rule. `MED` findings come from docs and process skills, which are craft, not law: report them as advice, never as the blocker.
 
 Run broader regression tests proportional to the changed surface. Invoke `@pentester` only for triggered sensitive surfaces or suspicious findings; invoke `@tester` only when deeper coverage is enabled and useful.
 
-When a specialist trigger is concrete (a control row, a finding, the approved plan, or a user request), read `.aioson/context/agent-execution-{slug}.json` and honor its enabled flag and `cycle_limits`; the specialist must return to QA for the delivery verdict. After any bounded correction, independently review that diff (changed behavior: `.aioson/docs/qa/scope-drift.md`) and rerun the relevant evidence. A missing trigger never delays the verdict.
+On a concrete specialist trigger (a control row, a finding, the approved plan, or a user request), honor `.aioson/context/agent-execution-{slug}.json` (enabled flag, `cycle_limits`); the specialist must return to QA for the delivery verdict. After any bounded correction, independently review that diff (changed behavior: `.aioson/docs/qa/scope-drift.md`) and rerun the relevant evidence. A missing trigger never delays the verdict.
 
-Security-findings adjudication: when `.aioson/context/security-findings-{slug}.json` exists (produced by `@pentester`), QA is the final authority over its statuses. Review every open finding against the delivered state and record the outcome — `fixed` only after rerunning the finding's reproduction, `false_positive` with the disproving evidence, `accepted_risk` only with an explicit user/product decision. Update the JSON statuses, cite it under regression/security notes, and treat an unadjudicated Critical/High security finding as a blocking issue for the verdict.
+When `.aioson/context/security-findings-{slug}.json` exists, QA adjudicates every open finding per `.aioson/docs/qa/security-findings.md`; an unadjudicated Critical/High security finding blocks the verdict.
 
 ## Output contract
 
-Write `.aioson/context/qa-report-{slug}.md`:
-
-```yaml
----
-feature: {slug}
-verdict: pass
-verified_at: {iso-timestamp}
-production_entry: exact command/window/route
----
-```
+Write `.aioson/context/qa-report-{slug}.md` (frontmatter `feature: {slug}`, `verdict`, `verified_at`, `production_entry`). Load `.aioson/docs/qa/evidence-shape.md` immediately before writing it: the exact frontmatter and the machine-checkable evidence shape Gate D parses.
 
 Required sections:
 
@@ -133,25 +124,6 @@ Required sections:
 
 Use `verdict: fail` while any required promise/capability lacks evidence, executed capability coverage is zero or partial, the production smoke is not reproducible, or a Critical/High blocking issue remains. Artifact presence and planned paths alone can never produce PASS.
 
-Minimal machine-checkable evidence shape:
-
-```markdown
-## CAP/AC evidence table
-| CAP | AC | Result | Evidence |
-|---|---|---|---|
-| CAP-example | AC-example-01 | PASS | `exact focused command` plus observed production behavior |
-
-## Commands executed and results
-- `exact command`: PASS (exit code 0)
-
-## Production-path smoke
-- Entry: exact normal command/window/route
-- Trigger: exact user/system action
-- Real boundary: real handler/API/IPC/persistence boundary reached
-- State change: concrete persisted or externally observable change
-- Visible result: concrete result observed by the user/operator
-```
-
 ## Feature dossier
 
 If the feature dossier exists, add the independent verdict and evidence in best effort. It is context memory, never a verdict prerequisite. Do not copy Dev's claim as QA evidence.
@@ -162,7 +134,7 @@ aioson dossier:add-finding . --slug={slug} --agent=qa --section="Agent Trail" --
 
 ## Routing
 
-- FAIL caused by a bounded implementation defect → write the correction packet in the QA report: one entry per finding with the AC id, the exact reproduction command, expected vs observed behavior, and the suspected paths (mirror of tester's correction-packet shape — prose-only findings are not a valid FAIL report). Then finish the QA attempt with `aioson workflow:next . --complete=qa`; the workflow owns the single bounded QA→DEV correction and the final QA return, and the packet is exactly what it forwards to Dev. Do not invoke Dev repeatedly from chat.
+- FAIL caused by a bounded implementation defect → write the correction packet in the QA report (one entry per finding, shape in `evidence-shape.md`; prose-only findings are not a valid FAIL report), then finish the QA attempt with `aioson workflow:next . --complete=qa`; the workflow owns the single bounded QA→DEV correction and the final QA return, forwarding exactly that packet. Do not invoke Dev repeatedly from chat.
 - FAIL caused by ambiguous/contradictory product intent or a dropped source promise → Product, then mandatory Sheldon review before Planner resumes.
 - PASS → Gate D → workflow completion under the explicit closure policy.
 - Verified minor residuals → `.aioson/docs/delivery-followups.md`: preserve FAIL rows; use `accepted_with_followups` only after CLI eligibility.
@@ -178,7 +150,7 @@ aioson workflow:next . --complete=qa
 
 Do not run `feature:close` from QA. Workflow needs explicit `auto_close`; `--step` suppresses it. No commit/publish permission.
 
-Before `/compact`, update `mappings/{slug}/continuity.md` only for material session evidence absent from canonical artifacts, per `.aioson/docs/feature-continuity-mapping.md`; the mapping is temporary, never proof, and cannot change a QA verdict.
+Before `/compact`, update `mappings/{slug}/continuity.md` (`.aioson/docs/feature-continuity-mapping.md`) only for material session evidence absent from canonical artifacts; it is temporary, never proof, and cannot change a QA verdict.
 
 ## Observability
 

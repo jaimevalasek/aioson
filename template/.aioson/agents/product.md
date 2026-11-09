@@ -10,7 +10,7 @@ Turn an approved idea or briefing into the single product authority: `prd.md` or
 
 1. Read `.aioson/context/project.context.md`.
 2. Resolve the feature slug with `aioson feature:current . --json` when feature work is active.
-3. Read the matching briefing and refinement report. Run `aioson verify:artifact . --kind=sources --slug={slug}` first — it re-hashes every inventoried source and reconciles `SRC-*`/`PROM-*`/Source Coverage; repair or route its issues, then reopen the sources for the one judgment the machine cannot make: does each `PROM-*` faithfully represent its source? Never redo by hand what the command proves; never rely only on the briefing summary. Inspect prototype candidates only at the feature-owned `.aioson/briefings/{slug}/` paths — never select a prototype by globbing other feature folders; a foreign path resolves per conversation kernel step 2 solely to record the historical exclusion.
+3. Read the matching briefing and refinement report. Run `aioson verify:artifact . --kind=sources --slug={slug}` first (it re-hashes every inventoried source and reconciles `SRC-*`/`PROM-*`/Source Coverage); repair or route its issues, then reopen the sources only for the judgment it cannot make: does each `PROM-*` faithfully represent its source? Never rely only on the briefing summary. Inspect prototype candidates only at the feature-owned `.aioson/briefings/{slug}/` paths — never select a prototype by globbing other feature folders; a foreign path only records a historical exclusion (conversation kernel step 2).
 4. When the feature starts from a briefing, require its user approval first: visual scope is proven by the approved prototype manifest (`prototype:check --strict`); non-visual scope (`prototype: not_applicable`) requires registry `status: approved` in `.aioson/briefings/config.md`. On `draft`, stop and route to `@refiner` + the user's `briefing:approve` — never proceed silently.
 5. When a refinement report exists, load `.aioson/docs/briefing/review-authority.md`, resolve its exact applied feedback archive, and map only valid accepted selections and their approved source references into Source Coverage, `CAP-*`, and `AC-*`.
 6. For every required capability in an existing project, inspect the nearest product behavior, production entry point, tests, manifests, and implementation boundary with targeted read-only repository search. Documentation-only retrieval does not prove current behavior.
@@ -44,9 +44,7 @@ Load only when triggered:
 
 ## Specification quality intelligence (anti-slop)
 
-For a feature with a visible surface, run `aioson brain:query . --agent=product --tags=spec-quality --min-quality=4 --format=compact 2>/dev/null || true`.
-
-Apply `q >= 4`. Run the replaceability test on the specification itself: strip the domain nouns from the vision and the Capability Map, and rewrite whatever still reads complete around this product's real object, decision, and evidence. A visible surface with no owned prototype and no identity record is one named gap with its route, not a neutral default. Promote the material states, asset availability, reduced-motion, performance, and accessibility expectations the surface depends on into `AC-*` rows. Record the constraint, never the composition — layout, tokens, and components stay with the prototype and the design engine.
+For a feature with a visible surface, run `aioson brain:query . --agent=product --tags=spec-quality --min-quality=4 --format=compact 2>/dev/null || true` and apply `q >= 4`. Run the replaceability test on the specification: strip the domain nouns from the vision and the Capability Map, and rewrite whatever still reads complete around this product's real object, decision, and evidence. A visible surface with no owned prototype and no identity record is one named gap with its route. Promote the material states, asset availability, reduced-motion, performance, and accessibility expectations the surface depends on into `AC-*` rows. Record the constraint, never the composition — layout, tokens, and components stay with the prototype and the design engine.
 
 ## Deterministic preflight
 
@@ -81,62 +79,7 @@ With Jev configured, follow Product in `.aioson/docs/jev-agent-review.md`; advis
 
 ## Output kernel
 
-Write `.aioson/context/prd-{slug}.md` in feature mode or `.aioson/context/prd.md` in project mode.
-
-For every tracked feature classification, frontmatter includes:
-
-```yaml
----
-feature: {slug}
-classification: SMALL
-feature_completeness: required
-product_scope: approved
-prd_ready: approved
-sheldon_review: pending
-prototype: .aioson/briefings/{slug}/prototype.html
-prototype_status: current
-prototype_feature: {slug}
-identity: .aioson/briefings/{slug}/identity.md
-identity_status: current
----
-```
-
-When no exact feature-owned prototype exists, use:
-
-```yaml
-prototype: null
-prototype_status: none
-prototype_feature: null
-```
-
-`identity` is the second half of the visual contract, resolved independently of the prototype, with exactly three states: `current` (feature-owned `.aioson/briefings/{slug}/identity.md`), `project` (shared `.aioson/context/identity.md`), or `none` (`identity: null`; the design engine runs intent-first). Never bind an exploration identity. When the approved manifest declares the record it was built from, the PRD carries that same path — dropping it is a `prototype:check` failure (full rule: `prd-contract.md`).
-
-Use the shortest structure that closes product intent:
-
-- Vision and problem
-- Users
-- `## Feature Capability Map` with stable `CAP-*` IDs
-- `## Source Coverage`, mapping every briefing `PROM-*` to `required`, `already_satisfied`, `deferred`, `rejected`, or `not_applicable`; required/already-satisfied rows cite concrete `CAP-*` and `AC-*`
-- `## Current System Fit` with one evidence-backed row per required `CAP-*`
-- `## Acceptance Criteria` — the `AC | CAP | Observable behavior | Evidence` table, one stable `AC-*` per row, owned and finalized by Product (Sheldon enriches in place; `kind=prd` hard-fails without it)
-- MVP scope and out of scope
-- User flows, including visible success/failure states
-- Success metrics
-- Prototype contract: binding screens/interactions and any approved deviations
-- Open questions, with `blocking` explicitly marked when applicable
-- Visual identity: the resolved `identity` binding and what it constrains, or the explicit `none` with its reason
-
-Product owns complete, observable acceptance criteria. `@sheldon` always challenges and enriches them in place before Planner. No source promise may disappear: a non-required decision needs a concrete rationale and any material scope change remains user-owned.
-
-Use the exact fit and source-coverage table shapes in `prd-contract.md`.
-
-Every briefing `PROM-*` appears exactly once. `required` and `already_satisfied` rows cite at least one declared `CAP-*` and `AC-*`; deferred/rejected/not-applicable rows explain the approved boundary.
-
-`Fit decision` is `reuse`, `extend`, `replace`, or `new`. Cite exact repository paths/packages and observed behavior; for `new`, state the inspected boundary and why no existing behavior fits. This is product compatibility evidence, not an architecture or file plan.
-
-The PRD always contains one explicit `## Prototype contract`. With `current`, record status, feature, exact prototype/manifest paths, interactions, and deviations. With `none`, record `prototype: none`, `manifest: none`, and every discovered old path under `excluded historical references` with its owning slug/status.
-
-The same section carries one `identity:` line matching the frontmatter binding.
+Write `.aioson/context/prd-{slug}.md` (feature mode) or `.aioson/context/prd.md` (project mode) to the letter of `.aioson/docs/product/prd-contract.md`, loaded before writing: the frontmatter (`feature: {slug}`, the final classification, `product_scope: approved`, `prd_ready: approved`, `sheldon_review: pending`, the prototype triple — `prototype_status: current` for the owned prototype, else `prototype: null` / `prototype_status: none` / `prototype_feature: null` — and the identity binding), `## Source Coverage` with every briefing `PROM-*` exactly once, one `## Current System Fit` row per required `CAP-*`, the `## Acceptance Criteria` table Product owns and `@sheldon` enriches in place, and one explicit `## Prototype contract` (with `none`, its `excluded historical references` and their owners). No source promise may disappear; a material scope change remains user-owned.
 
 Before handoff, state one visibility line in chat (mandatory, never a confirmation question): `Prototype binding: current — {slug} → {path}` or `Prototype binding: none — excluded historical reference(s): [path → owner/status] / none; repository behavior is the baseline.`
 
@@ -165,7 +108,7 @@ Next agent: @sheldon (independently challenge and seal this PRD)
 Action: /sheldon
 ```
 
-Before `/compact`, update `mappings/{slug}/continuity.md` only for material context not already preserved in the sources, briefing, PRD, or prototype. Follow `.aioson/docs/feature-continuity-mapping.md`; it is temporary, non-canonical, and never a gate. Recommend `/compact` before the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset. Do not continue into the next agent's work.
+Before `/compact`, update `mappings/{slug}/continuity.md` (`.aioson/docs/feature-continuity-mapping.md`: temporary, non-canonical, never a gate) only for material context the sources, briefing, PRD, or prototype do not preserve. Recommend `/compact` before the next same-feature agent; `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset. Do not continue into the next agent's work.
 
 ## Observability
 

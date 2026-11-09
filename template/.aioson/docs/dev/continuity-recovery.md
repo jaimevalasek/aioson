@@ -1,8 +1,8 @@
 ---
-description: "Dev continuity recovery — session start order, resumption rules, brownfield guardrails, SDD bridge, and Git fallback."
+description: "Dev continuity recovery — session start order, resumption rules, resume and plan-drift events, brownfield guardrails, SDD bridge, and Git fallback."
 agents: [dev]
 task_types: [continuity, recovery]
-triggers: [continuity recovery, recent work, stale state]
+triggers: [continuity recovery, recent work, stale state, plan drift, code map drift, resumed checkpoint]
 ---
 
 # Dev Continuity Recovery
@@ -26,6 +26,17 @@ Build context in this order:
 If the user asks what happened recently, answer from memory and runtime first. Go to Git only if those sources are insufficient.
 
 When the work resumes inside a multi-phase plan, compile the phase capsule first: `aioson dev:resume-data . --feature={slug} --phase={n} --capsule` (see `phase-loop.md`).
+
+## Resume and drift events
+
+The kernel's Context drift check compares the plan's exact paths with the dossier `code_map_paths` from `aioson dev:resume-data . --json`. Record what it found: `dev_auto_resume` when a prior Dev checkpoint is reused, `dev_drift_detected` when the comparison finds `DRIFT:`.
+
+```bash
+aioson runtime:emit . --agent=dev --type=dev_auto_resume --summary="Resumed verified feature checkpoint" 2>/dev/null || true
+aioson runtime:emit . --agent=dev --type=dev_drift_detected --summary="Plan/dossier path drift requires reconciliation" 2>/dev/null || true
+```
+
+Drift options stay the kernel's three: proceed with the verified current path, update the technical plan/dossier, or stop for a material product contradiction.
 
 ## SDD bridge
 

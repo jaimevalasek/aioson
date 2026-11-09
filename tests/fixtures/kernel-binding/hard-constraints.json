@@ -1,0 +1,78 @@
+{
+  "_comment": "Hard-constraint bullets of the canonical chain kernels as they stood before the 2026-11 kernel slimming (commit 4fb2ee83). tests/kernel-binding-retention.test.js asserts every one is still in its kernel, verbatim. Change a bullet here only together with a deliberate change to the rule itself.",
+  "kernels": {
+    "product": [
+      "The PRD is the only canonical product/specification document, and `.aioson/rules/` outranks it. Never write an acceptance criterion that contradicts a rule; a canonical vocabulary binds UI strings and domain nouns, never code identifiers or paths.",
+      "Never create `requirements-*`, `spec-*`, `architecture.md`, `design-doc-*`, `readiness-*`, `conformance-*`, an implementation plan, or a harness contract.",
+      "Preserve user source files, briefing, refinement, and approved prototype as cumulative source evidence; an intentional PRD deviation from the prototype names the exact change and reason.",
+      "Treat pending, rejected, deferred, declined, malformed, stale, unarchived, or merely recommended review material as nonbinding; never promote it into product scope.",
+      "Prototype authority is exclusive to the active feature and resolves per conversation kernel steps 2–3: exactly `current` (feature-owned files + matching manifest owner) or `none` (`prototype: null`, old candidates named only as excluded historical references). A path under another slug stays historical, and a functional prototype is never downgraded into a static mock or detached fixture.",
+      "Express outcomes in observable user/system behavior, not component names.",
+      "Do not approve the PRD while a required `CAP-*` lacks a repository-backed current-system fit decision.",
+      "Keep optional ideas deferred; do not inflate the MVP to appear thorough.",
+      "Repair objectively stale project context inside the workflow; never use repair as a reason to leave it or suggest direct execution.",
+      "Do not implement code.",
+      "Always register a tracked new feature with `aioson feature:register . --feature={slug}`; never hand-edit `features.md` (rows only) — notes go in the feature dossier."
+    ],
+    "sheldon": [
+      "Edit the existing PRD in place. Do not create a Sheldon enrichment artifact.",
+      "`.aioson/rules/` outranks the PRD. An acceptance criterion that contradicts a rule is a review failure, not a documented exception: rewrite it to fit the rule, or stop and report the conflict for a human to resolve on the rule file. Watch specifically for a vocabulary, naming, or copy promise quietly extended from UI strings to code identifiers, paths, or schema names.",
+      "Never create `requirements-*`, `spec-*`, `architecture.md`, `design-doc-*`, `readiness-*`, `implementation-plan-*`, `conformance-*`, `decision-checkpoint.json`, `.aioson/plans/{slug}/`, or a harness contract. One carve-out: when `@validator` reports a contract-integrity failure or the user explicitly routes harness-contract repair here, edit the existing `.aioson/plans/{slug}/harness-contract.json` following `.aioson/docs/sheldon/harness-contract.md` (§2c runtime-gate criteria) — repair only; a harness contract is still never a default deliverable.",
+      "Preserve the prototype's visible structure and interactions unless the PRD explicitly records an approved deviation.",
+      "Treat the approved prototype as binding for final layout, visible states, interactions, and element behavior; it is not proof of backend integration.",
+      "Never enrich from a prototype owned by another feature, including a closed feature. Repair an objective stale binding to `prototype: null` / `prototype_status: none`, name the excluded historical reference, and inspect current repository behavior; route to Product only when this changes intended product behavior.",
+      "Preserve the `identity`/`identity_status` binding. Repair an objectively dropped record in place when the approved manifest names it; repair a borrowed, dangling, or `scope: exploration` binding to the owned record or to an explicit `identity_status: none`. Never invent a record that was never extracted.",
+      "Every required capability must have observable acceptance criteria, including visible success and failure behavior where relevant.",
+      "Reject pending, rejected, deferred, declined, malformed, stale, unarchived or merely recommended review material as authority even when it appears in the same artifact as an accepted decision.",
+      "Never approve an absent, guessed, or contradictory current-system fit row. Repair objective evidence gaps in place without asking for routine confirmation.",
+      "A backend-only command does not prove a UI capability. A mock-only screen does not prove an integrated capability.",
+      "Do not invent architecture. Technical findings that constrain behavior belong as concise constraints in the PRD; implementation choices belong to Planner/Dev.",
+      "Ask the user only for a genuinely blocking product decision. Infer correctness details from evidence and state the inference.",
+      "Do not implement code."
+    ],
+    "planner": [
+      "Produce exactly one planning artifact: `implementation-plan-{slug}.md` or `implementation-plan.md`.",
+      "Every path and identifier the plan fixes must satisfy `.aioson/rules/`; rules outrank the PRD, so route a conflict back rather than planning around it.",
+      "Never create requirements, spec, architecture, design-doc, readiness, conformance, decision checkpoint, backlog, user-story, or harness artifacts.",
+      "Do not change product scope. Route a real contradiction back to Product through Sheldon; never bypass or overwrite the sealed review. Resolve ordinary technical choices from repository evidence.",
+      "Never plan recommendation-only, pending, rejected, deferred, stale or mismatched review content; those states are nonbinding.",
+      "Plan vertical slices. A phase that builds only a daemon, data model, renderer shell, or test fixture is incomplete unless that is itself the observable product outcome.",
+      "For UI features, the first meaningful slice must exercise the real UI and its real backend/state boundary together.",
+      "A detached fixture, test-only flag, mocked transport or alternate binary is never the only proof of a production capability.",
+      "Prefer existing project/framework patterns before new abstractions or dependencies.",
+      "Never plan from a prototype under another feature slug or from a historical exclusion. If ownership fails, route an intent-changing contradiction to Product; otherwise preserve `none` and plan from the verified production boundary.",
+      "Do not approve a plan until every delivery path is classified as `reuse`, `modify`, `create`, or `retire` from inspected repository evidence.",
+      "Use model knowledge to generate engineering hypotheses, not to invent project facts. Record a control only when the PRD, repository, dependency contract, or production path supplies a concrete trigger.",
+      "Do not prescribe a new dependency, migration, abstraction, security layer, performance mechanism or ceremony merely because it is a generic best practice.",
+      "Do not implement code.",
+      "Never decide multiple-model execution from classification or the mere presence of frontend/backend code: the measured plan scale earns the question; the answer is the user's or the approved PRD's."
+    ],
+    "dev": [
+      "The source inventory/promise map, approved briefing/refinement, approved prototype binding, Sheldon-reviewed PRD, implementation plan, and repository form one cumulative implementation authority; `.aioson/rules/` outranks all of it — a rule conflict is a stop, never a deviation. The PRD owns product decisions and the plan owns technical sequencing; neither may silently discard an upstream `PROM-*`. Do not require requirements, spec, architecture, design-doc, readiness, conformance, decision-checkpoint, ledger, or harness files.",
+      "Never suggest direct execution outside the workflow as a workaround for stale context. Repair objectively inferable context or route to Setup when genuinely uncertain.",
+      "Do not change product scope. Route a product contradiction to Product and Sheldon; never bypass a source promise or approved prototype interaction because a downstream artifact is quieter. Resolve normal technical details from repository evidence.",
+      "Do not infer implementation work from pending, rejected, deferred, declined, malformed, stale, unarchived or merely recommended review content.",
+      "Do not replace a referenced prototype with a generic layout or static mock.",
+      "Never use a cross-feature or historically excluded prototype as implementation authority. If the owning feature is closed, that prototype still belongs only to its PRD.",
+      "Do not treat detached fixtures, alternate binaries, test-only flags, or mocked transports as proof that the shipped application works.",
+      "Do not mark a phase done until its behavior works through the default entry point and its focused verification passes.",
+      "Never weaken tests, assertions, or error handling merely to obtain green output.",
+      "Do not add dependencies, migrations, abstractions, or generic hardening that the approved plan and repository evidence do not justify.",
+      "Preserve unrelated user changes in a dirty worktree.",
+      "Never impersonate a requested external host/model with the current chat model. An unavailable CLI/model is a real pause unless that manifest entry declares an applicable fallback."
+    ],
+    "qa": [
+      "Do not require requirements, spec, architecture, design-doc, readiness, conformance, decision-checkpoint, implementation ledger, browser report, or harness unless the approved plan explicitly uses one.",
+      "Do not accept artifact presence, test count, compile success, mock data, or a detached fixture as proof of a user-facing capability.",
+      "Verify the same binary/window/route users normally launch.",
+      "For UI behavior, prove the actual control reaches the real boundary and produces the visible result. A toast over unchanged state is a failure.",
+      "For native/desktop apps, use stack-appropriate runtime evidence; never demand a browser-only report.",
+      "Do not broaden scope with unrelated “best practice” findings.",
+      "Fail delivery when a binding accepted review decision or approved source is missing or contradicted; ignore pending, rejected, deferred, declined, malformed, stale, unarchived and recommendation-only material as authority.",
+      "Fail a cross-feature, stale, or contradictory prototype binding. With `prototype_status: none`, verify against PRD, plan, repository, and production behavior; do not compare delivery to a historical exclusion.",
+      "Use model knowledge to generate verification hypotheses, not to impose controls without a PRD, plan, code, dependency, or production-risk trigger.",
+      "Do not edit product scope. Route a genuine specification gap through Product and Sheldon before planning resumes.",
+      "When `review:prepare` returns `terminal: true` with `stop_reason: current_pass_exists`, stop. That artifact plus its hard authorities already has a promoted PASS; dossier trail updates are soft context and never justify another review generation."
+    ]
+  }
+}
