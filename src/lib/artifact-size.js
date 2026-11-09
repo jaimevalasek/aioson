@@ -21,6 +21,10 @@ const KEEP = {
   plan: 'the phases, Implementation Delta, Engineering Controls and Execution Sequence'
 };
 
+// At Gate C the PRD is approved and bound to its review by hash: editing it to
+// save bytes stales that review and blocks the gate, so the advice changes.
+const SEALED_ADVICE = 'it is approved and bound to its review, so do not edit it for size now; read it by section and report the size to the person';
+
 function kb(bytes) {
   return `${Math.round(bytes / 102.4) / 10} KB`;
 }
@@ -44,7 +48,7 @@ function largestSections(text, limit = 3) {
  * null when the document fits its budget; otherwise the advisory, with its
  * numbers, the three largest sections and a directed rewrite.
  */
-function sizeAdvisory({ kind, text, file, budget }) {
+function sizeAdvisory({ kind, text, file, budget, sealed = false }) {
   const limit = budget || SIZE_BUDGET[kind];
   if (!limit) return null;
   const bytes = Buffer.byteLength(String(text || ''), 'utf8');
@@ -59,7 +63,7 @@ function sizeAdvisory({ kind, text, file, budget }) {
     budget: limit,
     tokens_estimate: Math.round(bytes / 4),
     largest_sections: largest,
-    message: `${file} is ${kb(bytes)} (advisory budget ${kb(limit)}, about ${Math.round(bytes / 4 / 1000)}k tokens for every agent that reads it whole): move appendices, raw research and long examples to a linked file and keep ${KEEP[kind]} here. Largest sections: ${sample}.`
+    message: `${file} is ${kb(bytes)} (advisory budget ${kb(limit)}, about ${Math.round(bytes / 4 / 1000)}k tokens for every agent that reads it whole): ${sealed ? SEALED_ADVICE : `move appendices, raw research and long examples to a linked file and keep ${KEEP[kind]} here`}. Largest sections: ${sample}.`
   };
 }
 

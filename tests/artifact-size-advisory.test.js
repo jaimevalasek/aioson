@@ -55,6 +55,32 @@ test('kind=prd warns on an oversized PRD without changing its verdict', async ()
   assert.equal((big.warnings || []).filter((w) => /advisory budget 48 KB/.test(w)).length, 1);
 });
 
+test('--strict promotes real warnings, never the size advisory', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-size-strict-'));
+  await write(root, 'small/prd-demo.md', PRD);
+  await write(root, 'big/prd-demo.md', PRD + appendix(60 * 1024));
+  const run = (rel) => JSON.parse(spawnSync(process.execPath, [CLI, 'verify:artifact', root, '--kind=prd', `--file=${rel}`, '--strict', '--no-persist', '--json'], { encoding: 'utf8' }).stdout);
+  const small = run('small/prd-demo.md');
+  const big = run('big/prd-demo.md');
+  assert.equal(big.ok, small.ok);
+  assert.deepEqual(big.issues, small.issues, 'the size message is no issue under --strict');
+  assert.equal(big.warnings.filter((w) => /advisory budget 48 KB/.test(w)).length, 1, 'and is still said');
+});
+
+test('Gate C does not tell anyone to edit the sealed PRD', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-size-sealed-'));
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  await write(root, '.aioson/context/prd-demo.md', PRD + appendix(60 * 1024));
+  await approveAndSealSheldonReview(root);
+  await write(root, '.aioson/context/implementation-plan-demo.md', PLAN);
+  const gate = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
+  const advisory = gate.evidence.find((e) => e.type === 'artifact_size');
+  assert.equal(advisory.warnings.length, 1);
+  assert.equal(advisory.warnings[0].kind, 'prd');
+  assert.match(advisory.warnings[0].message, /do not edit it for size now/);
+  assert.doesNotMatch(advisory.warnings[0].message, /move appendices/);
+});
+
 test('Gate C carries the plan size advisory as evidence and keeps its result', async () => {
   const results = {};
   for (const variant of ['small', 'big']) {

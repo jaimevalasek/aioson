@@ -3,6 +3,8 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { isValidSlug } = require('./schema');
+const { withDossierLock } = require('./lock');
+const { writeAtomically } = require('../lib/feature-registry-storage');
 
 const FEATURES_SUBDIR = 'features';
 const DOSSIER_FILENAME = 'dossier.md';
@@ -23,6 +25,20 @@ const MIGRATABLE_SECTIONS = [
 
 function dossierPath(contextDir, slug) {
   return path.join(contextDir, FEATURES_SUBDIR, slug, DOSSIER_FILENAME);
+}
+
+function featureFolder(contextDir, slug) {
+  return path.join(contextDir, FEATURES_SUBDIR, slug);
+}
+
+async function exists(file) {
+  return fs.access(file).then(() => true, () => false);
+}
+
+function missingDossier(slug) {
+  const e = new Error(`dossier not found for slug "${slug}"`);
+  e.code = 'EDOSSIERMISSING';
+  return e;
 }
 
 function historyPath(contextDir, slug) {
@@ -181,6 +197,13 @@ function planTrailArchive(raw) {
  */
 async function archiveTrail({ slug, contextDir, force = false } = {}) {
   if (!isValidSlug(slug)) return { archived: false, reason: 'invalid_slug' };
+  if (!(await exists(dossierPath(contextDir, slug)))) return { archived: false, reason: 'missing' };
+  return withDossierLock(featureFolder(contextDir, slug), 'trail-archive', () => archiveTrailHeld({ slug, contextDir, force }));
+}
+
+/** archiveTrail for a caller that already holds the feature's dossier lock. */
+async function archiveTrailHeld({ slug, contextDir, force = false } = {}) {
+  if (!isValidSlug(slug)) return { archived: false, reason: 'invalid_slug' };
   const p = dossierPath(contextDir, slug);
   let raw;
   try { raw = await fs.readFile(p, 'utf8'); } catch { return { archived: false, reason: 'missing' }; }
@@ -197,8 +220,8 @@ async function archiveTrail({ slug, contextDir, force = false } = {}) {
   }
   const appended = `${archive.replace(/\s+$/, '')}\n\n${plan.moved.join('\n\n')}\n`;
   // Archive first: a crash between the two writes duplicates entries, never loses them.
-  await fs.writeFile(ap, appended, 'utf8');
-  await fs.writeFile(p, plan.raw, 'utf8');
+  await writeAtomically(ap, appended);
+  await writeAtomically(p, plan.raw);
   return { archived: true, entries: plan.count, activeSizeBytes: Buffer.byteLength(plan.raw, 'utf8'), archivePath: ap };
 }
 
@@ -212,17 +235,17 @@ async function compact({ slug, contextDir, now = () => new Date(), force = false
     err.code = 'EDOSSIERSLUG';
     throw err;
   }
+  if (!(await exists(dossierPath(contextDir, slug)))) throw missingDossier(slug);
+  return withDossierLock(featureFolder(contextDir, slug), 'compact', () => compactHeld({ slug, contextDir, now, force }));
+}
 
+async function compactHeld({ slug, contextDir, now, force }) {
   const p = dossierPath(contextDir, slug);
   let raw;
   try {
     raw = await fs.readFile(p, 'utf8');
   } catch (err) {
-    if (err && err.code === 'ENOENT') {
-      const e = new Error(`dossier not found for slug "${slug}"`);
-      e.code = 'EDOSSIERMISSING';
-      throw e;
-    }
+    if (err && err.code === 'ENOENT') throw missingDossier(slug);
     throw err;
   }
 
@@ -267,16 +290,16 @@ async function compact({ slug, contextDir, now = () => new Date(), force = false
 
   if (migratedHeadings.length === 0) {
     // The sections that close with their gates are gone: the trail is what grew.
-    const trail = await archiveTrail({ slug, contextDir, force });
+    const trail = await archiveTrailHeld({ slug, contextDir, force });
     if (trail.archived) return { compacted: true, migratedSections: [], archivedTrailEntries: trail.entries, activeSizeBytes: trail.activeSizeBytes, historyPath: hp };
     return { compacted: false, reason: 'nothing_migratable', sizeBytes: Buffer.byteLength(raw, 'utf8') };
   }
 
   const newRaw = joinSections(frontmatter, activeSections);
-  await fs.writeFile(p, newRaw, 'utf8');
-  // History is append-only
-  await fs.writeFile(hp, historyContent, 'utf8');
-  const trail = await archiveTrail({ slug, contextDir });
+  // History first: a crash between the two writes duplicates a section, never loses it.
+  await writeAtomically(hp, historyContent);
+  await writeAtomically(p, newRaw);
+  const trail = await archiveTrailHeld({ slug, contextDir });
 
   return {
     compacted: true,
@@ -301,6 +324,7 @@ module.exports = {
   compact,
   shouldCompact,
   archiveTrail,
+  archiveTrailHeld,
   readTrailArchive,
   planTrailArchive,
   MAX_ACTIVE_SIZE,

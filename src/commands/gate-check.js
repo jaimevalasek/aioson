@@ -362,7 +362,7 @@ async function withPlanRuntime(check, targetDir, slug, gateLetter) {
   const { sizeAdvisory } = require('../lib/artifact-size');
   const prdRel = `.aioson/context/prd-${slug}.md`;
   const oversized = [
-    sizeAdvisory({ kind: 'prd', text: await readFileSafe(path.join(targetDir, prdRel)), file: prdRel }),
+    sizeAdvisory({ kind: 'prd', text: await readFileSafe(path.join(targetDir, prdRel)), file: prdRel, sealed: true }),
     sizeAdvisory({ kind: 'plan', text: planText, file: `.aioson/context/implementation-plan-${slug}.md` })
   ].filter(Boolean);
   if (oversized.length > 0) check.evidence.push({ type: 'artifact_size', ok: true, advisory: true, warnings: oversized });

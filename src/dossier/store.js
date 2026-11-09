@@ -12,6 +12,8 @@ const {
   validateFrontmatter
 } = require('./schema');
 const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
+const { withDossierLock } = require('./lock');
+const { writeAtomically } = require('../lib/feature-registry-storage');
 
 const FEATURES_SUBDIR = 'features';
 const DOSSIER_FILENAME = 'dossier.md';
@@ -316,25 +318,41 @@ async function show({ slug, contextDir } = {}) {
   return { header, raw, frontmatter, sections, path: p, warn: historyWarn };
 }
 
+function missingDossier(slug, filePath) {
+  const e = new Error(`dossier not found for slug "${slug}" at ${filePath}`);
+  e.code = 'EDOSSIERMISSING';
+  e.path = filePath;
+  return e;
+}
+
 // Append-only write to a named ## section in dossier.md.
 // Uses SHA-256 of (section + content) for dedup — repeated calls with same args are no-ops.
-async function addFinding({ slug, contextDir, agent, section, content, now = () => new Date() } = {}) {
+// The read, the append and the archive pass run under the feature's dossier
+// lock: parallel writers (lanes, a retried phase:next) each keep their entry.
+async function addFinding(input = {}) {
+  const { slug, contextDir } = input;
   if (!isValidSlug(slug)) {
     const err = new Error(`invalid slug: ${JSON.stringify(slug)}`);
     err.code = 'EDOSSIERSLUG';
     throw err;
   }
   const filePath = dossierPath(contextDir, slug);
+  // Checked before the lock, which would create the feature folder.
+  try {
+    await fs.access(filePath);
+  } catch {
+    throw missingDossier(slug, filePath);
+  }
+  return withDossierLock(featureDir(contextDir, slug), 'agent-trail', () => appendFinding(input));
+}
+
+async function appendFinding({ slug, contextDir, agent, section, content, now = () => new Date() }) {
+  const filePath = dossierPath(contextDir, slug);
   let raw;
   try {
     raw = await fs.readFile(filePath, 'utf8');
   } catch (err) {
-    if (err && err.code === 'ENOENT') {
-      const e = new Error(`dossier not found for slug "${slug}" at ${filePath}`);
-      e.code = 'EDOSSIERMISSING';
-      e.path = filePath;
-      throw e;
-    }
+    if (err && err.code === 'ENOENT') throw missingDossier(slug, filePath);
     throw err;
   }
 
@@ -385,14 +403,14 @@ async function addFinding({ slug, contextDir, agent, section, content, now = () 
   before.push('', entry.trimEnd());
 
   const rebuilt = [...before, '', ...after].join('\n');
-  await fs.writeFile(filePath, rebuilt, 'utf8');
+  await writeAtomically(filePath, rebuilt);
 
   // Every chain agent reads the dossier at session start: past the size budget
   // the oldest trail entries move to the archive (dossier-compact.js). Best-effort.
   let archived = null;
   if (Buffer.byteLength(rebuilt, 'utf8') > compactor.MAX_ACTIVE_SIZE) {
     try {
-      const result = await compactor.archiveTrail({ slug, contextDir });
+      const result = await compactor.archiveTrailHeld({ slug, contextDir });
       if (result.archived) archived = { entries: result.entries, active_bytes: result.activeSizeBytes };
     } catch { /* the finding is recorded; archiving retries on the next write */ }
   }

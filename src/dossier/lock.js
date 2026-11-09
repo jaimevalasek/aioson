@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 
 const LOCK_FILENAME = '.dossier.lock';
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -29,6 +30,46 @@ function isStaleLock(payload, { staleTtlMs, now, isAlive }) {
   if (now() - acquiredMs >= staleTtlMs) return true;
   if (typeof payload.pid !== 'number' || !isAlive(payload.pid)) return true;
   return false;
+}
+
+/**
+ * Creates the lockfile with its payload in one step (a hard link of a written
+ * temp file), so no reader ever finds a live lock empty and takes it for a
+ * stale one. A filesystem without hard links falls back to create-then-write.
+ */
+async function createLockFile(lockPath, payload) {
+  const temp = `${lockPath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temp, payload, { flag: 'wx' });
+    try {
+      await fs.link(temp, lockPath);
+      return;
+    } catch (err) {
+      if (err && err.code === 'EEXIST') throw err;
+    }
+  } finally {
+    await fs.rm(temp, { force: true }).catch(() => {});
+  }
+  const fh = await fs.open(lockPath, 'wx');
+  try {
+    await fh.writeFile(payload);
+  } finally {
+    await fh.close();
+  }
+}
+
+/** The release of one held lock: idempotent, and a lockfile already gone is released. */
+function releaser(lockPath) {
+  let released = false;
+  return async function release() {
+    if (released) return;
+    released = true;
+    try {
+      await fs.unlink(lockPath);
+    } catch (err) {
+      if (err && err.code !== 'ENOENT') throw err;
+    }
+  };
 }
 
 async function acquireLock(lockDir, section, opts = {}) {
@@ -62,35 +103,28 @@ async function acquireLock(lockDir, section, opts = {}) {
         section,
         acquired_at: new Date(now()).toISOString()
       };
-      const fh = await fs.open(lockPath, 'wx');
-      try {
-        await fh.writeFile(JSON.stringify(payload));
-      } finally {
-        await fh.close();
-      }
-
-      let released = false;
-      return async function release() {
-        if (released) return;
-        released = true;
-        try {
-          await fs.unlink(lockPath);
-        } catch (err) {
-          if (err && err.code !== 'ENOENT') throw err;
-        }
-      };
+      await createLockFile(lockPath, JSON.stringify(payload));
+      return releaser(lockPath);
     } catch (err) {
-      if (!err || err.code !== 'EEXIST') throw err;
+      // On Windows a lockfile being deleted answers EPERM/EBUSY for a moment: held, not broken.
+      if (!err || !['EEXIST', 'EPERM', 'EBUSY', 'EACCES'].includes(err.code)) throw err;
 
       let existing = null;
+      let gone = false;
+      const raw = await fs.readFile(lockPath, 'utf8').catch(() => { gone = true; return ''; });
       try {
-        const raw = await fs.readFile(lockPath, 'utf8');
         existing = JSON.parse(raw);
       } catch (_) {
         existing = null;
       }
+      // Released (or mid-delete) since the failed create: try again, and never
+      // unlink — the next holder may already have it.
+      if (gone && now() - start < timeoutMs) {
+        await sleepFn(0);
+        continue;
+      }
 
-      if (isStaleLock(existing, { staleTtlMs, now, isAlive })) {
+      if (!gone && isStaleLock(existing, { staleTtlMs, now, isAlive })) {
         onWarn(
           `stale dossier lockfile at ${lockPath} (pid=${existing && existing.pid != null ? existing.pid : '?'}); overriding`
         );
@@ -117,12 +151,27 @@ async function acquireLock(lockDir, section, opts = {}) {
   }
 }
 
+/**
+ * Runs `work` holding the feature's dossier lock. Every read-modify-write of
+ * dossier.md and the files beside it goes through here: two agents closing a
+ * phase at once must not write over each other's entries.
+ */
+async function withDossierLock(lockDir, section, work, opts = {}) {
+  const release = await acquireLock(lockDir, section, { pollIntervalMs: 25, ...opts });
+  try {
+    return await work();
+  } finally {
+    await release();
+  }
+}
+
 module.exports = {
   LOCK_FILENAME,
   DEFAULT_TIMEOUT_MS,
   DEFAULT_POLL_INTERVAL_MS,
   DEFAULT_STALE_TTL_MS,
   acquireLock,
+  withDossierLock,
   isStaleLock,
   defaultIsAlive
 };

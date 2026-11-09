@@ -1357,7 +1357,9 @@ const ADAPTERS = {
     return {
       ok,
       issues: result.issues,
-      warnings: oversize ? [...result.warnings, oversize.message] : result.warnings,
+      warnings: result.warnings,
+      // Size never proves a PRD wrong: it stays a warning under --strict too.
+      advisories: oversize ? [oversize.message] : [],
       checks: [{ id: 'prd', ok, detail: result.issues.join('; ') || null }],
       metrics: { ...result.metrics, file: rel, briefing_read: briefingText.length > 0, bytes: Buffer.byteLength(prdText, 'utf8') }
     };
@@ -1959,7 +1961,7 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
 
   // strict promotes warnings to blocking issues.
   const issues = strict ? [...result.issues, ...result.warnings] : [...result.issues];
-  const warnings = strict ? [] : [...result.warnings];
+  const warnings = [...(strict ? [] : result.warnings), ...(result.advisories || [])];
   const unverified = result.verdict === 'unverified' && issues.length === 0;
   const ok = issues.length === 0 && !unverified;
   // Missing evidence is never rewritten as success, but it is not a concrete

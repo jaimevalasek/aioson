@@ -455,9 +455,13 @@ async function runDossierCompact({ args = [], options = {}, logger } = {}) {
     if (!result.compacted) {
       log(`Compaction skipped: ${result.reason} (${result.sizeBytes} bytes).`);
     } else {
-      log(`Dossier compacted: ${result.migratedSections.length} section(s) migrated to history.`);
+      const moved = [
+        ...(result.migratedSections.length > 0 ? [`${result.migratedSections.length} section(s) migrated to history`] : []),
+        ...(result.archivedTrailEntries ? [`${result.archivedTrailEntries} Agent Trail entr${result.archivedTrailEntries === 1 ? 'y' : 'ies'} moved to dossier-trail-archive.md`] : [])
+      ];
+      log(`Dossier compacted: ${moved.join('; ')}.`);
       log(`  Active size: ${result.activeSizeBytes} bytes`);
-      log(`  History: ${result.historyPath}`);
+      if (result.migratedSections.length > 0) log(`  History: ${result.historyPath}`);
     }
     return { ok: true, slug, ...result };
   } catch (err) {
