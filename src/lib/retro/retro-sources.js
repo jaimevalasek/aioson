@@ -253,7 +253,11 @@ function readDossierTrail({ rootDir, slug, locations }) {
     if (text === null) continue;
     const sourcePath = relPath(rootDir, full);
     const trailIdx = text.indexOf('## Agent Trail');
-    const region = trailIdx === -1 ? text : text.slice(trailIdx);
+    // The oldest entries the size budget moved to the trail archive come first,
+    // so a FAIL there and its PASS here still make one cycle.
+    const archived = readTextSafe(path.join(path.dirname(full), 'dossier-trail-archive.md'));
+    const archivedIdx = archived === null ? -1 : archived.indexOf('## Agent Trail');
+    const region = `${archivedIdx === -1 ? '' : `${archived.slice(archivedIdx)}\n`}${trailIdx === -1 ? text : text.slice(trailIdx)}`;
     const lines = region.split(/\r?\n/);
 
     // Acha headers de entrada e fatia o corpo entre eles.

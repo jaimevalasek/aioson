@@ -7,8 +7,11 @@ const { isValidSlug } = require('./schema');
 const FEATURES_SUBDIR = 'features';
 const DOSSIER_FILENAME = 'dossier.md';
 const HISTORY_FILENAME = 'dossier-history.md';
+const TRAIL_ARCHIVE_FILENAME = 'dossier-trail-archive.md';
 const MAX_ACTIVE_SIZE = 15000;
 const TARGET_ACTIVE_SIZE = 10000;
+// The newest Agent Trail entries always stay in the dossier, whatever their size.
+const TRAIL_KEEP_ENTRIES = 8;
 
 // Sections whose content can be migrated once the gate they belong to is closed.
 // The ordering reflects which gates close first in MEDIUM flow.
@@ -24,6 +27,10 @@ function dossierPath(contextDir, slug) {
 
 function historyPath(contextDir, slug) {
   return path.join(contextDir, FEATURES_SUBDIR, slug, HISTORY_FILENAME);
+}
+
+function trailArchivePath(contextDir, slug) {
+  return path.join(contextDir, FEATURES_SUBDIR, slug, TRAIL_ARCHIVE_FILENAME);
 }
 
 function splitSections(raw) {
@@ -70,6 +77,135 @@ function joinSections(frontmatter, sections) {
   return parts.join('\n');
 }
 
+// ─── Agent Trail archive ─────────────────────────────────────────────────────
+//
+// Every chain agent reads the dossier at session start, and the Agent Trail
+// only ever grew: one real feature's dossier reached 97 KB, almost all trail.
+// Past the size budget, the oldest entries move — verbatim, oldest first — to
+// dossier-trail-archive.md beside it; the newest TRAIL_KEEP_ENTRIES always
+// stay. One pointer line stays where they were, with how many moved, their
+// dates and the phases they name, so an agent looking for an earlier phase's
+// evidence or verdict knows to open the archive.
+
+const TRAIL_POINTER = /^_\((\d+) older Agent Trail entr(?:y|ies)(?:, (\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2}))?, are in \[dossier-trail-archive\.md\]\(dossier-trail-archive\.md\)(?:; phases they name: ([0-9, ]+))?\./;
+const HASH_MARKER = /^<!--\s*sha256:/;
+
+/**
+ * The trail's entries: an add-finding block opens at its hash marker; before the
+ * first marker, a hand-written entry opens at a top-level bullet or a ### line.
+ * Lines that open nothing stay with the entry before them.
+ */
+function splitTrail(lines) {
+  const head = [];
+  const entries = [];
+  let pointer = null;
+  let marked = false;
+  for (const line of lines) {
+    if (TRAIL_POINTER.test(line.trim())) { pointer = line.trim(); continue; }
+    const isMarker = HASH_MARKER.test(line);
+    if (isMarker) marked = true;
+    const opens = isMarker || (!marked && (/^[-*]\s+\S/.test(line) || /^###\s/.test(line)));
+    if (opens) entries.push([line]);
+    else if (entries.length > 0) entries[entries.length - 1].push(line);
+    else head.push(line);
+  }
+  return { head, entries, pointer };
+}
+
+function entryText(entry) {
+  return entry.join('\n').replace(/\s+$/, '');
+}
+
+function phasesNamed(text) {
+  const phases = new Set();
+  for (const match of String(text).matchAll(/\b(?:phase|fase|etapa)\s+(\d+)\b/gi)) phases.add(Number(match[1]));
+  return phases;
+}
+
+function datesOf(text) {
+  return [...String(text).matchAll(/\b(\d{4}-\d{2}-\d{2})/g)].map((match) => match[1]).sort();
+}
+
+function pointerLine(previous, movedText) {
+  const old = previous ? TRAIL_POINTER.exec(previous) : null;
+  const count = (old ? Number(old[1]) : 0) + movedText.count;
+  const dates = [...(old && old[2] ? [old[2], old[3]] : []), ...datesOf(movedText.text)].sort();
+  const phases = new Set([...(old && old[4] ? old[4].split(',').map((item) => Number(item.trim())) : []), ...phasesNamed(movedText.text)]);
+  const span = dates.length > 0 ? `, ${dates[0]} to ${dates[dates.length - 1]}` : '';
+  const named = phases.size > 0 ? `; phases they name: ${[...phases].sort((a, b) => a - b).join(', ')}` : '';
+  return `_(${count} older Agent Trail ${count === 1 ? 'entry' : 'entries'}${span}, are in [dossier-trail-archive.md](dossier-trail-archive.md)${named}. Read it for an earlier phase's evidence, verdict or decision.)_`;
+}
+
+/**
+ * The dossier text with its oldest trail entries cut until it fits
+ * TARGET_ACTIVE_SIZE (keeping the newest TRAIL_KEEP_ENTRIES), and the cut text;
+ * null when nothing can move.
+ */
+function planTrailArchive(raw) {
+  const lines = raw.split('\n');
+  const start = lines.findIndex((line) => line.trimEnd() === '## Agent Trail');
+  if (start === -1) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (/^## /.test(lines[i])) { end = i; break; }
+  }
+  const { head, entries, pointer } = splitTrail(lines.slice(start + 1, end));
+  if (entries.length <= TRAIL_KEEP_ENTRIES) return null;
+
+  let size = Buffer.byteLength(raw, 'utf8');
+  let cut = 0;
+  while (cut < entries.length - TRAIL_KEEP_ENTRIES && size > TARGET_ACTIVE_SIZE) {
+    size -= Buffer.byteLength(`${entries[cut].join('\n')}\n`, 'utf8');
+    cut += 1;
+  }
+  if (cut === 0) return null;
+
+  const moved = entries.slice(0, cut).map(entryText);
+  const movedText = { count: cut, text: moved.join('\n') };
+  const headText = head.join('\n').replace(/\s+$/, '');
+  const trail = [
+    ...(headText ? [headText, ''] : ['']),
+    pointerLine(pointer, movedText),
+    '',
+    ...entries.slice(cut).map(entryText).flatMap((text) => [text, '']),
+  ];
+  const rebuilt = [...lines.slice(0, start + 1), ...trail, ...lines.slice(end)].join('\n');
+  return { raw: rebuilt, moved, count: cut };
+}
+
+/**
+ * Moves the oldest Agent Trail entries to dossier-trail-archive.md once the
+ * dossier passes MAX_ACTIVE_SIZE (or always with `force`). The archive is
+ * append-only and keeps its own `## Agent Trail` heading, so every trail reader
+ * (retro, add-finding idempotency) reads it the same way.
+ */
+async function archiveTrail({ slug, contextDir, force = false } = {}) {
+  if (!isValidSlug(slug)) return { archived: false, reason: 'invalid_slug' };
+  const p = dossierPath(contextDir, slug);
+  let raw;
+  try { raw = await fs.readFile(p, 'utf8'); } catch { return { archived: false, reason: 'missing' }; }
+  if (!force && Buffer.byteLength(raw, 'utf8') <= MAX_ACTIVE_SIZE) return { archived: false, reason: 'size_ok' };
+  const plan = planTrailArchive(raw);
+  if (!plan) return { archived: false, reason: 'nothing_to_archive', sizeBytes: Buffer.byteLength(raw, 'utf8') };
+
+  const ap = trailArchivePath(contextDir, slug);
+  let archive;
+  try {
+    archive = await fs.readFile(ap, 'utf8');
+  } catch {
+    archive = `# Agent Trail archive — ${slug}\n\nOlder entries moved from dossier.md as it grew, verbatim, oldest first.\n\n## Agent Trail\n`;
+  }
+  const appended = `${archive.replace(/\s+$/, '')}\n\n${plan.moved.join('\n\n')}\n`;
+  // Archive first: a crash between the two writes duplicates entries, never loses them.
+  await fs.writeFile(ap, appended, 'utf8');
+  await fs.writeFile(p, plan.raw, 'utf8');
+  return { archived: true, entries: plan.count, activeSizeBytes: Buffer.byteLength(plan.raw, 'utf8'), archivePath: ap };
+}
+
+async function readTrailArchive({ slug, contextDir } = {}) {
+  try { return await fs.readFile(trailArchivePath(contextDir, slug), 'utf8'); } catch { return ''; }
+}
+
 async function compact({ slug, contextDir, now = () => new Date(), force = false } = {}) {
   if (!isValidSlug(slug)) {
     const err = new Error(`invalid slug: ${JSON.stringify(slug)}`);
@@ -99,7 +235,7 @@ async function compact({ slug, contextDir, now = () => new Date(), force = false
   const hp = historyPath(contextDir, slug);
 
   // Load or initialize history
-  let historyContent = '';
+  let historyContent;
   try {
     historyContent = await fs.readFile(hp, 'utf8');
   } catch {
@@ -130,6 +266,9 @@ async function compact({ slug, contextDir, now = () => new Date(), force = false
   }
 
   if (migratedHeadings.length === 0) {
+    // The sections that close with their gates are gone: the trail is what grew.
+    const trail = await archiveTrail({ slug, contextDir, force });
+    if (trail.archived) return { compacted: true, migratedSections: [], archivedTrailEntries: trail.entries, activeSizeBytes: trail.activeSizeBytes, historyPath: hp };
     return { compacted: false, reason: 'nothing_migratable', sizeBytes: Buffer.byteLength(raw, 'utf8') };
   }
 
@@ -137,11 +276,13 @@ async function compact({ slug, contextDir, now = () => new Date(), force = false
   await fs.writeFile(p, newRaw, 'utf8');
   // History is append-only
   await fs.writeFile(hp, historyContent, 'utf8');
+  const trail = await archiveTrail({ slug, contextDir });
 
   return {
     compacted: true,
     migratedSections: migratedHeadings,
-    activeSizeBytes: Buffer.byteLength(newRaw, 'utf8'),
+    ...(trail.archived ? { archivedTrailEntries: trail.entries } : {}),
+    activeSizeBytes: trail.archived ? trail.activeSizeBytes : Buffer.byteLength(newRaw, 'utf8'),
     historyPath: hp
   };
 }
@@ -156,4 +297,16 @@ async function shouldCompact({ slug, contextDir } = {}) {
   }
 }
 
-module.exports = { compact, shouldCompact, MAX_ACTIVE_SIZE, TARGET_ACTIVE_SIZE, dossierPath, historyPath };
+module.exports = {
+  compact,
+  shouldCompact,
+  archiveTrail,
+  readTrailArchive,
+  planTrailArchive,
+  MAX_ACTIVE_SIZE,
+  TARGET_ACTIVE_SIZE,
+  TRAIL_KEEP_ENTRIES,
+  dossierPath,
+  historyPath,
+  trailArchivePath
+};

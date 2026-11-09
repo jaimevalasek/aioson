@@ -346,8 +346,10 @@ async function addFinding({ slug, contextDir, agent, section, content, now = () 
   const hash = crypto.createHash('sha256').update(`${section}\0${safeContent}`).digest('hex');
   const hashMarker = `<!-- sha256:${hash} -->`;
 
-  // Idempotency: if hash already present, no-op silently
-  if (raw.includes(hashMarker)) {
+  // Idempotency: if hash already present, no-op silently — in the dossier or
+  // among the oldest entries the size budget moved to the trail archive.
+  const compactor = require('./dossier-compact');
+  if (raw.includes(hashMarker) || (await compactor.readTrailArchive({ slug, contextDir })).includes(hashMarker)) {
     return { added: false, hash };
   }
 
@@ -385,7 +387,17 @@ async function addFinding({ slug, contextDir, agent, section, content, now = () 
   const rebuilt = [...before, '', ...after].join('\n');
   await fs.writeFile(filePath, rebuilt, 'utf8');
 
-  return { added: true, hash };
+  // Every chain agent reads the dossier at session start: past the size budget
+  // the oldest trail entries move to the archive (dossier-compact.js). Best-effort.
+  let archived = null;
+  if (Buffer.byteLength(rebuilt, 'utf8') > compactor.MAX_ACTIVE_SIZE) {
+    try {
+      const result = await compactor.archiveTrail({ slug, contextDir });
+      if (result.archived) archived = { entries: result.entries, active_bytes: result.activeSizeBytes };
+    } catch { /* the finding is recorded; archiving retries on the next write */ }
+  }
+
+  return { added: true, hash, ...(archived ? { archived } : {}) };
 }
 
 module.exports = {
