@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.80.0] - 2026-11-09
+
+### Added
+
+- **A session starts at one compact digest instead of four full reads.** Before its first answer every session read `project.context.md` in full, ran `context:validate`, read the learnings index and ran the 40-title operator-memory recall: 15.2 KB on a real project. `aioson context:digest . --task="<task words>" --json` is one line with the same validator's verdict, the fields and section names of the project context, the rule count (subfolders of `.aioson/rules/` included), the learnings that share the most words with the task as `[title](path)` alone, the operator-memory titles that match plus the eight ranked first, the active feature, and the command that opens each full version. Measured on a real project: 9,928 B down to 1,744-2,600 B. The gateway block in `CLAUDE.md`, `AGENTS.md` and `OPENCODE.md` runs it first, and asks for a few task words, never the request verbatim: inside double quotes a shell still runs the backticks and `$( )` a pasted request may hold.
+- **Every plan phase ends at `phase:next`, and `session:kickoff` prints the line that starts the next conversation.** A session that chained every phase and then QA in one conversation re-sent 340-590k tokens per call by the last phase. `phase:next` records the decisions the phase left off disk (`--note`), returns the next phase and a binding `directive` for the `phase_restart` policy: `auto` inside AIOSON Play (the Play continues, in a new conversation or in the same one while its context is small), `suggest` elsewhere, `off` for the old behavior. Outside the Play `auto` behaves as `suggest` (`downgrade_reason: not_in_play`). The step from the last phase to QA is a stage handoff, so Autopilot decides it: with Autopilot off no event is recorded and DEV stops with the QA kickoff for the person. A plan with a phase heading no phase tool reads (`## Phase 2 (API)`) is refused by name, and the plan contract reports `plan_phase_heading_unparsed`.
+- **A PRD or a plan that outgrows what every later agent re-reads gets a size advisory.** Real ones reached 65-86 KB (PRD) and 73-134 KB (plan) with no check saying a word. `verify:artifact --kind=prd` and Gate C add an advisory past 48 KB for a PRD and 64 KB for a plan, with the three largest sections and a directed rewrite. Size never proves a document wrong: it stays a warning under `--strict`, and at Gate C, where the PRD is approved and bound to its review by hash, the advice is to read it by section and report the size, not to edit it.
+- **`squad:gateway` writes a squad's gateway entry as one line, rendered from its manifest.** Hand-written entries cost 0.6 to 1.9 KB a squad in every session. `aioson update` rewrites legacy entries in place; prose the entry held moves to the package's `docs/gateway-note.md`. Only a bullet whose label has up to four words counts as a pointer to a role file, so a sentence the author wrote is kept.
+
+### Changed
+
+- **The phase capsule carries the decisions earlier phases left off disk.** `phase:next` wrote them to the dossier Agent Trail, which a phase that starts from its capsule never opens. `dev:resume-data --capsule` now prints them under "Decisions earlier phases left off disk", read from the dossier and from its trail archive.
+- **`@dev` starts each phase from its capsule.** The kernel used to read the briefing, the Sheldon review, the PRD and the plan in full before the first edit: 190 to 640 KB of tool results on real features. The full sources are opened for a conflict, a capsule error or a detail the capsule omits. `memory-index.md` is no longer forced into every dev brief.
+- **The guard says a project rule once per agent, not before every write.** A session that wrote twenty form files read the form rule twenty times. The rule is said once, and again after a compaction, an hour later, or when the rule file changes. A subagent shares its parent's session and hears the rule once of its own.
+- **Past its size budget, the oldest Agent Trail entries of a dossier move to `dossier-trail-archive.md`.** Real dossiers reached 30, 48 and 97 KB, read in full by every chain agent; three of them measured 97 to 20 KB, 48 to 11 KB and 30 to 13 KB. `dossier:compact` names what it moved.
+- **`context:brief` prints a compact summary by default; `--full` prints what it printed before.** 7.4-8.8 KB down to 4.2-4.8 KB per brief on two real projects; `--json` is unchanged.
+- **The five chain kernels keep what every activation needs.** Conditional procedure moved to routed docs behind one-line triggers: 72,948 to 65,163 bytes over one activation of each, with every hard constraint and gate command pinned by a test. `phase-loop.md` went from 6,639 to 4,756 B.
+- **`op:list --json --titles-only` is one `slug: title` map.** 10,317 B down to 5,026 B on a 544-decision store.
+
+### Fixed
+
+- **Parallel writers to a dossier each keep their entry.** Two `dossier:add-finding` calls at the same moment lost one: the read, the append and the write were not under one lock, and a lockfile created but not yet written read as stale. The whole read-modify-write runs under the feature's lock, the lockfile is created with its payload in one step, and writes are atomic.
+- **`context:brief --full .` keeps the path.** The parser read `.` as the value of `--full`.
+- **A workspace copy of a template doc can no longer stay behind its template unnoticed.** `execution-lanes.md` did for one release; a test now compares every workspace copy under `.aioson/docs` and `.aioson/agents` with its template. Two sentences the kernel diet had dropped are back: the browser-script fallback in `phase-loop.md` and the visual `identity` binding in `prd-contract.md`.
+
 ## [1.79.0] - 2026-11-08
 
 ### Added
