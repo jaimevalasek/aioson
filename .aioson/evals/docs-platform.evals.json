@@ -16,6 +16,24 @@
       "absent": [{ "path": ".aioson/docs/gateway/agent-routing.md", "in": "selected" }]
     },
     {
+      "name": "the session digest leaves the full project context binding for an activated agent",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "switch the project's test runner and update the stack notes",
+      "expect": [{ "path": ".aioson/context/project.context.md", "in": "must_load" }],
+      "absent": [{ "path": ".aioson/docs/gateway/agent-routing.md", "in": "selected" }]
+    },
+    {
+      "name": "agentless routing still reads the full project context and the routing kernel",
+      "agent": "neo",
+      "mode": "planning",
+      "task": "no agent was named; which lane fits this concrete request to add a CSV export button",
+      "expect": [
+        { "path": ".aioson/context/project.context.md", "in": "must_load" },
+        { "path": ".aioson/docs/gateway/agent-routing.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "diagnosing a legacy Codex AGENTS regression reaches the archived entrypoint",
       "agent": "dev",
       "mode": "planning",

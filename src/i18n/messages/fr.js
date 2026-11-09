@@ -92,6 +92,7 @@ module.exports = {
       discovered: '{packs} paquet(s) de sources et {loose} fichier(s) isolé(s) trouvés.'
     },
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=fr]',
+    help_context_digest: 'aioson context:digest [path] [--task="<request>"] [--json] [--locale=fr]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<texte>] [--module=<module-ou-dossier>] [--max-files=8] [--json] [--locale=fr]',
     help_context_search:

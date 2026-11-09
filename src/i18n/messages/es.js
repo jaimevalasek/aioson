@@ -92,6 +92,7 @@ module.exports = {
       discovered: 'Se encontraron {packs} paquete(s) de fuentes y {loose} archivo(s) suelto(s).'
     },
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=es]',
+    help_context_digest: 'aioson context:digest [path] [--task="<request>"] [--json] [--locale=es]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-o-carpeta>] [--max-files=8] [--json] [--locale=es]',
     help_context_search:

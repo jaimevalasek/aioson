@@ -19,7 +19,7 @@ const { installTemplate } = require('../src/installer');
 const PROJECT_KNOWLEDGE_DIRECTIVE = [
   '## Project knowledge',
   '',
-  'Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.'
+  'Digest `learnings` = matching `.aioson/learnings/INDEX.md` lines; read the index when the task or files change. Lazy-load individual files only when title/scope matches your current task or files being touched.'
 ].join('\n');
 
 function normalizeNewlines(text) {

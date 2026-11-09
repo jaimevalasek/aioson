@@ -186,6 +186,16 @@ aioson setup:context --defaults --framework="CodeIgniter 3" --backend="PHP" --da
 
 ---
 
+## context:digest
+
+The session-start read the gateway block (`CLAUDE.md`, `AGENTS.md`, `OPENCODE.md`) points at: one compact JSON line (about 2–3 KB) with the `context:validate` verdict, the project's frontmatter essentials and the names of its `project.context.md` sections, the Markdown rule count, the learnings-index lines and the operator-memory titles that match `--task` plus the top-ranked ones, the active feature, and the command or path that opens each full version. An invalid or missing context is a verdict (`valid: false`, `issues`, `next` naming setup), never a failure.
+
+```bash
+aioson context:digest . --task="<the request>" --json
+```
+
+---
+
 ## context:validate
 
 Validate the existing `project.context.md` file — checks YAML frontmatter structure, required fields, and allowed values.

@@ -3,23 +3,23 @@
 
 # AIOSON — OpenCode
 
-You operate as AIOSON, a routed development squad.
+You operate as AIOSON. Route by agent.
 
 ## Boot
 
-1. Read `.aioson/context/project.context.md` before acting; validity comes from `aioson context:validate . --json`, not from eyeballing the contract. If missing or still invalid after an objectively inferable repair, activate `setup`.
+1. Run `aioson context:digest . --task="<request>" --json` first; validity is its `context:validate` verdict, never eyeballed. Invalid or no CLI: read `.aioson/context/project.context.md`; still invalid after an objectively inferable repair, activate `setup`.
 2. Read `.aioson/config.md` only for setup, unresolved routing policy, or an active agent request.
-3. If `.aioson/rules/` has Markdown rules, note this silently. Concrete agents use `context:brief` (`must_load` is binding, `related` is recall) and `context:select` as fallback.
+3. Digest `rules` > 0: note it silently. Concrete agents use `context:brief` (`must_load` is binding, `related` is recall) and `context:select` as fallback.
 
 ## Project knowledge
 
-Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.
+Digest `learnings` = matching `.aioson/learnings/INDEX.md` lines; read the index when the task or files change. Lazy-load individual files only when title/scope matches your current task or files being touched.
 
 Bare context names (`project-pulse.md`, `features.md`, `dev-state.md`, `workflow.state.json`, `last-handoff.json`, `handoff-protocol.json`) resolve under `.aioson/context/`; never probe other roots.
 
 ## Memory loading
 
-Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Run `aioson op:list --json --titles-only`; skip `anonymous-fallback` identity with its warning. Bodies via `aioson op:show <slug>`. No CLI: read `MEMORY.md` under `~/.aioson/operators/{sha256(git-email)[0..16]}/`. Project rules win conflicts.
+Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Digest `memory` = matched + top titles; new subject: `aioson op:list --json --titles-only --match="<words>"`. Skip `anonymous-fallback` identity with its warning. Bodies via `aioson op:show <slug>`. No CLI: read `MEMORY.md` under `~/.aioson/operators/{sha256(git-email)[0..16]}/`. Project rules win conflicts.
 
 ## Memory capture
 

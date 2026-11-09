@@ -23,6 +23,7 @@ const { runDoctorCommand } = lazy(() => { const { runDoctorCommand } = require('
 const { runI18nAdd } = lazy(() => { const { runI18nAdd } = require('./commands/i18n-add'); return { runI18nAdd }; });
 const { runAgentsList, runAgentPrompt } = lazy(() => { const { runAgentsList, runAgentPrompt } = require('./commands/agents'); return { runAgentsList, runAgentPrompt }; });
 const { runContextValidate } = lazy(() => { const { runContextValidate } = require('./commands/context-validate'); return { runContextValidate }; });
+const { runContextDigest } = lazy(() => { const { runContextDigest } = require('./commands/context-digest'); return { runContextDigest }; });
 const { runContextPack } = lazy(() => { const { runContextPack } = require('./commands/context-pack'); return { runContextPack }; });
 const { runContextSelect } = lazy(() => { const { runContextSelect } = require('./commands/context-select'); return { runContextSelect }; });
 const { runContextBrief } = lazy(() => { const { runContextBrief } = require('./commands/context-brief'); return { runContextBrief }; });
@@ -337,6 +338,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'doctor',
   'context:validate',
   'context-validate',
+  'context:digest',
+  'context-digest',
   'context:pack',
   'context-pack',
   'context:select',
@@ -1163,7 +1166,7 @@ const HELP_KEYS = [
   'cli.help_doc_new', 'cli.help_decide', 'cli.help_observe', 'cli.help_observation_list',
   'cli.help_observation_resolve', 'cli.help_op_list', 'cli.help_op_show', 'cli.help_op_capture', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
   'cli.help_briefing_approve', 'cli.help_briefing_unapprove', 'cli.help_briefing_review', 'cli.help_briefing_apply_feedback',
-  'cli.help_briefing_feedback', 'cli.help_briefing_migrate_lineage', 'cli.help_exploration', 'cli.help_context_validate',
+  'cli.help_briefing_feedback', 'cli.help_briefing_migrate_lineage', 'cli.help_exploration', 'cli.help_context_validate', 'cli.help_context_digest',
   'cli.help_context_pack', 'cli.help_context_search', 'cli.help_context_select', 'cli.help_context_brief',
   'cli.help_context_guard', 'cli.help_context_evals', 'cli.help_context_usage', 'cli.help_context_load',
   'cli.help_chain_audit', 'cli.help_chain_list', 'cli.help_chain_claim', 'cli.help_chain_resolve',
@@ -1463,6 +1466,8 @@ async function main() {
       result = await runAgentPrompt({ args, options, logger: commandLogger, t });
     } else if (command === 'context:validate' || command === 'context-validate') {
       result = await runContextValidate({ args, options, logger: commandLogger, t });
+    } else if (command === 'context:digest' || command === 'context-digest') {
+      result = await runContextDigest({ args, options, logger: commandLogger });
     } else if (command === 'context:pack' || command === 'context-pack') {
       result = await runContextPack({ args, options, logger: commandLogger, t });
     } else if (command === 'context:select' || command === 'context-select') {
@@ -2285,8 +2290,9 @@ async function main() {
     }
 
     if (jsonMode && commandSupportsJson(command)) {
-      // The session-start recall (`op:list --titles-only`) is read on every agent activation: compact.
-      const compact = (command === 'op:list' || command === 'op-list') && Boolean(options['titles-only']);
+      // The session-start reads (`context:digest`, `op:list --titles-only`) are paid on every session: compact.
+      const compact = ((command === 'op:list' || command === 'op-list') && Boolean(options['titles-only']))
+        || command === 'context:digest' || command === 'context-digest';
       writeJson(result || { ok: true }, { compact });
     }
 
