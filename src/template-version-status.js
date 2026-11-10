@@ -5,6 +5,10 @@ const path = require('node:path');
 const { getCliVersionSync } = require('./version');
 
 const INSTALL_RELATIVE_PATH = '.aioson/install.json';
+// Where this copy of the CLI lives. Several copies coexist on one machine (a
+// global install, an `npm link`, the one a desktop host ships in its installer),
+// and the path is what tells a stale copy apart.
+const CLI_ROOT = path.join(__dirname, '..');
 
 function parseSemver(value) {
   const match = String(value || '').trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
@@ -57,20 +61,32 @@ async function inspectTemplateVersion(targetDir, options = {}) {
   }
 
   const outdated = comparison < 0;
+  const ahead = comparison > 0;
   return {
-    status: outdated ? 'outdated' : comparison > 0 ? 'ahead' : 'current',
+    status: outdated ? 'outdated' : ahead ? 'ahead' : 'current',
     outdated,
     cli_version: cliVersion,
     template_version: templateVersion,
     path: INSTALL_RELATIVE_PATH,
     warning: outdated
       ? `[AIOSON template warning] Project routing template ${templateVersion} is older than CLI ${cliVersion}. Run \`aioson update .\`; until then, do not bind a new request to the active workflow without \`--expect-feature=<slug>\`.`
-      : null
+      : ahead
+        ? aheadWarning(templateVersion, cliVersion, options.cliRoot || CLI_ROOT)
+        : null
   };
+}
+
+// A newer CLI updated the project and an older copy is running now: the
+// project's agents name commands this copy may not have, and `aioson update`
+// from it is refused as a downgrade. Silent before, so the skew surfaced only
+// as an "unknown command" mid-session.
+function aheadWarning(templateVersion, cliVersion, cliRoot) {
+  return `[AIOSON template warning] Project template ${templateVersion} is newer than this CLI ${cliVersion} (${cliRoot}); commands the project's agents name may not exist in it. Update this copy (\`npm install -g @jaimevalasek/aioson@latest\`, or the app that ships it) or run the CLI that updated the project.`;
 }
 
 module.exports = {
   INSTALL_RELATIVE_PATH,
+  CLI_ROOT,
   parseSemver,
   compareSemver,
   inspectTemplateVersion

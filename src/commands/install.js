@@ -4,14 +4,42 @@
 // inner runHooksInstall — the real thing mutates machine-global settings.
 const hooksInstall = require('./hooks-install');
 const { detectFramework } = require('../detector');
-const { installTemplate, readInstallProfile, readInstalledTemplateVersion } = require('../installer');
-const { compareTemplateVersions } = require('../updater');
+const { installTemplate, readInstallProfile, readInstalledTemplateVersion, profileWithTool } = require('../installer');
+const { findDowngrade } = require('../updater');
 const { applyAgentLocale, normalizeInteractionLanguage } = require('../locales');
 const { resolvePromptTool } = require('../prompt-tool');
 const { runInstallWizard } = require('../install-wizard');
 const { renderRevealAnimation, renderInstallSummary, renderProgress } = require('../install-animation');
 const { getCliVersion } = require('../version');
 const { resolveTargetDir } = require('../lib/project-root');
+const { defaultProjectTool } = require('../lib/project-tool');
+
+// The update downgrade guard, for every command that overwrites managed files
+// (install --force/--reconfigure, init --force): the template copy comes from
+// the running CLI's own bundle, so a stale CLI would replace newer files.
+// --allow-downgrade is the one deliberate escape hatch.
+async function refuseTemplateDowngrade(targetDir, options, t) {
+  if (options['allow-downgrade']) return;
+  const downgrade = await findDowngrade(targetDir);
+  if (downgrade) throw new Error(t('update.downgrade_blocked', downgrade));
+}
+
+// What an install run says after the summary: the rollback copies an
+// overwrite kept, and — when it left older managed files in place — that the
+// project's template version did not move, so the "template is outdated"
+// warning preflight and workflow:next print is still true.
+async function reportInstallOutcome({ targetDir, result, logger, t, extraBackups = null }) {
+  if (result.dryRun) return;
+  // The language step backs up edited prompts on its own; one count for both.
+  const backups = result.backedUp.length + (Array.isArray(extraBackups) ? extraBackups.length : 0);
+  if (backups > 0) {
+    logger.log(t('update.backups_created', { count: backups }));
+  }
+  if (!result.templateStampKept) return;
+  const cliVersion = await getCliVersion();
+  if (await readInstalledTemplateVersion(targetDir) === cliVersion) return;
+  logger.log(t('install.template_kept', { count: result.keptManagedFiles.length, cliVersion }));
+}
 
 async function runInstall({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
@@ -20,7 +48,6 @@ async function runInstall({ args, options, logger, t }) {
   const noInteractive = Boolean(options['no-interactive']);
   const reconfigure = Boolean(options.reconfigure);
   const requestedLanguage = options.lang || options.language;
-  const promptTool = resolvePromptTool(options.tool);
 
   const detection = await detectFramework(targetDir);
   if (detection.installed) {
@@ -89,21 +116,14 @@ async function runInstall({ args, options, logger, t }) {
     logger.log(t('install.fallback_no_saved_profile'));
   }
 
+  // An explicit --tool joins whichever profile won above (installTemplate
+  // applies the same rule); here it is what the summary and the result show.
+  installProfile = profileWithTool(installProfile, options.tool);
+
   // When reconfigure, we need overwrite=true so changed profile is reflected
   const overwrite = force || reconfigure;
 
-  // Same downgrade guard as update: with overwrite on, a stale global CLI
-  // would replace newer managed files — and install mode takes no backups.
-  if (overwrite && !options['allow-downgrade']) {
-    const projectVersion = await readInstalledTemplateVersion(targetDir);
-    if (projectVersion) {
-      const cliVersion = await getCliVersion();
-      const cmp = compareTemplateVersions(cliVersion, projectVersion);
-      if (cmp !== null && cmp < 0) {
-        throw new Error(t('update.downgrade_blocked', { cliVersion, projectVersion }));
-      }
-    }
-  }
+  if (overwrite) await refuseTemplateDowngrade(targetDir, options, t);
 
   const result = await installTemplate(targetDir, {
     overwrite,
@@ -129,6 +149,10 @@ async function runInstall({ args, options, logger, t }) {
       logger.log(t('locale_apply.applied', { locale: localeApply.locale }));
     }
   }
+
+  // The tool this project runs, once install recorded it: an install with a
+  // saved Claude profile and no --tool still pointed at `--tool=codex`.
+  const promptTool = resolvePromptTool(options.tool || defaultProjectTool(targetDir));
 
   // Reveal animation + summary (TTY only, not dry-run)
   if (isTTY && !dryRun) {
@@ -158,10 +182,12 @@ async function runInstall({ args, options, logger, t }) {
     logger.log(t('install.step_agent_prompt', { tool: promptTool }));
   }
 
+  await reportInstallOutcome({ targetDir, result, logger, t, extraBackups: localeApply && localeApply.backedUp });
+
   if (result.isExistingProject) {
     logger.log('');
     logger.log(t('install.existing_project_detected', { count: result.projectFileCount }));
-    logger.log(t('install.existing_project_scan_hint'));
+    logger.log(t('install.existing_project_scan_hint', { folder: result.scanFolder || '<folder>' }));
   }
 
   // Same default as init: the project only has its full enforcement mesh once
@@ -180,5 +206,7 @@ async function runInstall({ args, options, logger, t }) {
 }
 
 module.exports = {
-  runInstall
+  runInstall,
+  refuseTemplateDowngrade,
+  reportInstallOutcome
 };

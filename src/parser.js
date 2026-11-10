@@ -140,7 +140,10 @@ function parseArgv(argv) {
       if (eqIdx !== -1) {
         const k = stripped.slice(0, eqIdx);
         const v = stripped.slice(eqIdx + 1);
-        options[k] = v;
+        // A switch spelled off must read as off: commands test switches by
+        // truthiness, and the string 'false' is truthy — `--dry-run=false`
+        // turned dry-run ON and `--allow-downgrade=false` let a downgrade through.
+        options[k] = BOOLEAN_FLAGS.has(k) && v.trim().toLowerCase() === 'false' ? false : v;
         continue;
       }
       const k = stripped;

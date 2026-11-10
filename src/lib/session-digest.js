@@ -18,6 +18,7 @@ const path = require('node:path');
 const { validateProjectContextFile } = require('../context');
 const { foldText } = require('../operator-memory/project-scope');
 const { STOPWORDS } = require('../operator-memory/loader');
+const { inspectTemplateVersion } = require('../template-version-status');
 
 // The frontmatter fields kernels and routing read; the rest stays in the file.
 const ESSENTIAL_FIELDS = [
@@ -160,6 +161,15 @@ async function activeFeature(targetDir) {
   }
 }
 
+// Only the skew a session cannot see otherwise: an older CLI driving a project
+// a newer one updated, whose agents then name commands this CLI lacks. An
+// outdated template is workflow:next's warning — after every release that is
+// most projects, not worth bytes at every session start.
+async function templateAhead(targetDir) {
+  const status = await inspectTemplateVersion(targetDir);
+  return status.status === 'ahead' ? status.warning : null;
+}
+
 async function buildSessionDigest(targetDir, { task = '', env = process.env } = {}) {
   const words = taskWords(task);
   const validation = await validationPart(targetDir);
@@ -167,9 +177,11 @@ async function buildSessionDigest(targetDir, { task = '', env = process.env } = 
   const memory = await memoryPart(targetDir, task, env);
   const feature = await activeFeature(targetDir);
   const rules = rulesCount(path.join(targetDir, '.aioson', 'rules'));
+  const template = await templateAhead(targetDir);
   return {
     ok: true,
     ...validation,
+    ...(template ? { template } : {}),
     ...(rules > 0 ? { rules } : {}),
     ...(learnings ? { learnings } : {}),
     memory,

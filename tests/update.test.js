@@ -318,6 +318,93 @@ test('update proceeds when template_version is absent or unparseable', async () 
   assert.equal(result.ok, true, 'unknown project version must not block the update');
 });
 
+test('a fresh clone (no install.json) still refuses a CLI older than the committed project context', async () => {
+  // install.json is gitignored: every clone and CI checkout lacked the stamp,
+  // the guard switched off, and an older CLI rewrote the committed agents.
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+  await fs.rm(path.join(dir, '.aioson/install.json'));
+  const contextPath = path.join(dir, '.aioson/context/project.context.md');
+  await fs.mkdir(path.dirname(contextPath), { recursive: true });
+  await fs.writeFile(contextPath, '---\nproject_name: "x"\naioson_version: "999.0.0"\n---\n', 'utf8');
+
+  const { t } = createTranslator('en');
+  await assert.rejects(
+    () => runUpdate({ args: [dir], options: { 'no-hooks': true }, logger: createQuietLogger(), t }),
+    (err) => {
+      assert.match(err.message, /AIOSON 999\.0\.0 \(\.aioson\/context\/project\.context\.md\)/);
+      assert.equal(err.jsonCode, 'downgrade_blocked');
+      assert.equal(err.jsonDetails.project_version, '999.0.0');
+      return true;
+    }
+  );
+});
+
+test('the refusal names the running copy of the CLI, and a `v`-prefixed stamp is still a version', async () => {
+  // Several copies of the CLI coexist (global, npm link, an app's bundled
+  // copy); "update the CLI" meant nothing to someone whose global was current.
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+  await stampTemplateVersion(dir, 'v999.0.0');
+  const { t } = createTranslator('en');
+  const repoRoot = path.join(__dirname, '..');
+  await assert.rejects(
+    () => runUpdate({ args: [dir], options: { 'no-hooks': true }, logger: createQuietLogger(), t }),
+    (err) => {
+      assert.ok(err.message.includes(`(${repoRoot})`), err.message);
+      assert.equal(err.jsonDetails.cli_root, repoRoot);
+      assert.equal(err.jsonDetails.project_version_source, '.aioson/install.json');
+      return true;
+    }
+  );
+});
+
+test('update reports the version it moved the project from, to, and with which CLI', async () => {
+  const { getCliVersionSync } = require('../src/version');
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+  await stampTemplateVersion(dir, '0.1.0');
+  const lines = [];
+  const { t } = createTranslator('en');
+  const result = await runUpdate({
+    args: [dir],
+    options: { 'no-hooks': true },
+    logger: { log: (line) => lines.push(String(line)), error() {} },
+    t
+  });
+  assert.equal(result.templateVersionBefore, '0.1.0');
+  assert.equal(result.templateVersionAfter, getCliVersionSync());
+  assert.equal(result.cliRoot, path.join(__dirname, '..'));
+  assert.ok(lines.some((line) => /^Template version applied: .+ \(was 0\.1\.0; CLI at .+\)$/.test(line)), lines.join('\n'));
+
+  const preview = [];
+  await runUpdate({
+    args: [dir],
+    options: { 'no-hooks': true, 'dry-run': true },
+    logger: { log: (line) => preview.push(String(line)), error() {} },
+    t
+  });
+  assert.ok(preview.some((line) => line.startsWith('Update preview (dry run, nothing written)')), preview.join('\n'));
+  assert.ok(!preview.some((line) => line.startsWith('Template version applied')), 'a dry run applies nothing');
+});
+
+test('--json: the downgrade refusal is a machine-readable code with both versions', () => {
+  const { spawnSync } = require('node:child_process');
+  const fsSync = require('node:fs');
+  const dir = fsSync.mkdtempSync(path.join(os.tmpdir(), 'aioson-update-json-'));
+  fsSync.mkdirSync(path.join(dir, '.aioson'), { recursive: true });
+  fsSync.writeFileSync(path.join(dir, '.aioson/install.json'), JSON.stringify({ managed_by: 'aioson', template_version: '999.0.0' }));
+  fsSync.mkdirSync(path.join(dir, '.aioson/agents'), { recursive: true });
+  fsSync.writeFileSync(path.join(dir, '.aioson/agents/dev.md'), '# dev\n');
+  const cli = path.join(__dirname, '..', 'bin', 'aioson.js');
+  const res = spawnSync(process.execPath, [cli, 'update', dir, '--json', '--no-hooks'], { encoding: 'utf8' });
+  assert.equal(res.status, 1, res.stderr);
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.error.code, 'downgrade_blocked');
+  assert.equal(out.error.details.project_version, '999.0.0');
+  assert.match(out.error.details.cli_version, /^\d+\.\d+\.\d+/);
+});
+
 test('install --force hits the same downgrade guard (no backups in install mode)', async () => {
   const { runInstall } = require('../src/commands/install');
   const dir = await makeTempDir();

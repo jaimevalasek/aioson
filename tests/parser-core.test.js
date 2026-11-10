@@ -126,6 +126,17 @@ describe('parser.js — parseArgv', () => {
     assert.equal(result.options.json, true);
   });
 
+  it('reads a switch spelled `=false` as off, and leaves values of other flags alone', () => {
+    // 'false' is a truthy string: `--dry-run=false` ran a dry run and
+    // `--allow-downgrade=false` let update downgrade the project.
+    const result = parseArgv(['node', 'aioson', 'update', '.', '--allow-downgrade=false', '--dry-run=FALSE', '--json=true']);
+    assert.equal(result.options['allow-downgrade'], false);
+    assert.equal(result.options['dry-run'], false);
+    assert.equal(result.options.json, 'true');
+    const valued = parseArgv(['node', 'aioson', 'context:brief', '.', '--task=false']);
+    assert.equal(valued.options.task, 'false', 'a value flag keeps its literal value');
+  });
+
   it('preserves `=` characters inside flag values (regression: dev-state-producer)', () => {
     // Pre-fix: `.split('=')` + destructuring chopped after the second `=`,
     // silently truncating any flag value containing `=` (URLs, sentences,

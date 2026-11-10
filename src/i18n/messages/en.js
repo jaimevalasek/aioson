@@ -670,7 +670,9 @@ module.exports = {
     step_agent_prompt: '3. Generate setup prompt for your tool: aioson agent:prompt setup --tool={tool}',
     existing_project_detected: '⚠ Existing project detected ({count} files). Run the scanner before starting:',
     existing_project_scan_hint:
-      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (generates discovery.md + skeleton-system.md; omit --with-llm for local maps only)',
+      '  aioson scan:project . --folder={folder} --with-llm --provider=<provider>   (generates discovery.md + skeleton-system.md; omit --with-llm for local maps only)',
+    template_kept:
+      '⚠ {count} managed file(s) already in the project differ from the AIOSON {cliVersion} template and were kept as they are, so the project template version was not advanced. Run `aioson update .` to refresh them (overwritten files are backed up first).',
     using_saved_profile: 'Using saved install profile from .aioson/install.json.',
     fallback_no_saved_profile: '⚠  No saved profile and no interactive wizard available — fallback to install-all (every template file will be copied).',
     reconfigure_needs_tty: '--reconfigure requires an interactive terminal (blocked by: {reason}). Re-run in a real TTY without --no-interactive/--dry-run.',
@@ -686,9 +688,11 @@ module.exports = {
   },
   update: {
     not_installed: 'No AIOSON installation found in {targetDir}.',
-    downgrade_blocked: 'This project was last updated by AIOSON {projectVersion}, but this CLI is {cliVersion}. Updating now would downgrade the managed files. Update the CLI first (npm install -g @jaimevalasek/aioson) and run update again, or pass --allow-downgrade to proceed anyway.',
+    downgrade_blocked: 'This project is at AIOSON {projectVersion} ({projectVersionSource}), but the CLI running now is {cliVersion} ({cliRoot}). Updating now would downgrade the managed files. Run the newer CLI, or update this copy (npm install -g @jaimevalasek/aioson, or the app that ships it) and run update again, or pass --allow-downgrade to proceed anyway.',
     done_at: 'Update completed at: {targetDir}',
-    template_version: 'Template version applied: {version}',
+    dry_run_done_at: 'Update preview (dry run, nothing written) for: {targetDir}',
+    template_version: 'Template version applied: {version} (was {previous}; CLI at {cliRoot})',
+    template_version_dry_run: 'Template version a real update would apply: {version} (now {previous}; CLI at {cliRoot})',
     files_updated: 'Files updated: {count}',
     backups_created: 'Backups created: {count}',
     profile_renamed: 'i Profile `beginner` renamed to `creator` in project.context.md to better describe the user. Behavior unchanged. Edit the file to switch to `developer` if desired.',
@@ -912,6 +916,8 @@ module.exports = {
   setup: {
     installing: 'Installing AIOSON template...',
     installed: 'Template installed ({count} files).',
+    dry_run_installed: '[dry-run] Template would install {count} files.',
+    dry_run_done: '[dry-run] Nothing was written to {targetDir}.',
     no_framework_detected: 'No framework detected in this directory (greenfield project).',
     framework_detected: 'Detected framework: {framework} (installed={installed})',
     writing_context: 'Writing project context...',
@@ -1000,7 +1006,18 @@ module.exports = {
       'Monorepo detected: Web3 and application framework coexist. Confirm primary framework with user and document structure in Notes.',
     written: 'Context file written: {path}',
     classification_result: 'Classification: {classification} (score={score}/6)',
-    locale_applied: 'Interaction language synchronized: {locale} ({count} agent prompts restored)'
+    locale_applied: 'Interaction language synchronized: {locale} ({count} agent prompts restored)',
+    unchanged: 'Context file unchanged: {path}',
+    context_backed_up: 'Previous context file backed up to: {path}',
+    agents_backed_up: '{count} edited agent prompt(s) backed up to {path}: {agents}',
+    agent_backup_failed: 'Kept {path} as it is: its backup failed ({error})',
+    dry_run_written: '[dry-run] Context file would be written: {path}',
+    dry_run_unchanged: '[dry-run] Context file would stay unchanged: {path}',
+    dry_run_field_change: '  {field}: {from} -> {to}',
+    dry_run_body_change: '  Its body text would change too.',
+    dry_run_context_backed_up: '[dry-run] Its current version would be backed up to: {path}',
+    dry_run_locale_applied: '[dry-run] Interaction language would be synchronized: {locale} ({count} agent prompts would be restored)',
+    dry_run_agents_backed_up: '[dry-run] {count} edited agent prompt(s) would be backed up to {path} first: {agents}'
   },
   locale_apply: {
     applied: 'Interaction language synchronized: {locale}',

@@ -23,10 +23,11 @@ const {
   calculateClassification,
   normalizeBoolean,
   renderProjectContext,
-  writeProjectContext,
+  saveProjectContext,
   renderSquadApiSection
 } = require('../context-writer');
 const { applyAgentLocale } = require('../locales');
+const { nowStamp } = require('../utils');
 const { openRuntimeDb, logAgentEvent } = require('../runtime-store');
 const {
   BACKEND_CHOICES,
@@ -472,9 +473,54 @@ async function askTeamProfile(rl, data, t) {
   );
 }
 
+// Folder a run's agent backups landed in, project-relative with forward
+// slashes, e.g. `.aioson/backups/<stamp>/.aioson/agents`.
+function backupFolderOf(backedUp) {
+  return backedUp.length > 0 ? path.posix.dirname(backedUp[0]) : '';
+}
+
+function agentNames(entries) {
+  return entries.map((entry) => path.posix.basename(entry.target || entry, '.md')).join(', ');
+}
+
+// What setup:context wrote, left alone or backed up — or, under --dry-run,
+// what it would. A user who loses a hand-made section must be told where it
+// went, and a dry-run that prints nothing specific teaches nothing.
+function reportSetupWrites({ contextWrite, localeApplyResult, classification, score, logger, t }) {
+  const dryRun = Boolean(contextWrite.dryRun);
+  const changes = contextWrite.changes || { fields: [], bodyChanged: false };
+  const contextKey = contextWrite.action === 'unchanged' ? 'unchanged' : 'written';
+  logger.log(t(`setup_context.${dryRun ? 'dry_run_' : ''}${contextKey}`, { path: contextWrite.filePath }));
+  if (dryRun) {
+    for (const change of changes.fields) logger.log(t('setup_context.dry_run_field_change', change));
+    if (changes.bodyChanged) logger.log(t('setup_context.dry_run_body_change'));
+  }
+  if (contextWrite.backupPath) {
+    logger.log(t(`setup_context.${dryRun ? 'dry_run_' : ''}context_backed_up`, { path: contextWrite.backupPath }));
+  }
+
+  logger.log(t('setup_context.classification_result', { classification, score }));
+
+  const { locale, written, backedUp, failedBackups } = localeApplyResult;
+  logger.log(t(dryRun ? 'setup_context.dry_run_locale_applied' : 'setup_context.locale_applied', { locale, count: written.length }));
+  if (backedUp.length > 0) {
+    logger.log(t(`setup_context.${dryRun ? 'dry_run_' : ''}agents_backed_up`, {
+      count: backedUp.length,
+      path: backupFolderOf(backedUp),
+      agents: agentNames(backedUp)
+    }));
+  }
+  for (const failure of failedBackups) {
+    logger.log(t('setup_context.agent_backup_failed', { path: failure.path, error: failure.error }));
+  }
+}
+
 async function runSetupContext({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const defaultsMode = Boolean(options.defaults);
+  // --dry-run computes everything a real run would and writes nothing: not the
+  // context file, not an agent prompt, not a backup, not a runtime event.
+  const dryRun = Boolean(options['dry-run']);
 
   const detection = await detectFramework(targetDir);
   const detectedFramework = detection.framework || 'Node';
@@ -651,24 +697,21 @@ async function runSetupContext({ args, options, logger, t }) {
   const content = renderProjectContext(data);
   const squadApiSection = await renderSquadApiSection(targetDir);
   const fullContent = squadApiSection ? content + '\n' + squadApiSection + '\n' : content;
-  const filePath = await writeProjectContext(targetDir, fullContent);
+  // One stamped folder holds whatever this run backs up — the previous context
+  // and any edited agent prompt — and is only created if something is kept.
+  const backupRoot = path.join(targetDir, '.aioson', 'backups', nowStamp());
+  const contextWrite = await saveProjectContext(targetDir, fullContent, { dryRun, backupRoot });
+  const filePath = contextWrite.filePath;
   const localeApplyResult = await applyAgentLocale(targetDir, data.interactionLanguage, {
-    dryRun: false
+    dryRun,
+    backupRoot
   });
 
-  logger.log(t('setup_context.written', { path: filePath }));
-  logger.log(
-    t('setup_context.classification_result', {
-      classification: data.classification,
-      score: classificationResult.score
-    })
-  );
-  logger.log(
-    t('setup_context.locale_applied', {
-      locale: localeApplyResult.locale,
-      count: localeApplyResult.copied.length
-    })
-  );
+  reportSetupWrites({ contextWrite, localeApplyResult, classification: data.classification, score: classificationResult.score, logger, t });
+
+  if (dryRun) {
+    return { ok: true, targetDir, filePath, contextWrite, data, classificationScore: classificationResult.score, localeApplyResult, dryRun };
+  }
 
   try {
     const handle = await openRuntimeDb(targetDir);
@@ -694,9 +737,11 @@ async function runSetupContext({ args, options, logger, t }) {
     ok: true,
     targetDir,
     filePath,
+    contextWrite,
     data,
     classificationScore: classificationResult.score,
-    localeApplyResult
+    localeApplyResult,
+    dryRun
   };
 }
 

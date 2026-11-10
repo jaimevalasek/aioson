@@ -1030,6 +1030,81 @@
         "by": "improve",
         "at": "2026-11-09T20:38:39.021Z"
       }
+    },
+    {
+      "id": "OBS-10d25e",
+      "kind": "defect",
+      "summary": "update never removes template files retired before the agent-rename migration (cypher.md + slash command, genoma.md, hybrid-clone.md, agents/dev.manifest.json, .gemini aios-*.toml, locales/*/agents): hand-maintained legacyIds list; robust …",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-10T18:56:58.977Z",
+      "updated_at": "2026-11-10T18:56:58.977Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-623aaa",
+      "kind": "defect",
+      "summary": "update agent-rename migration prints the briefing-refiner message for any retired agent it removes, deletes without backup, and --dry-run does not preview the removals (src/migrations/agent-rename.js, update.agent_renamed)",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-10T18:56:59.112Z",
+      "updated_at": "2026-11-10T18:56:59.112Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-b32e53",
+      "kind": "defect",
+      "summary": "update/install \"Files updated: N\" counts every template file (485 on a no-op update) instead of the files whose content changed; dry-run also reports backups it would not create",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-10T18:56:59.257Z",
+      "updated_at": "2026-11-10T18:56:59.257Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-e00c24",
+      "kind": "question",
+      "summary": "install with a claude-only profile still writes .codex/ and .opencode/ permission files, and six template .aioson/context/* files plus spec.md.template and seed-example.md are installed nowhere / referenced nowhere: intentional or dead tem…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-10T18:56:59.385Z",
+      "updated_at": "2026-11-10T18:56:59.385Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-fd2a47",
+      "kind": "risk",
+      "summary": "downgrade guard compares x.y.z only: a 1.81.0-rc.1 CLI against a 1.81.0 project, or the same semver from a different git sha (linked dev build vs npm release), is never refused",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-10T18:56:59.512Z",
+      "updated_at": "2026-11-10T18:56:59.512Z",
+      "resolution": null
     }
   ]
 }

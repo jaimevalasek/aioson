@@ -60,9 +60,28 @@ function runGitSync(args) {
  * per commit to know what's installed. Returns null when the package is not a
  * git checkout (a normal npm install) or git is unavailable. Best-effort.
  */
+// A packaged copy can sit inside SOMEONE ELSE's checkout (a project's
+// node_modules, the CLI an app bundles inside its own repo); `git -C` then
+// answers for the enclosing repository and the stamp names a commit of a
+// different codebase. Only a package that IS the top of its repository is a
+// git build of aioson.
+function isOwnCheckout() {
+  const top = runGitSync(['rev-parse', '--show-toplevel']);
+  if (!top) return false;
+  const norm = (p) => {
+    const real = fs.realpathSync.native(p);
+    return process.platform === 'win32' ? real.toLowerCase() : real;
+  };
+  return norm(top) === norm(ROOT_DIR);
+}
+
 function getGitBuildInfoSync() {
   if (cachedGitInfo !== undefined) return cachedGitInfo;
   try {
+    if (!isOwnCheckout()) {
+      cachedGitInfo = null;
+      return cachedGitInfo;
+    }
     const sha = runGitSync(['rev-parse', '--short', 'HEAD']);
     if (!sha) {
       cachedGitInfo = null;

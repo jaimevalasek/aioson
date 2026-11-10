@@ -10,6 +10,7 @@ const { resolvePromptTool } = require('../prompt-tool');
 const { normalizeBoolean } = require('../context-writer');
 const { runInstallWizard } = require('../install-wizard');
 const { resolveTargetDir } = require('../lib/project-root');
+const { defaultProjectTool } = require('../lib/project-tool');
 
 async function ask(rl, question, fallback = '') {
   const suffix = fallback ? ` (${fallback})` : '';
@@ -19,24 +20,34 @@ async function ask(rl, question, fallback = '') {
   return cleaned;
 }
 
+// The hint names the tool this project was installed for (install.json, then
+// the gateway file present), not a fixed codex: `install --tool=claude`
+// followed by setup used to suggest `--tool=codex`.
+function logClosing({ targetDir, dryRun, tool, logger, t }) {
+  logger.log('');
+  if (dryRun) {
+    logger.log(t('setup.dry_run_done', { targetDir }));
+    return;
+  }
+  logger.log(t('setup.done'));
+  logger.log(t('setup.step_agents'));
+  logger.log(t('setup.step_agent_prompt', { tool: resolvePromptTool(tool || defaultProjectTool(targetDir)) }));
+}
+
 async function runSetup({ args, options, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const dryRun = Boolean(options['dry-run']);
   const force = Boolean(options.force);
   const defaultsMode = Boolean(options.defaults);
-  const promptTool = resolvePromptTool(options.tool);
 
-  // Step 1 — detect install profile (wizard if first time in TTY)
+  // Step 1 — install profile. The saved one (.aioson/install.json) always
+  // applies, terminal or not: without a TTY it used to be dropped, and a
+  // claude/development project got AGENTS.md, OPENCODE.md and the squad docs
+  // it had left out. The wizard only runs for a first setup in a TTY.
   const isTTY = process.stdin.isTTY && process.stdout.isTTY;
-  let installProfile = null;
-
-  if (!dryRun && isTTY) {
-    const existingProfile = await readInstallProfile(targetDir);
-    if (!existingProfile) {
-      installProfile = await runInstallWizard({});
-    } else {
-      installProfile = existingProfile;
-    }
+  let installProfile = await readInstallProfile(targetDir);
+  if (!installProfile && !dryRun && isTTY) {
+    installProfile = await runInstallWizard({});
   }
 
   // Step 2 — install template
@@ -45,9 +56,10 @@ async function runSetup({ args, options, logger, t }) {
     overwrite: force,
     dryRun,
     mode: 'install',
-    installProfile
+    installProfile,
+    tool: options.tool
   });
-  logger.log(t('setup.installed', { count: installResult.copied.length }));
+  logger.log(t(dryRun ? 'setup.dry_run_installed' : 'setup.installed', { count: installResult.copied.length }));
 
   // Step 3 — detect framework and system language
   const detection = await detectFramework(targetDir);
@@ -55,8 +67,11 @@ async function runSetup({ args, options, logger, t }) {
   const detectedInstalled = detection.installed;
   const systemLang = detectSystemLanguage();
 
-  // Build setup:context options by merging detected state with explicit flags
-  const contextOptions = { defaults: true };
+  // Build setup:context options by merging detected state with explicit flags.
+  // --dry-run travels with them: setup:context writes the context file and
+  // every agent prompt, and a dry-run that skipped only the template copy
+  // still rewrote both.
+  const contextOptions = { defaults: true, 'dry-run': dryRun };
 
   // Propagate any explicit overrides the user passed to `setup`
   const passthroughFlags = [
@@ -160,16 +175,13 @@ async function runSetup({ args, options, logger, t }) {
     t
   });
 
-  if (!dryRun) {
-    logger.log('');
-    logger.log(t('setup.done'));
-    logger.log(t('setup.step_agents'));
-    logger.log(t('setup.step_agent_prompt', { tool: promptTool }));
-  }
+  logClosing({ targetDir, dryRun, tool: options.tool, logger, t });
 
   return {
     ok: true,
     targetDir,
+    dryRun,
+    installProfile,
     installResult,
     contextResult,
     detection

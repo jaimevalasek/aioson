@@ -467,7 +467,9 @@ module.exports = {
     existing_project_detected:
       '⚠ Projet existant detecte ({count} fichiers). Lancez le scanner avant de commencer :',
     existing_project_scan_hint:
-      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (genere discovery.md + skeleton-system.md ; sans --with-llm, seulement les cartes locales)',
+      '  aioson scan:project . --folder={folder} --with-llm --provider=<provider>   (genere discovery.md + skeleton-system.md ; sans --with-llm, seulement les cartes locales)',
+    template_kept:
+      '⚠ {count} fichier(s) gere(s) deja presents dans le projet different du template AIOSON {cliVersion} et ont ete conserves tels quels : la version du template du projet n a donc pas avance. Lancez `aioson update .` pour les rafraichir (les fichiers ecrases sont sauvegardes avant).',
     using_saved_profile: 'Utilisation du profil d installation enregistre dans .aioson/install.json.',
     fallback_no_saved_profile: '⚠  Aucun profil enregistre et aucun assistant interactif disponible — repli sur install-all (tous les fichiers du template seront copies).',
     reconfigure_needs_tty: '--reconfigure necessite un terminal interactif (bloque par : {reason}). Relancez dans un vrai TTY sans --no-interactive/--dry-run.',
@@ -483,9 +485,11 @@ module.exports = {
   },
   update: {
     not_installed: 'Aucune installation AIOSON trouvee dans {targetDir}.',
-    downgrade_blocked: 'Ce projet a ete mis a jour pour la derniere fois avec AIOSON {projectVersion}, mais ce CLI est en {cliVersion}. Mettre a jour maintenant retrograderait les fichiers geres. Mettez d abord a jour le CLI (npm install -g @jaimevalasek/aioson) puis relancez update, ou passez --allow-downgrade pour continuer malgre tout.',
+    downgrade_blocked: 'Ce projet est en AIOSON {projectVersion} ({projectVersionSource}), mais le CLI execute maintenant est en {cliVersion} ({cliRoot}). Mettre a jour maintenant retrograderait les fichiers geres. Lancez le CLI le plus recent, ou mettez a jour cette copie (npm install -g @jaimevalasek/aioson, ou l application qui l embarque) puis relancez update, ou passez --allow-downgrade pour continuer malgre tout.',
     done_at: 'Mise a jour terminee dans : {targetDir}',
-    template_version: 'Version du template appliquee : {version}',
+    dry_run_done_at: 'Apercu de la mise a jour (dry run, rien ecrit) dans : {targetDir}',
+    template_version: 'Version du template appliquee : {version} (avant {previous} ; CLI dans {cliRoot})',
+    template_version_dry_run: 'Version du template qu une vraie mise a jour appliquerait : {version} (actuelle {previous} ; CLI dans {cliRoot})',
     files_updated: 'Fichiers mis a jour : {count}',
     backups_created: 'Sauvegardes creees : {count}',
     profile_renamed: 'i Profil `beginner` renomme en `creator` dans project.context.md pour mieux decrire l utilisateur. Comportement inchange. Modifiez le fichier pour passer a `developer` si vous le souhaitez.',
@@ -711,6 +715,8 @@ module.exports = {
   setup: {
     installing: 'Installation du template AIOSON...',
     installed: 'Template installe ({count} fichiers).',
+    dry_run_installed: '[dry-run] Le template installerait {count} fichiers.',
+    dry_run_done: '[dry-run] Rien n a ete ecrit dans {targetDir}.',
     no_framework_detected: 'Aucun framework detecte dans ce repertoire (projet vierge).',
     framework_detected: 'Framework detecte : {framework} (installe={installed})',
     writing_context: 'Ecriture du contexte du projet...',
@@ -801,7 +807,18 @@ module.exports = {
       'Monorepo detecte : framework Web3 et framework applicatif coexistent. Confirmer le framework principal avec l utilisateur et documenter la structure dans Notes.',
     written: 'Fichier contexte ecrit : {path}',
     classification_result: 'Classification : {classification} (score={score}/6)',
-    locale_applied: 'Langue d interaction synchronisee : {locale} ({count} prompts d agent restaures)'
+    locale_applied: 'Langue d interaction synchronisee : {locale} ({count} prompts d agent restaures)',
+    unchanged: 'Fichier contexte inchange : {path}',
+    context_backed_up: 'Version precedente du contexte sauvegardee dans : {path}',
+    agents_backed_up: '{count} prompt(s) d agent modifie(s) sauvegarde(s) dans {path} : {agents}',
+    agent_backup_failed: '{path} laisse tel quel : sa sauvegarde a echoue ({error})',
+    dry_run_written: '[dry-run] Le fichier contexte serait ecrit : {path}',
+    dry_run_unchanged: '[dry-run] Le fichier contexte resterait inchange : {path}',
+    dry_run_field_change: '  {field} : {from} -> {to}',
+    dry_run_body_change: '  Le corps du fichier changerait aussi.',
+    dry_run_context_backed_up: '[dry-run] Sa version actuelle serait d abord sauvegardee dans : {path}',
+    dry_run_locale_applied: '[dry-run] La langue d interaction serait synchronisee : {locale} ({count} prompts d agent seraient restaures)',
+    dry_run_agents_backed_up: '[dry-run] {count} prompt(s) d agent modifie(s) seraient d abord sauvegardes dans {path} : {agents}'
   },
   locale_apply: {
     applied: 'Langue d interaction synchronisee : {locale}',

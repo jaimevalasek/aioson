@@ -2,7 +2,9 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { ensureDir } = require('./utils');
+const { ensureDir, copyFileWithDir, nowStamp, toRelativeSafe } = require('./utils');
+
+const PROJECT_CONTEXT_REL = '.aioson/context/project.context.md';
 
 function toPositiveInt(value, fallback = 0) {
   const num = Number(value);
@@ -137,12 +139,95 @@ ${notes.length > 0 ? notes.map((note) => `- ${note}`).join('\n') : '- [none]'}
 `;
 }
 
-async function writeProjectContext(targetDir, content) {
-  const contextDir = path.join(targetDir, '.aioson/context');
-  await ensureDir(contextDir);
-  const filePath = path.join(contextDir, 'project.context.md');
-  await fs.writeFile(filePath, content, 'utf8');
-  return filePath;
+// generated_at is stamped fresh on every render, so two renders of the same
+// answers never match byte for byte; the comparison ignores that one line.
+function withoutGeneratedAt(text) {
+  return String(text).replace(/^generated_at: .*$/m, '');
+}
+
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+
+function frontmatterFields(text) {
+  const fields = new Map();
+  const match = FRONTMATTER_RE.exec(String(text || ''));
+  if (!match) return fields;
+  for (const line of match[1].split(/\r?\n/)) {
+    const field = /^([A-Za-z0-9_]+):\s*(.*)$/.exec(line);
+    if (field && field[1] !== 'generated_at') fields.set(field[1], field[2].trim());
+  }
+  return fields;
+}
+
+/**
+ * What replacing `current` with `next` would change, in terms a dry-run can
+ * print: each frontmatter field whose value differs, and whether the body
+ * (sections the user may have added by hand) differs at all.
+ */
+function describeContextChanges(current, next) {
+  const before = frontmatterFields(current);
+  const after = frontmatterFields(next);
+  const fields = [];
+  for (const field of new Set([...before.keys(), ...after.keys()])) {
+    const from = before.has(field) ? before.get(field) : '';
+    const to = after.has(field) ? after.get(field) : '';
+    if (from !== to) fields.push({ field, from, to });
+  }
+  const body = (text) => String(text || '').replace(FRONTMATTER_RE, '').trim();
+  return { fields, bodyChanged: body(current) !== body(next) };
+}
+
+/**
+ * Write project.context.md without losing what it held. The file is where a
+ * user (or @setup) refined the project's context, and `setup --defaults`
+ * re-renders it from detection alone: a version that differs is copied to
+ * `.aioson/backups/<stamp>/.aioson/context/project.context.md` first, and one
+ * that already says the same thing is not touched at all — no rewrite, no
+ * backup folder to crowd out the real ones under rollback retention.
+ *
+ * @returns {Promise<{filePath:string, action:'created'|'updated'|'unchanged',
+ *   backupPath:string|null, changes:{fields:object[], bodyChanged:boolean}|null,
+ *   dryRun:boolean}>} backupPath is project-relative; `changes` describes an
+ *   update; in dry-run every field says what a real run would do and nothing
+ *   is written.
+ */
+async function saveProjectContext(targetDir, content, options = {}) {
+  const dryRun = Boolean(options.dryRun);
+  const filePath = path.join(targetDir, PROJECT_CONTEXT_REL);
+  let current;
+  try {
+    current = await fs.readFile(filePath, 'utf8');
+  } catch {
+    current = null;
+  }
+
+  if (current !== null && withoutGeneratedAt(current) === withoutGeneratedAt(content)) {
+    return { filePath, action: 'unchanged', backupPath: null, changes: null, dryRun };
+  }
+
+  let backupPath = null;
+  if (current !== null) {
+    const backupRoot = options.backupRoot || path.join(targetDir, '.aioson', 'backups', nowStamp());
+    const backupAbs = path.join(backupRoot, PROJECT_CONTEXT_REL);
+    if (!dryRun) await copyFileWithDir(filePath, backupAbs);
+    backupPath = toRelativeSafe(targetDir, backupAbs);
+  }
+
+  if (!dryRun) {
+    await ensureDir(path.dirname(filePath));
+    await fs.writeFile(filePath, content, 'utf8');
+  }
+  return {
+    filePath,
+    action: current === null ? 'created' : 'updated',
+    backupPath,
+    changes: current === null ? null : describeContextChanges(current, content),
+    dryRun
+  };
+}
+
+async function writeProjectContext(targetDir, content, options = {}) {
+  const result = await saveProjectContext(targetDir, content, options);
+  return result.filePath;
 }
 
 async function renderSquadApiSection(projectDir) {
@@ -195,6 +280,8 @@ module.exports = {
   classificationFromScore,
   normalizeBoolean,
   renderProjectContext,
+  describeContextChanges,
+  saveProjectContext,
   writeProjectContext,
   renderSquadApiSection
 };

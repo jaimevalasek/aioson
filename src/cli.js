@@ -2319,9 +2319,12 @@ async function main() {
       writeJson({
         ok: false,
         error: {
-          code: error.runtimeDiagnostic?.code ?? 'command_error',
+          code: error.runtimeDiagnostic?.code ?? error.jsonCode ?? 'command_error',
           message: error.runtimeDiagnostic ? 'Runtime preparation failed. Review the listed files.' : error.message,
           ...(error.runtimeDiagnostic ? { files: error.runtimeDiagnostic.files } : {}),
+          // A refusal a host acts on (e.g. update's downgrade guard) carries
+          // its facts as fields, so the host never parses localized prose.
+          ...(error.jsonDetails ? { details: error.jsonDetails } : {}),
           command
         }
       });

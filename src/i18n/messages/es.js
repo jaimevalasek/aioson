@@ -468,7 +468,9 @@ module.exports = {
     existing_project_detected:
       '⚠ Proyecto existente detectado ({count} archivos). Ejecuta el scanner antes de comenzar:',
     existing_project_scan_hint:
-      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (genera discovery.md + skeleton-system.md; sin --with-llm genera solo mapas locales)',
+      '  aioson scan:project . --folder={folder} --with-llm --provider=<provider>   (genera discovery.md + skeleton-system.md; sin --with-llm genera solo mapas locales)',
+    template_kept:
+      '⚠ {count} archivo(s) gestionado(s) que ya estaban en el proyecto difieren del template de AIOSON {cliVersion} y se mantuvieron tal cual, por eso la version del template del proyecto no avanzo. Ejecuta `aioson update .` para actualizarlos (los archivos sobrescritos reciben un respaldo antes).',
     using_saved_profile: 'Usando perfil de instalacion guardado en .aioson/install.json.',
     fallback_no_saved_profile: '⚠  Sin perfil guardado y sin asistente interactivo disponible — fallback a install-all (se copiaran todos los archivos del template).',
     reconfigure_needs_tty: '--reconfigure requiere una terminal interactiva (bloqueado por: {reason}). Vuelve a ejecutar en una TTY real sin --no-interactive/--dry-run.',
@@ -484,9 +486,11 @@ module.exports = {
   },
   update: {
     not_installed: 'No se encontro instalacion de AIOSON en {targetDir}.',
-    downgrade_blocked: 'Este proyecto fue actualizado por ultima vez con AIOSON {projectVersion}, pero este CLI es {cliVersion}. Actualizar ahora degradaria los archivos gestionados. Actualiza primero el CLI (npm install -g @jaimevalasek/aioson) y ejecuta update de nuevo, o usa --allow-downgrade para continuar de todos modos.',
+    downgrade_blocked: 'Este proyecto esta en AIOSON {projectVersion} ({projectVersionSource}), pero el CLI que se ejecuta ahora es {cliVersion} ({cliRoot}). Actualizar ahora degradaria los archivos gestionados. Ejecuta el CLI mas nuevo, o actualiza esta copia (npm install -g @jaimevalasek/aioson, o la app que la incluye) y ejecuta update de nuevo, o usa --allow-downgrade para continuar de todos modos.',
     done_at: 'Actualizacion completada en: {targetDir}',
-    template_version: 'Version de template aplicada: {version}',
+    dry_run_done_at: 'Vista previa del update (dry run, nada escrito) en: {targetDir}',
+    template_version: 'Version de template aplicada: {version} (antes {previous}; CLI en {cliRoot})',
+    template_version_dry_run: 'Version de template que aplicaria un update real: {version} (ahora {previous}; CLI en {cliRoot})',
     files_updated: 'Archivos actualizados: {count}',
     backups_created: 'Backups creados: {count}',
     profile_renamed: 'i Perfil `beginner` renombrado a `creator` en project.context.md para describir mejor al usuario. Comportamiento sin cambios. Edita el archivo para cambiar a `developer` si lo prefieres.',
@@ -712,6 +716,8 @@ module.exports = {
   setup: {
     installing: 'Instalando plantilla AIOSON...',
     installed: 'Plantilla instalada ({count} archivos).',
+    dry_run_installed: '[dry-run] La plantilla instalaria {count} archivos.',
+    dry_run_done: '[dry-run] No se escribio nada en {targetDir}.',
     no_framework_detected: 'No se detecto ningun framework en este directorio (proyecto nuevo).',
     framework_detected: 'Framework detectado: {framework} (instalado={installed})',
     writing_context: 'Escribiendo contexto del proyecto...',
@@ -800,7 +806,18 @@ module.exports = {
       'Monorepo detectado: framework Web3 y framework de aplicacion coexisten. Confirmar el framework principal con el usuario y documentar la estructura en Notes.',
     written: 'Archivo de contexto escrito: {path}',
     classification_result: 'Clasificacion: {classification} (score={score}/6)',
-    locale_applied: 'Idioma de interaccion sincronizado: {locale} ({count} prompts de agente restaurados)'
+    locale_applied: 'Idioma de interaccion sincronizado: {locale} ({count} prompts de agente restaurados)',
+    unchanged: 'Archivo de contexto sin cambios: {path}',
+    context_backed_up: 'Version anterior del contexto respaldada en: {path}',
+    agents_backed_up: '{count} prompt(s) de agente editado(s) respaldado(s) en {path}: {agents}',
+    agent_backup_failed: '{path} se mantuvo como esta: el respaldo fallo ({error})',
+    dry_run_written: '[dry-run] El archivo de contexto se escribiria: {path}',
+    dry_run_unchanged: '[dry-run] El archivo de contexto quedaria sin cambios: {path}',
+    dry_run_field_change: '  {field}: {from} -> {to}',
+    dry_run_body_change: '  El cuerpo del archivo tambien cambiaria.',
+    dry_run_context_backed_up: '[dry-run] La version actual se respaldaria antes en: {path}',
+    dry_run_locale_applied: '[dry-run] El idioma de interaccion se sincronizaria: {locale} ({count} prompts de agente se restaurarian)',
+    dry_run_agents_backed_up: '[dry-run] {count} prompt(s) de agente editado(s) se respaldarian antes en {path}: {agents}'
   },
   locale_apply: {
     applied: 'Idioma de interaccion sincronizado: {locale}',

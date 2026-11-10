@@ -70,10 +70,15 @@ async function runUpdate({ args, options, logger, t }) {
 
   if (!result.ok) {
     if (result.reason === 'downgrade-blocked') {
-      throw new Error(t('update.downgrade_blocked', {
-        cliVersion: result.cliVersion,
-        projectVersion: result.projectVersion
-      }));
+      const error = new Error(t('update.downgrade_blocked', result));
+      error.jsonCode = 'downgrade_blocked';
+      error.jsonDetails = {
+        cli_version: result.cliVersion,
+        project_version: result.projectVersion,
+        project_version_source: result.projectVersionSource,
+        cli_root: result.cliRoot
+      };
+      throw error;
     }
     throw new Error(t('update.not_installed', { targetDir }));
   }
@@ -92,12 +97,21 @@ async function runUpdate({ args, options, logger, t }) {
     localeSync = await applyAgentLocale(targetDir, language, { dryRun, selectiveUpdate: selective && !all });
   }
 
-  logger.log(t('update.done_at', { targetDir }));
-  // Surface WHICH template landed — stale-template updates used to be silent
-  // (the copy comes from the installed CLI's own bundle, not from npm latest).
-  logger.log(t('update.template_version', { version: getCliVersionLabelSync() }));
+  logger.log(t(dryRun ? 'update.dry_run_done_at' : 'update.done_at', { targetDir }));
+  // Surface WHICH template landed, from what, and from which copy of the CLI:
+  // the copy comes from the running CLI's own bundle, not from npm latest, and
+  // a machine can hold several (a global install, an `npm link`, the one an
+  // app installer ships). An app running its stale bundled copy moved a
+  // project 1.75 → 1.77 while the person expected the global 1.80.
+  logger.log(t(dryRun ? 'update.template_version_dry_run' : 'update.template_version', {
+    version: getCliVersionLabelSync(),
+    previous: result.templateVersionBefore || '-',
+    cliRoot: result.cliRoot
+  }));
   logger.log(t('update.files_updated', { count: result.copied.length }));
-  logger.log(t('update.backups_created', { count: result.backedUp.length }));
+  // The language step backs up edited prompts on its own; one count for both.
+  const localeBackups = localeSync && Array.isArray(localeSync.backedUp) ? localeSync.backedUp.length : 0;
+  logger.log(t('update.backups_created', { count: result.backedUp.length + localeBackups }));
   if (result.migrations && result.migrations.profileRename && result.migrations.profileRename.changed) {
     logger.log('');
     logger.log(t('update.profile_renamed'));

@@ -5,12 +5,14 @@ const path = require('node:path');
 // Namespace require (no destructuring) so tests can stub runHooksInstall —
 // the real thing mutates the machine-global AI tool settings.
 const hooksInstall = require('./hooks-install');
-const { installTemplate } = require('../installer');
+const { installTemplate, profileWithTool } = require('../installer');
 const { applyAgentLocale, normalizeInteractionLanguage } = require('../locales');
 const { resolvePromptTool } = require('../prompt-tool');
 const { runInstallWizard } = require('../install-wizard');
 const { renderRevealAnimation, renderInstallSummary, renderProgress } = require('../install-animation');
 const { getCliVersion } = require('../version');
+const { resolveTargetDir } = require('../lib/project-root');
+const { refuseTemplateDowngrade, reportInstallOutcome } = require('./install');
 
 // Complete profile used when --all is passed (skip wizard, install everything)
 const ALL_PROFILE = {
@@ -36,7 +38,12 @@ async function runInit({ args, options, logger, t }) {
     throw new Error(t('init.usage_error'));
   }
 
-  const targetDir = path.resolve(process.cwd(), projectName);
+  // A path inside a `.aioson/` tree is storage, never a new project: it
+  // resolves to the project that owns it, exactly as install resolves it.
+  const targetDir = resolveTargetDir(projectName);
+  const cdTarget = targetDir === path.resolve(process.cwd(), projectName)
+    ? projectName
+    : (path.relative(process.cwd(), targetDir) || '.');
   const force = Boolean(options.force);
   const dryRun = Boolean(options['dry-run']);
   const noInteractive = Boolean(options['no-interactive']);
@@ -44,11 +51,15 @@ async function runInit({ args, options, logger, t }) {
   const requestedLanguage = options.lang || options.language;
   const promptTool = resolvePromptTool(options.tool);
 
-  await fs.mkdir(targetDir, { recursive: true });
-
+  // No mkdir here: installTemplate creates the directory on a real run, and a
+  // dry run must leave none behind.
   if (!(await directoryIsEmpty(targetDir)) && !force) {
     throw new Error(t('init.non_empty_dir', { targetDir }));
   }
+
+  // init always overwrites; on a non-empty directory (--force) that is the
+  // same downgrade risk as install --force, refused the same way.
+  await refuseTemplateDowngrade(targetDir, options, t);
 
   // Run wizard for new projects (TTY only) — unless --all skips it
   const isTTY = process.stdin.isTTY && process.stdout.isTTY;
@@ -64,6 +75,9 @@ async function runInit({ args, options, logger, t }) {
     installProfile = await runInstallWizard({ noInteractive, t });
     // null = user cancelled → fall back to full install
   }
+  // An explicit --tool joins the chosen profile (installTemplate applies the
+  // same rule); here it is what the summary and the result show.
+  installProfile = profileWithTool(installProfile, options.tool);
 
   const result = await installTemplate(targetDir, {
     overwrite: true,
@@ -94,7 +108,7 @@ async function runInit({ args, options, logger, t }) {
     await renderRevealAnimation(version);
     renderInstallSummary({ result, installProfile });
     logger.log('');
-    logger.log(t('init.step_cd', { projectName }));
+    logger.log(t('init.step_cd', { projectName: cdTarget }));
   } else {
     logger.log(t('init.created_at', { targetDir }));
     logger.log(t('init.files_copied', { count: result.copied.length }));
@@ -102,11 +116,13 @@ async function runInit({ args, options, logger, t }) {
       logger.log(t('init.files_skipped', { count: result.skipped.length }));
     }
     logger.log(t('init.next_steps'));
-    logger.log(t('init.step_cd', { projectName }));
+    logger.log(t('init.step_cd', { projectName: cdTarget }));
     logger.log(t('init.step_setup'));
     logger.log(t('init.step_agents'));
     logger.log(t('init.step_agent_prompt', { tool: promptTool }));
   }
+
+  await reportInstallOutcome({ targetDir, result, logger, t });
 
   // Hooks are the always-on enforcement layer (context:guard injecting project
   // rules before every write/edit, plus runtime telemetry). Installed by

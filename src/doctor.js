@@ -995,7 +995,13 @@ async function applyDoctorFixes(targetDir, report, options = {}) {
     if (!dryRun) {
       try {
         const result = await generatePermissions(targetDir);
-        const regenCount = (result.written || []).length;
+        // The drift was measured before the earlier fix steps; required_files
+        // re-runs the installer, which already regenerates these files, so this
+        // pass may correctly write nothing. What it settled is the drift gone.
+        const settledAfter = await assessPermissionsSync(targetDir);
+        const settled = (permsAssessment.drifted.length + permsAssessment.missing.length)
+          - (settledAfter.drifted.length + settledAfter.missing.length);
+        const regenCount = Math.max((result.written || []).length, settled);
         if (regenCount > 0) changedCount += regenCount;
         actions.push({
           id: 'permissions_in_sync',

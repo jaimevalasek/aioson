@@ -73,7 +73,9 @@ aioson update --lang=pt-BR
 
 **What it updates:** all files in the `MANAGED_FILES` list that match your install profile (agents, config, gateway files, skills). Does not touch `project.context.md`, `discovery.md`, `architecture.md`, or other context files you created.
 
-**Output:** on completion, prints `Template version applied: <version>` (and `(<sha>, <date>)` when the install is a git checkout — e.g. an `npm link`ed dogfood setup) so you can tell exactly which template landed.
+**Output:** on completion, prints `Template version applied: <version> (was <previous>; CLI at <path>)` (the version carries `(<sha>, <date>)` when the CLI is its own git checkout — e.g. an `npm link`ed dogfood setup) so you can tell exactly which template landed and which copy of the CLI supplied it: one machine can hold several (a global install, an `npm link`, the copy an app installer ships), and `update` copies the templates of the copy that runs. `--dry-run` prints `Update preview (dry run, nothing written)` and the version a real update would apply. With `--json` the result carries `templateVersionBefore`, `templateVersionAfter` and `cliRoot`.
+
+**Downgrade guard:** a CLI older than the project is refused before any file is touched. The project's version comes from `.aioson/install.json`, or — on a fresh clone, where that local-only file is missing — from `aioson_version` in `.aioson/context/project.context.md`. The refusal names both versions and the running CLI's path; with `--json` it is `error.code: "downgrade_blocked"` with `error.details` (`cli_version`, `project_version`, `project_version_source`, `cli_root`). `--allow-downgrade` proceeds anyway.
 
 ---
 

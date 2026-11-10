@@ -183,6 +183,26 @@ test('an invalid or missing context is a verdict that names setup, never a silen
   assert.equal(missing.reason, 'missing_file');
 });
 
+test('a template newer than the running CLI is named at session start; a current or older one costs nothing', async () => {
+  // An app installer shipped a stale copy of the CLI while a newer global one
+  // had updated the project: the session ran the old copy, and the commands the
+  // project's agents named did not exist in it. Nothing said so.
+  const writeInstall = (dir, version) => fs.writeFileSync(
+    path.join(dir, '.aioson', 'install.json'),
+    JSON.stringify({ managed_by: 'aioson', template_version: version })
+  );
+  const ahead = makeProject();
+  writeInstall(ahead, '999.0.0');
+  const digest = await buildSessionDigest(ahead, { task: 'x' });
+  assert.match(digest.template, /Project template 999\.0\.0 is newer than this CLI \d+\.\d+\.\d+ \(.+\)/);
+  assert.match(digest.template, /npm install -g @jaimevalasek\/aioson@latest/);
+
+  const older = makeProject();
+  writeInstall(older, '0.1.0');
+  assert.equal((await buildSessionDigest(older, { task: 'x' })).template, undefined, 'outdated is workflow:next\'s warning');
+  assert.equal((await buildSessionDigest(makeProject(), { task: 'x' })).template, undefined, 'no install.json, no key');
+});
+
 test('AIOSON_OPERATOR_MEMORY=false keeps memory out', async () => {
   const digest = await buildSessionDigest(makeProject(), { task: 'deploy', env: { AIOSON_OPERATOR_MEMORY: 'false' } });
   assert.deepEqual(digest.memory, { off: true });

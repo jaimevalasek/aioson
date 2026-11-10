@@ -39,6 +39,18 @@ test('outdated installed template produces an actionable routing warning', async
   assert.match(status.warning, /--expect-feature=<slug>/);
 });
 
+test('a template newer than the running CLI warns and names where that CLI lives', async () => {
+  // Two copies of the CLI on one machine: the newer one updated the project,
+  // the older one (an app's bundled copy) runs now. The path tells them apart.
+  const root = await tmp();
+  await install(root, '1.80.0');
+  const status = await inspectTemplateVersion(root, { cliVersion: '1.77.0', cliRoot: 'C:/apps/host/bundled-cli' });
+  assert.equal(status.status, 'ahead');
+  assert.equal(status.outdated, false);
+  assert.match(status.warning, /template 1\.80\.0 is newer than this CLI 1\.77\.0 \(C:\/apps\/host\/bundled-cli\)/);
+  assert.match(status.warning, /npm install -g @jaimevalasek\/aioson@latest/);
+});
+
 test('current template and missing install metadata do not produce false warnings', async () => {
   const currentRoot = await tmp();
   await install(currentRoot, '1.44.0');

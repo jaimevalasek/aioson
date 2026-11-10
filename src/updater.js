@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
   detectExistingInstall,
@@ -8,22 +9,53 @@ const {
   readInstalledTemplateVersion
 } = require('./installer');
 const { getCliVersion } = require('./version');
+const { compareSemver, CLI_ROOT } = require('./template-version-status');
 const { migrateProfileRename } = require('./migrations/profile-rename');
 const { migrateAgentRename } = require('./migrations/agent-rename');
 
-// Numeric x.y.z compare; returns negative/0/positive, or null when either
-// side is unparseable (null disables the downgrade guard rather than guessing).
+// x.y.z compare; returns negative/0/positive, or null when either side is
+// unparseable (null disables the downgrade guard rather than guessing). One
+// parser with the template status: this one read `v999.0.0` as NaN and let
+// the downgrade through while the status warned about the same stamp.
 function compareTemplateVersions(a, b) {
-  const parse = (v) => String(v).trim().split('.').map((n) => Number.parseInt(n, 10));
-  const pa = parse(a);
-  const pb = parse(b);
-  for (let i = 0; i < 3; i++) {
-    const da = pa[i] ?? 0;
-    const db = pb[i] ?? 0;
-    if (Number.isNaN(da) || Number.isNaN(db)) return null;
-    if (da !== db) return da - db;
+  return compareSemver(a, b);
+}
+
+// install.json is local-only (the installer gitignores it), so a fresh clone
+// or a CI checkout has no stamp and the guard used to switch off — an older
+// CLI then rewrote the committed agents. project.context.md is committed and
+// records the CLI that set the project up: a lower bound of the template on
+// disk, enough to refuse a CLI older than it.
+async function readContextAiosonVersion(targetDir) {
+  try {
+    const raw = await fs.readFile(path.join(targetDir, '.aioson', 'context', 'project.context.md'), 'utf8');
+    const match = raw.match(/^aioson_version:[ \t]*["']?([^"'\r\n]+?)["']?[ \t]*$/m);
+    return match ? match[1] : null;
+  } catch {
+    return null;
   }
-  return 0;
+}
+
+// The downgrade guard every overwriting command shares (update, install
+// --force, init --force). The template copy comes from the running CLI's own
+// bundle, so a stale copy — an old global install, the one an app installer
+// ships — would mass-downgrade every managed file. Returns null when the
+// command may proceed, else the facts the refusal names: both versions, where
+// the project's version was read, and where the running CLI lives (the path
+// is what tells one copy of the CLI from another).
+async function findDowngrade(targetDir) {
+  const cliVersion = await getCliVersion();
+  const stamped = await readInstalledTemplateVersion(targetDir);
+  const projectVersion = stamped || await readContextAiosonVersion(targetDir);
+  if (!projectVersion) return null;
+  const cmp = compareTemplateVersions(cliVersion, projectVersion);
+  if (cmp === null || cmp >= 0) return null;
+  return {
+    cliVersion,
+    projectVersion,
+    projectVersionSource: stamped ? '.aioson/install.json' : '.aioson/context/project.context.md',
+    cliRoot: CLI_ROOT
+  };
 }
 
 async function updateInstallation(targetDir, options = {}) {
@@ -36,23 +68,15 @@ async function updateInstallation(targetDir, options = {}) {
     };
   }
 
-  // Downgrade guard — the template copy comes from the installed CLI's own
-  // bundle, so a stale global CLI running `update` on a newer project would
-  // mass-downgrade every managed file (the "old CLI trap"). Block it and
-  // point at the fix; --allow-downgrade is the deliberate escape hatch.
-  const cliVersion = await getCliVersion();
-  const projectVersion = await readInstalledTemplateVersion(targetDir);
-  if (projectVersion && !options.allowDowngrade) {
-    const cmp = compareTemplateVersions(cliVersion, projectVersion);
-    if (cmp !== null && cmp < 0) {
-      return {
-        ok: false,
-        reason: 'downgrade-blocked',
-        cliVersion,
-        projectVersion
-      };
-    }
+  // Downgrade guard (the "old CLI trap"); --allow-downgrade is the deliberate
+  // escape hatch.
+  if (!options.allowDowngrade) {
+    const downgrade = await findDowngrade(targetDir);
+    if (downgrade) return { ok: false, reason: 'downgrade-blocked', ...downgrade };
   }
+  // Read before the copy restamps it: the update reports the move it made.
+  const templateVersionBefore = await readInstalledTemplateVersion(targetDir);
+  const templateVersionAfter = await getCliVersion();
 
   const savedProfile = await readInstallProfile(targetDir);
 
@@ -93,11 +117,15 @@ async function updateInstallation(targetDir, options = {}) {
     ok: true,
     ...result,
     savedProfile,
+    templateVersionBefore,
+    templateVersionAfter,
+    cliRoot: CLI_ROOT,
     migrations: { profileRename: profileMigration, agentRename: agentRenameMigration }
   };
 }
 
 module.exports = {
   updateInstallation,
-  compareTemplateVersions
+  compareTemplateVersions,
+  findDowngrade
 };

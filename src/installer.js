@@ -11,6 +11,7 @@ const { isConfigMergePath, mergeConfigFile } = require('./installer-config-merge
 const { isGatewayPointerPath, mergeGatewayPointer } = require('./gateway-pointer-merge');
 const { listTrackedIgnoredPaths } = require('./lib/git-stage');
 const { ROLLBACK_KEEP, pruneStamped } = require('./lib/storage-footprint');
+const { surveyProjectFiles, countProjectFiles, pickScanFolder } = require('./lib/project-file-survey');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
@@ -323,20 +324,18 @@ async function ensureGitGuardBaseline(targetDir) {
   return mutations;
 }
 
-async function countProjectFiles(targetDir) {
-  const SKIP = new Set(['.git', 'node_modules', 'vendor', '.aioson', 'dist', 'build', '__pycache__']);
-  let count = 0;
-  async function walk(dir) {
-    let entries;
-    try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      if (SKIP.has(e.name)) continue;
-      if (e.isDirectory()) await walk(path.join(dir, e.name));
-      else count++;
-    }
+// Whether a managed file on disk still holds this template's text. Line
+// endings do not count: a checkout with core.autocrlf turns the committed
+// agents into CRLF without changing a word of them.
+async function holdsTemplateContent(templatePath, projectPath) {
+  try {
+    const [template, project] = await Promise.all([fs.readFile(templatePath), fs.readFile(projectPath)]);
+    if (template.equals(project)) return true;
+    const text = (buffer) => buffer.toString('utf8').replace(/\r\n/g, '\n');
+    return text(template) === text(project);
+  } catch {
+    return false;
   }
-  await walk(targetDir);
-  return count;
 }
 
 async function listFilesRecursive(dir) {
@@ -391,16 +390,38 @@ function shouldSkipTemplatePath(rel, profile = null) {
 // --tool speaks to that tool. Such a record names the tool and nothing else:
 // readInstallProfile never hands it to update, install or setup, which keep
 // copying everything exactly as a profile-less install did. A real profile
-// (the wizard's choice, --all's three tools) is recorded as given.
+// (the wizard's choice, --all's three tools) is recorded as given, plus an
+// explicit --tool it left out (profileWithTool).
 const TOOL_ONLY_PROFILE = 'tool_flag';
 
-function recordedInstallProfile(installProfile, existingProfile, tool) {
+function knownTool(tool) {
   const wanted = String(tool || '').trim().toLowerCase();
-  if (installProfile || !Object.prototype.hasOwnProperty.call(TOOL_FILES, wanted)) return installProfile || existingProfile || null;
+  return Object.prototype.hasOwnProperty.call(TOOL_FILES, wanted) ? wanted : null;
+}
+
+function recordedInstallProfile(installProfile, existingProfile, tool) {
+  const wanted = knownTool(tool);
+  if (installProfile || !wanted) return installProfile || existingProfile || null;
   return { tools: [wanted], source: TOOL_ONLY_PROFILE };
 }
 
-async function writeInstallMetadata(targetDir, action, frameworkDetection, installProfile, tool = null) {
+/**
+ * The profile an install runs with once an explicit `--tool` is honored. On a
+ * profile-less install `--tool` gets that tool's files (everything is copied)
+ * and is recorded; a real profile that leaves the tool out used to win
+ * silently — `install --tool=claude` on a Codex-only project exited 0 without
+ * CLAUDE.md or .claude/. The tool joins the profile's tools, so its files are
+ * copied now and every later update keeps them.
+ */
+function profileWithTool(installProfile, tool) {
+  const wanted = knownTool(tool);
+  if (!installProfile || installProfile.source === TOOL_ONLY_PROFILE || !wanted) return installProfile;
+  const tools = Array.isArray(installProfile.tools) ? installProfile.tools : [];
+  if (tools.includes(wanted)) return installProfile;
+  return { ...installProfile, tools: [...tools, wanted] };
+}
+
+async function writeInstallMetadata(targetDir, action, frameworkDetection, installProfile, tool = null, { keepTemplateStamp = false } = {}) {
   const metaPath = path.join(targetDir, '.aioson/install.json');
   await ensureDir(path.dirname(metaPath));
   let existing = {};
@@ -418,12 +439,24 @@ async function writeInstallMetadata(targetDir, action, frameworkDetection, insta
   // template_version alone identifies it. Lets a project record precisely which
   // commit it was last updated from.
   const gitInfo = getGitBuildInfoSync();
+  // A run that left older managed files in place keeps the stamp it found:
+  // the version is what preflight and workflow:next compare against the CLI,
+  // and stamping it here silenced "template is outdated" over old agents.
+  const stamp = keepTemplateStamp
+    ? {
+      template_version: existing.template_version || null,
+      template_git_sha: existing.template_git_sha || null,
+      template_git_date: existing.template_git_date || null
+    }
+    : {
+      template_version: version,
+      template_git_sha: gitInfo ? gitInfo.sha : null,
+      template_git_date: gitInfo ? gitInfo.date : null
+    };
   const data = {
     ...existing,
     managed_by: 'aioson',
-    template_version: version,
-    template_git_sha: gitInfo ? gitInfo.sha : null,
-    template_git_date: gitInfo ? gitInfo.date : null,
+    ...stamp,
     last_action: action,
     last_action_at: new Date().toISOString(),
     framework_detected: frameworkDetection || existing.framework_detected || null,
@@ -493,23 +526,32 @@ async function installTemplate(targetDir, options = {}) {
     overwrite = false,
     dryRun = false,
     mode = 'install',
-    backupOnOverwrite = mode === 'update',
+    // Every run that overwrites keeps a rollback copy of what it replaced:
+    // `install --force` and `init --force` rewrote user-edited agents with none.
+    backupOnOverwrite = mode === 'update' || overwrite,
     frameworkDetection = null,
-    installProfile = null,
+    installProfile: requestedProfile = null,
     selectiveUpdate = false,
     onProgress = null
   } = options;
+  const installProfile = profileWithTool(requestedProfile, options.tool);
 
-  await ensureDir(targetDir);
+  // A dry run writes nothing, not even the target directory it reports on.
+  if (!dryRun) await ensureDir(targetDir);
   await ensureCodexDirectoryCompatibility(targetDir, dryRun);
   const existingInstall = await detectExistingInstall(targetDir);
 
   const templateFiles = await listFilesRecursive(TEMPLATE_DIR);
+  // The project's own files, surveyed before this run adds any.
+  const survey = await surveyProjectFiles(targetDir, new Set(templateFiles.map((file) => toRelativeSafe(TEMPLATE_DIR, file))));
   const copied = [];
   const skipped = [];
   const backedUp = [];
   const failedBackups = [];
   const mergedConfigs = [];
+  // Managed files a non-overwriting run left on disk although they differ
+  // from this template — customized, or from an older release.
+  const keptManagedFiles = [];
   let runtime = null;
 
   let backupRoot = null;
@@ -612,6 +654,7 @@ async function installTemplate(targetDir, options = {}) {
 
     if (destExists && !overwrite && mode !== 'update') {
       skipped.push({ path: rel, reason: 'already-exists' });
+      if (!(await holdsTemplateContent(absPath, dest))) keptManagedFiles.push(rel);
       continue;
     }
 
@@ -620,7 +663,7 @@ async function installTemplate(targetDir, options = {}) {
     // not, so a project file that collides with a name the template later ships is
     // recoverable instead of silently lost. Identical content skips the backup so a
     // routine update does not snapshot the whole framework-owned tree.
-    if (destExists && mode === 'update' && backupOnOverwrite) {
+    if (destExists && backupOnOverwrite) {
       let contentDiffers = true;
       try {
         const [srcBuf, destBuf] = await Promise.all([fs.readFile(absPath), fs.readFile(dest)]);
@@ -653,6 +696,11 @@ async function installTemplate(targetDir, options = {}) {
     }
   }
 
+  // Only a run that left the project holding this template moves its version:
+  // a fresh install, an overwrite (--force, init, update), or a plain install
+  // that found every managed file already equal to this template.
+  const keepTemplateStamp = existingInstall && !overwrite && keptManagedFiles.length > 0;
+
   if (!dryRun) {
     await ensureDir(path.join(targetDir, '.aioson/context/parallel'));
     await ensureDir(path.join(targetDir, '.aioson/context'));
@@ -664,7 +712,7 @@ async function installTemplate(targetDir, options = {}) {
     // Squad research cache — created on install so @orache can write without mkdir
     await ensureDir(path.join(targetDir, 'squad-searches', 'standalone'));
 
-    await writeInstallMetadata(targetDir, mode, frameworkDetection, installProfile, options.tool);
+    await writeInstallMetadata(targetDir, mode, frameworkDetection, installProfile, options.tool, { keepTemplateStamp });
 
     await ensureProjectGitignorePolicy(targetDir);
     await ensureGitGuardBaseline(targetDir);
@@ -674,8 +722,8 @@ async function installTemplate(targetDir, options = {}) {
 
   const permissions = dryRun ? null : await settleInstall(targetDir);
 
-  // Detect if this is an existing project with many files
-  const projectFileCount = await countProjectFiles(targetDir);
+  // Detect if this is an existing project with many files of its own.
+  const projectFileCount = survey.count;
   const isExistingProject = frameworkDetection && projectFileCount > 20;
 
   return {
@@ -689,7 +737,10 @@ async function installTemplate(targetDir, options = {}) {
     permissions,
     dryRun,
     projectFileCount,
-    isExistingProject
+    isExistingProject,
+    scanFolder: pickScanFolder(survey.folders),
+    keptManagedFiles,
+    templateStampKept: keepTemplateStamp
   };
 }
 
@@ -709,5 +760,6 @@ module.exports = {
   shouldSkipTemplatePath,
   ensureGitGuardBaseline,
   GIT_GUARD_BASELINE_BLOCK_PATHS,
-  countProjectFiles
+  countProjectFiles,
+  profileWithTool
 };
