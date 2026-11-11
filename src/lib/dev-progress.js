@@ -93,12 +93,16 @@ const numericPhase = (key) => (/^\d+$/.test(key) ? Number(key) : null);
 // An interval stands for the phases it skipped only if none of them was stamped: a
 // phase stamped out of order took its own time, and `--phase=10` right after 1 does
 // not make phases 2 to 9 cheap.
-function phasesCovered(number, highest, stamped) {
+function phasesCovered(number, highest, { planned, stamped }) {
   if (number === null || highest === null || number <= highest) return 1;
-  for (let gap = highest + 1; gap < number; gap += 1) {
-    if (stamped.has(gap)) return 1;
+  let covered = 1;
+  // Iterate actual plan entries: numbering may have gaps or very large ids.
+  for (const phase of planned) {
+    if (phase === null || phase <= highest || phase >= number) continue;
+    if (stamped.has(phase)) return 1;
+    covered += 1;
   }
-  return number - highest;
+  return covered;
 }
 
 function plannedEntries(entries, planned, unplanned) {
@@ -110,14 +114,14 @@ function plannedEntries(entries, planned, unplanned) {
   });
 }
 
-function recordStamp(run, entry, stamped) {
+function recordStamp(run, entry, coverage) {
   const key = phaseKey(entry.phase);
   if (run.seen.has(key)) return;
   run.seen.add(key);
   run.finished.push(key);
   const number = numericPhase(key);
   const minutes = run.previousAt === null ? 0 : (entry.at - run.previousAt) / 60000;
-  const covers = stamped ? phasesCovered(number, run.highest, stamped) : 1;
+  const covers = coverage ? phasesCovered(number, run.highest, coverage) : 1;
   if (minutes >= MIN_INTERVAL_MINUTES) run.durations.push({ phase: key, minutes: round(minutes), covers });
   run.previousAt = entry.at;
   if (number !== null) run.highest = run.highest === null ? number : Math.max(run.highest, number);
@@ -128,9 +132,10 @@ function measureDurations(entries, planIds) {
   const unplanned = new Set();
   const kept = plannedEntries(entries, planned, unplanned);
   const stamped = new Set(kept.filter((entry) => entry.phase !== null).map((entry) => numericPhase(phaseKey(entry.phase))));
+  const coverage = planned ? { planned: [...planned].map(numericPhase), stamped } : null;
   const run = { seen: new Set(), durations: [], finished: [], previousAt: null, highest: null };
   for (const entry of kept) {
-    if (entry.phase !== null) recordStamp(run, entry, planned ? stamped : null);
+    if (entry.phase !== null) recordStamp(run, entry, coverage);
     else if (run.finished.length === 0) run.previousAt = entry.at;
   }
   return { finished: run.finished, durations: run.durations, unplanned: [...unplanned] };

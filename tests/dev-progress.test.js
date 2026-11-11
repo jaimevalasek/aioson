@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const { runStateSave } = require('../src/commands/state-save');
 const { runDevProgress } = require('../src/commands/dev-progress');
@@ -182,6 +183,33 @@ test('a stamp with no phase marks the start, and only before the first phase', (
   assert.equal(middle.mean_minutes, 10);
   const latestStart = projectProgress([stamp(0), stamp(50), stamp(60, 1), stamp(70, 2)], plan);
   assert.equal(latestStart.min_minutes, 10, 'the latest stamp before the first phase is the start');
+});
+
+test('intervals count only the phases present in a plan with gaps in its numbering', () => {
+  const progress = projectProgress([stamp(0, 1), stamp(30, 3), stamp(90, 7)], ['1', '3', '5', '7', '9']);
+  assert.equal(progress.intervals, 2);
+  assert.equal(progress.measured, 3, 'the second interval covers phases 5 and 7 only');
+  assert.equal(progress.mean_minutes, 30);
+  assert.equal(progress.min_minutes, 30);
+  assert.equal(progress.max_minutes, 30);
+  assert.equal(progress.projected_remaining_minutes, 60);
+  assert.deepEqual(progress.missing, ['5']);
+});
+
+test('a large phase id cannot make progress walk through nonexistent phase numbers', () => {
+  const script = `
+    const { projectProgress } = require(${JSON.stringify(require.resolve('../src/lib/dev-progress'))});
+    const stamp = (minutes, phase) => ({ at: minutes * 60000, phase: String(phase) });
+    const progress = projectProgress([stamp(0, 1), stamp(30, 3), stamp(60, 1e12)], ['1', '3', '1000000000000', '1000000000001']);
+    process.stdout.write(JSON.stringify(progress));
+  `;
+  const result = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+  const progress = JSON.parse(result.stdout);
+  assert.equal(progress.measured, 2);
+  assert.equal(progress.mean_minutes, 30);
+  assert.equal(progress.projected_remaining_minutes, 30);
 });
 
 test('the ledger reads in time order, whatever order the lines landed', async (t) => {
