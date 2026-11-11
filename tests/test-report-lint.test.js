@@ -300,10 +300,38 @@ test('kind=test-report: a named file outside the project or missing on disk is r
       logger: makeLogger()
     });
     assert.equal(res.metrics.oracle.files_scanned, 0);
-    assert.deepEqual(res.metrics.oracle.files_unreadable, ['tests/ghost.test.js']);
+    assert.deepEqual(res.metrics.oracle.files_unreadable, ['tests/ghost.test.js', '../outside/evil.test.js']);
     assert.ok(res.warnings.some((w) => /none is readable inside the project/.test(w)));
-    assert.ok(res.warnings.some((w) => /names 1 test file\(s\)/.test(w)), 'the traversal was dropped before the policy, so one path was named');
+    assert.ok(res.warnings.some((w) => /names 2 test file\(s\)/.test(w)), 'both paths are reported and refused by the repository policy');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
+});
+
+test('kind=test-report: tests in an opted-in sibling repository are checked for tautologies', async (ctx) => {
+  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-test-report-repositories-'));
+  ctx.after(() => fs.rm(workspace, { recursive: true, force: true }));
+  const project = path.join(workspace, 'app');
+  const sibling = path.join(workspace, 'cloud');
+  const named = '../cloud/tests/oracle.test.js';
+  await fs.mkdir(path.join(project, '.aioson/context'), { recursive: true });
+  await fs.mkdir(path.join(sibling, 'tests'), { recursive: true });
+  await fs.writeFile(path.join(sibling, 'tests/oracle.test.js'), 'assert.equal(1, 1);');
+  await fs.writeFile(path.join(project, '.aioson/context', `test-report-${SLUG}.md`), goodReport({ tests: `- ${named}` }));
+  const verify = () => runVerifyArtifact({
+    args: [project],
+    options: { kind: 'test-report', slug: SLUG, json: true, advisory: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  const refused = await verify();
+  assert.deepEqual(refused.metrics.test_files_named, [named]);
+  assert.equal(refused.metrics.oracle.files_scanned, 0);
+  assert.deepEqual(refused.metrics.oracle.files_unreadable, [named]);
+  await fs.writeFile(path.join(project, '.aioson/repository-roots.json'), JSON.stringify({ version: 1, roots: ['../cloud'] }));
+  const measured = await verify();
+  assert.equal(measured.metrics.oracle.files_scanned, 1);
+  assert.equal(measured.metrics.oracle.tautological, 1);
+  assert.deepEqual(measured.metrics.oracle.files_unreadable, []);
+  assert.equal(measured.ok, false, 'a tautology cannot pass the test report gate');
+  assert.ok(measured.issues.some((issue) => issue.includes(`${named}:1`)));
 });

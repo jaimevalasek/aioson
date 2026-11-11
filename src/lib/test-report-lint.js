@@ -190,7 +190,9 @@ function checkSections(text, issues, warnings) {
 function namedTestFiles(testsBody, warnings) {
   if (testsBody === null) return [];
   const { extractTestFilePaths } = require('./test-oracle-lint');
-  const named = extractTestFilePaths(testsBody);
+  // Extraction names candidates; analyzeNamedTestFiles authorizes each read
+  // against the project-owned repository roots, including sibling repositories.
+  const named = extractTestFilePaths(testsBody, { allowParentPaths: true });
   if (named.length === 0) {
     warnings.push('## Tests added or changed names no test file — the oracle of this pass cannot be measured; name each added or changed test file by path');
   }

@@ -581,10 +581,10 @@ function analyzeTestOracle({ files = [], mode = 'audit' } = {}) {
  * Path-like tokens of test files in a Markdown body (the tester's
  * `## Tests added or changed` section). Requires a known source extension and
  * either a directory separator or a test-file naming convention; URLs,
- * absolute paths and parent traversals are dropped — containment is the
- * caller's policy, this only extracts candidates.
+ * absolute paths are dropped. Parent-relative candidates are opt-in: a
+ * caller accepting them must enforce the repository path policy before reading.
  */
-function extractTestFilePaths(body) {
+function extractTestFilePaths(body, { allowParentPaths = false } = {}) {
   const text = String(body || '').replace(/\\/g, '/');
   const found = new Set();
   const withDir = /(?<![\w./-])(?!https?:)(?:[\w@.-]+\/)+[\w@.-]+\.(?:js|cjs|mjs|ts|tsx|jsx|mts|cts|py|php|rb|go|rs|java|kt|kts|cs|swift|dart|ex|exs|scala|clj|lua|sql|vue|svelte)(?![\w.])/g;
@@ -593,7 +593,7 @@ function extractTestFilePaths(body) {
     let match;
     while ((match = pattern.exec(text)) !== null) {
       const token = match[0].replace(/^\.\//, '');
-      if (token.startsWith('/') || token.includes('../') || /^[A-Za-z]:\//.test(token)) continue;
+      if (token.startsWith('/') || (!allowParentPaths && token.includes('../')) || /^[A-Za-z]:\//.test(token)) continue;
       found.add(token);
     }
   }
