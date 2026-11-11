@@ -1207,6 +1207,21 @@
       "created_at": "2026-11-11T05:52:15.333Z",
       "updated_at": "2026-11-11T05:52:15.333Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-83f85c",
+      "kind": "defect",
+      "summary": "tests/execution-run.test.js 'a ten-worker pool starts ten dependency-free disjoint units concurrently' is load-sensitive: 7 of 10 started when four suite quarters ran at once, 87/87 pass alone",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-11T06:17:21.382Z",
+      "updated_at": "2026-11-11T06:17:21.382Z",
+      "resolution": null
     }
   ]
 }
