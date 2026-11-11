@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **A session that compacts every few minutes says so, with a number.** A harness older than the model it runs does not recognize it, assumes its smallest context window and compacts at a fraction of what the model holds; from inside the session nothing told the host apart from the project. The `compaction` marker now keeps how full the context was (`context_tokens`, read from the tail of the harness's own transcript; Codex also reports `window_tokens`), and `hooks:recap` measures the gap between the automatic compactions of one harness session: two less than 45 minutes apart become a line of the checkpoint and, on Claude Code, a `systemMessage` for the person naming where to look (the host version and its context report). A single compaction, compactions hours apart and a typed `/compact` stay quiet. No model or window table exists — only measured numbers.
+
 ### Fixed
 
 - **`update` says which version it moved the project from, which it applied, and which copy of the CLI did it.** A desktop app that ships its own copy of the CLI ran that frozen 1.77 copy while its panel showed the global 1.80: the project moved 1.75 → 1.77, the panel kept asking for an update, and nothing named the copy that ran. The closing line is now `Template version applied: 1.80.0 (was 1.75.0; CLI at <path>)`; `--dry-run` opens with `Update preview (dry run, nothing written)` and the version a real update would apply; `--json` carries `templateVersionBefore`, `templateVersionAfter` and `cliRoot`.

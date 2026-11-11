@@ -37,6 +37,7 @@ const { openRuntimeDb, resolveRuntimePaths, readAgentSession } = require('../run
 const { resolveLauncherLiveSession } = require('./live');
 const { buildDevResumeData } = require('../lib/dev-resume');
 const { buildCompactionRecap, sessionAgent } = require('../lib/compaction-recap');
+const { compactionPressure, pressureNotice } = require('../lib/compaction-pressure');
 const { readStdin, hookAgentHandle } = require('./hooks-emit');
 
 const MAX_EVENTS = 2000;
@@ -49,12 +50,16 @@ const SESSION_ID_SQL = "CASE WHEN json_valid(payload_json) THEN json_extract(pay
 
 // Tools with a Claude-style SessionStart hook — Claude Code, Codex, and by
 // default any harness that copies that format — get its envelope; the
-// OpenCode plugin, which calls on demand, gets the bare context.
-function formatForTool(tool, additionalContext) {
+// OpenCode plugin, which calls on demand, gets the bare context. `notice` is
+// for the person, not the model: Claude Code shows a SessionStart hook's
+// `systemMessage` to the user. No other harness is known to, so there the
+// measurement travels only as a line of the context.
+function formatForTool(tool, additionalContext, notice = null) {
   switch (tool) {
     case 'opencode':
       return { additionalContext };
     case 'claude':
+      return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext }, ...(notice ? { systemMessage: notice } : {}) };
     case 'codex':
     default:
       return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext } };
@@ -129,6 +134,22 @@ function readSessionEvents(handle, { runKey, sessionId }) {
   `).all(runKey, MAX_EVENTS);
 }
 
+// Every compaction the session recorded, with its time. Its own read: a session
+// that compacts every few minutes is the one that outgrows MAX_EVENTS, and the
+// count has to be the session's, not the window's. Only markers stamped with
+// the session count — on a shared run the unstamped ones could be any window's.
+function readCompactionMarkers(handle, sessionId) {
+  if (!handle || !sessionId) return [];
+  const since = new Date(Date.now() - SESSION_LOOKBACK_MS).toISOString();
+  return handle.db.prepare(`
+    SELECT event_type, payload_json, created_at FROM agent_events
+    WHERE event_type = 'compaction'
+      AND run_key IN (SELECT run_key FROM agent_runs WHERE source = 'live' AND (status = 'running' OR started_at >= ?))
+      AND ${SESSION_ID_SQL} = ?
+    ORDER BY id ASC
+  `).all(since, sessionId);
+}
+
 function continuityFor(targetDir, resume) {
   if (!resume || !resume.feature_slug) return null;
   const relative = `.aioson/mappings/${resume.feature_slug}/continuity.md`;
@@ -173,11 +194,13 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
 
   const runKey = await sessionRunKey(targetDir, runtimeDir, source, handle).catch(() => null);
   let events;
+  let pressure = null;
   let sessionId = sessionIdOf(options.session) || sessionIdOf(payload && payload.session_id);
   const db = runKey || sessionId ? await openRuntimeDb(targetDir, { mustExist: true }).catch(() => null) : null;
   try {
     if (!sessionId && onDemand) sessionId = latestSessionId(db, runKey);
     events = readSessionEvents(db, { runKey, sessionId });
+    try { pressure = compactionPressure(readCompactionMarkers(db, sessionId)); } catch { /* the checkpoint goes out without the measurement */ }
   } finally {
     if (db && db.db) db.db.close();
   }
@@ -189,6 +212,7 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
   const observations = await require('../lib/observations').recentObservations(targetDir, { hours: 24 }).catch(() => []);
   const recap = buildCompactionRecap({
     events,
+    pressure,
     sessionScoped,
     resume,
     workflow,
@@ -198,7 +222,7 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
     targetDir,
     maxChars: options.maxChars
   });
-  return recap ? formatForTool(source, recap) : {};
+  return recap ? formatForTool(source, recap, pressureNotice(pressure)) : {};
 }
 
 /** The response for one call inside a project: the hook payload only feeds the compaction gate; on demand nothing is read. */

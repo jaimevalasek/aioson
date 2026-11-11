@@ -43,6 +43,7 @@ const { getAgentDefinition } = require('../agents');
 const { recordAgentActivation } = require('../lib/agent-activation');
 const { redactTelemetryText } = require('../lib/telemetry-redaction');
 const { redactCommandSecrets } = require('../lib/compaction-recap');
+const { contextAtCompaction } = require('../lib/compaction-pressure');
 const { readsCredentialSource } = require('../lib/credential-source-scan');
 
 const HOOKS_EMIT_VERSION = '1';
@@ -348,10 +349,12 @@ function lifecycleEvent(hookEvent, payload, source) {
     return agent ? { ...base, eventType: 'agent_activated', message: agent, extra: { agent, source } } : null;
   }
   // The conversation is about to be compacted: the marker bounds the stretch
-  // `hooks:recap` restores after it (src/lib/compaction-recap.js).
+  // `hooks:recap` restores after it (src/lib/compaction-recap.js). It also
+  // keeps how full the context was, so a session that compacts every few
+  // minutes says so with a number (src/lib/compaction-pressure.js).
   if (hookEvent === 'PreCompact') {
     const trigger = payload.trigger === 'manual' || payload.trigger === 'auto' ? payload.trigger : 'unknown';
-    return { ...base, eventType: 'compaction', message: `Context compaction (${trigger})`, extra: { trigger } };
+    return { ...base, eventType: 'compaction', message: `Context compaction (${trigger})`, extra: { trigger, ...contextAtCompaction(payload.transcript_path) } };
   }
   // End of a turn: the agent's own final message is the best account of what
   // it did — kept as its claim, never as verified fact.

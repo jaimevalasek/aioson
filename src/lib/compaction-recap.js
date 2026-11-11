@@ -34,6 +34,7 @@
 
 const path = require('node:path');
 const { stripInjectionChars, scanInjectionPayloads } = require('./llm-content-sanitizer');
+const { pressureLine } = require('./compaction-pressure');
 
 const DEFAULT_MAX_CHARS = 2000;
 const MAX_FILES = 12;
@@ -278,11 +279,12 @@ function fitToBudget(lines, maxChars) {
  * @param {string[]} [input.artifacts]  the session agent's canonical artifacts (project-relative)
  * @param {string|null} [input.continuityPath]  relative path of an existing continuity mapping
  * @param {string|null} [input.agent]  the session's agent when no activation was recorded
+ * @param {object|null} [input.pressure]  compactionPressure() output: the session compacts every few minutes
  * @param {string} [input.targetDir]
  * @param {number} [input.maxChars]
  * @returns {string|null}  null when there is nothing worth restoring
  */
-function buildCompactionRecap({ events = [], sessionScoped = false, resume = null, workflow = null, artifacts = [], continuityPath = null, observations = [], agent = null, targetDir = null, maxChars = DEFAULT_MAX_CHARS } = {}) {
+function buildCompactionRecap({ events = [], sessionScoped = false, resume = null, workflow = null, artifacts = [], continuityPath = null, observations = [], agent = null, pressure = null, targetDir = null, maxChars = DEFAULT_MAX_CHARS } = {}) {
   const list = Array.isArray(events) ? events : [];
   const window = compactionWindow(list);
   const stretch = summarizeStretch(window, targetDir);
@@ -294,9 +296,12 @@ function buildCompactionRecap({ events = [], sessionScoped = false, resume = nul
     ...workLines(stretch, state, tally),
     ...noteLines({ continuityPath, observations, reply: stretch.reply }, tally)
   ];
-  if (lines.length === 0 && tally.withheld === 0) return null;
-  // Said first, so the budget keeps them: who works, and what was left out and why.
+  const pressured = pressureLine(pressure);
+  if (lines.length === 0 && tally.withheld === 0 && !pressured) return null;
+  // Said first, so the budget keeps them: who works, how often the host is
+  // compacting, and what was left out and why.
   if (tally.withheld > 0) lines.unshift(`Withheld ${tally.withheld} recorded item(s) that read as instructions to an AI: data, not shown.`);
+  if (pressured) lines.unshift(pressured);
   if (who) lines.unshift(`Agent: ${who}`);
   return fitToBudget(lines, maxChars);
 }
