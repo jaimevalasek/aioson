@@ -9,6 +9,7 @@ const crypto = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const { runSystemPackage } = require('../src/commands/store-system');
 const { collectSystemFiles, runtimeSourceFingerprint } = require('../src/lib/system-runtime-package');
+const { captureInputs } = require('../src/lib/system-runtime-inputs');
 
 const logger = { log() {} };
 const t = (key, values = {}) => `${key} ${JSON.stringify(values)}`;
@@ -242,4 +243,78 @@ test('AC-011/016: editing an input after compilation starts cannot authorize an 
     assert.equal(await exited, 1, stderr);
     assert.equal(JSON.parse(stdout).error.code, 'runtime_inputs_changed');
   } finally { if (child.exitCode === null) child.kill(); }
+});
+
+async function inventoryProject(ctx, files) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-runtime-inventory-'));
+  ctx.after(() => fs.rm(dir, { recursive: true, force: true }));
+  for (const [name, content] of Object.entries(files)) {
+    await fs.mkdir(path.dirname(path.join(dir, name)), { recursive: true });
+    await fs.writeFile(path.join(dir, name), content);
+  }
+  return dir;
+}
+
+async function listedFiles(root, prefix = '') {
+  const found = [];
+  for (const entry of await fs.readdir(path.join(root, prefix), { withFileTypes: true })) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) found.push(...await listedFiles(root, relative));
+    else found.push(relative);
+  }
+  return found;
+}
+
+test('source inventory follows .gitignore: ignored local state is not copied and does not change the fingerprint', async (ctx) => {
+  const dir = await inventoryProject(ctx, {
+    '.gitignore': 'scratch/\nresources/*.bin\n.env\ndist/\ndist-server/\n',
+    'system.json': JSON.stringify({ slug: 'inventory-probe', version: '1.0.0', build_output_dirs: ['dist-server'] }),
+    'src/index.ts': 'export const value = 1;',
+    'resources/keep.json': '{}',
+    'resources/model.bin': 'heavy',
+    'scratch/notes.txt': 'local',
+    '.env': 'LOCAL_SECRET_SENTINEL=build-only',
+    'dist/index.html': 'built',
+    'dist-server/index.js': 'built',
+    'server/dist/index.js': 'built',
+    'server/scratch/notes.txt': 'local',
+  });
+  const snapshot = await captureInputs(dir, { outputDirs: new Set(['dist-server']), aiosonIncludes: [] });
+  try {
+    const copied = await listedFiles(snapshot.directory);
+    for (const kept of ['src/index.ts', 'resources/keep.json', 'system.json', '.gitignore', 'dist/index.html', 'dist-server/index.js', 'server/dist/index.js', '.env']) assert.ok(copied.includes(kept), kept);
+    for (const left of ['scratch/notes.txt', 'server/scratch/notes.txt', 'resources/model.bin']) assert.ok(!copied.includes(left), left);
+    assert.ok(snapshot.excluded.some(item => item.path === 'scratch' && item.reason === 'gitignore'));
+  } finally { await snapshot.dispose(); }
+  const before = await runtimeSourceFingerprint(dir);
+  await fs.writeFile(path.join(dir, 'scratch/notes.txt'), 'changed');
+  assert.equal(await runtimeSourceFingerprint(dir), before);
+  await fs.writeFile(path.join(dir, 'src/index.ts'), 'export const value = 2;');
+  assert.notEqual(await runtimeSourceFingerprint(dir), before);
+});
+
+test('the build reads a gitignored env file, and no env file reaches the package', async (ctx) => {
+  const { dir } = await app();
+  ctx.after(() => fs.rm(dir, { recursive: true, force: true }));
+  await fs.writeFile(path.join(dir, '.gitignore'), '.env\n.env.*\ndist/\n');
+  await fs.writeFile(path.join(dir, '.env.production'), 'LOCAL_SECRET_SENTINEL=never-publish');
+  await fs.writeFile(path.join(dir, 'build.cjs'), "const fs = require('node:fs'); fs.mkdirSync('dist',{recursive:true}); fs.writeFileSync('dist/index.cjs','console.log(42)'); fs.writeFileSync('dist/build-env.json',JSON.stringify({env:fs.existsSync('.env'),production:fs.existsSync('.env.production')}));");
+  const result = await runSystemPackage({ args: [dir], options: { build: true, json: true, 'dry-run': true }, logger, t });
+  assert.equal(result.ok, true);
+  assert.equal(result.inventory.find(item => item.path === 'dist/build-env.json').sha256,
+    crypto.createHash('sha256').update(JSON.stringify({ env: true, production: true })).digest('hex'), 'the build ran with both env files beside it');
+  assert.deepEqual(result.inventory.filter(item => path.basename(item.path).startsWith('.env')), []);
+  const fingerprint = await runtimeSourceFingerprint(dir);
+  await fs.writeFile(path.join(dir, '.env'), 'LOCAL_SECRET_SENTINEL=changed');
+  assert.notEqual(await runtimeSourceFingerprint(dir), fingerprint, 'a value the build inlines changes what was reviewed');
+});
+
+test('an ignored folder larger than the review limit does not block the package; real sources still do', async (ctx) => {
+  const oversized = 1024 * 1024 * 1024 + 1;
+  const dir = await inventoryProject(ctx, { '.gitignore': 'scratch/\n', 'system.json': JSON.stringify({ slug: 'inventory-limit', version: '1.0.0' }), 'src/index.ts': 'export {};', 'scratch/huge.bin': '' });
+  await fs.truncate(path.join(dir, 'scratch/huge.bin'), oversized);
+  await runtimeSourceFingerprint(dir);
+  await fs.writeFile(path.join(dir, 'src/huge.bin'), '');
+  await fs.truncate(path.join(dir, 'src/huge.bin'), oversized);
+  await assert.rejects(captureInputs(dir, { outputDirs: new Set(), aiosonIncludes: [] }), /exceeds the review limit/);
 });

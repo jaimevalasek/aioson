@@ -5,17 +5,45 @@ const { createReadStream } = require('node:fs');
 const { createHash } = require('node:crypto');
 const path = require('node:path');
 const os = require('node:os');
+const ignore = require('ignore');
 
 const SKIP = new Set(['node_modules', '.git', 'uploads', 'logs', 'data', 'output', '.cache']);
+const STANDARD_OUTPUT_DIRS = new Set(['dist', 'build', 'out', '.next']);
+
+// Same exemptions as collectSystemFiles: build output (a standard folder name at
+// any depth, or a folder the manifest declares) and the .aioson runtime folders
+// travel even when gitignored; anything else ignored is local state.
+// An env file is the one ignored input the author's build reads (bundlers inline
+// its values), so it reaches the snapshot; collectSystemFiles keeps it out of
+// the package.
+const BUILD_ENV_FILE = /^\.env(\..+)?$/;
+
+async function ignoredInputFilter(dir, options) {
+  const rules = ignore();
+  try { rules.add(await fs.readFile(path.join(dir, '.gitignore'), 'utf8')); } catch { /* no .gitignore, nothing to filter */ }
+  const declared = [...(options.outputDirs ?? [])];
+  const exempt = (relative, isDirectory) => {
+    const folders = relative.split('/');
+    if (!isDirectory && BUILD_ENV_FILE.test(folders.pop())) return true;
+    if (folders[0] === '.aioson' || folders.some(name => STANDARD_OUTPUT_DIRS.has(name))) return true;
+    return declared.some(item => relative === item || relative.startsWith(`${item}/`) || item.startsWith(`${relative}/`));
+  };
+  return (relative, isDirectory) => !exempt(relative, isDirectory) && rules.ignores(isDirectory ? `${relative}/` : relative);
+}
 
 async function inputFiles(dir, options) {
   const result = [];
   let total = 0;
+  const isIgnored = await ignoredInputFilter(dir, options);
   const walk = async (directory, prefix = '') => {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
       if (SKIP.has(entry.name)) {
         options.excluded?.push({ path: relative, reason: 'local state or build tooling' });
+        continue;
+      }
+      if (isIgnored(relative, entry.isDirectory())) {
+        options.excluded?.push({ path: relative, reason: 'gitignore' });
         continue;
       }
       if (relative.startsWith('.aioson/')) {
