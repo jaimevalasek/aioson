@@ -56,6 +56,30 @@ test('AC-015: runtime capabilities probe reports the installed engine without a 
   assert.equal(output.node, process.versions.node);
 });
 
+test('runtime snapshots retain opted-in .aioson files and fingerprint their contents', async (ctx) => {
+  const { dir } = await app();
+  ctx.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const files = {
+    '.aioson/build-options.json': JSON.stringify({ include: ['docs/guide.md', 'skills\\helper'] }),
+    '.aioson/docs/guide.md': 'Runtime guide',
+    '.aioson/skills/helper/SKILL.md': 'Runtime skill',
+    '.aioson/context/private.md': 'Unselected project context',
+  };
+  for (const [name, content] of Object.entries(files)) {
+    await fs.mkdir(path.dirname(path.join(dir, name)), { recursive: true });
+    await fs.writeFile(path.join(dir, name), content);
+  }
+  const result = await runSystemPackage({ args: [dir], options: { build: true, json: true, 'dry-run': true }, logger, t });
+  assert.equal(result.ok, true);
+  const paths = result.inventory.map((file) => file.path);
+  assert.ok(paths.includes('.aioson/docs/guide.md'), 'the runtime needs the opted-in guide');
+  assert.ok(paths.includes('.aioson/skills/helper/SKILL.md'), 'Windows separators identify the same runtime folder');
+  assert.ok(!paths.includes('.aioson/context/private.md'));
+  const fingerprint = await runtimeSourceFingerprint(dir);
+  await fs.writeFile(path.join(dir, '.aioson/docs/guide.md'), 'Updated runtime guide');
+  assert.notEqual(await runtimeSourceFingerprint(dir), fingerprint, 'editing a packaged input invalidates its review');
+});
+
 test('AC-007/011/015/016: staged version is explicit, source changes invalidate review, and build credentials are absent', async () => {
   const { dir } = await app();
   await fs.writeFile(path.join(dir, 'build.cjs'), "const fs = require('node:fs'); fs.mkdirSync('dist',{recursive:true}); fs.writeFileSync('dist/index.cjs','console.log(42)'); fs.writeFileSync('dist/build-env.json',JSON.stringify({hasToken:!!process.env.AIOSON_TOKEN,hasNodeOptions:!!process.env.NODE_OPTIONS}));");

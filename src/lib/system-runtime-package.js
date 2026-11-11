@@ -319,7 +319,7 @@ async function readAiosonIncludes(aiosonDir) {
       const list = Array.isArray(opts.include) ? opts.include : [];
       for (let entry of list) {
         if (typeof entry !== 'string') continue;
-        entry = entry.replace(/^\.aioson[\\/]/i, '').replace(/^[\\/]+/, '').replace(/[\\/]+$/, '').trim();
+        entry = entry.replace(/\\/g, '/').replace(/^\.aioson\//i, '').replace(/^\/+/, '').replace(/\/+$/, '').trim();
         if (!entry || entry.split(/[\\/]/).includes('..')) continue; // anti path-traversal
         includes.add(entry);
       }
@@ -694,7 +694,7 @@ function runtimePackageCapabilities() {
 
 async function createRuntimeArtifact({ dir, manifest, options, logger, t }) {
   const inputs = require('./system-runtime-inputs');
-  const settings = { outputDirs: readBuildOutputDirs(manifest), aiosonIncludes: await readAiosonIncludes(dir) };
+  const settings = { outputDirs: readBuildOutputDirs(manifest), aiosonIncludes: await readAiosonIncludes(path.join(dir, '.aioson')) };
   const snapshot = await inputs.captureInputs(dir, settings);
   try {
     return await createSnapshotArtifact({ dir: snapshot.directory, sourceDir: dir, sourceFingerprint: snapshot.sourceFingerprint, inputExclusions: snapshot.excluded, manifest, options, logger, t });
@@ -771,7 +771,7 @@ async function createSnapshotArtifact({ dir, sourceDir, sourceFingerprint, input
 
 async function runtimeSourceFingerprint(dir) {
   const manifest = JSON.parse(await fs.readFile(path.join(dir, 'system.json'), 'utf8'));
-  return require('./system-runtime-inputs').sourceFingerprint(dir, { outputDirs: readBuildOutputDirs(manifest), aiosonIncludes: await readAiosonIncludes(dir) });
+  return require('./system-runtime-inputs').sourceFingerprint(dir, { outputDirs: readBuildOutputDirs(manifest), aiosonIncludes: await readAiosonIncludes(path.join(dir, '.aioson')) });
 }
 
 module.exports = {
