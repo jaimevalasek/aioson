@@ -6,6 +6,7 @@ const { buildDevResumeData } = require('../lib/dev-resume');
 const { buildPhaseCapsule, openObservations } = require('../lib/phase-capsule');
 const { readFeatureArtifactSafe } = require('../preflight-engine');
 const { isValidSlug } = require('../dossier/schema');
+const { writeAtomically } = require('../lib/feature-registry-storage');
 
 /**
  * aioson dev:resume-data .
@@ -23,7 +24,26 @@ const { isValidSlug } = require('../dossier/schema');
  */
 function isInsideFolder(folder, file) {
   const rel = path.relative(folder, file);
-  return rel !== '' && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+}
+
+// Resolve missing leaves against their existing parent, including directory
+// links. A dangling link cannot prove where an eventual write would land.
+async function locationOnDisk(file) {
+  try {
+    return await fs.realpath(file);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    const present = await fs.lstat(file).then(() => true, (failure) => {
+      if (failure.code !== 'ENOENT') throw failure;
+      return false;
+    });
+    if (present) return null;
+    const parent = path.dirname(file);
+    if (parent === file) throw error;
+    const realParent = await locationOnDisk(parent);
+    return realParent ? path.join(realParent, path.basename(file)) : null;
+  }
 }
 
 // A flag with no value parses as `true`, and that is no value here.
@@ -36,8 +56,12 @@ async function writeCapsule(targetDir, target, text) {
   const file = path.resolve(targetDir, target);
   const sources = ['context', 'briefings'].map((folder) => path.resolve(targetDir, '.aioson', folder));
   if (sources.some((folder) => isInsideFolder(folder, file))) return null;
+  const realSources = await Promise.all(sources.map(locationOnDisk));
+  const realFile = await locationOnDisk(file);
+  if (!realFile || realSources.some((folder) => !folder || isInsideFolder(folder, realFile))) return null;
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, text, 'utf8');
+  // Replacing the output also leaves a hard-linked source inode untouched.
+  await writeAtomically(file, text);
   return path.relative(targetDir, file).split(path.sep).join('/');
 }
 

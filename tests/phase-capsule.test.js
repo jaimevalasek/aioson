@@ -433,3 +433,39 @@ test('--out never writes among the plan and the PRD it reads', async (t) => {
   assert.equal(await fs.readFile(path.join(root, `.aioson/context/implementation-plan-${SLUG}.md`), 'utf8'), PLAN, 'the plan is intact');
   assert.equal((await capsule(root, { out: '.aioson/runtime/capsule.md' })).ok, true);
 });
+
+test('--out cannot reach source artifacts through a directory link', async (t) => {
+  const root = await project(t);
+  const alias = path.join(root, 'context-alias');
+  await fs.symlink(path.join(root, '.aioson/context'), alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const refused = await capsule(root, { out: `context-alias/implementation-plan-${SLUG}.md` });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.reason, 'out_inside_sources');
+  assert.equal(await fs.readFile(path.join(root, `.aioson/context/implementation-plan-${SLUG}.md`), 'utf8'), PLAN);
+  const nested = await capsule(root, { out: 'context-alias/new-folder/capsule.md' });
+  assert.equal(nested.reason, 'out_inside_sources');
+  await assert.rejects(fs.access(path.join(alias, 'new-folder')), { code: 'ENOENT' });
+});
+
+test('--out leaves a source hard link intact when replacing an existing output', async (t) => {
+  const root = await project(t);
+  const plan = path.join(root, `.aioson/context/implementation-plan-${SLUG}.md`);
+  await fs.link(plan, path.join(root, 'capsule.md'));
+  const result = await capsule(root, { out: 'capsule.md' });
+  assert.equal(result.ok, true);
+  assert.equal(await fs.readFile(plan, 'utf8'), PLAN);
+  assert.equal(await fs.readFile(path.join(root, 'capsule.md'), 'utf8'), result.capsule);
+});
+
+test('--out refuses a file link to a source artifact', async (t) => {
+  const root = await project(t);
+  const prd = path.join(root, `.aioson/context/prd-${SLUG}.md`);
+  try {
+    await fs.symlink(prd, path.join(root, 'capsule.md'), 'file');
+  } catch (error) {
+    if (error.code === 'EPERM' && process.platform === 'win32') return t.skip('file symlinks require Windows Developer Mode');
+    throw error;
+  }
+  assert.equal((await capsule(root, { out: 'capsule.md' })).reason, 'out_inside_sources');
+  assert.equal(await fs.readFile(prd, 'utf8'), PRD);
+});
