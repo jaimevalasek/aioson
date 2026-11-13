@@ -1222,6 +1222,21 @@
       "created_at": "2026-11-11T06:17:21.382Z",
       "updated_at": "2026-11-11T06:17:21.382Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-923cc8",
+      "kind": "defect",
+      "summary": "tests/browser-walkthrough-real.test.js 'real browser: every mode launches with the flags as written, and is contained' fails on this machine: page.goto net::ERR_INVALID_URL at chrome://version (full suite 2026-11-13, unrelated to the live-…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-13T20:07:31.445Z",
+      "updated_at": "2026-11-13T20:07:31.445Z",
+      "resolution": null
     }
   ]
 }
