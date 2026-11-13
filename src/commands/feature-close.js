@@ -357,25 +357,24 @@ async function archiveScoutsForFeature(targetDir, slug) {
 // so a stale pointer to a done feature would make a future @dev session try to
 // "resume" work that is already closed (e.g. next_step: aioson feature:close).
 // Only retires when active_feature matches this slug; a pointer to a DIFFERENT
-// active feature is left untouched. Archived (not blind-deleted) for audit via
-// the existing state:reset --archive path. Idempotent and best-effort.
-async function retireDevStateForClosedFeature(targetDir, ctxDir, slug) {
-  const statePath = path.join(ctxDir, 'dev-state.md');
-  const content = await readFileSafe(statePath);
-  if (!content) return { retired: false, reason: 'no_dev_state' };
-  const fm = parseFrontmatter(content);
-  const active = String(fm.active_feature || '').trim();
-  if (active !== slug) {
-    return { retired: false, reason: 'points_to_other', active_feature: active || null };
-  }
+// active feature is left untouched. The closed feature's own state file
+// (features/<slug>/dev-state.md) goes with it, whichever feature the
+// project-level pointer names by then. Archived (not blind-deleted) for audit
+// via the existing state:reset --archive path. Idempotent and best-effort.
+async function retireDevStateForClosedFeature(targetDir, _ctxDir, slug) {
   const reset = await runStateReset({
     args: [targetDir],
-    options: { archive: true, json: true },
+    options: { archive: true, json: true, feature: slug },
     logger: { log() {} }
   });
+  if (!reset || !reset.removed) {
+    return reset && reset.reason === 'points_to_other'
+      ? { retired: false, reason: 'points_to_other', active_feature: reset.active_feature || null }
+      : { retired: false, reason: 'no_dev_state' };
+  }
   return {
-    retired: Boolean(reset && reset.removed),
-    archived: reset && reset.archived ? reset.archived : null
+    retired: true,
+    archived: reset.archived ? reset.archived : null
   };
 }
 

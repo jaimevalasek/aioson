@@ -105,8 +105,14 @@ function describeBindingRegistry(binding, boundFeature) {
   if (binding.source === 'pulse') {
     return `Feature registry: ${binding.registry || boundFeature || '(none)'} (project-pulse.md active_feature) — the workflow binding follows it; ${move}`;
   }
+  // Inside a live session the registry is the session's own feature: a
+  // command naming another one (`--feature=<slug>`) moves this session only.
+  const sessionRegistry = binding.registry_source === 'session';
+  if (binding.source === 'session') {
+    return `Feature registry: ${binding.registry || boundFeature || '(none)'} (the feature of this live session) — the workflow binding follows it; a command that names another feature (\`aioson pulse:update . --feature=<slug>\`) moves this session to it (the feature must be in_progress in features.md), and the previous feature's progress is archived under .aioson/context/features/<slug>/workflow.state.json and restored on return.`;
+  }
   const pulse = binding.registry
-    ? `project-pulse.md active_feature names ${binding.registry}, which is not in_progress in features.md, so the binding ignores it`
+    ? `${sessionRegistry ? 'this live session is on' : 'project-pulse.md active_feature names'} ${binding.registry}, which is not in_progress in features.md, so the binding ignores it`
     : 'project-pulse.md names no active_feature';
   const fallback = binding.source === 'last-handoff'
     ? 'last-handoff.json'

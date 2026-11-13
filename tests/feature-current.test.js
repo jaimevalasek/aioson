@@ -161,3 +161,163 @@ test('feature:current plain mode prints only the slug; ambiguous prints nothing'
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+// ─── feature per live session (parallel-sessions, AC-parallel-sessions-25) ───
+// Two sessions on one folder: each answers the feature it works on, whatever
+// the other registers or advances. The pulse stays one per project and is
+// what a reader outside any live session gets, as before.
+
+const { spawnSync } = require('node:child_process');
+const { createTranslator } = require('../src/i18n');
+const { runLiveStart, runLiveClose } = require('../src/commands/live');
+const { bindSessionFeature } = require('../src/lib/session-feature');
+
+const CLI = path.join(__dirname, '..', 'bin', 'aioson.js');
+const silent = { log() {}, error() {} };
+const { t: tr } = createTranslator('en');
+
+function sessionEnv(key) {
+  return { AIOSON_LIVE_SESSION_KEY: key, AIOSON_LIVE_SESSION: key };
+}
+
+async function openSession(dir, key) {
+  return runLiveStart({
+    args: [dir],
+    options: { tool: 'claude', 'tool-bin': process.execPath, 'no-launch': true, json: true, session: key, 'own-session': true, 'no-health-check': true, 'no-health': true },
+    logger: silent,
+    t: tr
+  });
+}
+
+// A suite run inside a launched session inherits the variables live:start exports.
+function cliEnv(extra = {}) {
+  const env = { ...process.env, ...extra };
+  for (const name of ['AIOSON_LIVE_SESSION_KEY', 'AIOSON_LIVE_SESSION', 'AIOSON_PLAY']) {
+    if (!(name in extra)) delete env[name];
+  }
+  return env;
+}
+
+function cliJson(args, env) {
+  const result = spawnSync(process.execPath, [CLI, ...args], { env: cliEnv(env), encoding: 'utf8' });
+  return { status: result.status, json: result.stdout.trim().startsWith('{') ? JSON.parse(result.stdout) : null, stderr: result.stderr };
+}
+
+test('AC-parallel-sessions-25 two live sessions on different features each get their own from feature:current', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+    await writePulse(dir, 'checkout');
+    await openSession(dir, 'session-a-key');
+    await openSession(dir, 'session-b-key');
+    await bindSessionFeature(dir, 'checkout', { env: sessionEnv('session-a-key') });
+    await bindSessionFeature(dir, 'billing', { env: sessionEnv('session-b-key') });
+    // Session B advances its feature: the project's pulse moves to it.
+    await writePulse(dir, 'billing');
+
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') }),
+      { slug: 'checkout', source: 'session', ambiguous: false, candidates: [] }
+    );
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-b-key') }),
+      { slug: 'billing', source: 'session', ambiguous: false, candidates: [] }
+    );
+    // Outside a live session nothing changed: the pulse answers.
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: {} }),
+      { slug: 'billing', source: 'pulse', ambiguous: false, candidates: [] }
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test('AC-parallel-sessions-25 a session that named no feature gets ambiguous with two in progress, never the pulse of another session', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+    await writePulse(dir, 'billing');
+    await openSession(dir, 'session-a-key');
+
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') }),
+      { slug: '', source: 'session', ambiguous: true, candidates: ['checkout', 'billing'] }
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test('AC-parallel-sessions-25 with a single feature in progress a session that named none answers as before', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'done' }]);
+    await writePulse(dir, 'checkout');
+    await openSession(dir, 'session-a-key');
+
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') }),
+      { slug: 'checkout', source: 'pulse', ambiguous: false, candidates: [] }
+    );
+    await writePulse(dir, '(none)');
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') }),
+      { slug: 'checkout', source: 'features.md', ambiguous: false, candidates: [] }
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test('AC-parallel-sessions-25 a session whose feature was closed, and a closed session, fall back to the project answer', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+    await writePulse(dir, 'billing');
+    await openSession(dir, 'session-a-key');
+    await bindSessionFeature(dir, 'checkout', { env: sessionEnv('session-a-key') });
+
+    // checkout is closed: the session is back to having no feature.
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'done' }, { slug: 'billing', status: 'in_progress' }]);
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') }),
+      { slug: 'billing', source: 'pulse', ambiguous: false, candidates: [] }
+    );
+
+    // The key of a session that is no longer running counts for nothing.
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+    await runLiveClose({ args: [dir], options: { session: 'session-a-key', json: true, 'no-health': true }, logger: silent, t: tr });
+    assert.deepEqual(
+      await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') }),
+      { slug: 'billing', source: 'pulse', ambiguous: false, candidates: [] }
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test('AC-parallel-sessions-25 the aioson command answers the session it runs in: feature:current --json through the CLI', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFeatures(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+    await writePulse(dir, 'billing');
+    await openSession(dir, 'session-a-key');
+    await openSession(dir, 'session-b-key');
+    await bindSessionFeature(dir, 'checkout', { env: sessionEnv('session-a-key') });
+
+    const inA = cliJson(['feature:current', dir, '--json'], sessionEnv('session-a-key'));
+    assert.deepEqual(inA.json, { ok: true, slug: 'checkout', source: 'session', ambiguous: false, candidates: [] }, inA.stderr);
+    // codex strips the *_KEY variable from the commands it runs: the other name is enough.
+    const inACodex = cliJson(['feature:current', dir, '--json'], { AIOSON_LIVE_SESSION: 'session-a-key' });
+    assert.equal(inACodex.json.slug, 'checkout');
+
+    const inB = cliJson(['feature:current', dir, '--json'], sessionEnv('session-b-key'));
+    assert.deepEqual(inB.json, { ok: true, slug: '', source: 'session', ambiguous: true, candidates: ['checkout', 'billing'] }, inB.stderr);
+
+    const outside = cliJson(['feature:current', dir, '--json']);
+    assert.deepEqual(outside.json, { ok: true, slug: 'billing', source: 'pulse', ambiguous: false, candidates: [] });
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

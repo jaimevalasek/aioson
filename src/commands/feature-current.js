@@ -9,13 +9,18 @@
  * (design-doc.md, readiness.md, scope-check.md, ui-spec.md, sheldon-enrichment.md).
  *
  * Resolution order:
+ *   0. inside a live session (`live:start` exported its key to this process):
+ *      the feature that session works on (src/lib/session-feature.js). Another
+ *      session registering or advancing another feature never changes it.
  *   1. project-pulse.md `active_feature` (when set and not the `(none)` sentinel)
  *   2. the single `in_progress` row in features.md (unambiguous fallback)
  *   3. empty — genuine project-level work, no active feature
  *
  * When more than one feature is `in_progress`, the result is `ambiguous`: no slug
  * is guessed, and the caller must disambiguate (ask the user) rather than
- * silently overwrite another feature's artifact.
+ * silently overwrite another feature's artifact. Inside a live session that
+ * has named no feature this holds BEFORE the pulse is read: the pulse is one
+ * per project and may be another session's.
  *
  * Usage:
  *   aioson feature:current .            # prints the slug (or nothing) to stdout
@@ -24,6 +29,7 @@
 
 const path = require('node:path');
 const { readProjectPulse, parseFeaturesMap, readFileSafe, contextDir } = require('../preflight-engine');
+const { readSessionFeature } = require('../lib/session-feature');
 
 // Values that mean "no active feature" rather than a real slug.
 const NONE_SENTINELS = new Set(['', '(none)', 'none', 'null', '-', 'n/a']);
@@ -36,15 +42,10 @@ function isNone(value) {
   return NONE_SENTINELS.has(normalizeSlug(value).toLowerCase());
 }
 
-async function resolveActiveFeature(targetDir) {
-  // 1. project-pulse.md active_feature — the single source of truth maintained
-  //    by pulse:update and reset by feature:close.
-  const pulse = await readProjectPulse(targetDir);
-  if (pulse && pulse.exists && !isNone(pulse.active_feature)) {
-    return { slug: normalizeSlug(pulse.active_feature), source: 'pulse', ambiguous: false, candidates: [] };
-  }
+// A feature the registry already closed is nobody's current work.
+const CLOSED_STATUSES = new Set(['done', 'abandoned']);
 
-  // 2. features.md — fall back to the unique in_progress row.
+async function resolveActiveFeature(targetDir, { env = process.env } = {}) {
   const featuresContent = await readFileSafe(path.join(contextDir(targetDir), 'features.md'));
   const map = parseFeaturesMap(featuresContent);
   const inProgress = [];
@@ -53,6 +54,30 @@ async function resolveActiveFeature(targetDir) {
       inProgress.push(slug);
     }
   }
+
+  // 0. The live session that owns this process answers for itself. A session
+  //    whose feature was closed since is back to having none.
+  const session = await readSessionFeature(targetDir, env).catch(() => null);
+  if (session) {
+    const status = session.feature ? normalizeSlug(map.get(session.feature)).toLowerCase() : '';
+    if (session.feature && !CLOSED_STATUSES.has(status)) {
+      return { slug: session.feature, source: 'session', ambiguous: false, candidates: [] };
+    }
+    // No feature of its own and more than one in progress: the pulse may be
+    // another session's, so nothing is guessed.
+    if (inProgress.length > 1) {
+      return { slug: '', source: 'session', ambiguous: true, candidates: inProgress };
+    }
+  }
+
+  // 1. project-pulse.md active_feature — the single source of truth maintained
+  //    by pulse:update and reset by feature:close.
+  const pulse = await readProjectPulse(targetDir);
+  if (pulse && pulse.exists && !isNone(pulse.active_feature)) {
+    return { slug: normalizeSlug(pulse.active_feature), source: 'pulse', ambiguous: false, candidates: [] };
+  }
+
+  // 2. features.md — fall back to the unique in_progress row.
   if (inProgress.length === 1) {
     return { slug: inProgress[0], source: 'features.md', ambiguous: false, candidates: [] };
   }

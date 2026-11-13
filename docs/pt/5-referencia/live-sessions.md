@@ -68,6 +68,44 @@ aioson live:close . --agent=qa --summary="QA passou 12/12 ACs. Feature pronta."
 aioson live:list .
 ```
 
+## Várias sessões na mesma pasta (sessão própria)
+
+Por padrão existe uma sessão por rótulo por pasta: um segundo `live:start` com o mesmo rótulo
+reaproveita a sessão aberta, ou a fecha quando a ferramenta é outra. Quem precisa de várias sessões
+lado a lado (o AIOSON Play abre uma por aba) usa a **sessão própria**:
+
+```bash
+# Abrir: quem abre escolhe a chave (6 a 128 caracteres: letras, dígitos, . _ : -)
+aioson live:start . --tool=claude --session=aba-1-7f3a --own-session
+aioson live:start . --tool=claude --session=aba-2-91bc --own-session
+
+# Consultar e fechar só aquela sessão
+aioson live:status . --session=aba-1-7f3a --json
+aioson live:close . --session=aba-1-7f3a
+
+# Saber se a CLI instalada aceita isso
+aioson tool:capabilities --json     # live_sessions: { own_session, session_feature }
+```
+
+- A sessão própria nunca reaproveita, fecha ou altera outra sessão da pasta, e não grava o ponteiro
+  do rótulo. Uma busca pelo rótulo ou pela pasta nunca cai nela.
+- Uma chave vale para uma sessão: reabrir pede chave nova.
+- `--own-session` exige `--session` e não combina com `--tmux`.
+
+### Feature por sessão
+
+Dentro de uma sessão viva, a feature em que ela trabalha é dela. Um comando de fluxo com a feature
+explícita (`pulse:update --feature`, `context:brief --feature`, `phase:next --feature`,
+`dev:state:write --feature`, `workflow:next --expect-feature`, `feature:register --feature`) liga a
+sessão àquela feature, e `aioson feature:current . --json` passa a responder
+`{ "slug": "<feature>", "source": "session" }` ali, mesmo que outra sessão registre ou avance outra
+feature. Sessão sem feature e com mais de uma em andamento recebe `ambiguous`. Fora de uma sessão viva
+nada muda: vale o `project-pulse.md`.
+
+O estado de retomada do `@dev` também é por feature: `dev:state:write --feature=<slug>` grava
+`.aioson/context/features/<slug>/dev-state.md` e mantém `.aioson/context/dev-state.md` como cópia do
+último gravado.
+
 ## Exemplo prático
 
 ```
@@ -122,6 +160,7 @@ aioson live:start . --agent=dev --tool=claude --tmux
 ├── aios.sqlite                    ← banco principal (dashboard lê daqui)
 └── live/<session-key>/
     ├── state.json                 ← estado da sessão
+    ├── feature.json               ← feature em que a sessão trabalha (quando ela nomeou uma)
     ├── events.ndjson              ← stream de eventos (até 10 por sessão)
     └── summary.md                 ← resumo ao fechar
 ```

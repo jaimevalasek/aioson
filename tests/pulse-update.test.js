@@ -205,3 +205,133 @@ test('pulse:update: includes phase in active work when provided', async () => {
   assert.equal(result.ok, true);
   assert.ok(result.active_work.includes('phase 3') || result.active_work.includes('cart'));
 });
+
+// ─── feature per live session (parallel-sessions, AC-parallel-sessions-25) ───
+// `pulse:update --feature` still moves the project's pointer — what a reader
+// outside any session gets — but inside a live session it also says which
+// feature THAT session is on, and never moves another session's.
+
+const { spawnSync } = require('node:child_process');
+const { createTranslator } = require('../src/i18n');
+const { runLiveStart } = require('../src/commands/live');
+const { resolveActiveFeature } = require('../src/commands/feature-current');
+const { bindSessionFeatureForCommand, readSessionFeature } = require('../src/lib/session-feature');
+
+const CLI = path.join(__dirname, '..', 'bin', 'aioson.js');
+const silentLogger = { log() {}, error() {} };
+const { t: tr } = createTranslator('en');
+
+function sessionEnv(key) {
+  return { AIOSON_LIVE_SESSION_KEY: key, AIOSON_LIVE_SESSION: key };
+}
+
+// A suite run inside a launched session inherits the variables live:start exports.
+function runCli(args, extra = {}) {
+  const env = { ...process.env, ...extra };
+  for (const name of ['AIOSON_LIVE_SESSION_KEY', 'AIOSON_LIVE_SESSION', 'AIOSON_PLAY']) {
+    if (!(name in extra)) delete env[name];
+  }
+  const result = spawnSync(process.execPath, [CLI, ...args], { env, encoding: 'utf8' });
+  return { status: result.status, json: result.stdout.trim().startsWith('{') ? JSON.parse(result.stdout) : null, stderr: result.stderr };
+}
+
+async function makeTwoSessionProject() {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/config.md', '# project\n');
+  await writeFile(dir, '.aioson/context/features.md', [
+    '# Features',
+    '',
+    '| slug | status | started | completed |',
+    '|------|--------|---------|-----------|',
+    '| checkout | in_progress | 2026-01-01 | — |',
+    '| billing | in_progress | 2026-01-02 | — |',
+    ''
+  ].join('\n'));
+  for (const key of ['session-a-key', 'session-b-key']) {
+    await runLiveStart({
+      args: [dir],
+      options: { tool: 'claude', 'tool-bin': process.execPath, 'no-launch': true, json: true, session: key, 'own-session': true, 'no-health-check': true, 'no-health': true },
+      logger: silentLogger,
+      t: tr
+    });
+  }
+  return dir;
+}
+
+test('AC-parallel-sessions-25 a session recording another feature does not change the feature of the other session', async () => {
+  const dir = await makeTwoSessionProject();
+  try {
+    const first = runCli(['pulse:update', dir, '--agent=dev', '--feature=checkout', '--action=Implemented phase 1', '--json'], sessionEnv('session-a-key'));
+    assert.equal(first.json.active_feature, 'checkout', first.stderr);
+
+    // Session B registers and advances another feature.
+    const second = runCli(['pulse:update', dir, '--agent=product', '--feature=billing', '--action=PRD created', '--json'], sessionEnv('session-b-key'));
+    assert.equal(second.json.active_feature, 'billing', second.stderr);
+    const moved = runCli(['pulse:update', dir, '--feature=billing', '--json'], sessionEnv('session-b-key'));
+    assert.equal(moved.json.previous_active_feature, 'billing');
+
+    assert.equal((await resolveActiveFeature(dir, { env: sessionEnv('session-a-key') })).slug, 'checkout');
+    assert.equal((await resolveActiveFeature(dir, { env: sessionEnv('session-b-key') })).slug, 'billing');
+    assert.equal(runCli(['feature:current', dir, '--json'], sessionEnv('session-a-key')).json.slug, 'checkout');
+
+    // The project's pointer is as it always was: the last one written.
+    assert.deepEqual(await resolveActiveFeature(dir, { env: {} }), { slug: 'billing', source: 'pulse', ambiguous: false, candidates: [] });
+    const pulse = await fs.readFile(path.join(dir, '.aioson/context/project-pulse.md'), 'utf8');
+    assert.match(pulse, /^active_feature: billing$/m);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test('AC-parallel-sessions-25 pulse:update outside a live session binds no session and writes the pulse as before', async () => {
+  const dir = await makeTwoSessionProject();
+  try {
+    const result = runCli(['pulse:update', dir, '--agent=dev', '--feature=checkout', '--json']);
+    assert.equal(result.json.active_feature, 'checkout', result.stderr);
+    assert.deepEqual(await readSessionFeature(dir, sessionEnv('session-a-key')), { sessionKey: 'session-a-key', feature: null });
+    assert.deepEqual(await readSessionFeature(dir, sessionEnv('session-b-key')), { sessionKey: 'session-b-key', feature: null });
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test('AC-parallel-sessions-25 every workflow command that names a feature binds the session it runs in, and only those', async () => {
+  const dir = await makeTwoSessionProject();
+  try {
+    const env = sessionEnv('session-a-key');
+    const bind = (command, options) => bindSessionFeatureForCommand({ command, args: [dir], options, env });
+    const current = async () => (await readSessionFeature(dir, env)).feature;
+
+    const naming = [
+      ['pulse:update', { feature: 'checkout' }, 'checkout'],
+      ['context:brief', { feature: 'billing' }, 'billing'],
+      ['phase:next', { feature: 'checkout' }, 'checkout'],
+      ['dev:state:write', { feature: 'billing' }, 'billing'],
+      ['state:save', { feature: 'checkout' }, 'checkout'],
+      ['workflow:next', { 'expect-feature': 'billing' }, 'billing'],
+      ['feature:register', { feature: 'checkout' }, 'checkout'],
+      ['dev-state-write', { feature: 'billing' }, 'billing']
+    ];
+    for (const [command, options, expected] of naming) {
+      const bound = await bind(command, options);
+      assert.equal(bound && bound.bound, true, command);
+      assert.equal(await current(), expected, command);
+    }
+
+    // A command that only reads about a feature, a bare flag, a value that is
+    // no slug and the project-mode expectation leave the session where it was.
+    assert.equal(await bind('gate:check', { feature: 'checkout' }), null);
+    assert.equal(await bind('preflight', { feature: 'checkout' }), null);
+    assert.equal(await bind('pulse:update', { feature: true }), null);
+    assert.equal(await bind('pulse:update', { feature: '../escape' }), null);
+    assert.equal(await bind('workflow:next', { 'expect-feature': 'none' }), null);
+    assert.equal(await bind('workflow:next', { feature: 'checkout' }), null, 'workflow:next names its feature with --expect-feature');
+    assert.equal(await current(), 'billing');
+
+    // The other session was never touched.
+    assert.equal((await readSessionFeature(dir, sessionEnv('session-b-key'))).feature, null);
+    assert.equal(await bindSessionFeatureForCommand({ command: 'pulse:update', args: [dir], options: { feature: 'checkout' }, env: {} }), null);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

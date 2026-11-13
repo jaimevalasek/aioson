@@ -23,6 +23,14 @@ const { getToolCapabilities, resolveResumeArgs, resolveLaunchPermission } = requ
 const { resolveHookTrustArgs, isUnattendedPermission } = require('../lib/hook-trust');
 const { resolveTargetDir } = require('../lib/project-root');
 const { resolveNpmCmdShim } = require('../agent-execution/executable-resolver');
+const {
+  NO_LIVE_SESSION,
+  sessionKeyToDirName,
+  liveSessionDir,
+  findRunningLiveSession,
+  readFeatureOfSessionDir,
+  writeFeatureOfSessionDir
+} = require('../lib/session-feature');
 
 const LIVE_EVENTS_LIMIT = 10;
 const LIVE_MESSAGE_LIMIT = 500;
@@ -56,6 +64,24 @@ function makeDirectSessionKey(agentName) {
   return `direct-session:${Date.now()}:${String(agentName || '').replace(/^@/, '')}`;
 }
 
+// A flag with no value parses as `true`, and that is no key.
+function sessionKeyOption(options) {
+  const value = options.session;
+  return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
+// A session the caller owns (`live:start --own-session --session=<key>`): the
+// key is the caller's, so it has to be safe as a directory name and as an
+// argument, and it is never the reserved `none` (six characters at least).
+const OWN_SESSION_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$/;
+
+function requireOwnSessionKey(options, t) {
+  const key = sessionKeyOption(options);
+  if (!key) throw new Error(t('live.own_session_requires_key'));
+  if (!OWN_SESSION_KEY_RE.test(key)) throw new Error(t('live.own_session_invalid_key', { session: key }));
+  return key;
+}
+
 function parseWatchSeconds(value) {
   if (value === undefined || value === null || value === false) return null;
   if (value === true || value === '') return 2;
@@ -77,23 +103,10 @@ async function withRuntimeDb(targetDir, t) {
   return handle;
 }
 
-// bug-found-005: session keys carry the format `direct-session:{ts}:{agent}`
-// which contains colons. NTFS reserves `:` in filenames (it's the drive-letter
-// separator and the alternate-data-stream syntax), so any `path.join(..., 'live',
-// 'direct-session:1234:deyvin')` would have `mkdir` fail silently in the
-// auxiliary-filesystem catches further down — leaving the dashboard's
-// state.json/events.ndjson/summary.md never written on Windows.
-//
-// We sanitize only at the filesystem boundary: the session_key stored in
-// SQLite, returned to callers, and printed by the CLI keeps its colons (it's
-// a documented public identifier). Colons survive on POSIX too, but `__` is
-// safe everywhere and lets a single code path handle both platforms.
-function sessionKeyToDirName(sessionKey) {
-  return String(sessionKey).replace(/:/g, '__');
-}
-
+// The directory of a session is named by src/lib/session-feature.js
+// (`sessionKeyToDirName`: the key with its colons made safe for NTFS).
 function resolveLivePaths(runtimeDir, sessionKey) {
-  const sessionDir = path.join(runtimeDir, 'live', sessionKeyToDirName(sessionKey));
+  const sessionDir = liveSessionDir(runtimeDir, sessionKey);
   return {
     sessionDir,
     statePath: path.join(sessionDir, 'state.json'),
@@ -532,7 +545,10 @@ function createLiveState(targetDir, run, task, options = {}) {
     current_task: options.currentTask ?? null,
     current_run_key: options.currentRunKey || run.run_key,
     stats: normalizeLiveStats(options.stats, planStats),
-    last_events: Array.isArray(options.lastEvents) ? options.lastEvents.slice(-LIVE_EVENTS_LIMIT) : []
+    last_events: Array.isArray(options.lastEvents) ? options.lastEvents.slice(-LIVE_EVENTS_LIMIT) : [],
+    // Found by its key alone (see NOT_OWN_SESSION_RUN): a state rebuilt from
+    // the database keeps the mark.
+    ...(taskMeta.own_session ? { own_session: true } : {})
   };
 }
 
@@ -547,6 +563,17 @@ function selectLiveRunByKey(db, runKey) {
     LIMIT 1
   `).get(String(runKey));
 }
+
+// A session opened with `--own-session` answers to its key alone. Looked up by
+// label, or as "the latest of the folder", it would be reused or closed by a
+// caller that never opened it (a launcher on the one-session-per-label path
+// sharing the folder). The mark is in the session task's metadata, written by
+// JSON.stringify — no spaces.
+const NOT_OWN_SESSION_RUN = `
+  task_key NOT IN (
+    SELECT task_key FROM tasks
+    WHERE task_kind = 'live_session' AND meta_json LIKE '%"own_session":true%'
+  )`;
 
 function selectLatestLiveRun(db, options = {}) {
   if (options.sessionKey) {
@@ -567,7 +594,7 @@ function selectLatestLiveRun(db, options = {}) {
         run_key, task_key, agent_name, agent_kind, squad_slug, session_key, source,
         title, status, summary, output_path, started_at, updated_at, finished_at
       FROM agent_runs
-      WHERE source = 'live' AND agent_name = ?
+      WHERE source = 'live' AND agent_name = ? AND ${NOT_OWN_SESSION_RUN}
       ORDER BY updated_at DESC, started_at DESC
       LIMIT 1
     `).get(String(options.agentName));
@@ -578,7 +605,7 @@ function selectLatestLiveRun(db, options = {}) {
       run_key, task_key, agent_name, agent_kind, squad_slug, session_key, source,
       title, status, summary, output_path, started_at, updated_at, finished_at
     FROM agent_runs
-    WHERE source = 'live'
+    WHERE source = 'live' AND ${NOT_OWN_SESSION_RUN}
     ORDER BY updated_at DESC, started_at DESC
     LIMIT 1
   `).get();
@@ -615,7 +642,7 @@ async function resolveLiveContext(targetDir, db, runtimeDir, options = {}) {
   }
 
   if (!sessionKey && !agentName) {
-    const liveStates = await listLiveStates(runtimeDir);
+    const liveStates = (await listLiveStates(runtimeDir)).filter((entry) => !entry.own_session);
     if (liveStates.length > 0) {
       state = liveStates[0];
       sessionKey = state.session_key || null;
@@ -725,10 +752,6 @@ function sameDir(a, b) {
   return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
 }
 
-// The value a lane worker's AIOSON_LIVE_SESSION carries (adapters/base.js
-// laneEnv): a session of its own, never the launcher's.
-const NO_LIVE_SESSION = 'none';
-
 /**
  * The open live session that launched the current tool, or null.
  *
@@ -749,23 +772,7 @@ const NO_LIVE_SESSION = 'none';
 async function resolveLauncherLiveSession(targetDir, runtimeDir, { source } = {}) {
   const envKey = String(process.env.AIOSON_LIVE_SESSION_KEY || process.env.AIOSON_LIVE_SESSION || '').trim();
   if (envKey === NO_LIVE_SESSION) return null;
-  if (envKey) {
-    const handle = await openRuntimeDb(targetDir, { mustExist: true });
-    if (!handle) return null;
-    try {
-      const row = handle.db.prepare(`
-        SELECT run_key FROM agent_runs
-        WHERE session_key = ? AND source = 'live' AND status = 'running'
-        ORDER BY started_at DESC, rowid DESC
-        LIMIT 1
-      `).get(envKey);
-      return row
-        ? { sessionKey: envKey, runKey: row.run_key, sessionDir: resolveLivePaths(runtimeDir, envKey).sessionDir }
-        : null;
-    } finally {
-      handle.db.close();
-    }
-  }
+  if (envKey) return findRunningLiveSession(targetDir, runtimeDir, envKey);
 
   const liveRoot = path.join(runtimeDir, 'live');
   const entries = await fs.readdir(liveRoot, { withFileTypes: true }).catch(() => []);
@@ -1322,10 +1329,13 @@ async function getLiveStatusSnapshot(targetDir, t, options = {}) {
 
   const { db, runtimeDir } = await openRuntimeDb(targetDir, { mustExist: true });
   try {
-    const context = await resolveLiveContext(targetDir, db, runtimeDir, {
-      agentName: options.agent,
-      limit: options.limit
-    });
+    // `--session=<key>` answers about that session and no other: the label
+    // and "the latest session of the folder" are never consulted, so with
+    // several sessions open each caller reads its own.
+    const requestedSession = sessionKeyOption(options);
+    const context = await resolveLiveContext(targetDir, db, runtimeDir, requestedSession
+      ? { sessionKey: requestedSession, limit: options.limit }
+      : { agentName: options.agent, limit: options.limit });
 
     if (!context.run && !context.state) {
       return {
@@ -1362,7 +1372,7 @@ async function getLiveStatusSnapshot(targetDir, t, options = {}) {
 
     // Prefer run.agent_name when no explicit --agent was passed;
     // this lets events emitted by other agents update the bar dynamically.
-    const effectiveAgent = options.agent
+    const effectiveAgent = options.agent && !requestedSession
       ? context.agentName
       : (context.run?.agent_name || context.agentName);
 
@@ -1377,6 +1387,8 @@ async function getLiveStatusSnapshot(targetDir, t, options = {}) {
       processState: context.processState,
       pid: state.child_pid || null,
       sessionKey: context.sessionKey,
+      ownSession: Boolean(state.own_session),
+      feature: await readFeatureOfSessionDir(context.paths ? context.paths.sessionDir : null),
       startedAt: state.started_at || null,
       updatedAt: state.updated_at || null,
       closedAt: state.closed_at || null,
@@ -1417,6 +1429,13 @@ async function runLiveStart({ args, options = {}, logger, t }) {
   const agentName = normalizeAgentHandle(options.agent || NEUTRAL_LIVE_AGENT);
   const tool = normalizeLiveTool(requireOption(options, 'tool', t), t);
   const noLaunch = Boolean(options['no-launch']);
+  // `--own-session --session=<key>`: the caller owns this session. It is
+  // created under exactly that key and never looked up, reused or closed by
+  // label, so several sessions — same tool or not, same launcher or not —
+  // live in one folder. The label pointer (`sessions/<agent>.json`, one per
+  // folder) is left as it was: it belongs to whoever opened by label.
+  const ownSession = Boolean(options['own-session'] || options.ownSession);
+  const ownSessionKey = ownSession ? requireOwnSessionKey(options, t) : null;
 
   if (options.json && !noLaunch && !options.attach) {
     throw new Error(t('live.json_requires_no_launch'));
@@ -1468,6 +1487,11 @@ async function runLiveStart({ args, options = {}, logger, t }) {
   };
 
   const useTmux = Boolean(options.tmux) || process.env.AIOSON_TMUX === '1';
+  // A tmux session is named after the folder and the label: two of them
+  // would be the same tmux session.
+  if (ownSession && useTmux) {
+    throw new Error(t('live.own_session_no_tmux'));
+  }
 
   // Pre-check tmux availability so we can warn early
   if (useTmux && !noLaunch) {
@@ -1480,12 +1504,17 @@ async function runLiveStart({ args, options = {}, logger, t }) {
   const { db, dbPath, runtimeDir } = await openRuntimeDb(targetDir);
 
   try {
-    const existing = await resolveLiveContext(targetDir, db, runtimeDir, {
+    // A key names one session for good: a reopened session gets a new one.
+    if (ownSession && selectLatestLiveRun(db, { sessionKey: ownSessionKey })) {
+      throw new Error(t('live.own_session_key_in_use', { session: ownSessionKey }));
+    }
+
+    const existing = ownSession ? null : await resolveLiveContext(targetDir, db, runtimeDir, {
       agentName,
       limit: options.limit
     });
 
-    if (existing.run && existing.run.source === 'live' && existing.open) {
+    if (existing && existing.run && existing.run.source === 'live' && existing.open) {
       const state = existing.state || createLiveState(targetDir, existing.run, existing.task, {
         sessionKey: existing.sessionKey,
         activeAgent: existing.agentName,
@@ -1644,6 +1673,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
       path: targetDir,
       child_pid: null
     };
+    if (ownSession) taskMeta.own_session = true;
     if (plan.planSteps.length > 0) {
       taskMeta.plan_steps = plan.planSteps;
     }
@@ -1712,14 +1742,16 @@ async function runLiveStart({ args, options = {}, logger, t }) {
       }
     }
 
-    await writeAgentSession(runtimeDir, agentName, {
-      runKey,
-      taskKey,
-      sessionKey,
-      startedAt: now,
-      finished: false,
-      source: 'live'
-    });
+    if (!ownSession) {
+      await writeAgentSession(runtimeDir, agentName, {
+        runKey,
+        taskKey,
+        sessionKey,
+        startedAt: now,
+        finished: false,
+        source: 'live'
+      });
+    }
 
     const state = createLiveState(targetDir, {
       run_key: runKey,
@@ -1765,6 +1797,11 @@ async function runLiveStart({ args, options = {}, logger, t }) {
     }
 
     await writeLiveState(runtimeDir, sessionKey, state);
+    // `--feature=<slug>`: the session is born on that feature (a session
+    // reopened for the next stage of the same feature keeps it).
+    const sessionFeature = await writeFeatureOfSessionDir(
+      resolveLivePaths(runtimeDir, sessionKey).sessionDir, sessionKey, options.feature, 'live:start'
+    ).catch(() => null);
     await appendLiveEvent(runtimeDir, sessionKey, {
       ts: now,
       type: 'session_started',
@@ -1822,6 +1859,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
         taskKey,
         runKey,
         sessionKey,
+        feature: sessionFeature,
         pid: null,
         processState: 'tmux',
         reused: false,
@@ -1839,6 +1877,8 @@ async function runLiveStart({ args, options = {}, logger, t }) {
       taskKey,
       runKey,
       sessionKey,
+      ownSession,
+      feature: sessionFeature,
       pid: taskMeta.child_pid,
       processState: detectProcessState(taskMeta.child_pid),
       reused: false,
@@ -2329,15 +2369,19 @@ async function runLiveStatus({ args, options = {}, logger, t }) {
 async function runLiveClose({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const requestedAgent = options.agent ? normalizeAgentHandle(options.agent) : null;
+  // `--session=<key>` closes that session and no other: without it the
+  // session is found by label, else it is the latest of the folder — which
+  // with several sessions open is somebody else's.
+  const requestedSession = sessionKeyOption(options);
   const { db, dbPath, runtimeDir } = await withRuntimeDb(targetDir, t);
 
   try {
-    const context = await resolveLiveContext(targetDir, db, runtimeDir, {
-      agentName: requestedAgent,
-      limit: options.limit
-    });
+    const context = await resolveLiveContext(targetDir, db, runtimeDir, requestedSession
+      ? { sessionKey: requestedSession, limit: options.limit }
+      : { agentName: requestedAgent, limit: options.limit });
 
     if (!context.run || context.run.source !== 'live' || !context.sessionKey || !context.task) {
+      if (requestedSession) throw new Error(t('live.no_session_for_key', { session: requestedSession }));
       throw new Error(requestedAgent
         ? t('live.no_session_for_agent', { agent: requestedAgent })
         : t('live.no_session_found'));
@@ -2417,7 +2461,13 @@ async function runLiveClose({ args, options = {}, logger, t }) {
       recentEvents: nextState.last_events
     }));
 
-    await clearAgentSession(runtimeDir, context.agentName);
+    // The label pointer is one per folder. Closing by key clears it only when
+    // it points at this very session: another session opened under the same
+    // label keeps its own.
+    const labelPointer = requestedSession ? await readAgentSession(runtimeDir, context.agentName) : null;
+    if (!requestedSession || (labelPointer && labelPointer.sessionKey === context.sessionKey)) {
+      await clearAgentSession(runtimeDir, context.agentName);
+    }
 
     if (!options.json) {
       logger.log(t('live.session_closed', { agent: context.agentName, session: context.sessionKey, dbPath }));

@@ -328,13 +328,13 @@ module.exports = {
     help_detect_test_runner:
       'aioson detect:test-runner [path] [--json] [--locale=en]',
     help_dev_resume_data:
-      'aioson dev:resume-data [path] [--feature=<slug> --phase=<n> --capsule [--base=<ref>] [--out=<file>]] [--json] [--locale=en]',
+      'aioson dev:resume-data [path] [--feature=<slug> (default: the feature of the live session running this, else the one of the last handoff)] [--phase=<n> --capsule (needs --feature=<slug>) [--base=<ref>] [--out=<file>]] [--json] [--locale=en]',
     help_dev_progress:
       'aioson dev:progress [path] --feature=<slug> [--json] [--locale=en]',
     help_phase_next:
       'aioson phase:next [path] --feature=<slug> --finished=<n> --note=<text|none> [--tool=<harness>] [--json] [--locale=en]',
     help_session_kickoff:
-      'aioson session:kickoff [path] --agent=<id> --feature=<slug> [--phase=<n>] [--tool=<harness>] [--json] [--locale=en]',
+      'aioson session:kickoff [path] --agent=<id> --feature=<slug> (optional inside a live session that named its feature) [--phase=<n>] [--tool=<harness>] [--json] [--locale=en]',
     help_verification_plan:
       'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=en]',
     help_delegation_plan:
@@ -506,13 +506,13 @@ module.exports = {
     help_execution_prices:
       'aioson execution:prices [path] [--refresh] [--json]',
     help_live_start:
-      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy|antigravity> --agent=<name> [--tool-bin=<binary>] [--permission-mode=yolo|default (default: yolo — the host runs unattended)] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
+      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy|antigravity> --agent=<name> [--tool-bin=<binary>] [--permission-mode=yolo|default (default: yolo — the host runs unattended)] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--own-session (with --session=<key>: a session of its own — never reuses, closes or changes another session of the folder; several per folder)] [--feature=<slug> (the feature the session starts on)] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
     help_live_status:
-      'aioson live:status [path] [--agent=<name>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=en]',
+      'aioson live:status [path] [--agent=<name>] [--session=<key> (that session only)] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=en]',
     help_live_handoff:
       'aioson live:handoff [path] --agent=<name> --to=<name> [--reason=<text>] [--summary=<text>] [--message=<text>] [--json] [--locale=en]',
     help_live_close:
-      'aioson live:close [path] [--agent=<name>] [--summary=<text>] [--message=<text>] [--status=completed|failed] [--json] [--locale=en]',
+      'aioson live:close [path] [--agent=<name>] [--session=<key> (that session only)] [--summary=<text>] [--message=<text>] [--status=completed|failed] [--json] [--locale=en]',
     help_live_list:
       'aioson live:list [path] [--json] [--locale=en]',
     help_scaffold_complete:
@@ -1624,6 +1624,11 @@ module.exports = {
     watch_json_conflict: '--watch cannot be combined with --json.',
     no_session_found: 'No live session found.',
     no_session_for_agent: 'No live session found for {agent}.',
+    no_session_for_key: 'No live session found with key {session}.',
+    own_session_requires_key: '--own-session requires --session=<key>: the caller names the session it owns.',
+    own_session_invalid_key: 'Invalid session key "{session}". Use 6 to 128 characters of letters, digits, ".", "_", ":" or "-", starting with a letter or a digit.',
+    own_session_key_in_use: 'Session key {session} was already used in this project. A reopened session takes a new key.',
+    own_session_no_tmux: '--own-session cannot be combined with --tmux: the tmux session is named after the folder and the agent.',
     session_already_closed: 'Live session {session} is already closed.',
     session_already_active: 'Live session already active: {agent} | session: {session} | run: {runKey} ({dbPath})',
     session_started: 'Live session started: {agent} | tool: {tool} | session: {session} ({dbPath})',

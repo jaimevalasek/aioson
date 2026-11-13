@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Several live sessions in one folder, each with its own key.** `live:start` found a session by its label and reused it, or closed it when the tool differed, so a second session on the same folder never came up beside the first. `live:start --session=<key> --own-session` now creates a session under the caller's key and looks nothing up: it never reuses, closes or changes another session of the folder, and it leaves the label pointer alone. `live:status --session=<key>` and `live:close --session=<key>` answer about and close that session only. A lookup by label, or "the latest session of the folder", never lands on an own session, so a launcher still on one session per label cannot take it. A key names one session for good: a reused key is refused. `tool:capabilities --json` carries `live_sessions: { own_session, session_feature }` for a client to check before it opens a second session.
+- **Each live session keeps the feature it works on.** The active feature was one per project (`active_feature` in `project-pulse.md`), so with two sessions open the one that registered or advanced a feature last moved the other one's too, and its agents went on with the wrong PRD and plan. Inside a live session, a workflow command that names a feature (`pulse:update --feature`, `context:brief --feature`, `phase:next --feature`, `dev:state:write --feature`, `workflow:next --expect-feature`, `feature:register --feature`) binds that session to it, and `feature:current` answers it there with `source: "session"` whatever another session does; `workflow:next`, `session:kickoff` without `--feature`, `dev:resume-data` and `context:digest` follow. A session that named no feature gets `ambiguous` when more than one is in progress, never the pulse another session wrote. Outside a live session, and with a single feature in progress, every answer is what it was.
+- **The `@dev` resume state is one file per feature.** `dev:state:write --feature=<slug>` writes `.aioson/context/features/<slug>/dev-state.md` and keeps `.aioson/context/dev-state.md` as a copy of the last write, so two features in progress no longer overwrite each other's phase, next step and history. `preflight --feature`, `dev:resume-data --feature` and the dev stage of `workflow:next` read the feature's own file; `state:reset --feature=<slug>` clears one feature, and `feature:close` retires the state of the feature it closes.
+
 ## [1.81.0] - 2026-11-11
 
 ### Added

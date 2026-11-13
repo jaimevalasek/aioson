@@ -120,3 +120,34 @@ test('every existing tool:capabilities field survives for the Play contract', ()
     for (const key of required) assert.ok(Object.hasOwn(caps, key), `${tool}.${key}`);
   }
 });
+
+// parallel-sessions (AC-parallel-sessions-03): the Play asks the installed CLI
+// whether it takes several sessions per folder before it opens a second one.
+// The answer is this block; a CLI that answers without it takes one session
+// per label, and the Play then keeps to one.
+test('AC-parallel-sessions-03 tool:capabilities --json says the CLI takes own sessions and a feature per session', async () => {
+  const { runToolCapabilities } = require('../src/commands/tool-capabilities');
+  const { TOOL_CAPS } = require('../src/lib/tool-capabilities');
+  const silent = { log() {}, error() {} };
+
+  const payload = await runToolCapabilities({ args: [], options: { json: true }, logger: silent });
+  assert.deepEqual(payload.live_sessions, { own_session: true, session_feature: true });
+  // What a client already read stays where it was.
+  assert.equal(payload.schema_version, 2);
+  assert.deepEqual(Object.keys(payload).sort(), ['live_sessions', 'schema_version', 'tools']);
+  assert.equal(payload.tools, TOOL_CAPS);
+
+  // The per-tool answer has the shape it had.
+  const single = await runToolCapabilities({ args: [], options: { json: true, tool: 'claude' }, logger: silent });
+  assert.deepEqual(Object.keys(single).sort(), ['capabilities', 'tool']);
+});
+
+test('AC-parallel-sessions-03 the aioson command prints live_sessions in its JSON', () => {
+  const { spawnSync } = require('node:child_process');
+  const path = require('node:path');
+  const result = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'aioson.js'), 'tool:capabilities', '--json'], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const printed = JSON.parse(result.stdout);
+  assert.deepEqual(printed.live_sessions, { own_session: true, session_feature: true });
+  assert.ok(printed.tools.claude && printed.tools.codex);
+});

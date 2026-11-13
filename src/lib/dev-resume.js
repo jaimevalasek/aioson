@@ -9,7 +9,12 @@
  *   - artifacts_consumed (from last-handoff.json artifact_uris, v2 form)
  *   - code_map_paths (from dossier ## Code Map files[].path)
  *   - sheldon_plan (path if .aioson/plans/{slug}/manifest.md exists)
- *   - next_step (from dev-state.md or derived from plan manifest)
+ *   - next_step (from the feature's dev-state.md or derived from plan manifest)
+ *
+ * The feature is the one asked for (`feature`), else the one the live session
+ * running this works on, else the last handoff's. The state is that feature's
+ * own file (features/<slug>/dev-state.md); the project-level dev-state.md
+ * counts only while it names the same feature.
  */
 
 const fs = require('node:fs/promises');
@@ -20,6 +25,8 @@ const {
   parseFeaturesTable,
   parseFrontmatterField
 } = require('../commands/dossier-audit');
+const { featureDevStateRel } = require('../preflight-engine');
+const { readSessionFeature } = require('./session-feature');
 
 async function readFileOrNull(filePath) {
   try {
@@ -139,18 +146,25 @@ function deriveNextStepFromPlan(planRaw) {
   return null;
 }
 
-async function buildDevResumeData(projectPath) {
+async function buildDevResumeData(projectPath, { feature: requestedFeature = null, env = process.env } = {}) {
   const targetDir = path.resolve(projectPath || '.');
   const ctxDir = path.join(targetDir, '.aioson', 'context');
 
-  const lastHandoff = await readJsonOrNull(path.join(ctxDir, 'last-handoff.json'));
-  const featureSlug = lastHandoff && lastHandoff.feature_slug ? lastHandoff.feature_slug : null;
-  if (!featureSlug) return null;
-
+  const lastHandoffRaw = await readJsonOrNull(path.join(ctxDir, 'last-handoff.json'));
   const featuresRaw = await readFileOrNull(path.join(ctxDir, 'features.md'));
   const features = featuresRaw ? parseFeaturesTable(featuresRaw) : [];
-  const feature = features.find((f) => f.slug === featureSlug);
-  if (!feature || feature.status !== 'in_progress') return null;
+  const inProgress = (slug) => Boolean(slug) && features.some((f) => f.slug === slug && f.status === 'in_progress');
+
+  // The last handoff is one per project: with two sessions on two features it
+  // is whichever handed off last, so the session's own feature comes first.
+  const session = requestedFeature ? null : await readSessionFeature(targetDir, env).catch(() => null);
+  const candidates = requestedFeature
+    ? [requestedFeature]
+    : [session && session.feature, lastHandoffRaw && lastHandoffRaw.feature_slug];
+  const featureSlug = candidates.find(inProgress) || null;
+  if (!featureSlug) return null;
+  // A handoff of another feature says nothing about this one.
+  const lastHandoff = lastHandoffRaw && lastHandoffRaw.feature_slug === featureSlug ? lastHandoffRaw : null;
 
   const dossierPath = path.join(ctxDir, 'features', featureSlug, 'dossier.md');
   const dossierRaw = await readFileOrNull(dossierPath);
@@ -159,7 +173,9 @@ async function buildDevResumeData(projectPath) {
   const specRaw = await readFileOrNull(path.join(ctxDir, `spec-${featureSlug}.md`));
   const classification = readClassificationFromFrontmatters([prdRaw, specRaw, dossierRaw]);
 
-  const devStateRaw = await readFileOrNull(path.join(ctxDir, 'dev-state.md'));
+  const ownStateRel = featureDevStateRel(featureSlug);
+  const devStateRaw = (ownStateRel ? await readFileOrNull(path.join(ctxDir, ownStateRel)) : null)
+    || await readFileOrNull(path.join(ctxDir, 'dev-state.md'));
   const devStateFields = extractDevStateFields(devStateRaw);
   const useDevState = isCurrentDevStateForFeature(devStateFields, featureSlug);
 

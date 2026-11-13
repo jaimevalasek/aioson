@@ -330,13 +330,13 @@ module.exports = {
     help_detect_test_runner:
       'aioson detect:test-runner [path] [--json] [--locale=pt-BR]',
     help_dev_resume_data:
-      'aioson dev:resume-data [path] [--feature=<slug> --phase=<n> --capsule [--base=<ref>] [--out=<file>]] [--json] [--locale=pt-BR]',
+      'aioson dev:resume-data [path] [--feature=<slug> (padrão: a feature da sessão live que roda o comando, senão a do último handoff)] [--phase=<n> --capsule (exige --feature=<slug>) [--base=<ref>] [--out=<file>]] [--json] [--locale=pt-BR]',
     help_dev_progress:
       'aioson dev:progress [path] --feature=<slug> [--json] [--locale=pt-BR]',
     help_phase_next:
       'aioson phase:next [path] --feature=<slug> --finished=<n> --note=<texto|none> [--tool=<ferramenta>] [--json] [--locale=pt-BR]',
     help_session_kickoff:
-      'aioson session:kickoff [path] --agent=<id> --feature=<slug> [--phase=<n>] [--tool=<ferramenta>] [--json] [--locale=pt-BR]',
+      'aioson session:kickoff [path] --agent=<id> --feature=<slug> (opcional dentro de uma sessão live que já nomeou a feature) [--phase=<n>] [--tool=<ferramenta>] [--json] [--locale=pt-BR]',
     help_verification_plan:
       'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=pt-BR]',
     help_delegation_plan:
@@ -504,13 +504,13 @@ module.exports = {
     help_execution_prices:
       'aioson execution:prices [path] [--refresh] [--json]',
     help_live_start:
-      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy|antigravity> --agent=<nome> [--tool-bin=<binario>] [--permission-mode=yolo|default (padrão: yolo — o host roda sem pedir permissão)] [--tool-args=<args>] [--title=<texto>] [--goal=<texto>] [--plan=<arquivo>] [--session=<chave>] [--message=<texto>] [--attach] [--no-launch] [--tmux] [--json] [--locale=pt-BR]',
+      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy|antigravity> --agent=<nome> [--tool-bin=<binario>] [--permission-mode=yolo|default (padrão: yolo — o host roda sem pedir permissão)] [--tool-args=<args>] [--title=<texto>] [--goal=<texto>] [--plan=<arquivo>] [--session=<chave>] [--own-session (com --session=<chave>: sessão própria — nunca reaproveita, fecha ou altera outra sessão da pasta; várias por pasta)] [--feature=<slug> (a feature em que a sessão começa)] [--message=<texto>] [--attach] [--no-launch] [--tmux] [--json] [--locale=pt-BR]',
     help_live_status:
-      'aioson live:status [path] [--agent=<nome>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=pt-BR]',
+      'aioson live:status [path] [--agent=<nome>] [--session=<chave> (só essa sessão)] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=pt-BR]',
     help_live_handoff:
       'aioson live:handoff [path] --agent=<nome> --to=<nome> [--reason=<texto>] [--summary=<texto>] [--message=<texto>] [--json] [--locale=pt-BR]',
     help_live_close:
-      'aioson live:close [path] [--agent=<nome>] [--summary=<texto>] [--message=<texto>] [--status=completed|failed] [--json] [--locale=pt-BR]',
+      'aioson live:close [path] [--agent=<nome>] [--session=<chave> (só essa sessão)] [--summary=<texto>] [--message=<texto>] [--status=completed|failed] [--json] [--locale=pt-BR]',
     help_live_list:
       'aioson live:list [path] [--json] [--locale=pt-BR]',
     help_runtime_backup:
@@ -1648,6 +1648,11 @@ module.exports = {
     watch_json_conflict: '--watch nao pode ser combinado com --json.',
     no_session_found: 'Nenhuma sessao live encontrada.',
     no_session_for_agent: 'Nenhuma sessao live encontrada para {agent}.',
+    no_session_for_key: 'Nenhuma sessão live encontrada com a chave {session}.',
+    own_session_requires_key: '--own-session exige --session=<chave>: quem abre dá o nome da sessão que é sua.',
+    own_session_invalid_key: 'Chave de sessão inválida "{session}". Use de 6 a 128 caracteres entre letras, dígitos, ".", "_", ":" e "-", começando por letra ou dígito.',
+    own_session_key_in_use: 'A chave de sessão {session} já foi usada neste projeto. Uma sessão reaberta recebe uma chave nova.',
+    own_session_no_tmux: '--own-session não combina com --tmux: a sessão do tmux leva o nome da pasta e do agente.',
     session_already_closed: 'A sessao live {session} ja esta encerrada.',
     session_already_active: 'Sessao live ja ativa: {agent} | sessao: {session} | run: {runKey} ({dbPath})',
     session_started: 'Sessao live iniciada: {agent} | ferramenta: {tool} | sessao: {session} ({dbPath})',

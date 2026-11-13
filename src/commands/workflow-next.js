@@ -43,6 +43,7 @@ const { inspectTemplateVersion } = require('../template-version-status');
 const { resolveTargetDir } = require('../lib/project-root');
 
 const { resolveActiveFeature } = require('./feature-current');
+const { featureDevStateRel } = require('../preflight-engine');
 const { featureStateArchivePath, hasWorkflowProgress, readArchivedFeatureState, archiveFeatureState, bindingMovedEvent, describeBindingRegistry } = require('../lib/workflow-binding');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
@@ -382,7 +383,13 @@ async function detectWorkflowMode(targetDir) {
   } catch {
     registry = null;
   }
-  const registrySlug = registry && registry.source === 'pulse' && registry.slug ? registry.slug : null;
+  // Inside a live session the registry is that session's own feature
+  // (feature:current, source `session`): two sessions on two features each
+  // move the binding to their own, and the other's progress waits archived.
+  const registrySource = registry && (registry.source === 'pulse' || registry.source === 'session') && registry.slug
+    ? registry.source
+    : null;
+  const registrySlug = registrySource ? registry.slug : null;
   const registryFeature = registrySlug
     ? (features || []).find((feature) => feature.slug === registrySlug && feature.status === 'in_progress') || null
     : null;
@@ -396,8 +403,9 @@ async function detectWorkflowMode(targetDir) {
       mode: 'feature',
       featureSlug: activeFeature.slug,
       features,
-      binding_source: registryFeature ? 'pulse' : (lastHandoff && lastHandoff.feature_slug === activeFeature.slug ? 'last-handoff' : 'features.md'),
-      registry: registrySlug
+      binding_source: registryFeature ? registrySource : (lastHandoff && lastHandoff.feature_slug === activeFeature.slug ? 'last-handoff' : 'features.md'),
+      registry: registrySlug,
+      registry_source: registrySource
     };
   }
 
@@ -406,7 +414,8 @@ async function detectWorkflowMode(targetDir) {
     featureSlug: null,
     features,
     binding_source: null,
-    registry: registrySlug
+    registry: registrySlug,
+    registry_source: registrySource
   };
 }
 
@@ -746,7 +755,7 @@ async function loadOrCreateState(targetDir, options = {}) {
   const shouldPersist = options.persist !== false;
   let existing = await readJsonIfExists(statePath);
   const modeInfo = await detectWorkflowMode(targetDir);
-  const binding = { source: modeInfo.binding_source || null, registry: modeInfo.registry || null, moved: null, restored: null };
+  const binding = { source: modeInfo.binding_source || null, registry: modeInfo.registry || null, registry_source: modeInfo.registry_source || null, moved: null, restored: null };
 
   // Mode/feature-transition guard: if the persisted state no longer matches
   // the feature the registry binds (or the mode), it is stale. This covers
@@ -967,7 +976,9 @@ function describeBinding(binding) {
   if (binding.moved) {
     const from = binding.moved.from || '(project mode)';
     const to = binding.moved.to || '(project mode)';
-    const via = binding.source === 'pulse' ? 'project-pulse.md active_feature' : (binding.source || 'features.md');
+    const via = binding.source === 'pulse'
+      ? 'project-pulse.md active_feature'
+      : binding.source === 'session' ? 'the feature of this live session' : (binding.source || 'features.md');
     lines.push(`[workflow:next] workflow binding moved: ${from} → ${to} (feature registry: ${via})${binding.moved.archived ? `; previous progress ${binding.moved.persisted ? 'archived at' : 'would be archived at'} ${binding.moved.archived}` : ''}`);
     if (binding.moved.archive_skipped) lines.push(`[workflow:next] warning: ${from}'s progress is NOT archived — "${from}" cannot name .aioson/context/features/<slug>/ (${binding.moved.archive_skipped}); the move replaces it`);
   }
@@ -1691,8 +1702,12 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
   }
 
   const contextDir = path.join(targetDir, '.aioson', 'context');
-  const devStatePath = path.join(contextDir, 'dev-state.md');
-  const devStateRaw = await readTextIfExists(devStatePath);
+  // The feature's own resume state first; the project-level dev-state.md is
+  // a copy of the last one written, which may be another feature's.
+  const ownStateRel = featureDevStateRel(state.featureSlug);
+  const ownStateRaw = ownStateRel ? await readTextIfExists(path.join(contextDir, ownStateRel)) : null;
+  const devStateRel = ownStateRaw ? ownStateRel : 'dev-state.md';
+  const devStateRaw = ownStateRaw || await readTextIfExists(path.join(contextDir, 'dev-state.md'));
   const devStatePackage = shouldUseDevStateForFeature(devStateRaw, state.featureSlug)
     ? parseDevStateContextPackage(devStateRaw)
       .map(normalizeContextDependency)
@@ -1700,7 +1715,7 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
     : [];
 
   if (devStatePackage.length > 0) {
-    return Array.from(new Set(['.aioson/context/dev-state.md', ...devStatePackage]));
+    return Array.from(new Set([`.aioson/context/${devStateRel}`, ...devStatePackage]));
   }
 
   const slug = state.featureSlug;
@@ -1724,14 +1739,18 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
   return existing.length > 0 ? existing : agent.dependsOn;
 }
 
+function isDevStateDependency(relPath) {
+  return /^\.aioson\/context\/(?:features\/[^/]+\/)?dev-state\.md$/.test(String(relPath || ''));
+}
+
 function buildStageActivationContext(state, stageName, dependencies) {
   if (stageName !== 'dev' || state.mode !== 'feature' || !state.featureSlug) return '';
   return [
     `Feature slug: ${state.featureSlug}`,
     `Workflow mode: ${state.mode}`,
     `Classification: ${state.classification || 'unknown'}`,
-    dependencies.includes('.aioson/context/dev-state.md')
-      ? 'Resume source: .aioson/context/dev-state.md'
+    dependencies.some(isDevStateDependency)
+      ? `Resume source: ${dependencies.find(isDevStateDependency)}`
       : 'Resume source: active feature artifacts'
   ].join('\n');
 }

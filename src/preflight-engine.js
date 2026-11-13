@@ -16,6 +16,7 @@ const { isRetiredDesignDocSeed } = require('./lib/design-doc-seed');
 const { parseFrontmatterText, parseFrontmatterList } = require('./lib/frontmatter');
 
 const parseFrontmatter = parseFrontmatterText;
+const { validateFeatureSlug } = require('./verification/path-policy');
 
 async function readFileSafe(filePath) {
   try {
@@ -393,9 +394,32 @@ async function readPhaseGates(targetDir, slug) {
 
 // ─── Dev state reader ─────────────────────────────────────────────────────────
 
-async function readDevState(targetDir) {
-  const filePath = path.join(contextDir(targetDir), 'dev-state.md');
-  const content = await readFileSafe(filePath);
+// @dev's resume state is one file per feature — features/<slug>/dev-state.md
+// — so two features in progress never overwrite each other's. The
+// project-level dev-state.md stays as a copy of the last one written: it is
+// what a reader that names no feature, and an older CLI, opens.
+const DEV_STATE_FILE = 'dev-state.md';
+
+/**
+ * `features/<slug>/dev-state.md`, relative to the context directory, or null
+ * for a slug that cannot name a feature folder.
+ */
+function featureDevStateRel(slug) {
+  const validation = validateFeatureSlug(slug);
+  return validation.ok ? `features/${validation.feature_slug}/${DEV_STATE_FILE}` : null;
+}
+
+/**
+ * The dev state to resume from. With `slug`, that feature's own file; the
+ * project-level file when the feature has none yet (it may be another
+ * feature's — detectStaleDevState says so). `state_file` names the one read.
+ */
+async function readDevState(targetDir, slug = null) {
+  const dir = contextDir(targetDir);
+  const ownRel = slug ? featureDevStateRel(slug) : null;
+  const ownContent = ownRel ? await readFileSafe(path.join(dir, ownRel)) : null;
+  const stateFile = ownContent ? ownRel : DEV_STATE_FILE;
+  const content = ownContent || await readFileSafe(path.join(dir, DEV_STATE_FILE));
   if (!content) return { exists: false };
   // F1 (workflow-handoff-integrity v1.9.7) — corrupt detection (AC-F1-08).
   // dev-state.md by convention ALWAYS has frontmatter; missing markers OR
@@ -404,7 +428,7 @@ async function readDevState(targetDir) {
   const fm = parseFrontmatter(content);
   const fmIsEmpty = Object.keys(fm).length === 0;
   const parseError = content.trim().length > 0 && (!hasFrontmatterMarkers || fmIsEmpty);
-  return { exists: true, parseError, ...fm, content };
+  return { exists: true, parseError, ...fm, content, state_file: stateFile };
 }
 
 // ─── Project pulse reader ────────────────────────────────────────────────────
@@ -542,7 +566,9 @@ function buildContextPackage(agent, slug, classification, artifacts, devState, m
   }
 
   // Agent-specific additions
-  if (agent === 'dev' && artifacts.dev_state.exists) pkg.push('dev-state.md (check for stale state before using)');
+  if (agent === 'dev' && (artifacts.dev_state.exists || (devState && devState.exists))) {
+    pkg.push(`${(devState && devState.state_file) || DEV_STATE_FILE} (check for stale state before using)`);
+  }
 
   return [...new Set(pkg)];
 }
@@ -765,6 +791,7 @@ module.exports = {
   parseGatesFromSpec,
   readPhaseGates,
   readDevState,
+  featureDevStateRel,
   detectStaleDevStateRich,
   parseFeaturesMap,
   readProjectPulse,

@@ -61,7 +61,9 @@ async function runPreflight({ args, options = {}, logger }) {
   const artifacts = await scanArtifacts(targetDir, slug);
   const manifest = await scanActiveManifest(targetDir, slug);
   const phaseGates = await readPhaseGates(targetDir, slug);
-  const devState = await readDevState(targetDir);
+  // The resume state of the feature asked about: with two features in
+  // progress the project-level file is whichever one wrote last.
+  const devState = await readDevState(targetDir, slug);
   const pulse = await readProjectPulse(targetDir);
   const templateVersion = await inspectTemplateVersion(targetDir);
 
@@ -176,6 +178,7 @@ async function runPreflight({ args, options = {}, logger }) {
       conformance: { exists: artifacts.conformance.exists },
       dev_state: {
         exists: devState.exists,
+        path: devState.exists ? `.aioson/context/${devState.state_file}` : null,
         next_step: devState.next_step || null
       }
     },

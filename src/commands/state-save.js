@@ -5,6 +5,10 @@
  * for @dev session resumption.
  *
  * Stores active feature, phase, next step, and a compact context package.
+ * Each feature has its own file — .aioson/context/features/<slug>/dev-state.md
+ * — so two features in progress never overwrite each other's phase, next step
+ * or history. .aioson/context/dev-state.md stays as a copy of the last one
+ * written: the file a reader that names no feature opens.
  * Invoked by upstream agents (@product, @sheldon, @planner; legacy specialists supported) at
  * session end so the next @dev activation auto-resumes on `next_step` instead
  * of cold-starting.
@@ -39,10 +43,11 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { contextDir, readFileSafe, parseFrontmatter, scanArtifacts } = require('../preflight-engine');
+const { contextDir, readFileSafe, parseFrontmatter, scanArtifacts, featureDevStateRel } = require('../preflight-engine');
 const { resolveTargetDir } = require('../lib/project-root');
 const { isUsableDesignDocFile } = require('../lib/design-doc-seed');
 const { appendPhaseCheckpoint } = require('../lib/dev-progress');
+const { exists } = require('../utils');
 
 const MAX_CONTEXT = 4;
 
@@ -78,12 +83,28 @@ async function fileExistsRel(targetDir, rel) {
   }
 }
 
-// The state file, then the stamped line `dev:progress` reads. A failed stamp never
-// fails the checkpoint.
-async function writeCheckpoint(targetDir, statePath, text, stamp, now, warnings) {
-  await fs.writeFile(statePath, text, 'utf8');
+// The feature's own state file and the project-level copy, then the stamped line
+// `dev:progress` reads. A failed stamp never fails the checkpoint.
+async function writeCheckpoint(targetDir, statePaths, text, stamp, now, warnings) {
+  for (const statePath of statePaths) {
+    await fs.mkdir(path.dirname(statePath), { recursive: true });
+    await fs.writeFile(statePath, text, 'utf8');
+  }
   const checkpoint = await appendPhaseCheckpoint(targetDir, stamp, now);
   if (!checkpoint.ok) warnings.push(`phase stamp not recorded (${checkpoint.reason}); dev:progress will not count this checkpoint`);
+}
+
+// The state a write continues (its phase when `--phase` is omitted, and its
+// history): this feature's own file. The project-level file continues them
+// only while it is this feature's (a state written before features had their
+// own) — another feature's phase and history are not this one's to inherit.
+async function readStateToContinue(slug, statePath, featurePath) {
+  const sharedContent = await readFileSafe(statePath);
+  if (!featurePath) return sharedContent;
+  const ownContent = await readFileSafe(featurePath);
+  if (ownContent) return ownContent;
+  const sharedFeature = sharedContent ? String(parseFrontmatter(sharedContent).active_feature || '').trim() : '';
+  return sharedFeature === slug ? sharedContent : null;
 }
 
 async function runStateSave({ args, options = {}, logger, now = Date.now }) {
@@ -158,8 +179,11 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
 
   const today = nowDate();
   const statePath = path.join(contextDir(targetDir), 'dev-state.md');
+  const featureRel = featureDevStateRel(slug);
+  const featurePath = featureRel ? path.join(contextDir(targetDir), featureRel) : null;
+  if (!featurePath) warnings.push(`"${slug}" cannot name a feature folder; only dev-state.md was written`);
 
-  const existingContent = await readFileSafe(statePath);
+  const existingContent = await readStateToContinue(slug, statePath, featurePath);
   const existingFm = existingContent ? parseFrontmatter(existingContent) : {};
 
   // Build history entry
@@ -201,12 +225,19 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
     ''
   ].filter((l) => l !== null);
 
-  await fs.mkdir(path.dirname(statePath), { recursive: true });
-  await writeCheckpoint(targetDir, statePath, lines.join('\n'), { feature: slug, phase, next }, now, warnings);
+  await writeCheckpoint(
+    targetDir,
+    featurePath ? [featurePath, statePath] : [statePath],
+    lines.join('\n'),
+    { feature: slug, phase, next },
+    now,
+    warnings
+  );
 
   const result = {
     ok: true,
     path: path.relative(targetDir, statePath),
+    feature_path: featurePath ? path.relative(targetDir, featurePath) : null,
     active_feature: slug,
     active_phase: phase,
     next_step: next,
@@ -218,6 +249,7 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
   if (options.json) return result;
 
   logger.log('dev-state.md updated:');
+  if (result.feature_path) logger.log(`  feature state: ${result.feature_path.split(path.sep).join('/')}`);
   logger.log(`  active_feature: ${slug}`);
   if (phase) logger.log(`  active_phase: ${phase}`);
   logger.log(`  next_step: "${next}"`);
@@ -237,51 +269,77 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
 /**
  * runStateReset — F1 (workflow-handoff-integrity v1.9.7)
  *
- * Clears `.aioson/context/dev-state.md`. Idempotent: no-op when file is absent.
+ * Clears `.aioson/context/dev-state.md` and the own file of the feature it
+ * names (`features/<slug>/dev-state.md`): left behind, that one would be read
+ * again by the next `preflight --feature=<slug>`. Idempotent: no-op when
+ * there is nothing to clear.
+ *
+ * With `--feature=<slug>` it clears that feature's state and nothing else:
+ * its own file, and the project-level file only while it names that feature.
  *
  * Behavior:
- *   - Default: deletes the file outright.
- *   - With `--archive`: moves to `.aioson/runtime/devstate-history/{ISO}.md` for audit trail.
+ *   - Default: deletes the file(s) outright.
+ *   - With `--archive`: keeps a copy under `.aioson/runtime/devstate-history/`
+ *     (`{ISO}.md`; `{ISO}-<slug>.md` for a feature file that differs from it).
  *
  * Usage:
  *   aioson state:reset .
  *   aioson state:reset . --archive
- *   aioson state:reset . --archive --json
+ *   aioson state:reset . --feature=checkout --archive --json
  */
 async function runStateReset({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const statePath = path.join(contextDir(targetDir), 'dev-state.md');
   const archive = Boolean(options.archive);
+  const requested = typeof options.feature === 'string' ? options.feature.trim() : '';
 
-  let archivedTo = null;
-  let removed = false;
+  const sharedExists = await exists(statePath);
+  const sharedContent = sharedExists ? await fs.readFile(statePath, 'utf8') : null;
+  const sharedFeature = sharedContent ? String(parseFrontmatter(sharedContent).active_feature || '').trim() : '';
+  const feature = requested || sharedFeature;
+  const featureRel = feature ? featureDevStateRel(feature) : null;
+  const featurePath = featureRel ? path.join(contextDir(targetDir), featureRel) : null;
+  const clearShared = sharedExists && (!requested || sharedFeature === requested);
+  const clearFeature = Boolean(featurePath) && await exists(featurePath);
 
-  try {
-    await fs.access(statePath);
-  } catch {
+  if (!clearShared && !clearFeature) {
     // AC-F1-03 — idempotent: no-op when absent.
-    const result = { ok: true, removed: false, archived: null, reason: 'no_state_file' };
+    const reason = sharedExists ? 'points_to_other' : 'no_state_file';
+    const result = { ok: true, removed: false, archived: null, reason, ...(sharedExists ? { active_feature: sharedFeature || null } : {}) };
     if (options.json) return result;
-    logger.log('state:reset — no dev-state.md present; nothing to do.');
+    logger.log(sharedExists
+      ? `state:reset — dev-state.md names ${sharedFeature || 'no feature'}, not ${requested}; nothing to do.`
+      : 'state:reset — no dev-state.md present; nothing to do.');
     return result;
   }
 
+  let archivedTo = null;
+  const featureContent = clearFeature ? await fs.readFile(featurePath, 'utf8') : null;
   if (archive) {
     const historyDir = path.join(targetDir, '.aioson', 'runtime', 'devstate-history');
     await fs.mkdir(historyDir, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    archivedTo = path.join(historyDir, `${stamp}.md`);
-    const content = await fs.readFile(statePath, 'utf8');
-    await fs.writeFile(archivedTo, content, 'utf8');
+    if (clearShared) {
+      archivedTo = path.join(historyDir, `${stamp}.md`);
+      await fs.writeFile(archivedTo, sharedContent, 'utf8');
+    }
+    // The project-level file is normally a copy of the feature's: one archive.
+    if (clearFeature && (!clearShared || featureContent !== sharedContent)) {
+      const featureArchive = path.join(historyDir, `${stamp}-${feature}.md`);
+      await fs.writeFile(featureArchive, featureContent, 'utf8');
+      archivedTo = archivedTo || featureArchive;
+    }
   }
 
-  await fs.unlink(statePath);
-  removed = true;
+  if (clearShared) await fs.unlink(statePath);
+  if (clearFeature) await fs.unlink(featurePath);
+  const removed = true;
 
   const result = {
     ok: true,
     removed,
-    archived: archivedTo ? path.relative(targetDir, archivedTo) : null
+    archived: archivedTo ? path.relative(targetDir, archivedTo) : null,
+    feature_state_removed: clearFeature
   };
 
   if (options.json) return result;

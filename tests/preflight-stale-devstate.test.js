@@ -268,3 +268,75 @@ test('state:reset --json returns structured result without prose', async () => {
   assert.equal(result.ok, true);
   assert.equal(logger.logs.length, 0, 'json mode suppresses prose');
 });
+
+// ─── resume state per feature (parallel-sessions, AC-parallel-sessions-25) ───
+// With two features in progress the project-level dev-state.md is whichever
+// one wrote last: preflight reads the state of the feature it is asked about.
+
+const { runPreflight } = require('../src/commands/preflight');
+const { runStateSave } = require('../src/commands/state-save');
+
+async function writeTwoFeatureStates(dir) {
+  await writeFeaturesMd(dir, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+  const write = (options) => runStateSave({ args: [dir], options: { json: true, ...options }, logger: makeLogger() });
+  await write({ feature: 'checkout', phase: '2', next: 'checkout next step' });
+  await write({ feature: 'billing', phase: '5', next: 'billing next step' });
+}
+
+test('AC-parallel-sessions-25 readDevState reads the feature asked about, and the project-level file without one', async () => {
+  const dir = await makeTempProject();
+  await writeTwoFeatureStates(dir);
+
+  const checkout = await readDevState(dir, 'checkout');
+  assert.deepEqual(
+    [checkout.active_feature, checkout.active_phase, checkout.next_step, checkout.state_file],
+    ['checkout', '2', 'checkout next step', 'features/checkout/dev-state.md']
+  );
+  const billing = await readDevState(dir, 'billing');
+  assert.deepEqual([billing.active_feature, billing.active_phase, billing.state_file], ['billing', '5', 'features/billing/dev-state.md']);
+
+  // No feature named: the project-level file, as before — the last one written.
+  const shared = await readDevState(dir);
+  assert.deepEqual([shared.active_feature, shared.state_file], ['billing', 'dev-state.md']);
+
+  // A feature with no state of its own falls back to the project-level file,
+  // and the stale check says whose it is.
+  const other = await readDevState(dir, 'reports');
+  assert.deepEqual([other.active_feature, other.state_file], ['billing', 'dev-state.md']);
+  assert.match(detectStaleDevState(other, 'reports'), /belongs to feature "billing", not "reports"/);
+  assert.equal(detectStaleDevState(checkout, 'checkout'), null);
+});
+
+test('AC-parallel-sessions-25 preflight of each feature reports its own dev state and no stale warning', async () => {
+  const dir = await makeTempProject();
+  await writeTwoFeatureStates(dir);
+  const preflight = (feature) => runPreflight({ args: [dir], options: { agent: 'dev', feature, json: true }, logger: makeLogger() });
+
+  const checkout = await preflight('checkout');
+  assert.deepEqual(
+    [checkout.dev_state.active_feature, checkout.dev_state.active_phase, checkout.dev_state.next_step],
+    ['checkout', '2', 'checkout next step']
+  );
+  assert.equal(checkout.stale_dev_state, null, 'the last write was billing\'s, and checkout still resumes from its own');
+  assert.equal(checkout.artifacts.dev_state.path, '.aioson/context/features/checkout/dev-state.md');
+  assert.ok(checkout.context_package.includes('features/checkout/dev-state.md (check for stale state before using)'));
+
+  const billing = await preflight('billing');
+  assert.deepEqual([billing.dev_state.active_feature, billing.dev_state.active_phase], ['billing', '5']);
+  assert.equal(billing.stale_dev_state, null);
+});
+
+test('preflight with a single project-level dev state reports what it always reported', async () => {
+  const dir = await makeTempProject();
+  await writeFeaturesMd(dir, [{ slug: 'demo', status: 'in_progress' }]);
+  await writeDevState(dir, { active_feature: 'demo', active_phase: 3, next_step: '"go on"', status: 'in_progress', last_updated: new Date().toISOString().slice(0, 10) });
+
+  const result = await runPreflight({ args: [dir], options: { agent: 'dev', feature: 'demo', json: true }, logger: makeLogger() });
+  assert.deepEqual([result.dev_state.active_feature, result.dev_state.active_phase, result.dev_state.next_step], ['demo', '3', 'go on']);
+  assert.equal(result.stale_dev_state, null);
+  assert.equal(result.artifacts.dev_state.path, '.aioson/context/dev-state.md');
+  assert.ok(result.context_package.includes('dev-state.md (check for stale state before using)'));
+
+  const mismatch = await runPreflight({ args: [dir], options: { agent: 'dev', feature: 'other', json: true }, logger: makeLogger() });
+  assert.match(mismatch.stale_dev_state, /belongs to feature "demo", not "other"/);
+});

@@ -11,7 +11,10 @@
  *
  * `--phase` counts only for @dev and must be a phase of
  * implementation-plan-<slug>.md. Without `--tool`, the harness of the live
- * session that runs this command, else claude. Writes nothing.
+ * session that runs this command, else claude. Without `--feature`, the
+ * feature of the live session that runs this command (feature:current,
+ * source `session`) — never the project's pulse, which may be another
+ * session's. Writes nothing.
  */
 
 const { getAgentDefinition } = require('../agents');
@@ -88,7 +91,12 @@ async function runSessionKickoff({ args = [], options = {}, logger } = {}) {
   const agent = getAgentDefinition(agentName);
   if (!agent) return refuse('unknown_agent', `Unknown agent: ${agentName}.`);
 
-  const feature = optionText(options.feature || options.slug);
+  let feature = optionText(options.feature || options.slug);
+  if (!feature) {
+    const { resolveActiveFeature } = require('./feature-current');
+    const active = await resolveActiveFeature(targetDir).catch(() => null);
+    if (active && active.source === 'session' && active.slug) feature = active.slug;
+  }
   if (!feature) return refuse('missing_feature', '--feature=<slug> is required.');
   if (!isValidSlug(feature)) return refuse('invalid_feature', `Not a feature slug: ${feature}.`);
 

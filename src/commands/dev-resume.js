@@ -109,7 +109,7 @@ async function runPhaseCapsule({ targetDir, options, logger }) {
 async function runDevResumeData({ args = [], options = {}, logger } = {}) {
   const targetDir = args[0] || '.';
   if (options.capsule) return runPhaseCapsule({ targetDir, options, logger });
-  const data = await buildDevResumeData(targetDir);
+  const data = await buildDevResumeData(targetDir, { feature: optionText(options.feature) || null });
 
   if (options.json || !logger) {
     return { ok: true, data };

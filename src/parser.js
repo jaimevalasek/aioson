@@ -113,7 +113,9 @@ const BOOLEAN_FLAGS = new Set([
   // and is handled by the `=` branch below.
   'resume',
   // dev:resume-data — pure boolean; `--capsule .` must not swallow the path.
-  'capsule'
+  'capsule',
+  // live:start — pure boolean; `--own-session .` must not swallow the path.
+  'own-session'
 ]);
 
 // Booleans whose value, when given, is a number: `live:status --watch 3` and

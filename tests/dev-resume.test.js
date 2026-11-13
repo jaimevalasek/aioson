@@ -445,3 +445,94 @@ it('--capsule takes no value, so the path after it stays the project', () => {
   assert.equal(parsed.options.capsule, true);
   assert.deepEqual(parsed.args, ['.']);
 });
+
+// parallel-sessions (AC-parallel-sessions-25): with the @dev of one feature in
+// one session and the @dev of another in a second one, each resume reads the
+// state of its own feature — never the one that wrote or handed off last.
+describe('dev-resume — one resume state per feature', () => {
+  const { runStateSave } = require('../src/commands/state-save');
+  const { runLiveStart } = require('../src/commands/live');
+  const { bindSessionFeature } = require('../src/lib/session-feature');
+  const { createTranslator } = require('../src/i18n');
+  const silent = { log() {}, error() {} };
+  const keyEnv = (key) => ({ AIOSON_LIVE_SESSION_KEY: key, AIOSON_LIVE_SESSION: key });
+
+  async function makeTwoFeatureProject() {
+    const tmp = await makeProject();
+    await writeFeaturesMd(tmp, [{ slug: 'checkout', status: 'in_progress' }, { slug: 'billing', status: 'in_progress' }]);
+    const write = (options) => runStateSave({ args: [tmp], options: { json: true, ...options }, logger: silent });
+    await write({ feature: 'checkout', phase: '2', next: 'Checkout: payment webhook' });
+    await write({ feature: 'billing', phase: '5', next: 'Billing: invoice PDF' });
+    // The last handoff, one per project, is billing's.
+    await writeLastHandoff(tmp, { feature_slug: 'billing', artifact_uris: ['.aioson/context/prd-billing.md'] });
+    return tmp;
+  }
+
+  it('AC-parallel-sessions-25 --feature resumes that feature from its own state, whoever wrote last', async () => {
+    const tmp = await makeTwoFeatureProject();
+    try {
+      const checkout = await buildDevResumeData(tmp, { feature: 'checkout', env: {} });
+      assert.deepEqual(
+        [checkout.feature_slug, checkout.current_phase, checkout.next_step],
+        ['checkout', '2', 'Checkout: payment webhook']
+      );
+      assert.deepEqual(checkout.artifacts_consumed, [], 'the handoff of another feature is not this one\'s');
+
+      const billing = await buildDevResumeData(tmp, { feature: 'billing', env: {} });
+      assert.deepEqual(
+        [billing.feature_slug, billing.current_phase, billing.next_step, billing.artifacts_consumed],
+        ['billing', '5', 'Billing: invoice PDF', ['.aioson/context/prd-billing.md']]
+      );
+
+      const viaCommand = await runDevResumeData({ args: [tmp], options: { feature: 'checkout', json: true } });
+      assert.equal(viaCommand.data.next_step, 'Checkout: payment webhook');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  });
+
+  it('AC-parallel-sessions-25 inside a live session the resume is for the feature of that session', async () => {
+    const tmp = await makeTwoFeatureProject();
+    try {
+      const { t } = createTranslator('en');
+      for (const key of ['session-a-key', 'session-b-key']) {
+        await runLiveStart({
+          args: [tmp],
+          options: { tool: 'claude', 'tool-bin': process.execPath, 'no-launch': true, json: true, session: key, 'own-session': true, 'no-health-check': true, 'no-health': true },
+          logger: silent,
+          t
+        });
+      }
+      await bindSessionFeature(tmp, 'checkout', { env: keyEnv('session-a-key') });
+      await bindSessionFeature(tmp, 'billing', { env: keyEnv('session-b-key') });
+
+      const inA = await buildDevResumeData(tmp, { env: keyEnv('session-a-key') });
+      assert.deepEqual([inA.feature_slug, inA.current_phase, inA.next_step], ['checkout', '2', 'Checkout: payment webhook']);
+      const inB = await buildDevResumeData(tmp, { env: keyEnv('session-b-key') });
+      assert.deepEqual([inB.feature_slug, inB.current_phase, inB.next_step], ['billing', '5', 'Billing: invoice PDF']);
+
+      // Outside a live session: the last handoff's feature, as before.
+      const outside = await buildDevResumeData(tmp, { env: {} });
+      assert.deepEqual([outside.feature_slug, outside.next_step], ['billing', 'Billing: invoice PDF']);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  });
+
+  it('a project-level state written before features had their own is still the resume of its feature', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeFeaturesMd(tmp, [{ slug: 'demo', status: 'in_progress' }]);
+      await writeLastHandoff(tmp, { feature_slug: 'demo' });
+      await fs.writeFile(
+        path.join(tmp, '.aioson', 'context', 'dev-state.md'),
+        '---\nactive_feature: demo\nactive_phase: 3\nnext_step: "legacy step"\nstatus: in_progress\n---\n',
+        'utf8'
+      );
+      const data = await buildDevResumeData(tmp, { env: {} });
+      assert.deepEqual([data.feature_slug, data.current_phase, data.next_step], ['demo', '3', 'legacy step']);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  });
+});

@@ -179,3 +179,45 @@ test('without --tool the kickoff is written for the harness of the live session,
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// parallel-sessions (AC-parallel-sessions-25): the Play asks for the QA kickoff
+// of the session it is reopening. Without --feature the answer is for the
+// feature THAT session works on — never the project's pulse, which with two
+// sessions open may be the other one's.
+test('AC-parallel-sessions-25 without --feature the kickoff is for the feature of the live session that asks', async () => {
+  const dir = makeProject();
+  const { bindSessionFeature } = require('../src/lib/session-feature');
+  const own = (key) => ({ tool: 'claude', 'tool-bin': 'node', 'no-launch': true, json: true, session: key, 'own-session': true });
+  const keyEnv = (key) => ({ AIOSON_LIVE_SESSION_KEY: key, AIOSON_LIVE_SESSION: key });
+  try {
+    fs.writeFileSync(path.join(dir, '.aioson', 'context', 'features.md'), [
+      '| slug | status | started | completed |', '|------|--------|---------|-----------|',
+      '| billing | in_progress | 2026-01-01 | — |', '| reports | in_progress | 2026-01-02 | — |', ''
+    ].join('\n'));
+    // The pulse names the feature the OTHER session advanced last.
+    fs.writeFileSync(path.join(dir, '.aioson', 'context', 'project-pulse.md'), '---\nactive_feature: reports\n---\n# Pulse\n');
+    await runLiveStart({ args: [dir], options: own('session-a-key'), logger: silent, t });
+    await runLiveStart({ args: [dir], options: own('session-b-key'), logger: silent, t });
+    await bindSessionFeature(dir, 'billing', { env: keyEnv('session-a-key') });
+
+    const inA = cli(['session:kickoff', dir, '--agent=qa', '--tool=claude', '--json'], cleanEnv(keyEnv('session-a-key')));
+    assert.equal(inA.status, 0, inA.stderr);
+    assert.deepEqual([inA.json.feature, inA.json.agent], ['billing', 'qa']);
+    assert.ok(inA.json.kickoff.includes('billing'));
+    assert.ok(!inA.json.kickoff.includes('reports'));
+
+    // An explicit --feature still wins.
+    const explicit = cli(['session:kickoff', dir, '--agent=qa', '--tool=claude', '--feature=reports', '--json'], cleanEnv(keyEnv('session-a-key')));
+    assert.equal(explicit.json.feature, 'reports');
+    assert.ok(explicit.json.kickoff.includes('reports'));
+
+    // A session that named no feature, and a caller outside any session, are
+    // refused as before: nothing is taken from the pulse.
+    const inB = cli(['session:kickoff', dir, '--agent=qa', '--tool=claude', '--json'], cleanEnv(keyEnv('session-b-key')));
+    assert.deepEqual([inB.status, inB.json.reason], [1, 'missing_feature']);
+    const outside = cli(['session:kickoff', dir, '--agent=qa', '--tool=claude', '--json']);
+    assert.deepEqual([outside.status, outside.json.reason], [1, 'missing_feature']);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
