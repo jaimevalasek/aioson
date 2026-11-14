@@ -508,7 +508,7 @@ module.exports = {
     help_live_status:
       'aioson live:status [path] [--agent=<nome>] [--session=<chave> (só essa sessão)] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=pt-BR]',
     help_live_handoff:
-      'aioson live:handoff [path] --agent=<nome> --to=<nome> [--reason=<texto>] [--summary=<texto>] [--message=<texto>] [--json] [--locale=pt-BR]',
+      'aioson live:handoff [path] --agent=<nome> --to=<nome> [--session=<chave>] [--reason=<texto>] [--summary=<texto>] [--message=<texto>] [--json] [--locale=pt-BR]',
     help_live_close:
       'aioson live:close [path] [--agent=<nome>] [--session=<chave> (só essa sessão)] [--summary=<texto>] [--message=<texto>] [--status=completed|failed] [--json] [--locale=pt-BR]',
     help_live_list:

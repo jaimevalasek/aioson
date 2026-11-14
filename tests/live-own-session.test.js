@@ -19,6 +19,7 @@ const { createTranslator } = require('../src/i18n');
 const {
   runLiveStart,
   runLiveStatus,
+  runLiveHandoff,
   runLiveClose,
   runLiveList,
   runRuntimeEmit,
@@ -212,6 +213,78 @@ test('AC-parallel-sessions-17 an event emitted inside one own session is recorde
   const second = await status(dir, { session: 'play-session-two' });
   assert.equal(first.recentEvents.some((event) => event.type === 'milestone'), false);
   assert.equal(second.recentEvents.filter((event) => event.type === 'milestone').length, 1);
+});
+
+/** Runs `work` as a command the tool of that session would run: its key in the environment. */
+async function insideSession(key, work) {
+  const previous = { key: process.env.AIOSON_LIVE_SESSION_KEY, name: process.env.AIOSON_LIVE_SESSION };
+  Object.assign(process.env, keyEnv(key));
+  try {
+    return await work();
+  } finally {
+    if (previous.key === undefined) delete process.env.AIOSON_LIVE_SESSION_KEY; else process.env.AIOSON_LIVE_SESSION_KEY = previous.key;
+    if (previous.name === undefined) delete process.env.AIOSON_LIVE_SESSION; else process.env.AIOSON_LIVE_SESSION = previous.name;
+  }
+}
+
+function handoff(dir, options = {}) {
+  return runLiveHandoff({ args: [dir], options: { agent: LABEL, to: '@dev', json: true, ...options }, logger: silent, t });
+}
+
+test('AC-parallel-sessions-13 the agent inside an own session hands that session over and no other', async (t0) => {
+  const dir = await makeProject(t0);
+  const { runtimeDir } = resolveRuntimePaths(dir);
+  const first = await openOwn(dir, 'play-session-one');
+  const second = await openOwn(dir, 'play-session-two');
+  const byLabel = await openByLabel(dir);
+  const pointer = await readAgentSession(runtimeDir, LABEL);
+
+  const handed = await insideSession('play-session-two', () => handoff(dir));
+  assert.deepEqual(
+    [handed.ok, handed.sessionKey, handed.previousRunKey, handed.nextAgent, handed.open],
+    [true, 'play-session-two', second.runKey, '@dev', true]
+  );
+
+  // The session has a new run under the same key: what the Play's watcher reads as an agent swap.
+  const after = await status(dir, { session: 'play-session-two' });
+  assert.deepEqual([after.open, after.run.run_key, after.run.agent_name], [true, handed.runKey, '@dev']);
+  assert.notEqual(handed.runKey, second.runKey);
+
+  // The other own session and the session found by this very label are as they were.
+  const untouched = await status(dir, { session: 'play-session-one' });
+  assert.deepEqual([untouched.open, untouched.run.run_key, untouched.run.agent_name], [true, first.runKey, LABEL]);
+  const labelled = await status(dir, { session: byLabel.sessionKey });
+  assert.deepEqual([labelled.open, labelled.run.run_key], [true, byLabel.runKey]);
+  assert.deepEqual(await readAgentSession(runtimeDir, LABEL), pointer, 'the label pointer still names the label session');
+  assert.equal(await readAgentSession(runtimeDir, '@dev'), null, 'an own session writes no pointer for the next agent');
+});
+
+test('AC-parallel-sessions-13 live:handoff --session hands over the session asked for, and a label never reaches an own one', async (t0) => {
+  const dir = await makeProject(t0);
+  const first = await openOwn(dir, 'play-session-one');
+  await openOwn(dir, 'play-session-two');
+
+  // From outside any session, the label finds no own session.
+  await assert.rejects(() => handoff(dir), /No active live session found for @aioson/);
+
+  const handed = await handoff(dir, { session: 'play-session-one' });
+  assert.deepEqual([handed.sessionKey, handed.previousRunKey], ['play-session-one', first.runKey]);
+  assert.equal((await status(dir, { session: 'play-session-two' })).run.agent_name, LABEL);
+
+  await assert.rejects(() => handoff(dir, { session: 'play-never-opened' }), /No live session found with key play-never-opened/);
+  // The agent named must be the one the session is on.
+  await assert.rejects(() => handoff(dir, { session: 'play-session-two', agent: '@qa', to: '@dev' }), /No active live session found for @qa/);
+});
+
+test('a session found by label is handed over by its label as before, inside it or not', async (t0) => {
+  const dir = await makeProject(t0);
+  const { runtimeDir } = resolveRuntimePaths(dir);
+  const byLabel = await openByLabel(dir);
+
+  const handed = await insideSession(byLabel.sessionKey, () => handoff(dir));
+  assert.deepEqual([handed.sessionKey, handed.previousRunKey], [byLabel.sessionKey, byLabel.runKey]);
+  assert.equal(await readAgentSession(runtimeDir, LABEL), null, 'the pointer left the old label');
+  assert.equal((await readAgentSession(runtimeDir, '@dev')).runKey, handed.runKey, 'and names the session under the next one');
 });
 
 test('AC-parallel-sessions-25 the feature of a session is kept beside its state and read back by live:status --session', async (t0) => {

@@ -818,14 +818,17 @@ async function resolveLauncherLiveContext(targetDir, t, options = {}) {
 
 async function requireActiveLiveContext(targetDir, agentName, t, options = {}) {
   const { db, dbPath, runtimeDir } = await withRuntimeDb(targetDir, t);
-  const context = await resolveLiveContext(targetDir, db, runtimeDir, {
-    agentName,
-    limit: options.limit
-  });
+  // By key the session is that one and no other; the label is not even read,
+  // since it may point at another session of the folder.
+  const context = await resolveLiveContext(targetDir, db, runtimeDir, options.sessionKey
+    ? { sessionKey: options.sessionKey, limit: options.limit }
+    : { agentName, limit: options.limit });
 
   if (!context.run || context.run.source !== 'live' || !context.sessionKey || !context.task) {
     db.close();
-    throw new Error(t('live.no_active_session', { agent: normalizeAgentHandle(agentName) }));
+    throw new Error(options.sessionKey
+      ? t('live.no_session_for_key', { session: options.sessionKey })
+      : t('live.no_active_session', { agent: normalizeAgentHandle(agentName) }));
   }
 
   if (context.phase !== 'active') {
@@ -2185,6 +2188,26 @@ async function emitStandaloneRuntimeEvent({
 }
 
 
+/**
+ * The session a handoff reaches by key instead of by label: `--session=<key>`,
+ * or the own session that launched this tool (its key is in the environment).
+ * An own session has no label pointer, so the agent inside it could not hand
+ * it over by `--agent` — and a session found under that label would be
+ * another one of the folder. Empty = today's lookup by label.
+ */
+async function handoffSessionKey(targetDir, options) {
+  const requested = sessionKeyOption(options);
+  if (requested) return requested;
+  // Only the key in the environment: with none, a session is never guessed.
+  const envKey = String(process.env.AIOSON_LIVE_SESSION_KEY || process.env.AIOSON_LIVE_SESSION || '').trim();
+  if (!envKey || envKey === NO_LIVE_SESSION) return '';
+  const { runtimeDir } = resolveRuntimePaths(targetDir);
+  const launcher = await findRunningLiveSession(targetDir, runtimeDir, envKey).catch(() => null);
+  if (!launcher) return '';
+  const state = await readLiveState(runtimeDir, envKey);
+  return state && state.own_session ? envKey : '';
+}
+
 async function runLiveHandoff({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const agentName = normalizeAgentHandle(requireOption(options, 'agent', t));
@@ -2200,8 +2223,12 @@ async function runLiveHandoff({ args, options = {}, logger, t }) {
   );
 
   const { db, dbPath, runtimeDir, context } = await requireActiveLiveContext(targetDir, agentName, t, {
-    limit: options.limit
+    limit: options.limit,
+    sessionKey: await handoffSessionKey(targetDir, options)
   });
+  // An own session never had a label pointer, and the one of this label may
+  // be another session's: it is left as it is.
+  const ownSession = Boolean(context.state && context.state.own_session);
 
   try {
     if (!context.run || context.run.agent_name !== agentName) {
@@ -2259,15 +2286,17 @@ async function runLiveHandoff({ args, options = {}, logger, t }) {
       }
     });
 
-    await clearAgentSession(runtimeDir, agentName);
-    await writeAgentSession(runtimeDir, nextAgent, {
-      runKey: nextRunKey,
-      taskKey: context.task.task_key,
-      sessionKey: context.sessionKey,
-      startedAt: now,
-      finished: false,
-      source: 'live'
-    });
+    if (!ownSession) {
+      await clearAgentSession(runtimeDir, agentName);
+      await writeAgentSession(runtimeDir, nextAgent, {
+        runKey: nextRunKey,
+        taskKey: context.task.task_key,
+        sessionKey: context.sessionKey,
+        startedAt: now,
+        finished: false,
+        source: 'live'
+      });
+    }
 
     const eventRecord = createLiveEventRecord(context, {
       ts: now,
