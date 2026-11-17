@@ -108,6 +108,8 @@ Cada início de sessão (`context:digest`) registra o projeto aberto em `~/.aios
 
 `aioson op:profile` lê essa lista e responde, sem modelo, o que você costuma escolher: tipo, framework, idioma, Autopilot, runner de testes, tamanho e design, com a contagem de cada um; os padrões para um projeto novo (só maioria clara: ao menos 3 projetos com o campo preenchido, que sejam metade dos projetos, e um valor com 60% deles; tamanho e design aparecem mas nunca são sugeridos); os projetos abaixo da versão da CLI, os mais antigos primeiro; e as decisões que valem em dois ou mais projetos. `--scan=<pasta>` importa de uma vez os projetos que já estão no disco (`--depth=<n>`, padrão 3; pastas de dependência, ocultas e o interior de um projeto ficam de fora). `--json` devolve tudo em campos (`choices`, `suggested`, `outdated`, `habits`, `recent`).
 
+Num projeto novo, `aioson setup:detect . --json` traz `portfolio` quando há 3 ou mais outros projetos com maioria clara: os mesmos padrões (o projeto que está sendo configurado não conta) e as `flags` do `setup:context` que os gravam (`--project-type=web_app --framework=Node --language=pt-BR --auto-handoff=true`). O `@setup` os oferece como resposta recomendada onde o workspace não prova nada, dizendo de onde vêm; a evidência do workspace sempre vence e nada é gravado sem confirmação.
+
 ## Privacidade e limites
 
 - a memória é por identidade e não é sincronizada pelo Git;

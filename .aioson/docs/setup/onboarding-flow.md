@@ -41,7 +41,7 @@ Run:
 aioson setup:context . --defaults --json
 ```
 
-Present one confirmation block containing inferred name, framework plus installed status, type, classification, and language. Ask the user to confirm or state corrections. Apply corrections as explicit `--option=value` flags in the final command.
+Present one confirmation block containing inferred name, framework plus installed status, type, classification, and language. Where `setup:detect` returned `portfolio` and the workspace proves nothing for a field, show the portfolio value as the recommended answer with its source ("in your last 12 projects: Node, 9 of 12"). Ask the user to confirm or state corrections. Apply corrections, and the confirmed `portfolio.flags`, as explicit `--option=value` flags in the final command; an unconfirmed portfolio value is never written.
 
 If the CLI is unavailable, inspect the same facts manually and continue. If an earlier `aioson setup .` already wrote context, treat this as confirmation/repair rather than restarting onboarding.
 

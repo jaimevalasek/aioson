@@ -108,6 +108,8 @@ Every session start (`context:digest`) records the project it opens in `~/.aioso
 
 `aioson op:profile` reads that list and answers, with no model, what you usually choose: type, framework, language, Autopilot, test runner, size and design, each counted; the defaults for a new project (clear majorities only: at least 3 projects hold the field, they are at least half the projects, and one value holds 60% of them; size and design are shown, never suggested); the projects behind the CLI version, oldest first; and the decisions standing in two or more projects. `--scan=<folder>` imports the projects already on disk at once (`--depth=<n>`, default 3; dependency and hidden folders and a project's inside are skipped). `--json` returns it all as fields (`choices`, `suggested`, `outdated`, `habits`, `recent`).
 
+In a new project, `aioson setup:detect . --json` carries `portfolio` when 3 or more other projects hold a clear majority: the same defaults (the project being set up never votes) and the `setup:context` `flags` that persist them (`--project-type=web_app --framework=Node --language=pt-BR --auto-handoff=true`). `@setup` offers them as the recommended answer where the workspace proves nothing, saying where they come from; workspace evidence always wins and nothing is written unconfirmed.
+
 ## Privacy and limits
 
 - memory is identity-scoped and is not synchronized through Git;

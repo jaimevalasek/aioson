@@ -80,6 +80,8 @@ aioson setup:detect . --json
 
 It returns `framework`, `installed`, `evidence`, `confidence`, `monorepo`, and every secondary match (Laravel/CodeIgniter/Symfony/Rails/Django/Next/Nuxt/SvelteKit/Remix/Adonis/Node plus Hardhat/Foundry/Truffle/Anchor/Solana/Cardano signals). Detection is evidence, not a decision: confirm the result with the user and skip bootstrap questions. `framework: null` → record the user's described framework as-is instead of forcing it into a list. `monorepo: true` → confirm the primary framework and record the structure. CLI unavailable → inspect manifests near the root manually.
 
+`portfolio`, when present, is what the operator chose in the other projects this machine recorded — clear majorities only, each as `value` with `count`/`of` (`project_type`, `framework`, `interaction_language`, `auto_handoff`, `test_runner`). Where the workspace proves nothing, offer it as the recommended option and say where it comes from ("in your last 12 projects: Node"); confirmed, its `flags` go into the final `setup:context` call. Workspace evidence always wins, and it is never written unconfirmed.
+
 ## Decision and evidence rules
 
 - Never silently default `project_type`, `profile`, `classification`, `interaction_language`, or its legacy alias `conversation_language`.
