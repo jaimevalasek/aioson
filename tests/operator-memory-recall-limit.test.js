@@ -41,11 +41,14 @@ function useIdentity(identity) {
   return identity;
 }
 
-function seed(identity, slug, { daysAgo = 0, category = 'default', reinforced = 0, body = `decision ${slug}`, signal = 'authorization', feature = null } = {}) {
+// An operator-wide decision of today's shape (scope written): the recall
+// tests rank decisions; an unscoped pre-scope one with a bare quote would be
+// archived as unproven (archive.js), which operator-memory-archive tests cover.
+function seed(identity, slug, { daysAgo = 0, category = 'default', reinforced = 0, body = `decision ${slug}`, signal = 'authorization', feature = null, scope = 'operator' } = {}) {
   const at = new Date(Date.now() - daysAgo * DAY_MS).toISOString();
   fs.writeFileSync(decisionPath(identity, slug), serializeDecision({
     slug, signal_type: signal, promoted_at: at, last_reinforced: at, reinforcement_count: reinforced,
-    category, source_agent: 'dev', quotes: ['q'], body, title: body, feature_slug: feature
+    category, source_agent: 'dev', quotes: ['q'], body, title: body, feature_slug: feature, scope
   }));
 }
 
@@ -174,7 +177,7 @@ test('a decision said in this project heads the recall, however old', async () =
 test('--match finds a decision the head leaves out, ranked by the words it shares', async () => {
   const identity = useIdentity('recall-match-bot');
   for (let i = 0; i < DEFAULT_RECALL_LIMIT + 5; i += 1) seed(identity, `filler-${String(i).padStart(2, '0')}`, { daysAgo: i, body: `rotina generica numero ${i}` });
-  seed(identity, 'old-deploy-rule', { daysAgo: 400, body: 'Deploy only through the Dokploy panel, never over ssh' });
+  seed(identity, 'old-deploy-rule', { daysAgo: 150, body: 'Deploy only through the Dokploy panel, never over ssh' });
   regenerateIndex(identity);
 
   assert.ok(!slugs(await list({ 'titles-only': true })).includes('old-deploy-rule'), 'out of the head');
@@ -238,17 +241,17 @@ test('--all keeps "this project\'s" for decisions said here, not for every scope
   const here = makeCheckout('all-here', 'https://github.com/acme/recall-all-here.git');
   const other = makeCheckout('all-other', 'https://github.com/acme/recall-all-other.git');
   const captured = await inDir(other, () => runOpCapture({
-    args: [], options: { json: true, 'source-agent': 'dev', signal: 'authorization', quote: 'aqui pode usar yarn', proposal: 'usar yarn no outro repositorio' }, logger: silent()
+    args: [], options: { json: true, 'source-agent': 'dev', signal: 'authorization', quote: 'daqui pra frente aqui pode usar yarn', proposal: 'usar yarn no outro repositorio' }, logger: silent()
   }));
   assert.equal(captured.scope, 'project');
-  const old = new Date(Date.now() - 300 * DAY_MS).toISOString();
+  const old = new Date(Date.now() - 150 * DAY_MS).toISOString();
   const decision = readDecision(identity, captured.slug);
   fs.writeFileSync(decisionPath(identity, captured.slug), serializeDecision({ ...decision, slug: captured.slug, promoted_at: old, last_reinforced: old }));
   for (let i = 0; i < DEFAULT_RECALL_LIMIT; i += 1) seed(identity, `fresh-all-${String(i).padStart(2, '0')}`, { daysAgo: 0 });
   regenerateIndex(identity);
 
   const fromHere = await list({ 'titles-only': true, all: true }, here);
-  assert.ok(!slugs(fromHere).includes(captured.slug), 'a 300-day-old decision of another project is not this project\'s');
+  assert.ok(!slugs(fromHere).includes(captured.slug), 'a 150-day-old decision of another project is not this project\'s');
   assert.equal(fromHere.total, DEFAULT_RECALL_LIMIT + 1);
   assert.equal(fromHere.omitted, 1);
   const fromOther = await list({ 'titles-only': true, all: true }, other);

@@ -1036,6 +1036,40 @@ function appendGuardEvent(db, options) {
   });
 }
 
+/**
+ * One event no agent run owns — a memory promotion, a feature closed, a
+ * dossier initialized — recorded like a guard injection: a row of its own,
+ * no task, run or session file created, so nothing is left "running".
+ */
+function appendDossierEvent(db, options) {
+  insertExecutionEvent(db, {
+    task_key: null,
+    run_key: null,
+    agent_name: options.agentName ? String(options.agentName).trim() : null,
+    agent_kind: null,
+    squad_slug: null,
+    session_key: null,
+    source: 'dossier',
+    workflow_id: null,
+    workflow_stage: null,
+    parent_run_key: null,
+    event_type: String(options.eventType || 'dossier_event'),
+    phase: 'dossier',
+    status: null,
+    tool_name: null,
+    message: String(options.message || options.eventType || ''),
+    payload_json: options.payload ? JSON.stringify(options.payload) : null,
+    sequence_no: 1,
+    parent_event_id: null,
+    created_at: options.createdAt || nowIso(),
+    plan_step_id: null,
+    worker_status: null,
+    verdict: null,
+    token_count: null,
+    progress_pct: null
+  });
+}
+
 function appendRunEvent(db, options) {
   const run = getRunContext(db, options.runKey);
   if (!run) {
@@ -2973,6 +3007,7 @@ module.exports = {
   appendContextBriefEvent,
   appendContextSelectEvent,
   appendGuardEvent,
+  appendDossierEvent,
   logAgentEvent,
   logTrailingAgentEvent,
   readAgentSession,

@@ -192,6 +192,7 @@ module.exports = {
       reinforced: "✔ Memory reinforced: '{proposal}'. Undo: aioson op:forget {slug}",
       reinforced_widened: "✔ Memory reinforced: '{proposal}' — now applies in every project. Undo: aioson op:forget {slug}",
       match_ignored: 'op:list — --match="{match}" has no word to match (two letters or more, grammar words aside); the list below is the unfiltered head.',
+      held: "· Memory waits for a repeat: '{proposal}' — the quote names nothing beyond this moment (always, from now on, no need to ask). Said again, it is saved.",
     },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=en]',

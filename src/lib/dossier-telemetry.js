@@ -1,7 +1,6 @@
 'use strict';
 
-const { openRuntimeDb } = require('../runtime-store');
-const { logAgentEvent } = require('../runtime-store');
+const { openRuntimeDb, appendDossierEvent } = require('../runtime-store');
 
 /**
  * Emit a single runtime event for dossier auto-init lifecycle.
@@ -14,16 +13,13 @@ const { logAgentEvent } = require('../runtime-store');
  */
 async function emitDossierEvent(targetDir, { agent, type, summary, meta }) {
   try {
+    // A run-bound event (logAgentEvent) needs the runtime dir and opens a
+    // session per caller; called with none it threw every time and the catch
+    // below hid it, so no dossier event ever landed. These events belong to
+    // no run: one row each.
     const { db } = await openRuntimeDb(targetDir);
     try {
-      await logAgentEvent(db, null, {
-        agentName: agent,
-        message: summary || '',
-        type,
-        summary,
-        meta,
-        finish: false
-      });
+      appendDossierEvent(db, { agentName: agent, eventType: type, message: summary || '', payload: meta });
     } finally {
       db.close();
     }

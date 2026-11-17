@@ -78,11 +78,11 @@ function seedMemory() {
     const at = new Date(Date.now() - daysAgo * DAY_MS).toISOString();
     fs.writeFileSync(decisionPath(identity, slug), serializeDecision({
       slug, signal_type: signal, promoted_at: at, last_reinforced: at, reinforcement_count: 0,
-      category: 'default', source_agent: 'dev', quotes: ['q'], body, title: body
+      category: 'default', source_agent: 'dev', quotes: ['q'], body, title: body, scope: 'operator'
     }));
   };
   for (let i = 0; i < 45; i += 1) seed(`fresh-decision-${String(i).padStart(2, '0')}`, i, `Keep the invoice numbering rule number ${i} for every new invoice series`);
-  seed('deploy-with-dokploy-volume', 300, 'Deploy with Dokploy and keep the uploads volume mounted');
+  seed('deploy-with-dokploy-volume', 150, 'Deploy with Dokploy and keep the uploads volume mounted');
   regenerateIndex(identity);
 }
 seedMemory();
@@ -112,7 +112,7 @@ test('memory: the decision the task names is in, even ranked far below the head,
   const dir = makeProject();
   const { digest } = digestOf(dir, 'deploy the app with dokploy');
   const slugs = Object.keys(digest.memory.items);
-  assert.ok(slugs.includes('deploy-with-dokploy-volume'), 'a 300-day-old matching decision is shown');
+  assert.ok(slugs.includes('deploy-with-dokploy-volume'), 'a 150-day-old matching decision is shown');
   assert.ok(slugs.includes('fresh-decision-00'), 'the top-ranked head is kept beside the match');
   assert.equal(digest.memory.total, 46);
   assert.match(digest.memory.more, new RegExp(`^${46 - slugs.length} more: aioson op:list \\. --json --titles-only --match=`));

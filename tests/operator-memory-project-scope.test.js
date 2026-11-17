@@ -207,17 +207,28 @@ test('--scope=operator promotes operator-wide; an invalid --scope is refused', a
   assert.match(refused.error, /invalid --scope/);
 });
 
-test('a decision written before scoping (no scope field) stays visible in every project', async () => {
+test('a decision written before scoping (no scope field) still applies in every project when its quote shows it is standing', async () => {
   const slug = 'legacy-unscoped-decision';
+  const bare = 'legacy-unscoped-one-time-answer';
   const now = new Date().toISOString();
-  fs.writeFileSync(decisionPath(IDENTITY, slug), serializeDecision({
-    slug, signal_type: 'authorization', promoted_at: now, last_reinforced: now, reinforcement_count: 0,
-    category: 'autonomy', source_agent: 'dev', quotes: ['pode'], body: 'legacy decision', title: 'legacy decision'
+  const legacy = (name, quote) => fs.writeFileSync(decisionPath(IDENTITY, name), serializeDecision({
+    slug: name, signal_type: 'authorization', promoted_at: now, last_reinforced: now, reinforcement_count: 0,
+    category: 'autonomy', source_agent: 'dev', quotes: [quote], body: `legacy decision ${name}`, title: `legacy decision ${name}`
   }));
+  legacy(slug, 'pode commitar sempre que a fatia for aprovada');
+  legacy(bare, 'pode');
   regenerateIndex(IDENTITY);
   const elsewhere = makeCheckout('elsewhere', 'https://github.com/acme/elsewhere.git');
-  assert.ok((await listSlugs(elsewhere)).includes(slug));
+  const listed = await listSlugs(elsewhere, { limit: '0' });
+  assert.ok(listed.includes(slug));
+  // Where it applies was never recorded: it answers a task that names it, not the unasked head.
+  assert.ok(!(await listSlugs(elsewhere)).includes(slug), 'out of the unasked head');
+  assert.ok((await listSlugs(elsewhere, { match: 'legacy decision ainda' })).includes(slug), 'in when the task names it');
   assert.equal(readDecision(IDENTITY, slug).scope, undefined);
+  // A bare one-time answer saved before scoping left the recall, file untouched.
+  assert.ok(!listed.includes(bare), 'an unproven pre-scope decision is archived');
+  assert.ok((await listSlugs(elsewhere, { 'include-archived': true, limit: '0' })).includes(bare));
+  assert.equal(readDecision(IDENTITY, bare).scope, undefined);
 });
 
 test('preflightLoad for a project root leaves out decisions scoped to another project', async () => {
@@ -669,7 +680,7 @@ test('a decision said now in a starter or an upstream stays out of its clients a
   const starter = makeProject(box, 'starter', remotesConfig({ origin: 'git@github.com:acme/starter.git' }));
   const client = makeProject(box, 'client-a', remotesConfig({ origin: 'git@github.com:acme/client-a.git', upstream: 'git@github.com:acme/starter.git' }));
   const proposal = 'rodar migrations destrutivas sem perguntar no starter';
-  const said = await capture(starter, { signal: 'authorization', quote: 'aqui pode rodar migrations destrutivas', proposal });
+  const said = await capture(starter, { signal: 'authorization', quote: 'aqui pode rodar migrations destrutivas sem perguntar', proposal });
   assert.equal(said.scope, 'project');
   assert.ok((await listSlugs(starter)).includes(said.slug));
   assert.ok(!(await listSlugs(client)).includes(said.slug), 'a client made from the starter is another project');

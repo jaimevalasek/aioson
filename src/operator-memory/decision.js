@@ -234,7 +234,10 @@ function promoteProposal({ identity, proposal: proposalData, scope: requestedSco
     deprecated_by: null,
     feature_slug: proposalData.feature_slug || null,
     session_id: proposalData.session_id || null,
-    scope: projects.length > 0 || requestedScope ? scope : null,
+    // Always written, operator-wide when no project was recorded: a decision
+    // with no scope field is then one saved before scopes existed, which
+    // archive.js tells apart (a pre-scope decision must prove it is standing).
+    scope,
     projects,
     project_sets: sets,
     project_names: parseList(proposalData.project_names)

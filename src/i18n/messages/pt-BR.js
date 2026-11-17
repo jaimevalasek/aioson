@@ -193,6 +193,7 @@ module.exports = {
       reinforced: "✔ Memory reforçada: '{proposal}'. aioson op:forget {slug} p/ desfazer.",
       reinforced_widened: "✔ Memory reforçada: '{proposal}' — agora vale em todos os projetos. aioson op:forget {slug} p/ desfazer.",
       match_ignored: 'op:list — --match="{match}" não tem palavra que filtre (duas letras ou mais, fora palavras gramaticais); a lista abaixo é o topo sem filtro.',
+      held: "· Memory aguarda repetição: '{proposal}' — a fala não diz que vale além de agora (sempre, daqui pra frente, não precisa perguntar). Dita de novo, é salva.",
     },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agente>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=pt-BR]',

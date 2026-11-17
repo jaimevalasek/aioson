@@ -193,6 +193,7 @@ module.exports = {
       reinforced: "✔ Memory renforcée : '{proposal}'. Pour annuler : aioson op:forget {slug}",
       reinforced_widened: "✔ Memory renforcée : '{proposal}' — vaut désormais dans tous les projets. Pour annuler : aioson op:forget {slug}",
       match_ignored: 'op:list — --match="{match}" n\'a aucun mot à filtrer (deux lettres ou plus, hors mots grammaticaux) ; la liste ci-dessous est la tête non filtrée.',
+      held: "· Memory attend une répétition : '{proposal}' — la citation ne dit pas que cela vaut au-delà de maintenant (toujours, désormais, sans demander). Redite, elle est enregistrée.",
     },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=fr]',

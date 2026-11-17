@@ -29,6 +29,7 @@ const { loadMemoryIndex } = require('../operator-memory/index-md');
 const { readDecision } = require('../operator-memory/decision');
 const { STOPWORDS } = require('../operator-memory/loader');
 const { halfLifeForCategory, daysSinceReinforced } = require('../operator-memory/decay');
+const { archiveReason } = require('../operator-memory/archive');
 const { resolveProjectScope, appliesInProject, parseList, foldText, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 
 // Every agent activation reads the recall: like a memory index loaded at
@@ -133,8 +134,26 @@ function selectRecall(items, options, limit, project) {
   const { words, ignored } = matchQuery(options);
   if (limit === 0 && words.length === 0) return { items, applied: false, total: items.length, omitted: 0, match_ignored: ignored };
   const ranked = rankForRecall(items, words, project, Date.now());
-  const head = limit > 0 ? ranked.slice(0, limit) : ranked;
+  const head = limit > 0 ? headPool(ranked, words, options).slice(0, limit) : ranked;
   return { items: head, applied: true, total: ranked.length, omitted: ranked.length - head.length, match_ignored: ignored };
+}
+
+/**
+ * What may sit in the head every session opens with, unasked. A decision saved
+ * before scopes existed never showed where it applies: standing in its own
+ * project is no proof it governs this one — on a real store, every pre-scope
+ * title a fresh project's head showed belonged to other projects. Such a
+ * decision answers when the task names it (--match) and is counted in
+ * `omitted`; said again, it is scoped (op:capture) and earns the head. --all
+ * asks for every project, so it keeps them.
+ */
+function headPool(ranked, words, options) {
+  if (options.all || !isActivationRecall(options)) return ranked;
+  if (words.length === 0) return ranked.filter((item) => Boolean(item.scope));
+  // Matched, its one shared word is weak evidence: "tela" pulled two other
+  // projects' screen rules into a login task. Two words, or every word asked.
+  const need = Math.min(2, words.length);
+  return ranked.filter((item) => Boolean(item.scope) || matchHits(item, words) >= need);
 }
 
 function moreHint(omitted) {
@@ -155,22 +174,43 @@ function loadProposals(identity) {
   return items;
 }
 
-/** One index tier, enriched with each decision's file so JSON carries category, scope and body. */
-function loadTier(identity, tier) {
-  const index = loadMemoryIndex(identity, tier);
-  const marker = tier === 'archive' ? { tier: 'archive' } : {};
+/**
+ * Every decision either index lists, once, enriched with its file so JSON
+ * carries category, scope and body. The tier is read from the decision now
+ * (archive.js), not from the file that listed it: an index last written
+ * months ago still archives what has aged since, and a reinforced decision is
+ * back in the recall before any index is rewritten.
+ */
+function loadDecisions(identity, now) {
+  const seen = new Set();
   const items = [];
-  for (const entry of (index && index.entries) || []) {
-    const decision = readDecision(identity, entry.slug);
-    if (decision) items.push({ slug: entry.slug, title: entry.title, ...marker, ...decision });
+  for (const tier of ['active', 'archive']) {
+    const index = loadMemoryIndex(identity, tier);
+    for (const entry of (index && index.entries) || []) {
+      if (seen.has(entry.slug)) continue;
+      seen.add(entry.slug);
+      const decision = readDecision(identity, entry.slug);
+      if (!decision) continue;
+      const reason = archiveReason(decision, now);
+      items.push({ slug: entry.slug, title: entry.title, ...(reason ? { tier: 'archive', archived: reason } : {}), ...decision });
+    }
   }
   return items;
 }
 
 function loadItems(identity, options) {
   if (options.proposals) return loadProposals(identity);
-  const active = loadTier(identity, 'active');
-  return options['include-archived'] ? [...active, ...loadTier(identity, 'archive')] : active;
+  return loadDecisions(identity, Date.now());
+}
+
+/**
+ * Archived decisions leave the list unless --include-archived; how many is
+ * said. A feature's record (--feature) is its history and keeps them all.
+ */
+function splitArchived(items, options) {
+  if (options.proposals || options.feature || options['include-archived']) return { items, archived: 0 };
+  const kept = items.filter((item) => item.tier !== 'archive');
+  return { items: kept, archived: items.length - kept.length };
 }
 
 /** The project the command runs in — resolved only when some decision is bound to one. */
@@ -236,6 +276,7 @@ function recallFields(recall) {
   const fields = recall.applied ? { total: recall.total, omitted: recall.omitted } : {};
   if (recall.omitted > 0) fields.more = moreHint(recall.omitted);
   if (recall.match_ignored) fields.match_ignored = true;
+  if (recall.archived > 0) fields.archived = recall.archived;
   return fields;
 }
 
@@ -292,6 +333,7 @@ function printTable(logger, items, recall, identity, showProposals) {
     logger.log('');
     for (const item of items) logger.log(tableRow(item, showProposals));
     if (recall.omitted > 0) logger.log(`  … ${moreHint(recall.omitted)}`);
+    if (recall.archived > 0) logger.log(`  … ${recall.archived} archived decision(s) (aged out or never shown to be standing): op:list --include-archived`);
   }
   return { ok: true, count: items.length };
 }
@@ -311,7 +353,8 @@ async function runOpList({ args = [], options = {}, logger }) {
   const resolved = commandIdentity(where.dir);
   const loaded = loadItems(resolved.identity, options);
   const project = currentProjectFor(where.dir, loaded);
-  const recall = selectRecall(applyFilters(loaded, project, options), options, limit, project);
+  const here = splitArchived(applyFilters(loaded, project, options), options);
+  const recall = { ...selectRecall(here.items, options, limit, project), archived: here.archived };
   const items = recall.items;
 
   if (options.format === 'json' || options.json) {

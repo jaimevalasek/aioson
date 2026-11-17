@@ -47,18 +47,22 @@ aioson op:capture \
   --source-agent=dev
 ```
 
-The slug is deterministic. Promotion now depends on signal type:
+The slug is deterministic. Promotion depends on the signal type and on what the user's verbatim quote says:
 
 | Signal | Detections to promote |
 |---|---:|
-| `authorization` | 1 |
+| `authorization` | 1 when the quote says it holds from now on; else 2 |
 | `exclusion` | 1 |
 | `correction` | 1 |
 | `confirmation` | 2 |
 
-An explicit authorization, exclusion, or correction is already a standing decision. `confirmation` still needs two observations so a one-off acceptance does not become a permanent preference.
+Exclusions and corrections hold at once: forgetting a prohibition is a failure nobody sees. An authorization holds at once only when its quote carries a standing marker ("always", "from now on", "no need to ask", "sempre", "daqui pra frente", "de ahora en adelante", or naming every project); "yes", "confirmed" or a picked option answer one moment and wait for their repeat. While one waits, `op:capture` says so in one line (`held: "awaiting_repeat"` with `--json`), so the agent never claims it remembered.
+
+A repeat is recognized by meaning, not by text: the agent's paraphrase changes every session, so a signal with nothing at its exact slug is compared with the decisions and proposals of its type by content words (Jaccard ≥ 0.4, at least 3 shared words) and matches only when they name the same identifiers (numbers, versions, feature or file slugs): "phase 2" and "phase 3" stay two decisions. Matched by meaning, the output carries `matched_by: "meaning"` and the similarity.
 
 A decision binds the project it was said in until the same signal is detected in a second project or the user's own quote names every project ("em todos os meus projetos", "in every project"). A negation keeps it local only when it negates that scope ("não se aplica a todos os projetos", "doesn't apply to every project", "nem em todos"); a negated action does not: "nunca use yarn em qualquer projeto" and "never push to main in any repo" are prohibitions for every project.
+
+A decision saved before scopes existed (no `scope` field) never recorded where it applies. It stays out of the head every session gets unasked and answers when the task names it (`--match`) with two words or more (or every word asked). Said again, it is adopted by the project it was said in (`adopted: true`) and widens in a second project like any other.
 
 ## Idempotent reinforcement
 
@@ -89,7 +93,14 @@ The session-start recall (`aioson op:list --json --titles-only`) prints `items` 
 
 Commands that take a slug accept `[path] <slug>` and also `<slug> [path]` (`aioson op:show <slug> .`). The lines `op:capture` and `op:promote` print follow `--locale` when it is given and the project's `interaction_language` otherwise.
 
-`MEMORY.md` is a small index; the decision body lives in `decisions/{slug}.md`. `MEMORY-archive.md` holds decisions outside the active tier, and `history/` receives forgotten items.
+`MEMORY.md` is a small index; the decision body lives in `decisions/{slug}.md`. `MEMORY-archive.md` lists the decisions out of the recall, with the reason, and is a reading of each decision, not a file move: `op:show` and `op:list --include-archived` still read them, and a reinforcement brings one back. Two reasons:
+
+- `unproven`: an unscoped decision, never reinforced, whose quote has no standing marker;
+- `stale`: a permission (`authorization`, `confirmation`) not reinforced for two of its category's half-lives (180 days for `default`). Exclusions and corrections never age out: an obeyed prohibition is never said again.
+
+`identity` decisions never archive. `op:list` reports how many were left out (`archived`).
+
+Once a day, `op:capture` tends the store: proposals not repeated within 90 days move to `history/` (recoverable there for a year), `history/` entries older than a year go, and the index is rewritten. This upkeep never deletes a decision.
 
 ## Privacy and limits
 
@@ -106,4 +117,4 @@ Commands that take a slug accept `[path] <slug>` and also `<slug> [path]` (`aios
 2. Check `AIOSON_OPERATOR_MEMORY=true` in the same process used by the AI client.
 3. Run `aioson op:list --proposals` to distinguish a pending signal from a promoted decision.
 4. Use `aioson op:show <slug>` to inspect `signal_type`, `promoted_at`, and `last_reinforced`.
-5. If a title is not loaded, check whether `.aioson/rules/` is winning or the item moved to the archive tier.
+5. If a title is not loaded, check whether `.aioson/rules/` is winning or the item moved to the archive tier (`aioson op:list --include-archived` shows the reason).

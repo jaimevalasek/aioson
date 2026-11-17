@@ -47,18 +47,22 @@ aioson op:capture \
   --source-agent=dev
 ```
 
-O slug é derivado de forma determinística do proposal. A promoção depende do tipo de sinal:
+O slug é derivado de forma determinística do proposal. A promoção depende do tipo de sinal e do que a citação literal do usuário diz:
 
 | Sinal | Detecções para promover |
 |---|---:|
-| `authorization` | 1 |
+| `authorization` | 1 se a citação diz que vale daqui pra frente; senão 2 |
 | `exclusion` | 1 |
 | `correction` | 1 |
 | `confirmation` | 2 |
 
-Uma autorização, exclusão ou correção explícita já é uma decisão permanente. `confirmation` continua exigindo duas ocorrências para evitar transformar uma aceitação pontual em preferência estável.
+Exclusões e correções valem na primeira vez: esquecer uma proibição é uma falha que ninguém vê. Uma autorização só vale na primeira vez quando a citação traz uma marca de permanência ("sempre", "daqui pra frente", "não precisa perguntar", "from now on", "de ahora en adelante", ou nomeia todos os projetos); "sim", "confirmo" ou uma opção escolhida são respostas daquele momento e esperam a repetição. Enquanto espera, `op:capture` diz isso numa linha (`held: "awaiting_repeat"` em `--json`), para o agente não anunciar que guardou.
+
+A repetição é reconhecida pelo sentido, não pelo texto: a paráfrase do agente muda a cada sessão, então um sinal sem nada no slug exato é comparado com as decisões e propostas do mesmo tipo pelas palavras de conteúdo (Jaccard ≥ 0,4, ao menos 3 palavras em comum) e só casa quando os identificadores são os mesmos (números, versões, slugs de feature ou arquivo): "fase 2" e "fase 3" continuam duas decisões. Casada pelo sentido, a saída traz `matched_by: "meaning"` e a similaridade.
 
 Uma decisão vale só no projeto em que foi dita até o mesmo sinal aparecer num segundo projeto ou até a citação do próprio usuário nomear todos os projetos ("em todos os meus projetos", "in every project"). Uma negação só a mantém local quando nega esse escopo ("não se aplica a todos os projetos", "doesn't apply to every project", "nem em todos"); a negação de uma ação não: "nunca use yarn em qualquer projeto" e "never push to main in any repo" são proibições para todos os projetos.
+
+Uma decisão salva antes dos escopos existirem (sem campo `scope`) não registrou onde se aplica. Ela fica fora do topo que toda sessão recebe sem pedir e responde quando a tarefa a nomeia (`--match`) com duas palavras ou mais (ou todas as palavras pedidas). Dita de novo, é adotada pelo projeto onde foi dita (`adopted: true`) e se amplia num segundo projeto como qualquer outra.
 
 ## Reforço idempotente
 
@@ -89,7 +93,14 @@ O recall de início de sessão (`aioson op:list --json --titles-only`) imprime `
 
 Os comandos que recebem um slug aceitam `[path] <slug>` e também `<slug> [path]` (`aioson op:show <slug> .`). As linhas que `op:capture` e `op:promote` imprimem seguem `--locale` quando informado e, sem ele, o `interaction_language` do projeto.
 
-`MEMORY.md` é um índice pequeno; o corpo da decisão vive em `decisions/{slug}.md`. O arquivo `MEMORY-archive.md` contém decisões fora do tier ativo, e `history/` recebe itens esquecidos.
+`MEMORY.md` é um índice pequeno; o corpo da decisão vive em `decisions/{slug}.md`. `MEMORY-archive.md` lista as decisões fora do recall, com o motivo, e é uma leitura de cada decisão, não uma mudança de arquivo: `op:show` e `op:list --include-archived` continuam lendo, e um reforço a traz de volta. Dois motivos:
+
+- `unproven`: decisão sem escopo, nunca reforçada, cuja citação não tem marca de permanência;
+- `stale`: permissão (`authorization`, `confirmation`) sem reforço por duas meias-vidas da categoria (180 dias em `default`). Exclusões e correções nunca envelhecem: uma proibição obedecida nunca é repetida.
+
+Decisões de categoria `identity` nunca vão para o arquivo. `op:list` informa quantas ficaram de fora (`archived`).
+
+Uma vez por dia, o `op:capture` faz a manutenção do armazenamento: propostas não repetidas em 90 dias vão para `history/` (recuperáveis lá por um ano), entradas de `history/` com mais de um ano saem e o índice é reescrito. Decisões nunca são apagadas por essa manutenção.
 
 ## Privacidade e limites
 
@@ -106,4 +117,4 @@ Os comandos que recebem um slug aceitam `[path] <slug>` e também `<slug> [path]
 2. Verifique `AIOSON_OPERATOR_MEMORY=true` no mesmo processo do cliente de IA.
 3. Rode `aioson op:list --proposals` para diferenciar sinal pendente de decisão promovida.
 4. Use `aioson op:show <slug>` para conferir `signal_type`, `promoted_at` e `last_reinforced`.
-5. Se o título não aparecer, confira se `.aioson/rules/` está vencendo a decisão ou se o item foi arquivado.
+5. Se o título não aparecer, confira se `.aioson/rules/` está vencendo a decisão ou se o item foi arquivado (`aioson op:list --include-archived` mostra o motivo).

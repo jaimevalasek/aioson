@@ -30,6 +30,8 @@ User grants ongoing permission for an action. Look for: `pode X sempre`, `from n
 - "agora pode commitar" → context-bound to current task, not standing
 - "ok faz isso" → simple agreement, not authorization
 
+**Enforced by `op:capture`:** an authorization whose verbatim quote carries no standing marker ("sempre", "daqui pra frente", "não precisa perguntar", "from now on") is held as a proposal and saved only when it comes back; the output says so (`held: awaiting_repeat`) — do not tell the user it was remembered. A repeat is matched by meaning, so paraphrase freely; exclusions and corrections are saved at once.
+
 ### 2. Exclusion
 
 User explicitly carves out an action that they keep manual / restricted. Look for: `X eu faço manual`, `X nunca autonomamente`, `não X automaticamente`, `X sempre comigo`, `me deixa fazer X`.

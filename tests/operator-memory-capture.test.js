@@ -356,12 +356,13 @@ test('AC-P2-12 capture pipeline does not crash when storage path is fresh (cold 
   assert.equal(result.isNew, true);
 });
 
-test('threshold: authorization/exclusion/correction promote on FIRST detection (1x)', async () => {
+test('threshold: exclusion/correction promote on FIRST detection, and an authorization whose quote says it is standing', async () => {
+  const quotes = { authorization: 'pode commitar sempre que aprovar a fatia', exclusion: 'q', correction: 'q' };
   for (const sig of ['authorization', 'exclusion', 'correction']) {
     const proposalText = `firstshot-${sig}-${Date.now()}`;
     const logger = silentLogger();
     const result = await runOpCapture({
-      args: [], options: { signal: sig, quote: 'q', proposal: proposalText, 'source-agent': 'dev' }, logger
+      args: [], options: { signal: sig, quote: quotes[sig], proposal: proposalText, 'source-agent': 'dev' }, logger
     });
     assert.equal(result.ok, true);
     assert.equal(result.promoted, true, `${sig} should promote on first detection`);
@@ -370,6 +371,21 @@ test('threshold: authorization/exclusion/correction promote on FIRST detection (
     assert.equal(readProposal(TEST_IDENTITY, slug), null, `${sig} proposal should be consumed`);
     assert.ok(logger.lines.some((l) => l.includes('✔ Memory:')), `${sig} should emit promote audit`);
   }
+});
+
+test('threshold: a one-time authorization ("sim", a picked option) waits for its repeat and says so', async () => {
+  const proposalText = `one-time-yes-${Date.now()}`;
+  const logger = silentLogger();
+  const first = await runOpCapture({ args: [], options: { signal: 'authorization', quote: 'sim, abrir a url (Recommended)', proposal: proposalText, 'source-agent': 'dev' }, logger });
+  assert.equal(first.promoted, false, 'a one-time answer is no standing decision');
+  assert.equal(first.held, 'awaiting_repeat');
+  const slug = deriveSlug(proposalText);
+  assert.equal(readDecision(TEST_IDENTITY, slug), null);
+  assert.ok(readProposal(TEST_IDENTITY, slug), 'it waits in the proposals queue');
+  assert.ok(logger.lines.some((l) => l.includes(proposalText) && !l.includes('✔')), 'one line says it was not saved yet');
+  const json = await runOpCapture({ args: [], options: { json: true, signal: 'authorization', quote: 'ok, de novo', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
+  assert.equal(json.promoted, true, 'the repeat is the proof');
+  assert.ok(readDecision(TEST_IDENTITY, slug));
 });
 
 test('threshold: confirmation still requires 2x (1st stays a proposal, 2nd promotes)', async () => {
@@ -405,10 +421,14 @@ test('idempotency: re-detecting a promoted decision reinforces (single FTS row, 
   }
 });
 
-test('promotionThresholdFor: confirmation=2, other signals=1', () => {
+test('promotionThresholdFor: confirmation=2, prohibitions=1, an authorization 1 only with a standing quote', () => {
   const { promotionThresholdFor } = require('../src/commands/op-capture');
   assert.equal(promotionThresholdFor('confirmation'), 2);
-  assert.equal(promotionThresholdFor('authorization'), 1);
+  assert.equal(promotionThresholdFor('confirmation', ['sempre']), 2);
+  assert.equal(promotionThresholdFor('authorization', ['daqui pra frente pode rodar os testes']), 1);
+  assert.equal(promotionThresholdFor('authorization', ['from now on, no need to ask before npm test']), 1);
+  assert.equal(promotionThresholdFor('authorization', ['sim']), 2);
+  assert.equal(promotionThresholdFor('authorization'), 2);
   assert.equal(promotionThresholdFor('exclusion'), 1);
   assert.equal(promotionThresholdFor('correction'), 1);
 });

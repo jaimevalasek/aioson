@@ -9,13 +9,18 @@
  * Flow (architecture-operator-memory.md § Phase 2 capture pipeline):
  *   1. Validate --signal in {authorization, exclusion, correction, confirmation}
  *   2. Resolve identity (Phase 1)
- *   3. deriveSlug(--proposal) — deterministic kebab + truncate
+ *   3. deriveSlug(--proposal) — deterministic kebab + truncate; no entry there,
+ *      then the decision or proposal of the same signal saying the same thing
+ *      in other words (equivalence.js) — a repeat is a repeat however worded
  *   4. Check proposals/{slug}.md:
  *      - absent: write proposal with detected_count=1
  *      - present: detected_count++
- *        - authorization/exclusion/correction: promote on detection 1
+ *        - exclusion/correction: promote on detection 1
+ *        - authorization: on detection 1 when the quote says it is standing
+ *          (standing.js), else on its repeat
  *        - confirmation: promote on detection 2
  *   5. Telemetry op_capture before file write
+ *   6. Once a day, the store's upkeep (housekeeping.js)
  */
 
 const fs = require('node:fs');
@@ -25,7 +30,11 @@ const { recordIdentityActivity, openIndexDb } = require('../operator-memory/stor
 const { deriveSlug, fingerprintProposal } = require('../operator-memory/slug');
 const { captureSignal, readProposal, deleteProposal, VALID_SIGNAL_TYPES } = require('../operator-memory/proposal');
 const { promoteProposal, readDecision, reinforceDecision, applyProjectScope } = require('../operator-memory/decision');
-const { resolveProjectScope, VALID_SCOPES, SCOPE_OPERATOR, SCOPE_PROJECT } = require('../operator-memory/project-scope');
+const { resolveProjectScope, namesCrossProjectScope, VALID_SCOPES, SCOPE_OPERATOR, SCOPE_PROJECT } = require('../operator-memory/project-scope');
+const { findEquivalent } = require('../operator-memory/equivalence');
+const { hasStandingProof } = require('../operator-memory/standing');
+const { isUnprovenLegacy } = require('../operator-memory/archive');
+const { sweepStore } = require('../operator-memory/housekeeping');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
@@ -33,16 +42,22 @@ const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
 const PROMOTION_THRESHOLD = 2;
 
 /**
- * Detections required before a signal promotes to a decision, by signal type.
+ * Detections required before a signal promotes to a decision, by signal type
+ * and by what the user's own words (`quotes`) say.
  *
  * `confirmation` needs 2x — the user accepting the same non-obvious approach twice
- * is what turns it into a signal. `authorization` / `exclusion` / `correction` are
- * single explicit standing decisions ("pode sempre X", "nunca X", "pare de X"), so
- * they promote on first detection. Mirrors the taxonomy in
+ * is what turns it into a signal. `exclusion` / `correction` promote on the first
+ * detection: forgetting a prohibition is a failure the agent cannot see.
+ * `authorization` promotes at once only when the quote carries a standing marker
+ * ("pode sempre X", "daqui pra frente", "não precisa perguntar"); a bare "sim" or
+ * a picked option is a one-time answer, and waits for its repeat — forgetting a
+ * permission only costs a question. Mirrors the taxonomy in
  * agents/_shared/memory-capture-directive.md.
  */
-function promotionThresholdFor(signalType) {
-  return signalType === 'confirmation' ? PROMOTION_THRESHOLD : 1;
+function promotionThresholdFor(signalType, quotes = []) {
+  if (signalType === 'confirmation') return PROMOTION_THRESHOLD;
+  if (signalType === 'authorization' && !hasStandingProof(quotes, signalType)) return PROMOTION_THRESHOLD;
+  return 1;
 }
 
 function existsCheckFactory(identity) {
@@ -108,7 +123,16 @@ A decision applies only in the project it was said in until it is detected in a 
     db.close();
   }
 
-  const slug = deriveSlug(proposal, existsCheckFactory(resolved.identity));
+  let slug = deriveSlug(proposal, existsCheckFactory(resolved.identity));
+  // The paraphrase is the agent's words, new every session: with nothing at
+  // its exact slug, the same signal said differently is still a repeat.
+  let equivalent = null;
+  if (!readDecision(resolved.identity, slug) && !readProposal(resolved.identity, slug)) {
+    try { equivalent = findEquivalent(resolved.identity, { signalType: signal, proposal }); } catch { equivalent = null; }
+    if (equivalent) slug = equivalent.slug;
+  }
+  const meaning = equivalent ? { matched_by: 'meaning', similarity: equivalent.score } : {};
+  try { sweepStore(resolved.identity); } catch { /* upkeep never fails a capture */ }
 
   await emitDossierEvent(targetDir, {
     agent: 'op-capture',
@@ -176,12 +200,17 @@ A decision applies only in the project it was said in until it is detected in a 
   // not re-promoted — re-promotion would duplicate the FTS row and reset promoted_at.
   const existingDecision = readDecision(resolved.identity, slug);
   if (existingDecision) {
+    // A pre-scope decision never shown to be standing loaded in every project
+    // until now; said again, it belongs to the project it was said in (or to
+    // every project, when the words say so) — and widens on a second project.
+    const adopted = !requestedScope && isUnprovenLegacy(existingDecision) && Boolean(project && project.anchored);
+    const scopeRequest = requestedScope || (adopted ? (namesCrossProjectScope([quote]) ? SCOPE_OPERATOR : SCOPE_PROJECT) : null);
     let reinforced = null;
     try { reinforced = reinforceDecision(resolved.identity, slug); } catch { /* best-effort */ }
     // captureSignal re-created a stray proposal (the decision had none) — drop it.
     try { deleteProposal(resolved.identity, slug); } catch { /* best-effort */ }
     let scoped = null;
-    try { scoped = applyProjectScope(resolved.identity, slug, { project, quote, requested: requestedScope }); } catch { /* best-effort */ }
+    try { scoped = applyProjectScope(resolved.identity, slug, { project, quote, requested: scopeRequest }); } catch { /* best-effort */ }
     // Only a real move from one project to every project is news; an
     // operator-wide decision seen in one more project is not.
     const widened = Boolean(scoped && scoped.changed && scoped.previous === SCOPE_PROJECT && scoped.scope === SCOPE_OPERATOR);
@@ -193,7 +222,9 @@ A decision applies only in the project it was said in until it is detected in a 
         slug,
         identity: resolved.identity,
         reinforcement_count: reinforced ? reinforced.reinforcement_count : undefined,
-        scope: scoped ? scoped.scope : undefined
+        scope: scoped ? scoped.scope : undefined,
+        ...(adopted ? { adopted: true } : {}),
+        ...meaning
       };
     }
     // The line a person reads, in the project's language.
@@ -201,7 +232,7 @@ A decision applies only in the project it was said in until it is detected in a 
     return { ok: true, promoted: false, reinforced: true, slug };
   }
 
-  if (count >= promotionThresholdFor(signal)) {
+  if (count >= promotionThresholdFor(signal, result.proposal.quotes)) {
     // Promote to decision
     let decision;
     try {
@@ -218,7 +249,7 @@ A decision applies only in the project it was said in until it is detected in a 
     });
 
     if (options.json) {
-      return { ok: true, promoted: true, slug, identity: resolved.identity, category: decision.category, scope: decision.scope || 'operator' };
+      return { ok: true, promoted: true, slug, identity: resolved.identity, category: decision.category, scope: decision.scope || 'operator', ...meaning };
     }
     const onlyHere = decision.scope === SCOPE_PROJECT && project;
     if (logger) {
@@ -227,11 +258,15 @@ A decision applies only in the project it was said in until it is detected in a 
     return { ok: true, promoted: true, slug };
   }
 
-  // First detection (or below threshold) — silent
+  // Below its threshold. A confirmation waits in silence, as it always has; an
+  // authorization held for want of a standing word says so, or the agent
+  // would tell the user it was remembered.
+  const held = signal === 'authorization';
   if (options.json) {
-    return { ok: true, promoted: false, slug, detected_count: count, identity: resolved.identity };
+    return { ok: true, promoted: false, slug, detected_count: count, identity: resolved.identity, ...(held ? { held: 'awaiting_repeat' } : {}), ...meaning };
   }
-  return { ok: true, promoted: false, slug, detected_count: count };
+  if (held && logger) logger.log((t || projectTranslator(targetDir, options))('cli.operator_memory.held', { proposal, slug }));
+  return { ok: true, promoted: false, slug, detected_count: count, ...(held ? { held: 'awaiting_repeat' } : {}) };
 }
 
 module.exports = {

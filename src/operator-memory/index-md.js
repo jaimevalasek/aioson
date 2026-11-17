@@ -43,7 +43,7 @@ function listDecisionSlugs(identity) {
     .map((f) => f.slice(0, -3));
 }
 
-function deriveLineForDecision(decision) {
+function deriveLineForDecision(decision, archived = null) {
   const title = decision.body
     ? decision.body.slice(0, 80).split('\n')[0].replace(/[#`*\[\]()]/g, '').trim()
     : decision.slug;
@@ -51,7 +51,9 @@ function deriveLineForDecision(decision) {
   // A reader without the CLI sees which decisions bind only one project.
   const names = String(decision.project_names || '').split(',').map((n) => n.trim()).filter(Boolean);
   const only = decision.scope === 'project' ? ` — only in project ${names.join(', ') || '(unnamed)'}` : '';
-  return `- [${title || decision.slug}](decisions/${decision.slug}.md) — ${decision.signal_type}, reinforced ${dateOnly}${only}`;
+  // An archived line says why it left the recall (archive.js).
+  const reason = archived ? ` — archived: ${archived}` : '';
+  return `- [${title || decision.slug}](decisions/${decision.slug}.md) — ${decision.signal_type}, reinforced ${dateOnly}${only}${reason}`;
 }
 
 function serializeIndex({ identity, decisionsCount, archivedCount, lastPromoted, lines, tier = 'active' }) {
@@ -121,13 +123,22 @@ function loadMemoryIndex(identity, tier = 'active') {
   };
 }
 
+function writeIndexFile(identity, tier, content) {
+  const p = indexPath(identity, tier);
+  const tmp = `${p}.tmp`;
+  fs.writeFileSync(tmp, content, 'utf8');
+  fs.renameSync(tmp, p);
+  return p;
+}
+
 /**
- * Regenerate MEMORY.md from current decisions on disk.
- *
- * Phase 3 V1: includes ALL decisions in active tier (no decay yet).
- * Phase 5 will partition into active vs archive based on category half-life.
+ * Regenerate MEMORY.md and MEMORY-archive.md from the decisions on disk. Each
+ * decision lands in the tier archive.js reads for it now: a reinforcement
+ * brings an archived one back at the next regeneration. The archive file is
+ * written once there is something to list (or one already exists).
  */
-function regenerateIndex(identity) {
+function regenerateIndex(identity, now = Date.now()) {
+  const { archiveReason } = require('./archive');
   const slugs = listDecisionSlugs(identity);
   const decisions = slugs
     .map((slug) => {
@@ -142,21 +153,18 @@ function regenerateIndex(identity) {
     .filter(Boolean)
     .sort((a, b) => String(b.last_reinforced || '').localeCompare(String(a.last_reinforced || '')));
 
-  const lines = decisions.map(deriveLineForDecision);
-  const lastPromoted = decisions[0]?.promoted_at || null;
-  const indexContent = serializeIndex({
-    identity,
-    decisionsCount: decisions.length,
-    archivedCount: 0, // Phase 5 will compute from MEMORY-archive.md
-    lastPromoted,
-    lines,
-    tier: 'active'
-  });
-
-  const p = indexPath(identity, 'active');
-  const tmp = `${p}.tmp`;
-  fs.writeFileSync(tmp, indexContent, 'utf8');
-  fs.renameSync(tmp, p);
+  const active = [];
+  const archived = [];
+  for (const decision of decisions) {
+    const reason = archiveReason(decision, now);
+    if (reason) archived.push(deriveLineForDecision(decision, reason));
+    else active.push(deriveLineForDecision(decision));
+  }
+  const counts = { identity, decisionsCount: active.length, archivedCount: archived.length, lastPromoted: decisions[0]?.promoted_at || null };
+  const p = writeIndexFile(identity, 'active', serializeIndex({ ...counts, lines: active, tier: 'active' }));
+  if (archived.length > 0 || fs.existsSync(indexPath(identity, 'archive'))) {
+    writeIndexFile(identity, 'archive', serializeIndex({ ...counts, lines: archived, tier: 'archive' }));
+  }
   return p;
 }
 
