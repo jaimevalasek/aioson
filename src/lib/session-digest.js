@@ -171,6 +171,10 @@ async function templateAhead(targetDir) {
 }
 
 async function buildSessionDigest(targetDir, { task = '', env = process.env } = {}) {
+  // Every session start records the project it opens (~/.aioson/projects.json):
+  // what the operator chooses across projects is read from that list.
+  const { recordProjectQuietly } = require('./project-registry');
+  recordProjectQuietly(targetDir, { env });
   const words = taskWords(task);
   const validation = await validationPart(targetDir);
   const learnings = learningsPart(targetDir, words);

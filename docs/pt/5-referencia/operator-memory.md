@@ -102,6 +102,10 @@ Decisões de categoria `identity` nunca vão para o arquivo. `op:list` informa q
 
 Uma vez por dia, o `op:capture` faz a manutenção do armazenamento: propostas não repetidas em 90 dias vão para `history/` (recuperáveis lá por um ano), entradas de `history/` com mais de um ano saem e o índice é reescrito. Decisões nunca são apagadas por essa manutenção.
 
+## Projetos desta máquina
+
+Cada início de sessão (`context:digest`) registra o projeto aberto em `~/.aioson/projects.json`: caminho, nome (`project_name`), primeira e última vez visto. Só entram raízes AIOSON com `.aioson/context/project.context.md`; nunca uma pasta dentro de `.aioson/` nem uma pasta descartável sob o diretório temporário do sistema. O registro grava no máximo uma vez por hora por projeto, um projeto cuja pasta sumiu sai da lista na próxima gravação, e nada sai do computador. Desligue com `AIOSON_PROJECT_REGISTRY=false` (ou com a memória do operador desligada).
+
 ## Privacidade e limites
 
 - a memória é por identidade e não é sincronizada pelo Git;

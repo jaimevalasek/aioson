@@ -102,6 +102,10 @@ Commands that take a slug accept `[path] <slug>` and also `<slug> [path]` (`aios
 
 Once a day, `op:capture` tends the store: proposals not repeated within 90 days move to `history/` (recoverable there for a year), `history/` entries older than a year go, and the index is rewritten. This upkeep never deletes a decision.
 
+## Projects on this machine
+
+Every session start (`context:digest`) records the project it opens in `~/.aioson/projects.json`: path, name (`project_name`), first and last seen. Only AIOSON roots with `.aioson/context/project.context.md` enter; never a folder inside `.aioson/` nor a throwaway folder under the OS temp dir. The list is written at most once an hour per project, a project whose folder is gone leaves at the next write, and nothing leaves the computer. Turn it off with `AIOSON_PROJECT_REGISTRY=false` (or with operator memory off).
+
 ## Privacy and limits
 
 - memory is identity-scoped and is not synchronized through Git;
