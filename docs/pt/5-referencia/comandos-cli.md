@@ -121,6 +121,7 @@ O mesmo resolver é usado por `verification:plan`; nomes como `GPT 5.6 Terra`, `
 | `op:identity show` / `set <id>` | Inspeciona ou define a identidade local do operador | Em CI, máquinas compartilhadas ou após trocar o e-mail Git |
 | `op:capture` | Registra um sinal e promove uma decisão conforme o tipo | Quando uma preferência explícita deve sobreviver às sessões |
 | `op:list` / `op:show` | Lista ou exibe decisões/proposals (`--titles-only`, o recall de cada ativação, traz as 40 mais bem ranqueadas — as deste projeto primeiro e, em cada grupo, exclusões e correções antes de autorizações — e sempre informa `total` e `omitted`; `--match="<palavras>"` com palavras de 2+ letras (`match_ignored` avisa quando nada sobrou) e `--limit=<n>`, `0` = todas; `--feature`/`--proposals` só cortam com `--limit` explícito; `op:show <slug> .` também vale) | Para conferir o que será carregado pelo agente |
+| `op:profile` | Retrato das suas escolhas nos projetos AIOSON desta máquina (`~/.aioson/projects.json`): contagem por campo, padrões para projeto novo (só maioria clara), projetos abaixo da versão da CLI e decisões que valem em 2+ projetos; `--scan=<pasta>` importa os que já estão no disco | Para ver o que o AIOSON sabe do seu jeito de trabalhar ou importar projetos antigos |
 | `op:reinforce <slug>` | Atualiza `last_reinforced` sem reescrever o corpo | Quando uma decisão arquivada continua válida |
 | `op:forget <slug>` | Move decisão ou proposal para `history/` | Para retirar uma preferência da memória ativa |
 

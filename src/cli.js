@@ -243,6 +243,7 @@ const { runObserve, runObservationList, runObservationResolve } = lazy(() => { c
 const { runOpPromote } = lazy(() => { const { runOpPromote } = require('./commands/op-promote'); return { runOpPromote }; });
 const { runOpForget } = lazy(() => { const { runOpForget } = require('./commands/op-forget'); return { runOpForget }; });
 const { runOpList } = lazy(() => { const { runOpList } = require('./commands/op-list'); return { runOpList }; });
+const { runOpProfile } = lazy(() => { const { runOpProfile } = require('./commands/op-profile'); return { runOpProfile }; });
 const { runOpShow } = lazy(() => { const { runOpShow } = require('./commands/op-show'); return { runOpShow }; });
 const { runOpReinforce } = lazy(() => { const { runOpReinforce } = require('./commands/op-reinforce'); return { runOpReinforce }; });
 const { runOpMigrate } = lazy(() => { const { runOpMigrate } = require('./commands/op-migrate'); return { runOpMigrate }; });
@@ -955,6 +956,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'op-forget',
   'op:list',
   'op-list',
+  'op:profile',
+  'op-profile',
   'op:show',
   'op-show',
   'op:reinforce',
@@ -1108,6 +1111,7 @@ const DEDICATED_HELP_COMMANDS = new Set([
   'op:promote', 'op-promote',
   'op:forget', 'op-forget',
   'op:list', 'op-list',
+  'op:profile', 'op-profile',
   'op:show', 'op-show',
   'op:reinforce', 'op-reinforce',
   'op:migrate', 'op-migrate',
@@ -1170,7 +1174,7 @@ const HELP_KEYS = [
   'cli.help_storage_triage', 'cli.help_i18n_add', 'cli.help_agents', 'cli.help_agent_prompt',
   'cli.help_agent_help', 'cli.help_agent_invoke', 'cli.help_agent_epilogue', 'cli.help_rule_new',
   'cli.help_doc_new', 'cli.help_decide', 'cli.help_observe', 'cli.help_observation_list',
-  'cli.help_observation_resolve', 'cli.help_op_list', 'cli.help_op_show', 'cli.help_op_capture', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
+  'cli.help_observation_resolve', 'cli.help_op_list', 'cli.help_op_show', 'cli.help_op_capture', 'cli.help_op_profile', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
   'cli.help_briefing_approve', 'cli.help_briefing_unapprove', 'cli.help_briefing_review', 'cli.help_briefing_apply_feedback',
   'cli.help_briefing_feedback', 'cli.help_briefing_migrate_lineage', 'cli.help_exploration', 'cli.help_context_validate', 'cli.help_context_digest',
   'cli.help_context_pack', 'cli.help_context_search', 'cli.help_context_select', 'cli.help_context_brief',
@@ -2093,6 +2097,8 @@ async function main() {
       result = await runOpForget({ args, options, logger: commandLogger });
     } else if (command === 'op:list' || command === 'op-list') {
       result = await runOpList({ args, options, logger: commandLogger });
+    } else if (command === 'op:profile' || command === 'op-profile') {
+      result = await runOpProfile({ args, options, logger: commandLogger });
     } else if (command === 'op:show' || command === 'op-show') {
       result = await runOpShow({ args, options, logger: commandLogger });
     } else if (command === 'op:reinforce' || command === 'op-reinforce') {

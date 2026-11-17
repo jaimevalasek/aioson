@@ -106,6 +106,8 @@ Uma vez por dia, o `op:capture` faz a manutenção do armazenamento: propostas n
 
 Cada início de sessão (`context:digest`) registra o projeto aberto em `~/.aioson/projects.json`: caminho, nome (`project_name`), primeira e última vez visto. Só entram raízes AIOSON com `.aioson/context/project.context.md`; nunca uma pasta dentro de `.aioson/` nem uma pasta descartável sob o diretório temporário do sistema. O registro grava no máximo uma vez por hora por projeto, um projeto cuja pasta sumiu sai da lista na próxima gravação, e nada sai do computador. Desligue com `AIOSON_PROJECT_REGISTRY=false` (ou com a memória do operador desligada).
 
+`aioson op:profile` lê essa lista e responde, sem modelo, o que você costuma escolher: tipo, framework, idioma, Autopilot, runner de testes, tamanho e design, com a contagem de cada um; os padrões para um projeto novo (só maioria clara: ao menos 3 projetos com o campo preenchido, que sejam metade dos projetos, e um valor com 60% deles; tamanho e design aparecem mas nunca são sugeridos); os projetos abaixo da versão da CLI, os mais antigos primeiro; e as decisões que valem em dois ou mais projetos. `--scan=<pasta>` importa de uma vez os projetos que já estão no disco (`--depth=<n>`, padrão 3; pastas de dependência, ocultas e o interior de um projeto ficam de fora). `--json` devolve tudo em campos (`choices`, `suggested`, `outdated`, `habits`, `recent`).
+
 ## Privacidade e limites
 
 - a memória é por identidade e não é sincronizada pelo Git;

@@ -106,6 +106,8 @@ Once a day, `op:capture` tends the store: proposals not repeated within 90 days 
 
 Every session start (`context:digest`) records the project it opens in `~/.aioson/projects.json`: path, name (`project_name`), first and last seen. Only AIOSON roots with `.aioson/context/project.context.md` enter; never a folder inside `.aioson/` nor a throwaway folder under the OS temp dir. The list is written at most once an hour per project, a project whose folder is gone leaves at the next write, and nothing leaves the computer. Turn it off with `AIOSON_PROJECT_REGISTRY=false` (or with operator memory off).
 
+`aioson op:profile` reads that list and answers, with no model, what you usually choose: type, framework, language, Autopilot, test runner, size and design, each counted; the defaults for a new project (clear majorities only: at least 3 projects hold the field, they are at least half the projects, and one value holds 60% of them; size and design are shown, never suggested); the projects behind the CLI version, oldest first; and the decisions standing in two or more projects. `--scan=<folder>` imports the projects already on disk at once (`--depth=<n>`, default 3; dependency and hidden folders and a project's inside are skipped). `--json` returns it all as fields (`choices`, `suggested`, `outdated`, `habits`, `recent`).
+
 ## Privacy and limits
 
 - memory is identity-scoped and is not synchronized through Git;

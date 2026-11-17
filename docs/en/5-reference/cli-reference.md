@@ -1257,6 +1257,7 @@ Identity-scoped decision memory is optional and local to `~/.aioson/operators/`.
 aioson op:identity show --json
 aioson op:capture --signal=authorization --quote="..." --proposal="..." --source-agent=dev
 aioson op:list --include-archived
+aioson op:profile --scan=~/dev
 aioson op:show <slug> --json
 aioson op:reinforce <slug> --json
 aioson op:forget <slug>
@@ -1267,6 +1268,8 @@ aioson op:forget <slug>
 Every `op:*` command takes an optional `[path]` first (`aioson op:list ../client-app --json --titles-only`; a slug command also reads `<slug> [path]`, so `op:show <slug> .` works): the project a decision is scoped to is resolved from that path, and from the working directory only when no path is given. `--locale` wins over the project's language for the lines `op:capture` and `op:promote` print. A decision binds the project it was said in (`scope: project`) and widens to every project when the same signal is detected in a second distinct project or when the user's own quote names every project; `op:list` lists what applies in the current project, `--all` lists every project's.
 
 `op:list --json --titles-only` is the recall shape (a session reads it through `context:digest`, which asks for the eight ranked first plus the eight that best match the task; run it directly for a new subject), so by default it lists the 40 decisions ranked first — this project's, then every other's; within each group exclusions and corrections before authorizations and confirmations (a forgotten prohibition is a failure the agent cannot see, a forgotten permission only costs a question), then the freshest by the decay model (reinforcements raise a decision, its category's half-life lowers it with age) — and always reports `total` and `omitted` (0 when nothing is cut) plus the way to the rest: `--match="<words>"` keeps only the decisions whose title or body shares a word of two letters or more (grammar words aside; `match_ignored: true` says when no usable word was left), `--limit=<n>` sets the head (`0` = all). The head applies only to that activation shape: `--feature` and `--proposals` listings are cut only by an explicit `--limit`, which then reports the same counts.
+
+`op:profile [path] [--scan=<folder>] [--depth=<n>] [--json]` is the operator's portfolio across the AIOSON projects this machine recorded in `~/.aioson/projects.json` (every `context:digest` records the project it opens; `--scan` imports the ones already under a folder): the choices counted per field, the defaults a new project is offered (clear majorities only), the projects behind the CLI, and the decisions standing in two or more projects.
 
 See [Operator memory](./operator-memory.md).
 
