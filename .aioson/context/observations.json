@@ -1327,6 +1327,66 @@
         "by": "owner",
         "at": "2026-11-17T04:42:57.020Z"
       }
+    },
+    {
+      "id": "OBS-55396a",
+      "kind": "defect",
+      "summary": "operator-memory preflightLoad (loader.js) reads only the active MEMORY.md and never applies archiveReason at read time; an aged authorization still comes back from an old index. No production caller today (tests only) — wire it or retire i…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-17T06:02:19.617Z",
+      "updated_at": "2026-11-17T06:02:19.617Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-2cfa2d",
+      "kind": "risk",
+      "summary": "setup:context --defaults --json writes the inferred defaults before the user confirms them (pre-existing, not from the portfolio wave); @setup offers portfolio picks as unconfirmed, so a defaults run can persist what was never confirmed",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-17T06:02:19.803Z",
+      "updated_at": "2026-11-17T06:02:19.803Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-0f0866",
+      "kind": "defect",
+      "summary": "operator-portfolio isBehind has no strict SemVer check: isBehind('junk1.80.0garbage','1.81.0') is true and '1.81.0-beta' vs '1.81.0' is false; op:profile outdated can count a garbage version",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-17T06:02:19.996Z",
+      "updated_at": "2026-11-17T06:02:19.996Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-8799b0",
+      "kind": "idea",
+      "summary": "standing.js still misses some standing authorizations ('é regra: sem push', 'a partir desse projeto, commit é contigo'); a missed marker only waits for the repeat, so add patterns only with a measured false-positive check on the real store",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-17T06:02:20.181Z",
+      "updated_at": "2026-11-17T06:02:20.181Z",
+      "resolution": null
     }
   ]
 }
