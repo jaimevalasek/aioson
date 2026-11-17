@@ -110,6 +110,8 @@ Every session start (`context:digest`) records the project it opens in `~/.aioso
 
 In a new project, `aioson setup:detect . --json` carries `portfolio` when 3 or more other projects hold a clear majority: the same defaults (the project being set up never votes) and the `setup:context` `flags` that persist them (`--project-type=web_app --framework=Node --language=pt-BR --auto-handoff=true`). `@setup` offers them as the recommended answer where the workspace proves nothing, saying where they come from; workspace evidence always wins and nothing is written unconfirmed.
 
+At every session start, `context:digest` shows in `memory.habits` up to 5 decisions standing in two or more projects (seen in two distinct projects or said for every project in your own words), apart from this project's head and never listed twice. While there is none, the field is absent.
+
 ## Privacy and limits
 
 - memory is identity-scoped and is not synchronized through Git;

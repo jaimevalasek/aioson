@@ -110,6 +110,8 @@ Cada início de sessão (`context:digest`) registra o projeto aberto em `~/.aios
 
 Num projeto novo, `aioson setup:detect . --json` traz `portfolio` quando há 3 ou mais outros projetos com maioria clara: os mesmos padrões (o projeto que está sendo configurado não conta) e as `flags` do `setup:context` que os gravam (`--project-type=web_app --framework=Node --language=pt-BR --auto-handoff=true`). O `@setup` os oferece como resposta recomendada onde o workspace não prova nada, dizendo de onde vêm; a evidência do workspace sempre vence e nada é gravado sem confirmação.
 
+No início de cada sessão, o `context:digest` mostra em `memory.habits` até 5 decisões que valem em dois ou mais projetos (vistas em dois projetos distintos ou ditas para todos os projetos com as suas palavras), à parte do topo deste projeto e sem repetir nenhuma. Enquanto não existe nenhuma, o campo não aparece.
+
 ## Privacidade e limites
 
 - a memória é por identidade e não é sincronizada pelo Git;

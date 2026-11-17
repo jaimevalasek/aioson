@@ -27,6 +27,8 @@ const ESSENTIAL_FIELDS = [
 ];
 const MEMORY_MATCHED = 8;
 const MEMORY_TOP = 8;
+// Decisions standing in two or more projects: few by nature, all shown.
+const HABITS_MAX = 5;
 const LEARNINGS_MAX = 6;
 // A line of the index without a link is its own title: it is cut here.
 const LEARNING_LINE_MAX = 160;
@@ -142,8 +144,20 @@ async function memoryPart(targetDir, task, env) {
   const items = { ...(matched.items || {}) };
   for (const [slug, title] of Object.entries(top.items || {})) if (!(slug in items)) items[slug] = title;
   const total = Number(top.total) || Object.keys(items).length;
+  // What the person keeps choosing in every project, beside this project's
+  // head: shown only when some decision earned it (operator-portfolio.js), so
+  // a store without one pays no byte; never listed twice.
+  const habits = {};
+  try {
+    const { loadHabits } = require('./operator-portfolio');
+    for (const habit of loadHabits(top.identity, { limit: HABITS_MAX })) {
+      habits[habit.slug] = habit.title;
+      delete items[habit.slug];
+    }
+  } catch { /* habits are a bonus line, never a failure */ }
   return {
     total,
+    ...(Object.keys(habits).length > 0 ? { habits } : {}),
     items,
     ...(total > Object.keys(items).length ? { more: `${total - Object.keys(items).length} more: aioson op:list . --json --titles-only --match="<task words>" (--limit=0: all)` } : {}),
     body: 'aioson op:show <slug>'
