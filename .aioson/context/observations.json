@@ -46,11 +46,17 @@
       "feature": null,
       "origin_feature": null,
       "agent": null,
-      "status": "open",
+      "status": "resolved",
       "seen": 1,
       "created_at": "2026-10-20T14:03:46.495Z",
-      "updated_at": "2026-10-20T14:03:46.495Z",
-      "resolution": null
+      "updated_at": "2026-11-17T04:01:15.108Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": null,
+        "why": null,
+        "by": "owner",
+        "at": "2026-11-17T04:01:15.108Z"
+      }
     },
     {
       "id": "OBS-9b546e",
@@ -1236,6 +1242,84 @@
       "seen": 1,
       "created_at": "2026-11-13T20:07:31.445Z",
       "updated_at": "2026-11-13T20:07:31.445Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-7ee199",
+      "kind": "defect",
+      "summary": "op:capture identifies a repeat only by the exact paraphrase slug: 665 of 676 decisions never reinforced, 0 widened to operator scope since scoping (10-19), 120 of 142 confirmations stuck at detection 1",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "resolved",
+      "seen": 1,
+      "created_at": "2026-11-17T03:10:10.257Z",
+      "updated_at": "2026-11-17T04:01:14.760Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": null,
+        "why": null,
+        "by": "owner",
+        "at": "2026-11-17T04:01:14.760Z"
+      }
+    },
+    {
+      "id": "OBS-6a534b",
+      "kind": "defect",
+      "summary": "emitDossierEvent never writes: logAgentEvent(db, null) throws on path.join(null) and the catch swallows it, so op_promote/op_capture/feature-close/workflow-next dossier events (13 call sites) are lost",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "resolved",
+      "seen": 1,
+      "created_at": "2026-11-17T03:10:10.442Z",
+      "updated_at": "2026-11-17T04:01:14.878Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": null,
+        "why": null,
+        "by": "owner",
+        "at": "2026-11-17T04:01:14.878Z"
+      }
+    },
+    {
+      "id": "OBS-ba8d70",
+      "kind": "defect",
+      "summary": "Only 48 of 357 promoted authorizations quote a standing marker (sempre, daqui pra frente, nao precisa perguntar); quotes like sim, confirmo, (recomendado) became standing decisions; the directive with the do-not-capture examples is reachab…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "resolved",
+      "seen": 1,
+      "created_at": "2026-11-17T03:10:10.631Z",
+      "updated_at": "2026-11-17T04:01:14.999Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": null,
+        "why": null,
+        "by": "owner",
+        "at": "2026-11-17T04:01:14.999Z"
+      }
+    },
+    {
+      "id": "OBS-f4a7cd",
+      "kind": "idea",
+      "summary": "Cross-project operator portfolio: @setup and the digest never read the operator's past project choices (stack, design skill, classification, harness); 41 projects of project.context.md frontmatter sit unused",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-17T03:10:10.833Z",
+      "updated_at": "2026-11-17T03:10:10.833Z",
       "resolution": null
     }
   ]
