@@ -16,6 +16,7 @@
 const path = require('node:path');
 const { positionalArgs, openCommand, commandFailure, projectTranslator } = require('../operator-memory/command-context');
 const { recordProjects, scanForProjects, registryPath } = require('../lib/project-registry');
+const { printable } = require('../lib/terminal-text');
 const { buildPortfolio, FIELDS } = require('../lib/operator-portfolio');
 
 const HELP = 'op:profile [path] [--scan=<folder>] [--depth=<n>] [--json] — what you usually choose across the AIOSON projects this machine recorded (type, framework, language, Autopilot, tests, size, design), the defaults a new project is offered (clear majorities only), projects behind this CLI, and decisions standing in two or more projects. Every session records the project it opens; --scan imports the projects already under a folder (default depth 3).';
@@ -34,7 +35,7 @@ function identityFor(dir) {
   }
 }
 
-function scan(options, logger) {
+async function scan(options, logger) {
   if (options.scan === undefined) return { scanned: null };
   if (typeof options.scan !== 'string' || !options.scan.trim()) {
     return { failure: commandFailure(options, logger, 'op:profile — --scan needs a folder: --scan=<folder>.') };
@@ -45,22 +46,24 @@ function scan(options, logger) {
   }
   const root = path.resolve(options.scan);
   const found = scanForProjects(root, { depth });
-  const recorded = recordProjects(found, { force: true });
+  const recorded = await recordProjects(found, { force: true });
   return { scanned: { root, found: found.length, added: recorded.added.length, skipped: recorded.skipped.length, ...(recorded.disabled ? { disabled: true } : {}) } };
 }
 
 function label(t, field, value) {
   if (field === 'auto_handoff') return t(`cli.op_profile.value_${value === 'true' ? 'on' : 'off'}`);
-  return value;
+  return printable(value);
 }
 
+// Names, values and titles come from other projects' files: a human line
+// prints them without terminal control sequences (terminal-text.js).
 function printProfile(logger, t, portfolio, scanned) {
-  if (scanned) logger.log(t('cli.op_profile.scanned', scanned));
+  if (scanned) logger.log(t('cli.op_profile.scanned', { ...scanned, root: printable(scanned.root) }));
   if (portfolio.projects === 0) {
     logger.log(t('cli.op_profile.empty'));
     return;
   }
-  const latest = portfolio.recent[0] ? `${portfolio.recent[0].name}, ${String(portfolio.recent[0].last_seen || '').slice(0, 10)}` : '-';
+  const latest = portfolio.recent[0] ? `${printable(portfolio.recent[0].name)}, ${printable(String(portfolio.recent[0].last_seen || '').slice(0, 10))}` : '-';
   logger.log(t('cli.op_profile.header', { count: portfolio.projects, latest }));
   for (const field of FIELDS) {
     const tally = portfolio.choices[field];
@@ -72,12 +75,12 @@ function printProfile(logger, t, portfolio, scanned) {
   logger.log(picks.length > 0 ? t('cli.op_profile.suggested', { list: picks.join(', ') }) : t('cli.op_profile.no_suggestion'));
   if (portfolio.habits.length > 0) {
     logger.log(t('cli.op_profile.habits_header'));
-    for (const habit of portfolio.habits) logger.log(`  - ${habit.title} (${habit.slug})`);
+    for (const habit of portfolio.habits) logger.log(`  - ${printable(habit.title)} (${habit.slug})`);
   } else {
     logger.log(t('cli.op_profile.habits_none'));
   }
   if (portfolio.outdated && portfolio.outdated.count > 0) {
-    const oldest = portfolio.outdated.oldest.map((entry) => `${entry.name} ${entry.version}`).join(', ');
+    const oldest = portfolio.outdated.oldest.map((entry) => `${printable(entry.name)} ${printable(entry.version)}`).join(', ');
     logger.log(t('cli.op_profile.outdated', { count: portfolio.outdated.count, total: portfolio.projects, current: portfolio.outdated.current, oldest }));
   }
 }
@@ -90,7 +93,7 @@ async function runOpProfile({ args = [], options = {}, logger }) {
   }
   const where = openCommand('op:profile', positionalArgs(args)[0], options, logger);
   if (where.failure) return where.failure;
-  const scanned = scan(options, logger);
+  const scanned = await scan(options, logger);
   if (scanned.failure) return scanned.failure;
 
   const portfolio = buildPortfolio({ identity: identityFor(where.dir), cliVersion: cliVersion() });

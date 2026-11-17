@@ -14,14 +14,17 @@
  * the OS temp dir (a test run or a probe would fill the operator's list) unless
  * the home itself is a sandbox there. Reading prunes nothing on disk: a project
  * whose folder is gone is left out of the answer and dropped at the next write.
- * Writes are best-effort, atomic, and at most once an hour per project.
+ * Writes are best-effort, atomic, locked across processes, and at most once
+ * an hour per project.
  */
 
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { withRegistryLock } = require('./feature-registry-storage');
 
 const REGISTRY_FILE = 'projects.json';
+const REGISTRY_LOCK = '.projects.lock';
 const SCHEMA_VERSION = 1;
 const MAX_PROJECTS = 500;
 const TOUCH_INTERVAL_MS = 60 * 60 * 1000;
@@ -100,14 +103,9 @@ function projectName(dir) {
   return path.basename(path.resolve(dir));
 }
 
-/**
- * Record (or touch) the projects in `dirs`. Returns { added, touched, skipped }.
- * `force` skips the hourly debounce (an explicit scan).
- */
-function recordProjects(dirs, { home = os.homedir(), now = Date.now(), env = process.env, force = false } = {}) {
+// Apply `dirs` to `registry` in place: what was added, touched or refused, and whether anything changed.
+function planRecord(registry, dirs, { home, now, force }) {
   const outcome = { added: [], touched: [], skipped: [] };
-  if (registryDisabled(env)) return { ...outcome, disabled: true };
-  const registry = readRegistry(home);
   let changed = false;
   for (const raw of dirs) {
     const dir = path.resolve(raw);
@@ -128,13 +126,32 @@ function recordProjects(dirs, { home = os.homedir(), now = Date.now(), env = pro
     outcome.touched.push(dir);
     changed = true;
   }
-  if (changed) writeRegistry(registry, home);
-  return outcome;
+  return { outcome, changed };
 }
 
-/** Best-effort record of one project; never throws. */
-function recordProjectQuietly(dir, options = {}) {
-  try { return recordProjects([dir], options); } catch { return null; }
+/**
+ * Record (or touch) the projects in `dirs`. Resolves { added, touched, skipped }.
+ * `force` skips the hourly debounce (an explicit scan). Sessions opening at
+ * once each read the list, added their project and wrote it back: six
+ * processes ended with one project. The write holds a lock across processes
+ * and reads the list again inside it; a call the debounce answers with
+ * nothing to write takes no lock.
+ */
+async function recordProjects(dirs, { home = os.homedir(), now = Date.now(), env = process.env, force = false } = {}) {
+  if (registryDisabled(env)) return { added: [], touched: [], skipped: [], disabled: true };
+  const preview = planRecord(readRegistry(home), dirs, { home, now, force });
+  if (!preview.changed) return preview.outcome;
+  return withRegistryLock(path.dirname(registryPath(home)), () => {
+    const fresh = readRegistry(home);
+    const planned = planRecord(fresh, dirs, { home, now, force });
+    if (planned.changed) writeRegistry(fresh, home);
+    return planned.outcome;
+  }, { name: REGISTRY_LOCK });
+}
+
+/** Best-effort record of one project; never rejects. */
+async function recordProjectQuietly(dir, options = {}) {
+  try { return await recordProjects([dir], options); } catch { return null; }
 }
 
 /** The recorded projects whose folder still holds a project context, newest first. */

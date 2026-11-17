@@ -50,6 +50,9 @@ function ensureStorageTree(identity) {
 }
 
 function migrateIndexSchema(db) {
+  // Every operator's sessions share this file: a writer waits for another
+  // instead of failing with "database is locked".
+  db.pragma('busy_timeout = 5000');
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
 
@@ -94,16 +97,14 @@ function openIndexDb() {
   return db;
 }
 
+// One statement: a look-up then an insert let two first captures of one
+// operator both insert, and the second failed on the primary key.
 function recordIdentityActivity(db, { identity, source }) {
   const now = new Date().toISOString();
-  const existing = db.prepare('SELECT identity FROM operators WHERE identity = ?').get(identity);
-  if (existing) {
-    db.prepare('UPDATE operators SET last_active_at = ? WHERE identity = ?').run(now, identity);
-  } else {
-    db.prepare(
-      'INSERT INTO operators (identity, created_at, source, last_active_at) VALUES (?, ?, ?, ?)'
-    ).run(identity, now, source, now);
-  }
+  db.prepare(`
+    INSERT INTO operators (identity, created_at, source, last_active_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(identity) DO UPDATE SET last_active_at = excluded.last_active_at
+  `).run(identity, now, source, now);
 }
 
 module.exports = {

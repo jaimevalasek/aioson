@@ -6,8 +6,9 @@
  */
 
 const path = require('node:path');
-const { openSlugCommand } = require('../operator-memory/command-context');
+const { commandFailure, openSlugCommand } = require('../operator-memory/command-context');
 const { forgetEntry } = require('../operator-memory/decision');
+const { withStoreLock, isLockTimeout } = require('../operator-memory/store-lock');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 async function runOpForget({ args = [], options = {}, logger }) {
@@ -19,7 +20,13 @@ async function runOpForget({ args = [], options = {}, logger }) {
   const opened = openSlugCommand('op:forget', args, options, logger);
   if (opened.failure) return opened.failure;
   const { slug, dir: targetDir, resolved } = opened;
-  const result = forgetEntry(resolved.identity, slug);
+  let result;
+  try {
+    result = await withStoreLock(resolved.identity, () => forgetEntry(resolved.identity, slug));
+  } catch (err) {
+    if (!isLockTimeout(err)) throw err;
+    return commandFailure(options, logger, `op:forget failed: ${err.message}`);
+  }
 
   await emitDossierEvent(targetDir, {
     agent: 'op-forget',

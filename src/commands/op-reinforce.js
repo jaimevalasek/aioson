@@ -7,6 +7,7 @@
 
 const { commandFailure, openSlugCommand } = require('../operator-memory/command-context');
 const { reinforceDecision } = require('../operator-memory/decision');
+const { withStoreLock, isLockTimeout } = require('../operator-memory/store-lock');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 async function runOpReinforce({ args = [], options = {}, logger }) {
@@ -23,7 +24,13 @@ async function runOpReinforce({ args = [], options = {}, logger }) {
   // last_reinforced and regenerates the index, preserving title/body/trigger-quotes
   // byte-for-byte. (The old re-serialize path double-wrapped them, because the merged
   // body from readDecision already contained the "# title" and "## Trigger quotes".)
-  const reinforced = reinforceDecision(resolved.identity, slug);
+  let reinforced;
+  try {
+    reinforced = await withStoreLock(resolved.identity, () => reinforceDecision(resolved.identity, slug));
+  } catch (err) {
+    if (!isLockTimeout(err)) throw err;
+    return commandFailure(options, logger, `op:reinforce failed: ${err.message}`);
+  }
   if (!reinforced) return commandFailure(options, logger, `op:reinforce — decision '${slug}' not found for identity ${resolved.identity}.`);
 
   const { last_reinforced: now, previous, reinforcement_count } = reinforced;

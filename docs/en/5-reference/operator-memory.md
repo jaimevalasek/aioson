@@ -56,17 +56,24 @@ The slug is deterministic. Promotion depends on the signal type and on what the 
 | `correction` | 1 |
 | `confirmation` | 2 |
 
-Exclusions and corrections hold at once: forgetting a prohibition is a failure nobody sees. An authorization holds at once only when its quote carries a standing marker ("always", "from now on", "no need to ask", "sempre", "daqui pra frente", "de ahora en adelante", or naming every project); "yes", "confirmed" or a picked option answer one moment and wait for their repeat. While one waits, `op:capture` says so in one line (`held: "awaiting_repeat"` with `--json`), so the agent never claims it remembered.
+Exclusions and corrections hold at once: forgetting a prohibition is a failure nobody sees. An authorization holds at once only when its quote carries a standing marker ("always", "from now on", "no need to ask", "sempre", "daqui pra frente", "de ahora en adelante", or naming every project); "yes", "confirmed" or a picked option answer one moment and wait for their repeat. A quote that bounds itself to the moment waits too, whatever marker it holds: "I never saw this; do it now", "finish this task", "run this once" ("now", "this task", "this once"; "from now on" and "a partir de agora" are still markers). "Always" and "never" count only when they govern an instruction: "never saw", "always thought" tell what happened. Phrases that keep the current work going ("keep going", "feel free", "sem pausa", "pode ir fazendo") are no marker. While one waits, `op:capture` says so in one line (`held: "awaiting_repeat"` with `--json`), so the agent never claims it remembered.
 
-A repeat is recognized by meaning, not by text: the agent's paraphrase changes every session, so a signal with nothing at its exact slug is compared with the decisions and proposals of its type by content words (Jaccard ≥ 0.4, at least 3 shared words) and matches only when they name the same identifiers (numbers, versions, feature or file slugs): "phase 2" and "phase 3" stay two decisions. Matched by meaning, the output carries `matched_by: "meaning"` and the similarity.
+A repeat is recognized by meaning, not by text: the agent's paraphrase changes every session, so a signal with nothing at its exact slug is compared with the decisions and proposals of its type by content words (Jaccard ≥ 0.4, at least 3 shared words) and matches only when they name the same identifiers (numbers, versions, feature or file slugs): "phase 2" and "phase 3" stay two decisions. Three guards read the sentence, not just its words: the same polarity ("use Tailwind" and "don't use Tailwind" are two), the same direction when it states a preference or a replacement ("prefer Postgres to MySQL" and "prefer MySQL to Postgres" are two), and no object swapped inside the same frame ("commit the login fix" and "commit the payments migration" are two). Matched by meaning, the output carries `matched_by: "meaning"` and the similarity. Only a close match (similarity ≥ 0.6) carries the signal into a project the entry was never seen in — that second project is what widens a decision to every project; below it the signal joins the entry only in the same project, or stands as its own.
 
 A decision binds the project it was said in until the same signal is detected in a second project or the user's own quote names every project ("em todos os meus projetos", "in every project"). A negation keeps it local only when it negates that scope ("não se aplica a todos os projetos", "doesn't apply to every project", "nem em todos"); a negated action does not: "nunca use yarn em qualquer projeto" and "never push to main in any repo" are prohibitions for every project.
 
-A decision saved before scopes existed (no `scope` field) never recorded where it applies. It stays out of the head every session gets unasked and answers when the task names it (`--match`) with two words or more (or every word asked). Said again, it is adopted by the project it was said in (`adopted: true`) and widens in a second project like any other.
+A decision saved before scopes existed (no `scope` field) never recorded where it applies. It falls in one of two classes:
+
+- **Active:** its quote carries a standing marker, or it was reinforced. It stays out of the head every session gets unasked and answers when the task names it (`--match`) with two words or more (or every word asked).
+- **Archived (`unproven`):** no marker, never reinforced. It does not answer `--match`; only `aioson op:list . --include-archived --match="<words>"` (or `--limit=0` for all) lists it. `op:list` reports how many were left out in `archived`.
+
+Said again in an identifiable project, an unscoped decision without a marker is adopted by that project (`adopted: true`) — even when an earlier repeat in a folder with no project already reinforced it — and widens in a second project like any other. A decision without `scope` promoted after this CLI began always writing one came from an older CLI sharing the store: it applies to every project, as that CLI answered, and is not archived.
 
 ## Idempotent reinforcement
 
-When an already-promoted signal is detected again, AIOSON does not create another FTS row or reset `promoted_at`. It only refreshes `last_reinforced` and increments `reinforcement_count`.
+When an already-promoted signal is detected again, AIOSON does not create another FTS row or reset `promoted_at`. It refreshes `last_reinforced`, increments `reinforcement_count` and keeps the new quote with the earlier ones (up to 5: the first, those naming every project, then the newest) — "in all my projects" said on a repeat is the proof that makes the decision a habit.
+
+Captures, promotions, reinforcements and forgets of one operator run one at a time (a cross-process lock in the store's folder): two sessions capturing at once count two repeats, and the daily sweep never archives a proposal another capture just renewed.
 
 Manually reinforce a decision with:
 
@@ -74,7 +81,7 @@ Manually reinforce a decision with:
 aioson op:reinforce autonomous-commit-after-approval --json
 ```
 
-The command preserves the title, body, and trigger quotes byte-for-byte. To forget a decision, use the slug printed by `op:capture`:
+The command preserves the title, body, and trigger quotes byte-for-byte (it takes no quote). To forget a decision, use the slug printed by `op:capture`:
 
 ```bash
 aioson op:forget autonomous-commit-after-approval

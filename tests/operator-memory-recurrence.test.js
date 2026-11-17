@@ -27,7 +27,7 @@ process.env.AIOSON_OPERATOR_ID = 'recurrence-bot';
 
 const { standingMarker, hasStandingProof } = require('../src/operator-memory/standing');
 const { similarity, signature, findEquivalent } = require('../src/operator-memory/equivalence');
-const { archiveReason, isUnprovenLegacy } = require('../src/operator-memory/archive');
+const { archiveReason, isUnprovenLegacy, SCOPE_ALWAYS_WRITTEN_SINCE } = require('../src/operator-memory/archive');
 const { sweepStore, expireProposals, PROPOSAL_TTL_DAYS } = require('../src/operator-memory/housekeeping');
 const { readDecision, serializeDecision, decisionPath } = require('../src/operator-memory/decision');
 const { readProposal, writeProposal } = require('../src/operator-memory/proposal');
@@ -61,11 +61,15 @@ async function inDir(dir, fn) {
 const capture = (dir, options) => inDir(dir, () => runOpCapture({ args: [], options: { json: true, 'source-agent': 'dev', ...options }, logger: silent() }));
 const list = (dir, options = {}) => inDir(dir, () => runOpList({ args: [], options: { json: true, 'titles-only': true, ...options }, logger: silent() }));
 
+// Promoted before this CLI always wrote a scope: what a pre-scope decision is.
+const BEFORE_SCOPES = SCOPE_ALWAYS_WRITTEN_SINCE - DAY_MS;
+
 function seedLegacy(identity, slug, { signal = 'authorization', quote = 'sim', body = `legacy ${slug}`, daysAgo = 0, category = 'default', reinforced = 0 } = {}) {
   const at = new Date(Date.now() - daysAgo * DAY_MS).toISOString();
+  const promoted = new Date(Math.min(Date.now() - daysAgo * DAY_MS, BEFORE_SCOPES)).toISOString();
   // No `scope` field: the shape every decision had before scopes existed.
   fs.writeFileSync(decisionPath(identity, slug), serializeDecision({
-    slug, signal_type: signal, promoted_at: at, last_reinforced: at, reinforcement_count: reinforced,
+    slug, signal_type: signal, promoted_at: promoted, last_reinforced: at, reinforcement_count: reinforced,
     category, source_agent: 'dev', quotes: [quote], body, title: body
   }));
 }

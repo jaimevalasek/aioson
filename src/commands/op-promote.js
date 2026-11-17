@@ -7,6 +7,7 @@
 
 const { readProposal } = require('../operator-memory/proposal');
 const { promoteProposal } = require('../operator-memory/decision');
+const { withStoreLock, isLockTimeout } = require('../operator-memory/store-lock');
 const { resolveProjectScope, recordProject, parseList, VALID_SCOPES, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 const { commandFailure: fail, openSlugCommand, projectTranslator } = require('../operator-memory/command-context');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
@@ -54,19 +55,27 @@ async function runOpPromote({ args = [], options = {}, logger, t = null }) {
   const opened = openSlugCommand('op:promote', args, options, logger);
   if (opened.failure) return opened.failure;
   const { slug, dir: targetDir, resolved } = opened;
-  const proposal = readProposal(resolved.identity, slug);
-  if (!proposal) return fail(options, logger, `op:promote — proposal '${slug}' not found.`);
-
-  const scoped = requestedScopeFor(options, proposal, targetDir);
-  if (scoped.error) return fail(options, logger, scoped.error);
-  const { requestedScope, project } = scoped;
-
-  let decision;
+  // Read and promote under the store lock (store-lock.js): a capture renewing
+  // the same proposal meanwhile is never lost.
+  let locked;
   try {
-    decision = promoteProposal({ identity: resolved.identity, proposal, scope: requestedScope });
+    locked = await withStoreLock(resolved.identity, () => {
+      const proposal = readProposal(resolved.identity, slug);
+      if (!proposal) return { error: `op:promote — proposal '${slug}' not found.` };
+      const scoped = requestedScopeFor(options, proposal, targetDir);
+      if (scoped.error) return { error: scoped.error };
+      try {
+        return { proposal, project: scoped.project, decision: promoteProposal({ identity: resolved.identity, proposal, scope: scoped.requestedScope }) };
+      } catch (err) {
+        return { error: `op:promote failed: ${err.message}` };
+      }
+    });
   } catch (err) {
+    if (!isLockTimeout(err)) throw err;
     return fail(options, logger, `op:promote failed: ${err.message}`);
   }
+  if (locked.error) return fail(options, logger, locked.error);
+  const { proposal, project, decision } = locked;
 
   await emitDossierEvent(targetDir, {
     agent: 'op-promote',

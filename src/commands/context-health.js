@@ -162,6 +162,11 @@ async function buildDriftWarnings(contextDir) {
   return warnings;
 }
 
+// A hit rate counts cache lookups only. Dividing by every execution event made
+// any other producer move it: four operator-memory events (source 'dossier')
+// took one hit from 100% to 20% with no lookup in between.
+const CACHE_EVENTS = ['cache_hit', 'cache_miss'];
+
 async function getCacheHitRate(db) {
   if (!db) return null;
   try {
@@ -170,7 +175,8 @@ async function getCacheHitRate(db) {
              SUM(CASE WHEN event_type = 'cache_hit' THEN 1 ELSE 0 END) as hits
       FROM execution_events
       WHERE created_at >= datetime('now', '-7 days')
-    `).get();
+        AND event_type IN (${CACHE_EVENTS.map(() => '?').join(', ')})
+    `).get(...CACHE_EVENTS);
     if (!rows || rows.total === 0) return null;
     return Math.round((rows.hits / rows.total) * 100);
   } catch {

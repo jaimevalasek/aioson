@@ -56,17 +56,24 @@ O slug é derivado de forma determinística do proposal. A promoção depende do
 | `correction` | 1 |
 | `confirmation` | 2 |
 
-Exclusões e correções valem na primeira vez: esquecer uma proibição é uma falha que ninguém vê. Uma autorização só vale na primeira vez quando a citação traz uma marca de permanência ("sempre", "daqui pra frente", "não precisa perguntar", "from now on", "de ahora en adelante", ou nomeia todos os projetos); "sim", "confirmo" ou uma opção escolhida são respostas daquele momento e esperam a repetição. Enquanto espera, `op:capture` diz isso numa linha (`held: "awaiting_repeat"` em `--json`), para o agente não anunciar que guardou.
+Exclusões e correções valem na primeira vez: esquecer uma proibição é uma falha que ninguém vê. Uma autorização só vale na primeira vez quando a citação traz uma marca de permanência ("sempre", "daqui pra frente", "não precisa perguntar", "from now on", "de ahora en adelante", ou nomeia todos os projetos); "sim", "confirmo" ou uma opção escolhida são respostas daquele momento e esperam a repetição. Uma citação que se limita ao momento também espera, mesmo com uma dessas palavras: "nunca vi isso, pode fazer agora", "termina essa tarefa", "run this once" ("agora", "essa tarefa", "this once"; "a partir de agora" e "from now on" continuam marcas). "Sempre" e "nunca" só contam quando regem uma instrução: "nunca vi", "sempre achei" contam o que aconteceu. Frases que mantêm o trabalho atual andando ("sem pausa", "keep going", "feel free", "pode ir fazendo") não são marca. Enquanto espera, `op:capture` diz isso numa linha (`held: "awaiting_repeat"` em `--json`), para o agente não anunciar que guardou.
 
-A repetição é reconhecida pelo sentido, não pelo texto: a paráfrase do agente muda a cada sessão, então um sinal sem nada no slug exato é comparado com as decisões e propostas do mesmo tipo pelas palavras de conteúdo (Jaccard ≥ 0,4, ao menos 3 palavras em comum) e só casa quando os identificadores são os mesmos (números, versões, slugs de feature ou arquivo): "fase 2" e "fase 3" continuam duas decisões. Casada pelo sentido, a saída traz `matched_by: "meaning"` e a similaridade.
+A repetição é reconhecida pelo sentido, não pelo texto: a paráfrase do agente muda a cada sessão, então um sinal sem nada no slug exato é comparado com as decisões e propostas do mesmo tipo pelas palavras de conteúdo (Jaccard ≥ 0,4, ao menos 3 palavras em comum) e só casa quando os identificadores são os mesmos (números, versões, slugs de feature ou arquivo): "fase 2" e "fase 3" continuam duas decisões. Três guardas leem a frase, não só as palavras: a mesma polaridade ("usar Tailwind" e "não usar Tailwind" são duas), a mesma direção quando há preferência ou troca ("preferir Postgres a MySQL" e "preferir MySQL a Postgres" são duas) e nenhum objeto trocado na mesma moldura ("commit da correção de login" e "commit da migração de pagamentos" são dois). Casada pelo sentido, a saída traz `matched_by: "meaning"` e a similaridade. Só um casamento próximo (similaridade ≥ 0,6) leva o sinal a um projeto onde a entrada nunca foi vista — é esse segundo projeto que amplia a decisão para todos; abaixo disso o sinal se junta à entrada só no mesmo projeto, ou vira uma entrada própria.
 
 Uma decisão vale só no projeto em que foi dita até o mesmo sinal aparecer num segundo projeto ou até a citação do próprio usuário nomear todos os projetos ("em todos os meus projetos", "in every project"). Uma negação só a mantém local quando nega esse escopo ("não se aplica a todos os projetos", "doesn't apply to every project", "nem em todos"); a negação de uma ação não: "nunca use yarn em qualquer projeto" e "never push to main in any repo" são proibições para todos os projetos.
 
-Uma decisão salva antes dos escopos existirem (sem campo `scope`) não registrou onde se aplica. Ela fica fora do topo que toda sessão recebe sem pedir e responde quando a tarefa a nomeia (`--match`) com duas palavras ou mais (ou todas as palavras pedidas). Dita de novo, é adotada pelo projeto onde foi dita (`adopted: true`) e se amplia num segundo projeto como qualquer outra.
+Uma decisão salva antes dos escopos existirem (sem campo `scope`) não registrou onde se aplica. São duas classes:
+
+- **Ativa:** a citação traz uma marca de permanência, ou ela já foi reforçada. Fica fora do topo que toda sessão recebe sem pedir e responde quando a tarefa a nomeia (`--match`) com duas palavras ou mais (ou todas as palavras pedidas).
+- **Arquivada (`unproven`):** sem marca e nunca reforçada. Não responde a `--match`; só aparece com `aioson op:list . --include-archived --match="<palavras>"` (ou `--limit=0` para listar todas). `op:list` informa quantas ficaram de fora em `archived`.
+
+Dita de novo num projeto identificável, uma decisão sem escopo e sem marca é adotada por esse projeto (`adopted: true`), mesmo que uma repetição anterior numa pasta sem projeto já a tenha reforçado, e se amplia num segundo projeto como qualquer outra. Uma decisão sem `scope` promovida depois que este CLI passou a sempre gravar escopo veio de um CLI mais antigo que divide o mesmo armazenamento: vale para todos os projetos, como aquele CLI respondeu, e não é arquivada.
 
 ## Reforço idempotente
 
-Se um sinal já promovido aparecer novamente, ele não cria outra linha no índice FTS nem reseta `promoted_at`. O AIOSON atualiza somente `last_reinforced` e incrementa `reinforcement_count`.
+Se um sinal já promovido aparecer novamente, ele não cria outra linha no índice FTS nem reseta `promoted_at`. O AIOSON atualiza `last_reinforced`, incrementa `reinforcement_count` e guarda a citação nova junto das anteriores (até 5: a primeira, as que nomeiam todos os projetos e as mais recentes) — "em todos os meus projetos" dito numa repetição é a prova que faz da decisão um hábito.
+
+Capturas, promoções, reforços e esquecimentos do mesmo operador acontecem um de cada vez (um lock entre processos na pasta do armazenamento): duas sessões capturando ao mesmo tempo contam duas repetições, e a limpeza diária nunca arquiva uma proposta que outra captura acabou de renovar.
 
 Para reforçar manualmente uma decisão:
 
@@ -74,7 +81,7 @@ Para reforçar manualmente uma decisão:
 aioson op:reinforce commit-autonomo-apos-aprovacao --json
 ```
 
-O comando preserva título, corpo e trigger quotes byte a byte. Para desfazer uma decisão, use o slug exibido no `op:capture`:
+O comando preserva título, corpo e trigger quotes byte a byte (ele não recebe citação). Para desfazer uma decisão, use o slug exibido no `op:capture`:
 
 ```bash
 aioson op:forget commit-autonomo-apos-aprovacao

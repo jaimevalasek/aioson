@@ -36,7 +36,13 @@ function writeState(root, state) {
   fs.renameSync(tmp, file);
 }
 
-/** Proposals not detected again within the TTL move to history/; their slugs. */
+/**
+ * Proposals not detected again within the TTL move to history/; their slugs.
+ * Only the generation judged old leaves: the file is read again right before
+ * it goes, and one a capture renewed in between stays (op:capture also holds
+ * the store lock around the sweep, store-lock.js). What history/ keeps is the
+ * text that was judged.
+ */
 function expireProposals(identity, now = Date.now(), ttlDays = PROPOSAL_TTL_DAYS) {
   const dir = path.join(getStorageRoot(identity), 'proposals');
   if (!fs.existsSync(dir)) return [];
@@ -46,13 +52,18 @@ function expireProposals(identity, now = Date.now(), ttlDays = PROPOSAL_TTL_DAYS
     const slug = file.slice(0, -3);
     if (!isValidDecisionSlug(slug)) continue;
     const full = path.join(dir, file);
+    let judged;
     let proposal;
-    try { proposal = parseProposalFrontmatter(fs.readFileSync(full, 'utf8').replace(/\r\n/g, '\n')); } catch { continue; }
+    try {
+      judged = fs.readFileSync(full, 'utf8');
+      proposal = parseProposalFrontmatter(judged.replace(/\r\n/g, '\n'));
+    } catch { continue; }
     const seen = new Date((proposal && (proposal.last_detected || proposal.first_detected)) || 0).getTime();
     if (!seen || now - seen < ttlDays * DAY_MS) continue;
     try {
+      if (fs.readFileSync(full, 'utf8') !== judged) continue;
       fs.mkdirSync(path.join(getStorageRoot(identity), 'history'), { recursive: true });
-      fs.copyFileSync(full, historyPath(identity, slug, new Date(now).toISOString()));
+      fs.writeFileSync(historyPath(identity, slug, new Date(now).toISOString()), judged, 'utf8');
       deleteProposal(identity, slug);
       expired.push(slug);
     } catch { /* one unreadable proposal never stops the sweep */ }

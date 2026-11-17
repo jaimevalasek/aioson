@@ -33,6 +33,9 @@ const LEARNINGS_MAX = 6;
 // A line of the index without a link is its own title: it is cut here.
 const LEARNING_LINE_MAX = 160;
 const ISSUES_MAX = 6;
+// What the session start may cost, as printed (compact JSON): fitBudget.
+const DIGEST_BUDGET_BYTES = 3072;
+const LEARNINGS_INDEX = '.aioson/learnings/INDEX.md';
 
 function taskWords(text) {
   return [...new Set(foldText(String(text || '')).split(/[^a-z0-9]+/).filter((word) => word.length >= 3 && !STOPWORDS.has(word)))];
@@ -101,7 +104,7 @@ function learningTitle(line) {
 }
 
 function learningsPart(targetDir, words) {
-  const rel = '.aioson/learnings/INDEX.md';
+  const rel = LEARNINGS_INDEX;
   const content = readText(path.join(targetDir, rel));
   if (content === null) return null;
   const lines = content.split(/\r?\n/).filter((line) => /^\s*(?:[-*]|\d+[.)])\s+\S/.test(line)).map((line) => line.trim());
@@ -116,11 +119,7 @@ function learningsPart(targetDir, words) {
     .sort((a, b) => b.hits - a.hits || a.order - b.order)
     .slice(0, LEARNINGS_MAX)
     .map((entry) => learningTitle(entry.line));
-  return {
-    total: lines.length,
-    ...(matched.length > 0 ? { matched } : {}),
-    ...(lines.length > matched.length ? { rest: `read ${rel} when the task or files change (${lines.length - matched.length} line(s) not shown)` } : {})
-  };
+  return learningsShape({ total: lines.length, matched, rel });
 }
 
 async function recall(targetDir, options) {
@@ -155,13 +154,62 @@ async function memoryPart(targetDir, task, env) {
       delete items[habit.slug];
     }
   } catch { /* habits are a bonus line, never a failure */ }
+  return memoryShape({ total, habits, items });
+}
+
+// The memory part in its printed order; `more` counts what neither `items`
+// nor `habits` shows (they never share a slug).
+function memoryShape({ total, habits, items }) {
+  const shown = Object.keys(items).length + Object.keys(habits).length;
   return {
     total,
     ...(Object.keys(habits).length > 0 ? { habits } : {}),
     items,
-    ...(total > Object.keys(items).length ? { more: `${total - Object.keys(items).length} more: aioson op:list . --json --titles-only --match="<task words>" (--limit=0: all)` } : {}),
+    ...(total > shown ? { more: `${total - shown} more: aioson op:list . --json --titles-only --match="<task words>" (--limit=0: all)` } : {}),
     body: 'aioson op:show <slug>'
   };
+}
+
+function learningsShape({ total, matched, rel }) {
+  return {
+    total,
+    ...(matched.length > 0 ? { matched } : {}),
+    ...(total > matched.length ? { rest: `read ${rel} when the task or files change (${total - matched.length} line(s) not shown)` } : {})
+  };
+}
+
+/**
+ * The digest within DIGEST_BUDGET_BYTES as printed (compact JSON). Each part
+ * caps its own count, but a full store, a full learnings index and five habits
+ * together measured 3,625 B. The verdict, the project essentials and the
+ * routing never shrink; titles leave from the least ranked — the memory head
+ * first, then the matched lessons, then the habits — and every cut list keeps
+ * counting what it left out and how to read it.
+ */
+function fitBudget(digest, budget = DIGEST_BUDGET_BYTES) {
+  const size = () => Buffer.byteLength(JSON.stringify(digest));
+  if (size() <= budget) return digest;
+  const memory = digest.memory && digest.memory.items ? { ...digest.memory, habits: { ...(digest.memory.habits || {}) }, items: { ...digest.memory.items } } : null;
+  const learnings = digest.learnings && Array.isArray(digest.learnings.matched) ? { ...digest.learnings, matched: [...digest.learnings.matched] } : null;
+  const dropLast = (map) => {
+    const slugs = Object.keys(map);
+    if (slugs.length === 0) return false;
+    delete map[slugs[slugs.length - 1]];
+    return true;
+  };
+  const cuts = [
+    memory && (() => dropLast(memory.items)),
+    learnings && (() => learnings.matched.pop() !== undefined),
+    memory && (() => dropLast(memory.habits))
+  ].filter(Boolean);
+  const refresh = () => {
+    if (memory) digest.memory = memoryShape(memory);
+    if (learnings) digest.learnings = learningsShape({ total: learnings.total, matched: learnings.matched, rel: LEARNINGS_INDEX });
+  };
+  for (const cut of cuts) {
+    while (size() > budget && cut()) refresh();
+  }
+  return digest;
 }
 
 async function activeFeature(targetDir) {
@@ -188,7 +236,7 @@ async function buildSessionDigest(targetDir, { task = '', env = process.env } = 
   // Every session start records the project it opens (~/.aioson/projects.json):
   // what the operator chooses across projects is read from that list.
   const { recordProjectQuietly } = require('./project-registry');
-  recordProjectQuietly(targetDir, { env });
+  await recordProjectQuietly(targetDir, { env });
   const words = taskWords(task);
   const validation = await validationPart(targetDir);
   const learnings = learningsPart(targetDir, words);
@@ -196,7 +244,7 @@ async function buildSessionDigest(targetDir, { task = '', env = process.env } = 
   const feature = await activeFeature(targetDir);
   const rules = rulesCount(path.join(targetDir, '.aioson', 'rules'));
   const template = await templateAhead(targetDir);
-  return {
+  return fitBudget({
     ok: true,
     ...validation,
     ...(template ? { template } : {}),
@@ -205,7 +253,7 @@ async function buildSessionDigest(targetDir, { task = '', env = process.env } = 
     memory,
     ...(feature ? { feature } : {}),
     routing: 'active /agent: .aioson/agents/<agent>.md (it reads project.context.md itself); none: .aioson/docs/gateway/agent-routing.md'
-  };
+  });
 }
 
-module.exports = { buildSessionDigest, taskWords, ESSENTIAL_FIELDS, MEMORY_MATCHED, MEMORY_TOP };
+module.exports = { buildSessionDigest, fitBudget, taskWords, ESSENTIAL_FIELDS, MEMORY_MATCHED, MEMORY_TOP, DIGEST_BUDGET_BYTES };

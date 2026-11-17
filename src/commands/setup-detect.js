@@ -18,6 +18,7 @@
  */
 
 const { detectFramework, isMonorepoDetection } = require('../detector');
+const { printable } = require('../lib/terminal-text');
 const { resolveTargetDir } = require('../lib/project-root');
 
 // The setup:context flag each suggested field is persisted with, once confirmed.
@@ -87,7 +88,8 @@ async function runSetupDetect({ args, options = {}, logger }) {
     }
   }
   if (portfolio) {
-    const picks = Object.entries(portfolio.suggested).map(([field, pick]) => `${field}=${pick.value} (${pick.count}/${pick.of})`);
+    // Values from other projects' files: printed without terminal control sequences.
+    const picks = Object.entries(portfolio.suggested).map(([field, pick]) => `${field}=${printable(pick.value)} (${pick.count}/${pick.of})`);
     logger.log(`  your other ${portfolio.from} projects usually: ${picks.join(', ')} — the default to offer where this workspace proves nothing`);
   }
   return result;

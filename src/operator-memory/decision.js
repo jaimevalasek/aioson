@@ -191,6 +191,15 @@ function parseDecisionFile(content) {
   return out;
 }
 
+/** The proposal a decision states: its paragraph, the heading when it has none. */
+function decisionStatement(decision) {
+  const body = String((decision && decision.body) || '');
+  const quotesAt = body.indexOf('\n## Trigger quotes');
+  const own = quotesAt === -1 ? body : body.slice(0, quotesAt);
+  const heading = (own.match(/^#\s+(.*)$/m) || [])[1] || '';
+  return own.replace(/^#\s+.*$/m, '').trim() || heading.trim();
+}
+
 function readDecision(identity, slug) {
   const filePath = decisionPath(identity, slug);
   if (!fs.existsSync(filePath)) return null;
@@ -277,17 +286,50 @@ function promoteProposal({ identity, proposal: proposalData, scope: requestedSco
   return decision;
 }
 
+const MAX_DECISION_QUOTES = 5;
+
+/**
+ * The quotes a decision keeps, at most MAX_DECISION_QUOTES: the first (what
+ * promoted it), any that names every project (the proof a habit is read from,
+ * operator-portfolio.js), then the newest.
+ */
+function keepQuotes(quotes) {
+  const unique = [...new Set(quotes.map((q) => String(q || '').replace(/\s+/g, ' ').trim()).filter(Boolean))];
+  if (unique.length <= MAX_DECISION_QUOTES) return unique;
+  const [first, ...rest] = unique;
+  const keep = new Set([first, ...rest.filter((q) => namesCrossProjectScope([q])).slice(-(MAX_DECISION_QUOTES - 1))]);
+  for (let i = rest.length - 1; i >= 0 && keep.size < MAX_DECISION_QUOTES; i -= 1) keep.add(rest[i]);
+  return unique.filter((q) => keep.has(q));
+}
+
+/** `content` with its frontmatter quotes and its "## Trigger quotes" list set to `quotes`. */
+function setQuotes(content, quotes) {
+  const close = content.indexOf('\n---', 3);
+  if (!content.startsWith('---\n') || close === -1) return content;
+  const block = /^quotes:.*(?:\n[ \t]+-[ \t].*)*/m;
+  const yaml = `quotes:${quotesToYaml(quotes)}`;
+  let head = content.slice(0, close);
+  head = block.test(head) ? head.replace(block, () => yaml) : `${head}\n${yaml}`;
+  let tail = content.slice(close);
+  const list = ['## Trigger quotes', ...quotes.map((q) => `- "${q}"`), ''].join('\n');
+  const at = tail.indexOf('\n## Trigger quotes');
+  tail = at === -1 ? `${tail.replace(/\n*$/, '\n')}\n${list}` : `${tail.slice(0, at + 1)}${list}`;
+  return head + tail;
+}
+
 /**
  * Reinforce an existing decision in place: bump reinforcement_count and refresh
  * last_reinforced (PMD-11). Used when a signal already promoted is re-detected —
  * strengthens the memory instead of re-promoting (which would duplicate the FTS
- * row and reset promoted_at).
+ * row and reset promoted_at). `quote` is the user's words this time: kept with
+ * the others, or "em todos os meus projetos" said on a repeat widened the
+ * decision and was then lost — the habit read from it never appeared.
  *
- * Surgical frontmatter edit — preserves title, body and trigger quotes byte-for-byte
- * (unlike a full re-serialize, which cannot recover the title from the merged body).
+ * Surgical frontmatter edit — preserves title and body byte-for-byte (unlike a
+ * full re-serialize, which cannot recover the title from the merged body).
  * Returns { slug, last_reinforced, previous, reinforcement_count } or null if absent.
  */
-function reinforceDecision(identity, slug) {
+function reinforceDecision(identity, slug, { quote = null } = {}) {
   const filePath = decisionPath(identity, slug);
   if (!fs.existsSync(filePath)) return null;
 
@@ -299,9 +341,12 @@ function reinforceDecision(identity, slug) {
 
   // Replace only the first (frontmatter) occurrence of each field; `.` never
   // spans newlines, so the body is untouched.
-  const updated = content
+  let updated = content
     .replace(/^(reinforcement_count:[ \t]*).*$/m, `$1${nextCount}`)
     .replace(/^(last_reinforced:[ \t]*).*$/m, `$1${now}`);
+  const said = String(quote || '').replace(/\s+/g, ' ').trim();
+  const known = (parsed && parsed.quotes) || [];
+  if (said && !known.includes(said)) updated = setQuotes(updated, keepQuotes([...known, said]));
 
   // The index surfaces the reinforced date; FTS body/category are unchanged,
   // so no FTS write is needed.
@@ -404,6 +449,8 @@ module.exports = {
   applyProjectScope,
   forgetEntry,
   readDecision,
+  decisionStatement,
+  keepQuotes,
   decisionPath,
   historyPath,
   serializeDecision,

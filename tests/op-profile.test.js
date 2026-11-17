@@ -63,7 +63,7 @@ function freshHome() {
 
 const silent = () => ({ log() {}, error() {}, warn() {} });
 
-test('choices are tallied per field; "Node" and "Node.js" are one framework, shown as most spelled', () => {
+test('choices are tallied per field; "Node" and "Node.js" are one framework, shown as most spelled', async () => {
   const rows = [
     { data: { framework: 'Node' } }, { data: { framework: 'Node' } }, { data: { framework: 'Node.js' } },
     { data: { framework: 'Next.js' } }, { data: { framework: '' } }
@@ -73,7 +73,7 @@ test('choices are tallied per field; "Node" and "Node.js" are one framework, sho
     [{ value: 'false', count: 1 }, { value: 'true', count: 1 }]);
 });
 
-test('a default is offered only on a clear majority of projects that hold the choice', () => {
+test('a default is offered only on a clear majority of projects that hold the choice', async () => {
   const { home, work } = freshHome();
   const dirs = [
     makeProject(work, { framework: 'Node', auto_handoff: true, test_runner: 'vitest' }),
@@ -82,7 +82,7 @@ test('a default is offered only on a clear majority of projects that hold the ch
     makeProject(work, { framework: 'Laravel', classification: 'MEDIUM' }),
     makeProject(work, { framework: 'Next.js', project_type: 'site' })
   ];
-  recordProjects(dirs, { home });
+  await recordProjects(dirs, { home });
   const portfolio = buildPortfolio({ home });
   assert.equal(portfolio.projects, 5);
   assert.deepEqual(portfolio.suggested.framework, { value: 'Node', count: 3, of: 5 });
@@ -98,18 +98,18 @@ test('a default is offered only on a clear majority of projects that hold the ch
   assert.equal(excluded.projects, 4, 'a project being set up does not vote for itself');
 });
 
-test('fewer than three projects, or no majority, offers no default', () => {
+test('fewer than three projects, or no majority, offers no default', async () => {
   const { home, work } = freshHome();
-  recordProjects([makeProject(work), makeProject(work)], { home });
+  await recordProjects([makeProject(work), makeProject(work)], { home });
   assert.deepEqual(buildPortfolio({ home }).suggested, {});
   const split = freshHome();
-  recordProjects(['Node', 'Laravel', 'Rails', 'Django'].map((framework) => makeProject(split.work, { framework })), { home: split.home });
+  await recordProjects(['Node', 'Laravel', 'Rails', 'Django'].map((framework) => makeProject(split.work, { framework })), { home: split.home });
   assert.equal(buildPortfolio({ home: split.home }).suggested.framework, undefined);
 });
 
-test('projects behind the CLI are counted, the oldest named first', () => {
+test('projects behind the CLI are counted, the oldest named first', async () => {
   const { home, work } = freshHome();
-  recordProjects([
+  await recordProjects([
     makeProject(work, { name: 'Current', aioson_version: '1.81.0' }),
     makeProject(work, { name: 'Old', aioson_version: '1.7.2' }),
     makeProject(work, { name: 'Recent', aioson_version: '1.80.1' }),
@@ -186,7 +186,7 @@ test('op:profile speaks the project language and says how to fill an empty list'
   assert.equal(JSON.parse(json.stdout).projects, 0);
 });
 
-test('op:profile --help is side-effect free', () => {
+test('op:profile --help is side-effect free', async () => {
   const home = fs.mkdtempSync(path.join(ROOT, 'help-'));
   const env = { ...process.env, HOME: home, USERPROFILE: home };
   const res = spawnSync(process.execPath, [CLI, 'op:profile', '--help', '--json'], { encoding: 'utf8', env, cwd: home });

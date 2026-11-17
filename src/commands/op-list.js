@@ -29,7 +29,7 @@ const { loadMemoryIndex } = require('../operator-memory/index-md');
 const { readDecision } = require('../operator-memory/decision');
 const { STOPWORDS } = require('../operator-memory/loader');
 const { halfLifeForCategory, daysSinceReinforced } = require('../operator-memory/decay');
-const { archiveReason } = require('../operator-memory/archive');
+const { archiveReason, isLegacy } = require('../operator-memory/archive');
 const { resolveProjectScope, appliesInProject, parseList, foldText, SCOPE_PROJECT } = require('../operator-memory/project-scope');
 
 // Every agent activation reads the recall: like a memory index loaded at
@@ -149,11 +149,14 @@ function selectRecall(items, options, limit, project) {
  */
 function headPool(ranked, words, options) {
   if (options.all || !isActivationRecall(options)) return ranked;
-  if (words.length === 0) return ranked.filter((item) => Boolean(item.scope));
+  // A decision with no scope saved by an older CLI after scopes were always
+  // written is that writer's operator-wide decision, not a pre-scope one.
+  const placed = (item) => !isLegacy(item);
+  if (words.length === 0) return ranked.filter(placed);
   // Matched, its one shared word is weak evidence: "tela" pulled two other
   // projects' screen rules into a login task. Two words, or every word asked.
   const need = Math.min(2, words.length);
-  return ranked.filter((item) => Boolean(item.scope) || matchHits(item, words) >= need);
+  return ranked.filter((item) => placed(item) || matchHits(item, words) >= need);
 }
 
 function moreHint(omitted) {

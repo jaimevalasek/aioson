@@ -29,6 +29,7 @@ const {
 } = require('../src/operator-memory/project-scope');
 const { deriveSlug } = require('../src/operator-memory/slug');
 const { readDecision, serializeDecision, decisionPath, promoteProposal } = require('../src/operator-memory/decision');
+const { SCOPE_ALWAYS_WRITTEN_SINCE } = require('../src/operator-memory/archive');
 const { captureSignal, readProposal } = require('../src/operator-memory/proposal');
 const { ensureStorageTree, getStorageRoot } = require('../src/operator-memory/storage');
 const { regenerateIndex } = require('../src/operator-memory/index-md');
@@ -211,8 +212,10 @@ test('a decision written before scoping (no scope field) still applies in every 
   const slug = 'legacy-unscoped-decision';
   const bare = 'legacy-unscoped-one-time-answer';
   const now = new Date().toISOString();
+  // Promoted before this CLI always wrote a scope (archive.js).
+  const before = new Date(SCOPE_ALWAYS_WRITTEN_SINCE - 24 * 60 * 60 * 1000).toISOString();
   const legacy = (name, quote) => fs.writeFileSync(decisionPath(IDENTITY, name), serializeDecision({
-    slug: name, signal_type: 'authorization', promoted_at: now, last_reinforced: now, reinforcement_count: 0,
+    slug: name, signal_type: 'authorization', promoted_at: before, last_reinforced: now, reinforcement_count: 0,
     category: 'autonomy', source_agent: 'dev', quotes: [quote], body: `legacy decision ${name}`, title: `legacy decision ${name}`
   }));
   legacy(slug, 'pode commitar sempre que a fatia for aprovada');
