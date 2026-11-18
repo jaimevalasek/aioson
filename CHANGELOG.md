@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.82.0] - 2026-11-18
+
 ### Added
 
 - **The machine knows the AIOSON projects its operator works in.** Nothing listed them: 58 projects sat on one machine with no surface to compare what was chosen in each. Every session start (`context:digest`) now records the project it opens in `~/.aioson/projects.json` (path, name, first and last seen), at most once an hour per project. Only AIOSON roots with a project context enter — never a folder inside `.aioson/` nor a throwaway folder under the OS temp dir, so test runs and probes stay out — and a project whose folder is gone leaves at the next write. Off with `AIOSON_PROJECT_REGISTRY=false` or with operator memory off.
