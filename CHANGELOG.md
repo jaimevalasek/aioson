@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.83.0] - 2026-11-23
+
+### Changed
+
+- **Deck documents stay out of store packages.** Every file under `docs/deck/` at the app root (the project documents the Deck writes) is left out of `system:package` in code mode and build mode, and out of the build inputs. The report lists each one with the reason "Deck document (docs/deck/), kept out of the package".
+
 ## [1.82.0] - 2026-11-18
 
 ### Added
