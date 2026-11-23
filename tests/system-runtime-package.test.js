@@ -318,3 +318,45 @@ test('an ignored folder larger than the review limit does not block the package;
   await fs.truncate(path.join(dir, 'src/huge.bin'), oversized);
   await assert.rejects(captureInputs(dir, { outputDirs: new Set(), aiosonIncludes: [] }), /exceeds the review limit/);
 });
+
+async function withDeckDocuments(dir) {
+  const files = {
+    'docs/deck/combinados.md': '# Combinados\n\nDECK_DOCUMENT_SENTINEL\n',
+    'docs/deck/Notas da Reuniao.md': '# Notas\n',
+    'docs/deck/anexos/lista.md': '# Lista\n',
+    'docs/guide.md': '# Guide that ships\n',
+  };
+  for (const [name, content] of Object.entries(files)) {
+    await fs.mkdir(path.dirname(path.join(dir, name)), { recursive: true });
+    await fs.writeFile(path.join(dir, name), content);
+  }
+  return ['docs/deck/combinados.md', 'docs/deck/Notas da Reuniao.md', 'docs/deck/anexos/lista.md'];
+}
+
+function deckExclusions(excluded) {
+  return excluded.filter((item) => item.reason === 'Deck document (docs/deck/), kept out of the package').map((item) => item.path).sort();
+}
+
+test('AC-deck-work-breadth-25: code mode leaves every docs/deck file out and reports each one', async (ctx) => {
+  const { dir } = await app();
+  ctx.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const deckFiles = await withDeckDocuments(dir);
+  const result = await collectSystemFiles(dir, { buildMode: false });
+  assert.deepEqual(Object.keys(result.files).filter((file) => file.startsWith('docs/deck')), []);
+  assert.ok(!Object.values(result.files).some((content) => String(content).includes('DECK_DOCUMENT_SENTINEL')));
+  assert.equal(typeof result.files['docs/guide.md'], 'string', 'other Markdown still ships in code mode');
+  assert.deepEqual(deckExclusions(result.excluded), [...deckFiles].sort());
+});
+
+test('AC-deck-work-breadth-25: build mode leaves every docs/deck file out of the inputs and the package and reports each one', async (ctx) => {
+  const { dir } = await app();
+  ctx.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const deckFiles = await withDeckDocuments(dir);
+  await fs.writeFile(path.join(dir, 'build.cjs'), "const fs = require('node:fs'); fs.mkdirSync('dist',{recursive:true}); fs.writeFileSync('dist/index.cjs','console.log(42)'); fs.writeFileSync('dist/saw-deck.json', JSON.stringify(fs.existsSync('docs/deck')));");
+  const result = await runSystemPackage({ args: [dir], options: { build: true, json: true, 'dry-run': true }, logger, t });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.inventory.filter((item) => item.path.startsWith('docs/deck')), []);
+  assert.equal(result.inventory.find((item) => item.path === 'dist/saw-deck.json').sha256,
+    crypto.createHash('sha256').update('false').digest('hex'), 'the build never saw the Deck documents');
+  assert.deepEqual(deckExclusions(result.excluded), [...deckFiles].sort());
+});

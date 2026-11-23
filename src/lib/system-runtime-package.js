@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const ignore = require('ignore');
+const { DECK_DOCUMENTS_REASON, excludeDeckDocuments, isDeckDocumentsPath } = require('./deck-documents');
 const { exists } = require('../utils');
 const { collectStagedSecretFindings } = require('./security/staged-secret-detector');
 const { isInside, assertInstallSlug } = require('./store/install-containment');
@@ -551,6 +552,14 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
     for (const entry of entries) {
       const fullPath = path.join(current, entry.name);
       const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+
+      // The Deck's project documents never travel, in code mode or build mode
+      // (RULE-deck-work-breadth-05): each file is reported as excluded.
+      if (!forceInclude && isDeckDocumentsPath(relPath)) {
+        if (entry.isDirectory()) await excludeDeckDocuments(fullPath, relPath, exclude);
+        else exclude(relPath, DECK_DOCUMENTS_REASON);
+        continue;
+      }
 
       // The input snapshot links this cache for build tools, never for delivery.
       if (buildMode && !rel && entry.name === 'node_modules') {

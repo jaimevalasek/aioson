@@ -6,6 +6,7 @@ const { createHash } = require('node:crypto');
 const path = require('node:path');
 const os = require('node:os');
 const ignore = require('ignore');
+const { DECK_DOCUMENTS_REASON, excludeDeckDocuments, isDeckDocumentsPath } = require('./deck-documents');
 
 const SKIP = new Set(['node_modules', '.git', 'uploads', 'logs', 'data', 'output', '.cache']);
 const STANDARD_OUTPUT_DIRS = new Set(['dist', 'build', 'out', '.next']);
@@ -38,6 +39,13 @@ async function inputFiles(dir, options) {
   const walk = async (directory, prefix = '') => {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      // The Deck's project documents stay out of the build inputs too (RULE-deck-work-breadth-05).
+      if (isDeckDocumentsPath(relative)) {
+        const exclude = (file, reason) => options.excluded?.push({ path: file, reason });
+        if (entry.isDirectory()) await excludeDeckDocuments(path.join(directory, entry.name), relative, exclude);
+        else exclude(relative, DECK_DOCUMENTS_REASON);
+        continue;
+      }
       if (SKIP.has(entry.name)) {
         options.excluded?.push({ path: relative, reason: 'local state or build tooling' });
         continue;
