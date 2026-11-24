@@ -103,7 +103,8 @@ async function ownedBy(targetDir, relative, id) {
 async function freeSlug(targetDir, item, { explicit, relativeOf, taken }) {
   const base = explicit || slugFromSummary(item.summary, item.id);
   if (!SLUG.test(base)) throw new Error(`--slug=${base} must be kebab-case (letters, digits, hyphens)`);
-  const candidates = explicit ? [base] : [base, `${base.slice(0, SLUG_MAX - 7)}-${idSuffix(item.id)}`];
+  // The cut may land on a hyphen: `…-` + `-id` would be a slug no reader accepts.
+  const candidates = explicit ? [base] : [base, `${base.slice(0, SLUG_MAX - 7).replace(/-+$/, '')}-${idSuffix(item.id)}`];
   for (const slug of candidates) {
     const owner = await ownedBy(targetDir, relativeOf(slug), item.id);
     if (owner.same) return { slug, reuse: true };
@@ -123,7 +124,10 @@ function bulletPaths(item) {
 
 async function routeSimplePlan(targetDir, item, { slug: explicit }) {
   const relativeOf = (slug) => `.aioson/context/simple-plans/${slug}.md`;
-  const { slug, reuse } = await freeSlug(targetDir, item, { explicit, relativeOf, taken: async () => false });
+  // A plan named like a feature would share that feature's dev-state
+  // (`features/{slug}/dev-state.md`) and read as its thread: the name is taken.
+  const registered = async (slug) => (await refExists(targetDir, slug)).ok;
+  const { slug, reuse } = await freeSlug(targetDir, item, { explicit, relativeOf, taken: registered });
   const relative = relativeOf(slug);
   if (!reuse) {
     const date = today();
@@ -189,6 +193,11 @@ ${bulletPaths(item)}
 Outside the approved scope of the feature it was noticed in. \`@briefing\` turns this pack into a briefing (\`aioson briefing:sources . --slug=${slug}\`) before any PRD; nothing here is approved scope.
 `;
     await safeWrite(targetDir, relative, body, { exclusive: true });
+  }
+  // Outside the `reuse` branch: a run that wrote the pack and failed on the
+  // registry must be able to finish on the next one — the item settles against
+  // the row, so a pack without it would refuse every retry.
+  if (!(await registered(slug))) {
     await writeFeatureRow(targetDir, { slug, status: 'planning', completed: '—' }, { resolveStarted: (existing) => (existing && existing.started) || today() });
   }
   return {

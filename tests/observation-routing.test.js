@@ -147,6 +147,42 @@ test('two ideas with the same words never share a destination, and an explicit s
   await assert.rejects(routing.routeObservation(dir, { id: three.id, to: 'simple-plan', slug: 'Not Kebab' }), /kebab-case/);
 });
 
+test('a Simple Plan never takes the name of a feature: it would share that feature dev-state', async (t2) => {
+  const dir = await makeProject();
+  t2.after(() => cleanup(dir));
+  const item = await idea(dir, 'Listagem de pedidos: falta o filtro por status');
+  const result = await routing.routeObservation(dir, { id: item.id, to: 'simple-plan' });
+  assert.equal(result.slug, `${FEATURE}-${item.id.replace('OBS-', '')}`);
+  const other = await idea(dir, 'Paginação na listagem de pedidos');
+  await assert.rejects(routing.routeObservation(dir, { id: other.id, to: 'simple-plan', slug: FEATURE }), /already taken/);
+});
+
+test('a derived slug cut on a hyphen stays a slug when the id is appended', async (t2) => {
+  const dir = await makeProject();
+  t2.after(() => cleanup(dir));
+  const clause = 'abcdefghij klmnopqrst uvwxyzabcd efghijk lmnopqrstu';
+  const one = await idea(dir, `${clause}: primeira`, { feature: null });
+  const two = await idea(dir, `${clause}: segunda`, { feature: null });
+  await routing.routeObservation(dir, { id: one.id, to: 'simple-plan' });
+  const second = await routing.routeObservation(dir, { id: two.id, to: 'simple-plan' });
+  assert.match(second.slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+  assert.match(second.slug, new RegExp(`-${two.id.replace('OBS-', '')}$`));
+});
+
+test('draft: a run that wrote the pack and died before the registry row finishes on the next one', async (t2) => {
+  const dir = await makeProject();
+  t2.after(() => cleanup(dir));
+  const item = await idea(dir, 'Exportar pedidos em planilha');
+  const slug = routing.slugFromSummary(item.summary, item.id);
+  await write(dir, `plans/${slug}/idea.md`, `---\nsource_observation: ${item.id}\n---\n\n# pack left by the interrupted run\n`);
+  const result = await routing.routeObservation(dir, { id: item.id, to: 'draft' });
+  assert.equal(result.slug, slug);
+  assert.equal(result.created, false);
+  assert.match(await read(dir, '.aioson/context/features.md'), new RegExp(`\\| ${slug} \\| planning \\|`));
+  const settled = (await obs.listObservations(dir, { status: 'all' })).items.find((entry) => entry.id === item.id);
+  assert.deepEqual([settled.status, settled.resolution.ref], ['resolved', slug]);
+});
+
 test('what is not work to schedule, or has nowhere to land, is refused with the next step', async (t2) => {
   const dir = await makeProject();
   t2.after(() => cleanup(dir));

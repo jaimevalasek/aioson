@@ -247,7 +247,11 @@ async function listOpenDevThreads(targetDir, { now = Date.now() } = {}) {
   const ctxDir = path.join(path.resolve(targetDir || '.'), '.aioson', 'context');
   let slugs;
   try {
-    slugs = await fs.readdir(path.join(ctxDir, 'features'));
+    // Directories only: a plain file here (a note, a README) is not a feature,
+    // and reading `<file>/dev-state.md` throws ENOTDIR outside Windows.
+    slugs = (await fs.readdir(path.join(ctxDir, 'features'), { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
   } catch (err) {
     if (err && err.code === 'ENOENT') return [];
     throw err;

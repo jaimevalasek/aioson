@@ -1436,6 +1436,36 @@
       "created_at": "2026-11-24T19:05:13.724Z",
       "updated_at": "2026-11-24T19:05:13.724Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-737668",
+      "kind": "risk",
+      "summary": "system:package code mode packages a SQLite file inside local-state folders (.data, uploads): LOCAL_STATE_DIRS is applied only in build mode, and .sqlite is now an allowed type",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-24T20:09:44.312Z",
+      "updated_at": "2026-11-24T20:09:44.312Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-6a8000",
+      "kind": "defect",
+      "summary": "system:install writes only text files: binary files of a store package (images, a SQLite database) are dropped by textFiles() without a word",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-24T20:09:44.528Z",
+      "updated_at": "2026-11-24T20:09:44.528Z",
+      "resolution": null
     }
   ]
 }

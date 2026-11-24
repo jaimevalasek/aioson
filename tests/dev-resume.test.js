@@ -630,6 +630,10 @@ describe('dev-resume — two chats on one folder', () => {
       assert.equal(staleOnly.ambiguous, undefined, 'one live thread and one stale thread: nothing to ask');
       assert.equal((await listOpenDevThreads(tmp)).find((t) => t.feature === 'fix-login').stale, true);
 
+      // A plain file inside features/ is not a feature (and `<file>/dev-state.md` is ENOTDIR outside Windows).
+      await fs.writeFile(path.join(ctx, 'features', 'notes'), 'a file whose name reads like a slug', 'utf8');
+      assert.deepEqual((await listOpenDevThreads(tmp)).map((t) => t.feature).sort(), ['checkout', 'fix-login']);
+
       // checkout closes in the registry: its leftover state is no thread.
       await writeFeaturesMd(tmp, [{ slug: 'checkout', status: 'done' }]);
       assert.deepEqual((await listOpenDevThreads(tmp)).map((t) => t.feature), ['fix-login']);
