@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.84.1] - 2026-11-24
+
+### Fixed
+
+- **A database of one installation never travels in a store package.** Since 1.84.0 a `.sqlite`/`.sqlite3` file is an accepted type, so one inside a local-state folder (`.data/`, `uploads/`, `logs/`, `backups/`, `.runtime/`…) entered in code mode, and one under `.aioson/squads/` entered in both modes even when ignored by git. Both stay out now, reported as "local installation database"; a database the app ships elsewhere still travels.
+- **`system:install` names the files it does not write.** It writes only text files; a binary of the package is now listed in a warning and in `skipped`.
+
+### Security
+
+- `undici` 6.29.1, `@cursor/sdk` 1.0.40 (optional), and `zod` 4.6.7, `fast-uri` 3.1.9 and `minimatch` 10.2.6 in the lockfile: no high-severity advisory in the runtime dependencies.
+
 ## [1.84.0] - 2026-11-24
 
 ### Added
