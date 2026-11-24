@@ -236,6 +236,7 @@ const SYSTEM_ALLOWED_EXTS = new Set([
   '.yaml', '.yml',
   '.toml',
   '.gitignore',
+  '.sqlite', '.sqlite3',
 ]);
 
 const SYSTEM_BUILD_ALLOWED_EXTS = new Set([
@@ -249,9 +250,10 @@ const SYSTEM_BUILD_ALLOWED_EXTS = new Set([
   '.prisma',
   '.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif',
   '.woff', '.woff2', '.ttf', '.otf', '.wasm', '.bin',
+  '.sqlite', '.sqlite3',
 ]);
 
-const BINARY_RUNTIME_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.wasm', '.bin']);
+const BINARY_RUNTIME_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.wasm', '.bin', '.sqlite', '.sqlite3']);
 const LOCAL_STATE_DIRS = new Set(['uploads', 'logs', '.logs', 'backups', '.backups', '.data', '.runtime']);
 
 const RUNTIME_SERVER_SOURCE_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts']);
@@ -398,9 +400,11 @@ const RUNTIME_CONFIG_RE = /^vite\.config\.[cm]?[jt]s$/i;
 // filtrados e o squad subiria sem os agentes.
 const AIOSON_RUNTIME_EXTS = new Set(['.md', '.mdx', '.txt']);
 
-const MAX_FILE_BYTES = 512 * 1024;             // 512 KB per file (source)
-const MAX_FILE_BYTES_BUILD = 2 * 1024 * 1024;  // 2 MB per file (compiled bundles)
-const MAX_PACKAGE_BYTES = 20 * 1024 * 1024;    // 20 MB total
+// The limits that matter are the ZIP (10 MiB, checked after compression here and by the store) and the expanded total below. A single file
+// may use up to 8 MB of them: an app that carries data (a SQLite knowledge base, a dataset) is as legitimate as one that carries only source.
+const MAX_FILE_BYTES = 8 * 1024 * 1024;        // 8 MB per file (source or data)
+const MAX_FILE_BYTES_BUILD = 8 * 1024 * 1024;  // 8 MB per file (compiled output or data)
+const MAX_PACKAGE_BYTES = 20 * 1024 * 1024;    // 20 MB total, expanded
 
 /**
  * Collect all eligible source files under `dir`.
@@ -483,7 +487,8 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
         limitHit = true;
         return;
       }
-      const binary = buildMode && BINARY_RUNTIME_EXTS.has(ext);
+      // Bytes, in both modes: decoding a binary file as UTF-8 text would corrupt it.
+      const binary = BINARY_RUNTIME_EXTS.has(ext);
       let content = await fs.readFile(fullPath, binary ? undefined : 'utf8');
       if (binary) {
         if (runtimeBytes + content.length > MAX_PACKAGE_BYTES) {
@@ -790,6 +795,9 @@ module.exports = {
   loadAppObfuscator,
   unprotectedJsError,
   MAX_OBFUSCATION_OPTIONS,
+  MAX_FILE_BYTES,
+  MAX_FILE_BYTES_BUILD,
+  MAX_PACKAGE_BYTES,
   protectRuntimeTypeScript,
   rawSourceError,
   readBuildOutputDirs,

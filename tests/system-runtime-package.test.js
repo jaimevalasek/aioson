@@ -8,7 +8,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const { runSystemPackage } = require('../src/commands/store-system');
-const { collectSystemFiles, runtimeSourceFingerprint } = require('../src/lib/system-runtime-package');
+const { collectSystemFiles, runtimeSourceFingerprint, createZipBuffer, MAX_FILE_BYTES, MAX_FILE_BYTES_BUILD, MAX_PACKAGE_BYTES } = require('../src/lib/system-runtime-package');
 const { captureInputs } = require('../src/lib/system-runtime-inputs');
 
 const logger = { log() {} };
@@ -196,7 +196,7 @@ test('AC-014: protection cannot inflate a runtime file beyond its declared limit
   await fs.writeFile(path.join(dir, 'dist/index.js'), 'module.exports = 42;');
   const result = await collectSystemFiles(dir, {
     buildMode: true,
-    protection: { level: 'max', obfuscator: { obfuscate: () => ({ getObfuscatedCode: () => 'x'.repeat(2 * 1024 * 1024 + 1) }) } }
+    protection: { level: 'max', obfuscator: { obfuscate: () => ({ getObfuscatedCode: () => 'x'.repeat(MAX_FILE_BYTES_BUILD + 1) }) } }
   });
   assert.equal(result.files['dist/index.js'], undefined);
   assert.ok(result.errors.some((item) => item.includes('dist/index.js') && item.includes('size limit')));
@@ -359,4 +359,70 @@ test('AC-deck-work-breadth-25: build mode leaves every docs/deck file out of the
   assert.equal(result.inventory.find((item) => item.path === 'dist/saw-deck.json').sha256,
     crypto.createHash('sha256').update('false').digest('hex'), 'the build never saw the Deck documents');
   assert.deepEqual(deckExclusions(result.excluded), [...deckFiles].sort());
+});
+
+// ---------------------------------------------------------------- data files (a SQLite database) and the size of a single file
+async function dataApp(ctx, extra = {}) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-data-app-'));
+  ctx.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const files = { 'system.json': JSON.stringify({ slug: 'data-probe', version: '1.0.0' }), 'package.json': JSON.stringify({ name: 'data-probe', scripts: { start: 'node server.js' } }), 'server.js': 'console.log(1);', ...extra };
+  for (const [name, content] of Object.entries(files)) {
+    await fs.mkdir(path.dirname(path.join(dir, name)), { recursive: true });
+    await fs.writeFile(path.join(dir, name), content);
+  }
+  return dir;
+}
+// Bytes that are not valid UTF-8 text, so a decode as text would change them.
+const databaseBytes = (size) => { const bytes = crypto.randomBytes(size); bytes.set([0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0xff, 0xfe, 0x80, 0x00]); return bytes; };
+
+test('a SQLite database travels byte for byte, in code mode and in build mode', async (ctx) => {
+  const bytes = databaseBytes(3 * 1024 * 1024);
+  const dir = await dataApp(ctx);
+  await fs.mkdir(path.join(dir, 'base'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'base/knowledge.sqlite'), bytes);
+  for (const buildMode of [false, true]) {
+    const result = await collectSystemFiles(dir, { buildMode });
+    assert.ok(Buffer.isBuffer(result.files['base/knowledge.sqlite']), `bytes, not text (buildMode ${buildMode})`);
+    assert.ok(result.files['base/knowledge.sqlite'].equals(bytes), `identical bytes (buildMode ${buildMode})`);
+    assert.deepEqual(result.errors, []);
+  }
+});
+
+test('the ZIP of an app with a database carries it whole, and stays under the 10 MiB limit of the package', async (ctx) => {
+  const bytes = databaseBytes(3 * 1024 * 1024);
+  const dir = await dataApp(ctx, { 'base/knowledge.sqlite': bytes });
+  const { files } = await collectSystemFiles(dir, { buildMode: false });
+  const zip = await createZipBuffer(files);
+  assert.ok(zip.length > bytes.length && zip.length < 10 * 1024 * 1024, `zip is ${zip.length} bytes`);
+});
+
+test('a file between the old limit and the new one is packaged; one over the new limit is left out and reported', async (ctx) => {
+  const dir = await dataApp(ctx, { 'data/two-megabytes.json': JSON.stringify({ text: 'x'.repeat(2 * 1024 * 1024) }), 'data/huge.json': 'x'.repeat(MAX_FILE_BYTES + 1) });
+  for (const buildMode of [false, true]) {
+    const result = await collectSystemFiles(dir, { buildMode });
+    assert.ok(result.files['data/two-megabytes.json'], `2 MB is accepted (buildMode ${buildMode})`);
+    assert.equal(result.files['data/huge.json'], undefined);
+    assert.ok(result.errors.some((item) => item.includes('data/huge.json') && item.includes('too large')));
+    assert.ok(result.excluded.some((item) => item.path === 'data/huge.json' && item.reason === 'file size limit'));
+  }
+  assert.ok(MAX_FILE_BYTES < MAX_PACKAGE_BYTES, 'one file cannot be allowed to be larger than the whole package');
+});
+
+test('executables and libraries are still refused: only data was added to the types an app may carry', async (ctx) => {
+  const dir = await dataApp(ctx, { 'bin/tool.exe': 'MZ', 'lib/native.dll': 'MZ', 'lib/native.node': 'MZ', 'base/ok.sqlite': databaseBytes(64) });
+  for (const buildMode of [false, true]) {
+    const result = await collectSystemFiles(dir, { buildMode });
+    assert.ok(result.files['base/ok.sqlite']);
+    for (const refused of ['bin/tool.exe', 'lib/native.dll', 'lib/native.node']) {
+      assert.equal(result.files[refused], undefined, `${refused} stays out (buildMode ${buildMode})`);
+      assert.ok(result.excluded.some((item) => item.path === refused && item.reason === 'not a supported runtime file'));
+    }
+  }
+});
+
+test('an icon is read as bytes in code mode too, so it is not corrupted by a text decode', async (ctx) => {
+  const icon = Buffer.from([0x00, 0x00, 0x01, 0x00, 0xff, 0xfe, 0x80, 0x81]);
+  const dir = await dataApp(ctx, { 'public/favicon.ico': icon });
+  const result = await collectSystemFiles(dir, { buildMode: false });
+  assert.ok(Buffer.isBuffer(result.files['public/favicon.ico']) && result.files['public/favicon.ico'].equals(icon));
 });

@@ -223,7 +223,9 @@ async function runSystemPackage({ args, options, logger, t }) {
   await ensureDir(pkgDir);
 
   const pkgFile = path.join(pkgDir, `${manifest.slug}-${manifest.version}.json`);
-  await fs.writeFile(pkgFile, JSON.stringify({ manifest, files }, null, 2), 'utf8');
+  // Binary files (images, a SQLite database) are bytes: JSON carries them as base64, not as a list of numbers.
+  const descriptorFiles = Object.fromEntries(Object.entries(files).map(([name, content]) => [name, Buffer.isBuffer(content) ? { encoding: 'base64', data: content.toString('base64') } : content]));
+  await fs.writeFile(pkgFile, JSON.stringify({ manifest, files: descriptorFiles }, null, 2), 'utf8');
 
   logger.log(t('system.package_saved', { path: pkgFile }));
   return { ok: true, manifest, fileCount, totalBytes, path: pkgFile };
