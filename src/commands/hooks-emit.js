@@ -50,13 +50,19 @@ const HOOKS_EMIT_VERSION = '1';
 const SILENT = { log: () => {}, error: () => {} };
 
 // Tool name → event_type mapping. `apply_patch` and `update_plan` are Codex's
-// file-edit and plan tools (its hooks report them under those names).
+// file-edit and plan tools (its hooks report them under those names); `exec_command`
+// and `shell` are its other command tools and `exec` its code-mode script tool. Every
+// tool the Codex matcher admits (hooks-install.js) must be read here: a name that is
+// matched but not read is recorded as an empty note (tests/hooks-codex.test.js).
 const TOOL_EVENT_MAP = {
   Write: 'artifact',
   Edit: 'artifact',
   MultiEdit: 'artifact',
   apply_patch: 'artifact',
   Bash: 'step_done',
+  exec_command: 'step_done',
+  shell: 'step_done',
+  exec: 'step_done',
   Task: 'note',
   TodoWrite: 'note',
   update_plan: 'note',
@@ -417,9 +423,31 @@ function shellLine(input) {
 }
 
 function commandDetails(toolName, input, hookEvent, payload) {
-  const cmd = String(input.command || input.cmd || '').trim().slice(0, MAX_COMMAND_CHARS);
+  const cmd = shellLine(input).trim().slice(0, MAX_COMMAND_CHARS);
   const credentialRead = readsCredentialSource(shellLine(input)) ? { credential_read: true } : {};
-  return { message: cmd ? `$ ${cmd}` : 'Bash', extra: { ...bashOutcome(hookEvent, payload, shellLine(input)), ...credentialRead } };
+  return { message: cmd ? `$ ${cmd}` : toolName, extra: { ...bashOutcome(hookEvent, payload, shellLine(input)), ...credentialRead } };
+}
+
+/** The script a code-mode call ran: the freeform text itself, or the first text field of its input. */
+function scriptText(input) {
+  if (typeof input === 'string') return input;
+  const source = input && typeof input === 'object' ? input : {};
+  return [source.command, source.cmd, source.input, source.code, source.source, source.script].find((value) => typeof value === 'string') || '';
+}
+
+/**
+ * Codex's code-mode `exec`: one freeform script that runs commands and edits through its
+ * own tool calls. The script is recorded as one step (its first characters, never all of
+ * it) with the credential-read mark when it opens a credential file by name (a command
+ * line inside one of its strings stays unseen, like a file named through a variable).
+ * It gets no verdict: the recap keeps a failure until the same command passes, and a
+ * script has no identity to pass again, so a failure of one command it ran would stay
+ * "still failing" after the model handled it. The files it edits are not itemised.
+ */
+function scriptDetails(toolName, input) {
+  const script = scriptText(input);
+  const head = oneLine(script, MAX_COMMAND_CHARS);
+  return { message: head ? `${toolName}: ${head}` : toolName, extra: readsCredentialSource(script) ? { credential_read: true } : {} };
 }
 
 function todoDetails(toolName, input) {
@@ -433,6 +461,9 @@ const TOOL_DETAILS = new Map([
   ['Edit', fileEditDetails],
   ['MultiEdit', fileEditDetails],
   ['Bash', commandDetails],
+  ['exec_command', commandDetails],
+  ['shell', commandDetails],
+  ['exec', scriptDetails],
   ['apply_patch', (toolName, input) => patchArtifact(input)],
   ['update_plan', (toolName, input) => planUpdate(input)],
   ['Task', (toolName, input) => ({ message: String(input.description || input.prompt || '').slice(0, 80) || 'Task launched' })],

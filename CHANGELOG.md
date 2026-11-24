@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Codex trust records are not foreign hooks.** `[hooks.state]` and `[hooks.state.'<file>:<event>:i:j']` (with `trusted_hash`) in `config.toml` are Codex's record of what the person trusted in `/hooks`, not hook definitions. Every home that had ever trusted a hook answered `foreign_hooks`, so unattended launches never got `--dangerously-bypass-hook-trust`.
+- **The Codex hook now matches `exec`, `exec_command` and `shell`, and `hooks:emit` reads all three.** Codex 0.171 runs commands and edits through its code-mode `exec` tool, and the `PostToolUse` matcher admits it. Before, a matched name that `hooks:emit` did not know was recorded as an empty note (`[codex] exec`): no command, no verdict, no credential-read mark. `exec_command` and `shell` now read like `Bash` (a `shell` argv reads as one line, not a comma list), and an `exec` script is recorded as one step with its first 200 characters. A test derived from the installed matcher fails when a name is admitted without a reader. Codex asks for one new review in `/hooks` after `aioson update` installs the hooks (the matcher is part of the hook it trusts).
+
 ## [1.83.0] - 2026-11-23
 
 ### Changed

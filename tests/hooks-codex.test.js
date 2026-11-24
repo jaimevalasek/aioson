@@ -257,6 +257,64 @@ test('hooks:emit reads the files of a Codex apply_patch: a move records where th
   assert.match(plan.message, /Tarefas: 1 de 3 feitas · em andamento: fix refund · próximas: docs/);
 });
 
+// What Codex's model calls (measured in its own rollout logs): `exec` takes a freeform script,
+// `shell` an argv, `exec_command` a `cmd` line. The hook's tool_input follows the same
+// `{ command }` convention as Bash; the script is also accepted as the bare text.
+const CODEX_ADMITTED_TOOL_INPUTS = {
+  Bash: { command: 'npm test' },
+  exec_command: { cmd: 'npm test' },
+  shell: { command: ['bash', '-lc', 'npm test'] },
+  exec: 'const out = await tools.exec_command({ cmd: "npm test" });\ntext(out.output);',
+  apply_patch: { command: '*** Begin Patch\n*** Update File: src/a.js\n@@\n-x\n+y\n*** End Patch\n' },
+  update_plan: { plan: [{ step: 'write tests', status: 'completed' }] }
+};
+
+test('every tool the Codex matcher admits is read by hooks:emit: a matched name never lands as an empty note', () => {
+  const admitted = buildCodexHooks('dev').PostToolUse[0].matcher.split('|');
+  for (const name of admitted) {
+    assert.ok(name in CODEX_ADMITTED_TOOL_INPUTS, `${name} is matched by the hook: add the input Codex sends for it, and read it in hooks:emit`);
+    const event = buildEventFromPayload(codexPayload({ tool_name: name, tool_input: CODEX_ADMITTED_TOOL_INPUTS[name], tool_response: 'ok' }), 'codex');
+    assert.ok(event, `${name} produced no event`);
+    assert.doesNotMatch(event.message, /^\[codex\]/, `${name} is matched but recorded as an opaque note: ${event.message}`);
+    assert.notEqual(event.message, name, `${name} recorded without what it ran`);
+  }
+});
+
+test('the command tools Codex reports beside Bash read like Bash: the line, the verdict and the credential-read mark', () => {
+  const failing = 'FAIL src/refund.test.js\n Tests  1 failed | 12 passed (13)\n';
+  const cmd = buildEventFromPayload(codexPayload({ tool_name: 'exec_command', tool_input: { cmd: 'npm test' }, tool_response: failing }), 'codex');
+  assert.equal(cmd.eventType, 'step_done');
+  assert.equal(cmd.message, '$ npm test');
+  assert.equal(cmd.extra.outcome, 'failed');
+
+  const argv = buildEventFromPayload(codexPayload({ tool_name: 'shell', tool_input: { command: ['bash', '-lc', 'npm test'] }, tool_response: failing }), 'codex');
+  assert.equal(argv.eventType, 'step_done');
+  assert.equal(argv.message, '$ bash -lc npm test', 'an argv reads as one line, not as a comma list');
+  assert.equal(argv.extra.outcome, 'failed');
+
+  const secret = buildEventFromPayload(codexPayload({ tool_name: 'shell', tool_input: { command: ['bash', '-lc', 'cat .env'] }, tool_response: 'API_KEY=x' }), 'codex');
+  assert.equal(secret.extra.credential_read, true, 'a credential read through the argv tool is flagged like one through Bash');
+  assert.equal(argv.extra.credential_read, undefined);
+});
+
+test('a Codex code-mode exec script is recorded as one step: its first characters and a credential file it opens, never a verdict', () => {
+  const script = 'const out = await tools.exec_command({ cmd: "npm test" });\ntext(out.output);';
+  for (const [input, response] of [[script, 'Process exited with code 1\n1 failed'], [{ command: script }, 'FAIL src/a.test.js\n Tests  1 failed (1)\n']]) {
+    const step = buildEventFromPayload(codexPayload({ tool_name: 'exec', tool_input: input, tool_response: response }), 'codex');
+    assert.equal(step.eventType, 'step_done');
+    assert.equal(step.message, 'exec: const out = await tools.exec_command({ cmd: "npm test" }); text(out.output);');
+    assert.equal(step.extra.outcome, undefined, 'a script has no identity to pass again: a verdict would stay "still failing" in the recap after the model handled it');
+    assert.equal(step.extra.credential_read, undefined);
+  }
+
+  const long = buildEventFromPayload(codexPayload({ tool_name: 'exec', tool_input: `const data = "${'x'.repeat(5000)}";`, tool_response: 'ok' }), 'codex');
+  assert.ok(long.message.length <= 'exec: '.length + 200, 'never the whole script');
+
+  const reads = buildEventFromPayload(codexPayload({ tool_name: 'exec', tool_input: "const text = require('node:fs').readFileSync('.env', 'utf8');", tool_response: 'ok' }), 'codex');
+  assert.equal(reads.extra.credential_read, true);
+  assert.equal(buildEventFromPayload(codexPayload({ tool_name: 'exec', tool_input: '', tool_response: 'ok' }), 'codex').message, 'exec', 'an empty script still says which tool ran');
+});
+
 test('a Codex command\'s verdict comes from its output text alone: runner summaries and an exit line, never invented', () => {
   const failed = codexBash('npm test', 'FAIL src/refund.test.js\n  refund > rounds half-up\n Tests  1 failed | 12 passed (13)\n');
   assert.equal(failed.extra.outcome, 'failed');
