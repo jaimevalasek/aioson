@@ -17,7 +17,7 @@
     "5 distinct font families (inter, jetbrains mono, sf mono, system-ui) — a coherent system rarely needs more than two",
     "kanban/pipeline surface with no drag-and-drop markers — recurrent status flows move by drag-and-drop with an accessible fallback (status-flow-drag-and-drop rule)",
     "21 emoji glyph(s) in the UI corpus (⚙ ⚠ 🔒 ⚡ ⚖ ✅ …) — emoji standing in for icons is a slop marker; use the icon set. Emoji inside seeded mock content is fine — judge in context",
-    "798 spaced em dash(es) across UI copy and mock content (\"<title>FlowBoard — protótipo (mock)</titl\", \"s=\"proto-badge\">● MOCK — refresh reseta · sem b\", \"<title>Squad Dashboard — AIOSON</title>\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
+    "806 spaced em dash(es) across UI copy and mock content (\"<title>FlowBoard — protótipo (mock)</titl\", \"s=\"proto-badge\">● MOCK — refresh reseta · sem b\", \"<title>Squad Dashboard — AIOSON</title>\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
     "declared finish never applied: --primary-glow — effects that exist only in the stylesheet decorate the code while the user sees flat; wire each one to a real surface or delete it. Dead declarations are not craft, and they read as leftovers in review",
     "generation tell: 6 gradient-text declaration(s) (background-clip: text) — emphasis comes from weight, size, or the accent, not from painting the letters; keep gradients in the material layer",
     "generation tell: 3 rule(s) ride a thick colored side border — the most recognizable generated-UI signature; carry the state in a background wash, an icon, or the tokened border system instead (status/tab/blockquote contexts are already exempt)",
@@ -25,9 +25,9 @@
     "generation tell: 7 zero-offset chromatic glow shadow(s) — a halo with no offset is decoration, not depth; shadows take offset and soft blur from the shadow vocabulary, and glow is reserved for live/focus states that mean something",
     "generation tell: 48 font-size declaration(s) under 11px (10.56px, 9.6px, 10.88px, 9.92px) — functional text floors at 11px; if it matters enough to render, it matters enough to read",
     "copy tell: 2 marketing buzzword(s) in visible copy (revolucionária, streamlined) — replace each with the concrete claim it is hiding: a number, a named capability, or delete the sentence",
-    "corpus truncated: 408 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
+    "corpus truncated: 420 file(s) beyond the 400-file cap were not read, so this measurement is partial — point --dir at the interface root (src/, app/) rather than the repository",
     "visual conformance NOT measured: no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to — this surface was not held to any prototype floor; record the outcome instead of assuming it",
-    "cross-project palette repetition / visual fingerprint: accent hue ~80° on a dark ground resembles recent project \"aioson-com-wt\" (Δ2°, same accent family with the ground polarity flipped) — palette, type, composition, material and motion fingerprints are compared; this source similarity is a review hint, not proof of identical rendered layouts. Draw a diversified start with `aioson design:seed` (or extract the owner's identity), or record the product reason for continuity"
+    "cross-project palette repetition / visual fingerprint: accent hue ~80° on a dark ground resembles recent project \"aioson-com\" (Δ2°, same accent family with the ground polarity flipped) — palette, type, composition, material and motion fingerprints are compared; this source similarity is a review hint, not proof of identical rendered layouts. Draw a diversified start with `aioson design:seed` (or extract the owner's identity), or record the product reason for continuity"
   ],
   "checks": [
     {
@@ -37,8 +37,8 @@
     }
   ],
   "metrics": {
-    "declarations": 8692,
-    "scoped_declarations": 7483,
+    "declarations": 8696,
+    "scoped_declarations": 7489,
     "css_scope": {
       "scoped": true,
       "excluded_selectors": [
@@ -222,7 +222,6 @@
         "return `$",
         "return `.aioson/context/scan-$",
         "providerCfg =",
-        "folder: `$",
         "const output =",
         "process.exitCode = 1;\r\n    return",
         "error:",
@@ -313,6 +312,7 @@
         "message: `Project context created: $",
         "const failure =",
         "; evidence: $",
+        "projects usually: $",
         ";\r\n  return",
         "let content = '';\n  try",
         ";\n  return",
@@ -1472,7 +1472,7 @@
         "refused: refuse('unknown_phase', `Phase $",
         "args = [], options =",
         "const targetDir = resolveTargetDir(args);\n  const refuse = refusal(options, logger);\n\n  const agentName = optionText(options.agent);\n  if (!agentName) return refuse('missing_agent', '--agent=<id> is required.');\n  const agent = getAgentDefinition(agentName);\n  if (!agent) return refuse('unknown_agent', `Unknown agent: $",
-        ".`);\n\n  const feature = optionText(options.feature || options.slug);\n  if (!feature) return refuse('missing_feature', '--feature=<slug> is required.');\n  if (!isValidSlug(feature)) return refuse('invalid_feature', `Not a feature slug: $",
+        "if (!feature) return refuse('missing_feature', '--feature=<slug> is required.');\n  if (!isValidSlug(feature)) return refuse('invalid_feature', `Not a feature slug: $",
         "return refuse('unknown_tool', `Unknown harness: $",
         "let phase = null;\n  \n  if (agent.id === 'dev' && options.phase !== undefined)",
         "const kickoff = buildKickoff(",
@@ -1567,13 +1567,24 @@
         "const handle = await openRuntimeDb(targetDir);\r\n    const",
         ")`,\r\n        type: 'completed',\r\n        taskTitle: `@setup — $",
         "= require('../detector');\nconst",
+        "= require('../lib/terminal-text');\nconst",
+        "= require('../lib/project-root');\n\n\nconst SETUP_FLAGS =",
+        ";\n\n\n\n\n\nconst SAFE_FLAG_VALUE = /^[\\p",
+        "\\p",
+        ".+#:/_-]",
+        "const text = String(value);\n  if (!SAFE_FLAG_VALUE.test(text)) return null;\n  return `--$",
+        "/\\s/.test(text) ? `\"$",
+        "= require('../lib/operator-portfolio');\n    const portfolio = buildPortfolio(",
+        ");\n    if (portfolio.projects < SUGGEST_MIN_PROJECTS || Object.keys(portfolio.suggested).length === 0) return null;\n    const flags = Object.entries(portfolio.suggested).filter(([field]) => SETUP_FLAGS[field]).map(([field, pick]) => flagFor(field, pick.value)).filter(Boolean);\n    return",
         "const targetDir = resolveTargetDir(args);\n  let detection;\n  try",
         ";\n    if (options.json) return failure;\n    logger.error(`setup:detect failed: $",
         "`);\n    return",
-        ";\n  if (options.json) return result;\n\n  if (!detection.framework)",
+        ";\n  const portfolio = portfolioFor(targetDir);\n  if (portfolio) result.portfolio = portfolio;\n  if (options.json) return result;\n\n  if (!detection.framework)",
         "logger.log(`setup:detect — $",
         ")$",
         "logger.log(`  also detected: $",
+        "const picks = Object.entries(portfolio.suggested).map(([field, pick]) => `$",
+        ")`);\n    logger.log(`  your other $",
         "= require('./setup-context');\r\nconst",
         "= require('../prompt-tool');\r\nconst",
         "= require('../install-wizard');\r\nconst",
@@ -3024,7 +3035,7 @@
       "📁",
       "🎙"
     ],
-    "em_dash_prose": 798,
+    "em_dash_prose": 806,
     "prototype_anchors": false,
     "primary_marker": false,
     "tour_marker": false,
@@ -3336,7 +3347,7 @@
       "stylesheets": 17,
       "components": 363,
       "files_total": 400,
-      "truncated": 408
+      "truncated": 420
     },
     "conformance": {
       "prototype": null,
@@ -3355,12 +3366,12 @@
       "reason": "no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to"
     },
     "palette_repeat": {
-      "project": "aioson-com-wt",
+      "project": "aioson-com",
       "delta_deg": 2,
       "reason": "same accent family with the ground polarity flipped",
       "same_face": false,
       "same_composition": false,
-      "same_material": false,
+      "same_material": true,
       "same_motion": false
     },
     "fingerprint_recorded": true,
@@ -3372,5 +3383,5 @@
     }
   },
   "exitCode": 0,
-  "measured_at": "2026-11-11T04:30:40.392Z"
+  "measured_at": "2026-11-24T20:10:00.897Z"
 }
