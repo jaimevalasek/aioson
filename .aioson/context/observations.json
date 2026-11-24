@@ -1402,6 +1402,40 @@
       "created_at": "2026-11-24T17:26:48.164Z",
       "updated_at": "2026-11-24T17:26:48.164Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-b2a035",
+      "kind": "defect",
+      "summary": "browser-walkthrough-real: 'every mode launches with the flags as written' fails on a clean HEAD on this machine: page.goto chrome://version gives net::ERR_INVALID_URL (the installed browser rejects it); the other 28 tests of the file pass",
+      "detail": null,
+      "paths": [
+        "tests/browser-walkthrough-real.test.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-24T19:05:13.538Z",
+      "updated_at": "2026-11-24T19:05:13.538Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-df9322",
+      "kind": "process",
+      "summary": "A Simple Plan marked done leaves its features/<slug>/dev-state.md in_progress (the lane says to update dev-state only while work remains), so any reader of dev-state overcounts open threads; dev:resume-data now reads the plan status, but c…",
+      "detail": null,
+      "paths": [
+        "template/.aioson/docs/dev/simple-plan-lane.md"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": "improve",
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-24T19:05:13.724Z",
+      "updated_at": "2026-11-24T19:05:13.724Z",
+      "resolution": null
     }
   ]
 }
