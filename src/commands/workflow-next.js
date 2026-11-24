@@ -2667,6 +2667,14 @@ async function runWorkflowNext({ args, options, logger, t }) {
       // agent:done runs this silenced and re-prints the block from the payload.
       if (fan.items.length > 0 || fan.answered.length > 0) printHandoff(logger, Object.assign(payload, handoffFields(fan)));
     } catch { /* the hub is advisory; a broken store never blocks the handoff */ }
+    // The end of @dev's task is where improvements noticed while building reach
+    // the owner with their three destinations (feature, Simple Plan, draft).
+    if (completedStage === 'dev' && state.featureSlug) {
+      try {
+        const routing = require('../lib/observation-routing');
+        routing.printImprovements(logger, Object.assign(payload, await routing.improvementFields(targetDir, state.featureSlug)));
+      } catch { /* advisory */ }
+    }
     logger.log(activation.prompt);
   } else {
     logger.log(t('workflow_next.done'));

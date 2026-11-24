@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`@dev` tells the owner what it noticed while building, and one command runs the answer.** An improvement seen beside the approved scope (a listing with no detail modal, a form with no empty state) had no way to reach the owner: `@dev` never recorded `idea` observations (of 85 items in this repository's store, 6 came from `@dev` and none was an idea), `idea` is addressed to product, briefing, refiner and sheldon only, and the completion report had no place for it. Now `.aioson/docs/dev/improvement-radar.md` says what is worth a line and the kernel points at it; `workflow:next --complete=dev` prints an `[Improvements]` block with the feature's open ideas and the three destinations (plus `[Scope additions]` for approved rows no PRD cites yet), and the completion report carries it as `Improvements noticed:`. `aioson observation:route --id=OBS-… --to=feature|simple-plan|draft` writes the destination and settles the item against it: a row in `features/{slug}/scope-additions.md` (not scope until the PRD cites the id), a `status: pending` Simple Plan, or a `planning` row plus the source pack `plans/{slug}/idea.md` for `@briefing`. Each route also leaves one line in the Agent Trail of the dossier of the feature the idea came from, so the agents that read the dossier see the owner's decision (best effort: a missing dossier is bootstrapped from the PRD or briefing, and a failure never undoes the routing). Advisory throughout: nothing here creates scope or satisfies a gate. To pick it up: `aioson update` (a `@dev` session already open reads the old kernel).
+
 ### Fixed
 
 - **Codex trust records are not foreign hooks.** `[hooks.state]` and `[hooks.state.'<file>:<event>:i:j']` (with `trusted_hash`) in `config.toml` are Codex's record of what the person trusted in `/hooks`, not hook definitions. Every home that had ever trusted a hook answered `foreign_hooks`, so unattended launches never got `--dangerously-bypass-hook-trust`.

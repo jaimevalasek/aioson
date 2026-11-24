@@ -45,6 +45,30 @@
       "task": "Bump the testing library to its latest patch release and run the suite.",
       "paths": ["package.json"],
       "absent": [{ "path": ".aioson/docs/observations.md", "in": "selected" }]
+    },
+    {
+      "name": "dev-closing-relays-improvements-noticed",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "The listing screen is built and tested; at the end of the task relay the improvements noticed while building (a detail modal would make it more complete) and ask where each should go.",
+      "paths": ["src/orders/list.js"],
+      "expect": [{ "path": ".aioson/docs/dev/improvement-radar.md", "in": "selected" }]
+    },
+    {
+      "name": "dev-pt-br-melhoria-percebida-durante-a-implementacao",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Notei durante a implementação uma melhoria que deixaria a tela mais completa; quero oferecer ao dono como adicional da feature, Simple Plan ou rascunho de uma feature futura.",
+      "paths": ["src/orders/list.js"],
+      "expect": [{ "path": ".aioson/docs/dev/improvement-radar.md", "in": "selected" }]
+    },
+    {
+      "name": "improvement-radar-stays-quiet-for-a-lockfile-refresh",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Regenerate the lockfile after the dependency bump and rerun the unit tests.",
+      "paths": ["package-lock.json"],
+      "absent": [{ "path": ".aioson/docs/dev/improvement-radar.md", "in": "selected" }]
     }
   ]
 }

@@ -62,7 +62,7 @@ Then inspect the production entry point and the active phase's files before edit
 
 If PRD and plan conflict, stop and report the exact conflict. If the repository differs only in implementation detail, update the plan's technical note or document the deviation in the dossier without creating another specification artifact.
 
-With `prototype_status: none`, tell the user which historical path was excluded (if any) and compare the PRD/plan with the real code and tests: correct bounded drift directly when product behavior is clear, route to Product only when the desired behavior itself is ambiguous, and do not pause Autopilot merely to confirm the evidence-backed exclusion.
+With `prototype_status: none`, tell the user which historical path was excluded (if any) and compare PRD/plan with the real code and tests: correct bounded drift directly when behavior is clear, route to Product only when it is ambiguous, and never pause Autopilot just to confirm the exclusion.
 
 ## Context drift check
 
@@ -90,13 +90,13 @@ Implement one vertical phase at a time:
 3. **Prototype fidelity:** preserve structure, key states, interactions, and visual direction unless the PRD records a deviation.
 4. **No fake completion:** a toast, hard-coded row, in-memory façade, or command fixture is incomplete when persistence/integration was promised.
 5. **Vertical checkpoints:** every phase leaves a working observable slice.
-6. **Exact scope:** implement every required CAP and no deferred CAP.
+6. **Exact scope:** implement every required CAP and no deferred CAP; a noticed improvement is recorded, never built (`.aioson/docs/dev/improvement-radar.md`).
 7. **Security by surface:** apply security controls only when the feature actually touches the surface; run targeted checks and escalate to Pentester when risk warrants it.
 8. **Stack-native tests:** use the project's real test runner, in whatever language the stack uses.
 
 ## Feature dossier
 
-After each phase, update the active dossier in best effort with implemented capabilities, exact paths, verification commands/results, production smoke evidence, and any justified plan deviation. Dossier failure never blocks implementation or handoff.
+After each phase, update the active dossier (best effort, never blocking) with implemented capabilities, exact paths, verification results, production smoke, and any justified plan deviation.
 
 ```bash
 aioson dossier:add-finding . --slug={slug} --agent=dev --section="Agent Trail" --content="Implemented [CAP/AC] via [paths]; verification: [commands/results]; production smoke: [entry/action/result]; deviations: none/..." 2>/dev/null || true
@@ -117,11 +117,12 @@ Implementation completed: [phases/CAPs]
 Production entry verified: [command/window/route]
 Prototype binding used: current — {owner/path} | none — {historical exclusions}; repository path inspected: {path}
 Evidence: [tests + user action → visible result]
+Improvements noticed: [the handoff's [Improvements] block, put to the owner | none]
 Next agent: @qa (independent verification against PRD, plan, prototype, and real app)
 Action: /qa
 ```
 
-Before `/compact`, update `mappings/{slug}/continuity.md` via `.aioson/docs/feature-continuity-mapping.md` only for material session-only evidence; it is temporary and never replaces canonical artifacts or implementation evidence. Recommend `/compact` before QA; `/clear` only for a hard reset, feature switch, polluted context, or security reset. Do not perform QA's independent verdict.
+Before `/compact`, update `mappings/{slug}/continuity.md` (`.aioson/docs/feature-continuity-mapping.md`) only for material session-only evidence — temporary, never canonical. Recommend `/compact` before QA; `/clear` only for a hard reset, feature switch, or polluted/security context. Do not perform QA's independent verdict.
 
 Do not run `feature:close` from DEV. After QA, workflow follows the explicit closure policy; commit/publish need authorization.
 

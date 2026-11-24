@@ -147,6 +147,7 @@ const MANAGED_FILES = [
   '.aioson/docs/dev/stack-conventions.md',
   '.aioson/docs/dev/execution-discipline.md',
   '.aioson/docs/dev/simple-plan-lane.md',
+  '.aioson/docs/dev/improvement-radar.md',
   '.aioson/docs/dev/scout.md',
   '.aioson/docs/dev/continuity-recovery.md',
   '.aioson/docs/dev/runtime-handoffs.md',

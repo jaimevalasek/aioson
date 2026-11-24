@@ -80,7 +80,7 @@ const FEATURE_BOUND_KINDS = new Set(['defect', 'risk', 'question']);
 // The one line that makes an open item an option instead of a note.
 const NEXT_STEP = {
   defect: 'fix it through a Simple Plan (@dev) or inside the feature it belongs to, or dismiss it with a reason',
-  idea: 'offer it to @product/@briefing when the next feature is scoped, or dismiss it with a reason',
+  idea: 'offer it to @product/@briefing when the next feature is scoped, route it (aioson observation:route --to=feature|simple-plan|draft), or dismiss it with a reason',
   process: 'turn it into a rule (rule:new), a learning, or an operator decision (op:capture), or dismiss it',
   risk: 'hand it to @qa/@pentester at the next review, plan it, or dismiss it with a reason',
   question: 'answer it (--as=answered --why="<answer>") before the stage that needs the answer'

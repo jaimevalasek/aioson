@@ -430,6 +430,14 @@ aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answer
 
 `planned`/`promoted` need an existing `--ref` (a Simple Plan path, a registered feature slug or its briefing/feature folder or PRD, a rule or learning path) — an outcome recorded against nothing is refused; `dismissed`/`answered` need `--why`; `--by` defaults to `AIOSON_AGENT`, else `owner`. `observation:list` exits 1 when the store is unreadable: repair it or rename it aside, never delete it. Observations are noncanonical memory: never scope, never approval, never a gate. The routed `.aioson/docs/observations.md` carries the full protocol.
 
+At the end of its task `@dev` relays the improvements it noticed while building (`workflow:next --complete=dev` prints an `[Improvements]` block) and asks the owner where each goes; `observation:route` runs the answer in one step — the destination is written, then the item is settled against it:
+
+```bash
+aioson observation:route . --id=OBS-xxxxxx --to=<feature|simple-plan|draft> [--slug=<kebab-case>] [--feature=<slug>] [--by=<who>] [--json]
+```
+
+`feature` adds a row to `.aioson/context/features/{slug}/scope-additions.md` (settled `promoted`; not scope until `@product` amends the PRD citing the OBS id — `workflow:next` prints `[Scope additions]` for approved rows no PRD cites); `simple-plan` seeds `.aioson/context/simple-plans/{slug}.md` with `status: pending` (settled `planned`); `draft` registers a `planning` row in `features.md` and writes the source pack `plans/{slug}/idea.md` for `@briefing` (settled `promoted`). `idea`, `defect` and `risk` route; routing again reuses the same artifact, and one line goes to the Agent Trail of the origin feature's dossier (best effort). How `@dev` records and relays: `.aioson/docs/dev/improvement-radar.md`.
+
 ---
 
 ## verify:artifact --kind=visual

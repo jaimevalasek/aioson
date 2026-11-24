@@ -9,6 +9,8 @@
  *   aioson observation:list . [--kind=<kind>] [--feature=<slug>|project] [--all|--resolved] [--json]
  *   aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answered|dismissed> \
  *     [--ref=<plan path|feature slug>] [--why="..."] [--by=<who>]
+ *   aioson observation:route . --id=OBS-xxxxxx --to=<feature|simple-plan|draft> [--slug=<kebab-case>] [--feature=<slug>]
+ *     (the owner's choice for an improvement: writes the destination, settles the item against it)
  *
  * `observe` is one call and never blocks: the feature defaults to the active
  * one (pulse → features.md), the agent to the active one (AIOSON_AGENT → last
@@ -281,4 +283,41 @@ planned/promoted need an existing --ref (a Simple Plan path, a feature slug); di
   return payload;
 }
 
-module.exports = { runObserve, runObservationList, runObservationResolve, defaultFeature };
+async function runObservationRoute({ args = [], options = {}, logger }) {
+  const { ROUTES } = require('../lib/observation-routing');
+  if (wantsHelp(args, options)) {
+    const text = `observation:route — send one open observation where the owner decided it goes, and settle it against that destination.
+Usage:
+  aioson observation:route [path] --id=OBS-xxxxxx --to=<${ROUTES.join('|')}> [--slug=<kebab-case>] [--feature=<slug>] [--by=<who>] [--json]
+feature     add it to the feature being built: a row in features/{slug}/scope-additions.md (the PRD is amended, then it is built)
+simple-plan a bounded technical plan: simple-plans/{slug}.md, status pending, for @dev's Simple Plan lane
+draft       a future feature: a planning row in features.md and the source pack plans/{slug}/idea.md for @briefing
+idea, defect and risk route; the owner chooses, an agent only runs the choice. Running it again reuses the same artifact.`;
+    if (options.json) return { ok: true, help: true };
+    if (logger) logger.log(text);
+    return { ok: true, help: true };
+  }
+  const targetDir = projectDir(args);
+  const outside = outsideProject('observation:route', targetDir);
+  if (outside) return fail(logger, options, outside);
+  let result;
+  try {
+    result = await require('../lib/observation-routing').routeObservation(targetDir, {
+      id: given(options.id),
+      to: given(options.to),
+      slug: given(options.slug),
+      feature: given(options.feature),
+      by: given(options.by) || given(options.agent) || envAgent() || 'owner'
+    });
+  } catch (error) {
+    return fail(logger, options, `observation:route — ${error.message}`);
+  }
+  const payload = { ok: true, id: result.id, kind: result.kind, route: result.route, as: result.as, ref: result.ref, artifact: result.artifact, created: result.created, next: result.next, dossier: result.dossier, resolution: result.item.resolution };
+  if (options.json) return payload;
+  logger.log(`observation:route — ${result.id} (${result.kind}) → ${result.route}: ${result.artifact} ${result.created ? 'created' : 'already there'} · settled as ${result.as} ${result.ref}`);
+  if (result.dossier === 'added') logger.log('  dossier: one line added to the Agent Trail of the feature it came from');
+  logger.log(`  next: ${result.next}`);
+  return payload;
+}
+
+module.exports = { runObserve, runObservationList, runObservationResolve, runObservationRoute, defaultFeature };

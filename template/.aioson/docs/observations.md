@@ -56,6 +56,20 @@ aioson observation:resolve . --id=OBS-xxxxxx --as=<fixed|planned|promoted|answer
 - `answered` — the question has its answer in `--why`, where the stage that needs it reads it; observed again, in any feature, it stays answered and the observer reads the answer.
 - `dismissed` — `--why` records the reason; observed again, in any feature, it stays dismissed and the observer reads the reason.
 
+### Routing an improvement
+
+An `idea` (or a `defect`/`risk` the owner wants scheduled) is settled in one step with the owner's choice, which writes the destination and settles the item against it:
+
+```bash
+aioson observation:route . --id=OBS-xxxxxx --to=<feature|simple-plan|draft> [--slug=<kebab-case>] [--feature=<slug>]
+```
+
+- `feature` — a row in `features/{slug}/scope-additions.md`, settled `promoted`. Not scope yet: `@product` amends the PRD citing the OBS id, `@planner` sequences it, then `@dev` builds it. `workflow:next --complete=dev` prints `[Scope additions]` for approved rows no PRD cites.
+- `simple-plan` — `simple-plans/{slug}.md` with `status: pending`, settled `planned`; `.aioson/docs/dev/simple-plan-lane.md` runs it.
+- `draft` — a `planning` row in `features.md` and the source pack `plans/{slug}/idea.md`, settled `promoted`; `@briefing` scopes it later.
+
+Running it again reuses the same artifact; a `question` or `process` item does not route. How `@dev` records and relays improvements at the end of a task: `.aioson/docs/dev/improvement-radar.md`.
+
 The owner settles; an agent settles only what it was authorized to fix or plan. `--by` defaults to `AIOSON_AGENT`, else `owner`. A reference that does not exist is refused — a feature slug is a registry row or the feature's briefing, folder or PRD, never a word that merely appears in `features.md`: an outcome recorded against nothing is how an item gets lost while "handled".
 
 ## Authority boundary
