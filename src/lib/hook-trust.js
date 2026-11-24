@@ -87,6 +87,9 @@ const MAX_PLUGIN_DEPTH = 6;
 // that opens a hooks table (`hooks = …`, `hooks.Stop = …`).
 const TOML_HEADER = /^\[\[?\s*([^\]]+?)\s*\]\]?$/;
 const TOML_HOOKS_KEY = /^["']?hooks["']?\s*[=.]/;
+// Codex's own record of the hooks the person trusted in `/hooks` (`[hooks.state]`,
+// `[hooks.state.'<file>:<event>:0:0']` with `trusted_hash`): a review answer, not a hook.
+const TOML_HOOK_TRUST = /^hooks\.state(\.|=|$)/;
 
 function readText(file) {
   try {
@@ -103,8 +106,9 @@ function tomlDefinesHooks(text) {
     const line = raw.replace(/#.*$/, '').trim();
     const header = TOML_HEADER.exec(line);
     if (header) table = header[1].replace(/["'\s]/g, '');
-    if (header && table.split('.').includes('hooks')) return true;
-    if (!header && table !== 'features' && TOML_HOOKS_KEY.test(line)) return true;
+    const trustRecord = TOML_HOOK_TRUST.test(header ? table : line.replace(/["'\s]/g, ''));
+    if (header && !trustRecord && table.split('.').includes('hooks')) return true;
+    if (!header && table !== 'features' && !TOML_HOOK_TRUST.test(table) && !trustRecord && TOML_HOOKS_KEY.test(line)) return true;
   }
   return false;
 }

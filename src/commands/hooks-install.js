@@ -271,6 +271,9 @@ async function scrubAntigravityHookFile(filePath, dryRun, logger, label) {
 // before the summary and the checkpoint before the next model request. A new or
 // changed hook runs only after the user trusts it (`/hooks` inside Codex) — by
 // design, not ours to grant — so every handler change ships in one release.
+// The Codex tools whose use AIOSON records. `exec` is the code-mode tool of codex 0.171+.
+const CODEX_TOOL_MATCHER = 'apply_patch|Bash|update_plan|exec|exec_command|shell';
+
 function buildCodexHooks(agentName) {
   const safeAgentName = normalizeHookAgentName(agentName);
   const windows = (parts) => `${parts.join(' ')} 2>nul & exit /b 0`;
@@ -282,7 +285,9 @@ function buildCodexHooks(agentName) {
   };
 
   return {
-    PostToolUse: [group('apply_patch|Bash|update_plan', [handler(emit, { async: true })])],
+    // Codex 0.171 runs commands and edits through its code-mode `exec` tool (a script calling
+    // tools.exec_command / tools.apply_patch), so `exec` and the inner names are matched too.
+    PostToolUse: [group(CODEX_TOOL_MATCHER, [handler(emit, { async: true })])],
     UserPromptSubmit: [group(null, [handler(emit, { async: true })])],
     // The final message of a turn; the session itself closes at SessionEnd.
     Stop: [group(null, [handler(emit, { async: true })])],
@@ -354,7 +359,7 @@ async function installCodexHooks(agentName, dryRun, logger) {
   } else {
     logger.log(`  [dry-run] Would write: ${configPath}${unchanged ? ' (unchanged)' : ''}`);
     logger.log('  Hooks to add:');
-    logger.log('    PostToolUse (apply_patch|Bash|update_plan) → hooks:emit (async)');
+    logger.log(`    PostToolUse (${CODEX_TOOL_MATCHER}) → hooks:emit (async)`);
     logger.log('    UserPromptSubmit → hooks:emit (agent activated in the session, async)');
     logger.log('    Stop → hooks:emit (final message, async)');
     logger.log('    PreCompact → hooks:emit (compaction marker)');

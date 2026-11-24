@@ -63,7 +63,7 @@ async function withTempHome(fn) {
 
 test('buildCodexHooks: Codex tool names, async telemetry, a compact SessionStart recap, a lean SessionEnd, guarded Windows lines', () => {
   const hooks = buildCodexHooks('dev');
-  assert.equal(hooks.PostToolUse[0].matcher, 'apply_patch|Bash|update_plan');
+  assert.equal(hooks.PostToolUse[0].matcher, 'apply_patch|Bash|update_plan|exec|exec_command|shell', 'codex 0.171 runs commands and edits through its code-mode exec tool');
   const emit = hooks.PostToolUse[0].hooks[0];
   assert.match(emit.command, /aioson hooks:emit "\$PWD" --agent='dev' --source='codex'/);
   assert.equal(emit.commandWindows, 'aioson hooks:emit . --agent=dev --source=codex 2>nul & exit /b 0', 'a missing aioson or a crash is never a failed hook on Windows');

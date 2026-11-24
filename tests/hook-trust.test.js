@@ -221,6 +221,13 @@ test('every other place Codex loads hooks from is foreign: config.toml, a projec
     const toml = path.join(home, '.codex', 'config.toml');
     await fs.writeFile(toml, 'model = "gpt-5.6"\n[features]\nhooks = true\n', 'utf8');
     assert.deepEqual(await trust(), { args: [FLAG], reason: 'added' }, '`[features] hooks = true` switches the feature on: it is not a hook');
+    const hooksFile = path.join(home, '.codex', 'hooks.json');
+    await fs.writeFile(toml, `model = "gpt-5.6"\n[hooks.state]\n\n[hooks.state.'${hooksFile}:stop:0:0']\ntrusted_hash = "sha256:abc"\n\n[projects.'C:\\\\work']\ntrust_level = "trusted"\n`, 'utf8');
+    assert.deepEqual(await trust(), { args: [FLAG], reason: 'added' }, 'what the person trusted in /hooks ([hooks.state]) is a review answer, not a hook');
+    await fs.writeFile(toml, `hooks.state.'${hooksFile}:stop:0:0'.trusted_hash = "sha256:abc"\n`, 'utf8');
+    assert.deepEqual(await trust(), { args: [FLAG], reason: 'added' }, 'the same record as a dotted key');
+    await fs.writeFile(toml, `[hooks.state.'${hooksFile}:stop:0:0']\ntrusted_hash = "sha256:abc"\n[[hooks.Stop]]\n[[hooks.Stop.hooks]]\ntype = "command"\ncommand = "python3 ~/audit.py"\n`, 'utf8');
+    assert.deepEqual(await trust(), { args: [], reason: 'foreign_hooks', source: toml }, 'a real hook beside the trust records is still foreign');
     await fs.writeFile(toml, 'model = "gpt-5.6"\n[[hooks.PostToolUse]]\nmatcher = "Bash"\n[[hooks.PostToolUse.hooks]]\ntype = "command"\ncommand = "python3 ~/audit.py"\n', 'utf8');
     assert.deepEqual(await trust(), { args: [], reason: 'foreign_hooks', source: toml }, 'the same layer, in its other representation');
     await fs.rm(toml);
