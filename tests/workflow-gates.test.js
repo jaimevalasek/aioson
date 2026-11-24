@@ -193,6 +193,62 @@ describe('workflow-gates.js — runTechnicalGate', () => {
     assert.ok(changedDuringRun.reasons.includes('implementation_changed_during_checks'));
   });
 
+  // Two chats on one folder: the second edits a file, or commits, while the
+  // first one's gate runs its checks. The block stays (the result cannot be
+  // tied to one snapshot) but it names what moved, instead of a bare reason.
+  async function gitProject(files, checkArgv) {
+    await ensureDir(path.join(tmpDir, '.aioson'));
+    for (const [name, content] of Object.entries(files)) {
+      await ensureDir(path.dirname(path.join(tmpDir, name)));
+      await fs.writeFile(path.join(tmpDir, name), content);
+    }
+    await fs.writeFile(path.join(tmpDir, '.aioson/quality.json'), JSON.stringify({ schema_version: 1, checks: [{ id: 'tests', argv: checkArgv }] }));
+    execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['add', '.'], { cwd: tmpDir, stdio: 'ignore' });
+    execFileSync('git', ['-c', 'user.name=AIOSON Test', '-c', 'user.email=test@aioson.local', 'commit', '-m', 'fixture'], { cwd: tmpDir, stdio: 'ignore' });
+  }
+
+  it('names the file another session edited while the checks ran', async () => {
+    await gitProject(
+      { 'src/auth/login.js': 'module.exports = 1;\n', 'src/billing/invoice.js': 'module.exports = 1;\n' },
+      ['node', '-e', 'require("node:fs").appendFileSync("src/auth/login.js", "// the other chat\\n")']
+    );
+    const blocked = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(blocked.status, 'error');
+    assert.equal(blocked.blocked, true);
+    assert.ok(blocked.reasons.includes('implementation_changed_during_checks'), 'the reason stays the one the gate always gave');
+    assert.deepEqual(blocked.source_change.paths, ['src/auth/login.js']);
+    assert.equal(blocked.source_change.head_changed, false);
+    assert.match(blocked.source_change.message, /src\/auth\/login\.js changed while the checks ran/);
+    assert.match(blocked.source_change.message, /parallel-sessions\.md/);
+    const printed = formatGateError(blocked);
+    assert.match(printed, /implementation_changed_during_checks/);
+    assert.match(printed, /src\/auth\/login\.js changed while the checks ran/);
+  });
+
+  it('says HEAD moved when another session committed while the checks ran', async () => {
+    await gitProject(
+      { 'app.cjs': 'module.exports = 1;\n' },
+      ['node', '-e', 'require("node:child_process").execFileSync("git", ["-c", "user.name=Other", "-c", "user.email=other@aioson.local", "commit", "--allow-empty", "-qm", "other chat"], { stdio: "ignore" })']
+    );
+    const blocked = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(blocked.status, 'error');
+    assert.equal(blocked.source_change.head_changed, true);
+    assert.deepEqual(blocked.source_change.paths, []);
+    assert.match(blocked.source_change.message, /HEAD moved/);
+  });
+
+  it('adds no source_change to a run nobody touched, and keeps the framework state out of the diagnosis', async () => {
+    await gitProject(
+      { 'app.cjs': 'module.exports = 1;\n' },
+      ['node', '-e', 'require("node:fs").mkdirSync(".aioson/context", { recursive: true }); require("node:fs").writeFileSync(".aioson/context/project-pulse.md", "pulse")']
+    );
+    const run = await runTechnicalGate(tmpDir, 'qa');
+    assert.equal(run.ok, true);
+    assert.equal(run.status, 'pass');
+    assert.equal(run.source_change, undefined);
+  });
+
   it('fingerprints untracked files relative to a nested project rather than the repository root', async () => {
     await fs.writeFile(path.join(tmpDir, 'root.txt'), 'root');
     execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });

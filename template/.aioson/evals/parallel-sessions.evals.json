@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "dev-gate-blocked-by-another-chats-edit",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "The technical gate blocked with implementation_changed_during_checks and I did not touch those files; another chat is open on this folder.",
+      "expect": [
+        { "path": ".aioson/docs/dev/parallel-sessions.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "dev-binding-mismatch-after-the-other-chat-moved-the-pulse",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "workflow:next says Workflow binding mismatch because the other chat moved the pulse to another feature while I have two chats open on the same folder.",
+      "expect": [
+        { "path": ".aioson/docs/dev/parallel-sessions.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "neo-two-chats-on-one-folder",
+      "agent": "neo",
+      "mode": "planning",
+      "task": "I want to run a feature in one chat and fixes in another chat at the same time on the same folder, in parallel.",
+      "expect": [
+        { "path": ".aioson/docs/dev/parallel-sessions.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "dev-pt-br-dois-chats-na-mesma-pasta",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Estou com dois chats abertos na mesma pasta, um implementando uma feature e o outro corrigindo outra parte, e um atrapalha o outro.",
+      "expect": [
+        { "path": ".aioson/docs/dev/parallel-sessions.md", "in": "selected" }
+      ]
+    },
+    {
+      "name": "parallel-sessions-stay-quiet-for-a-readme-typo",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix a spelling error in the README introduction.",
+      "paths": ["README.md"],
+      "absent": [
+        { "path": ".aioson/docs/dev/parallel-sessions.md", "in": "selected" }
+      ]
+    }
+  ]
+}

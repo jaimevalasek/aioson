@@ -61,6 +61,7 @@ test('engine evidence binds the executed argv and exit code to source and detect
   assert.equal(changed.exitCode, 2);
   assert.equal(changed.result.reason, 'implementation_changed_during_checks');
   assert.equal(changed.result.checks[0].status, 'pass', 'command success does not certify a different final source snapshot');
+  assert.deepEqual(changed.result.source.change.paths, ['app.cjs'], 'the evidence names the file that moved under the run');
 });
 
 async function project(t) {

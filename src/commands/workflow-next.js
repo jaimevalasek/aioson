@@ -43,7 +43,7 @@ const { inspectTemplateVersion } = require('../template-version-status');
 const { resolveTargetDir } = require('../lib/project-root');
 
 const { resolveActiveFeature } = require('./feature-current');
-const { featureDevStateRel } = require('../preflight-engine');
+const { featureDevStateRel, readProjectPulse } = require('../preflight-engine');
 const { featureStateArchivePath, hasWorkflowProgress, readArchivedFeatureState, archiveFeatureState, bindingMovedEvent, describeBindingRegistry } = require('../lib/workflow-binding');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
@@ -397,6 +397,9 @@ async function detectWorkflowMode(targetDir) {
     ? registryFeature.slug
     : (lastHandoff && lastHandoff.feature_slug ? lastHandoff.feature_slug : null);
   const activeFeature = chooseActiveFeature(features, preferredSlug);
+  // Who last wrote the pulse the binding follows: a mismatch against it is,
+  // with two chats on one folder, the other chat having moved it.
+  const pulseBy = registryFeature && registrySource === 'pulse' ? await readPulseWriter(targetDir) : null;
 
   if (activeFeature) {
     return {
@@ -405,7 +408,8 @@ async function detectWorkflowMode(targetDir) {
       features,
       binding_source: registryFeature ? registrySource : (lastHandoff && lastHandoff.feature_slug === activeFeature.slug ? 'last-handoff' : 'features.md'),
       registry: registrySlug,
-      registry_source: registrySource
+      registry_source: registrySource,
+      pulse_by: pulseBy
     };
   }
 
@@ -415,8 +419,17 @@ async function detectWorkflowMode(targetDir) {
     features,
     binding_source: null,
     registry: registrySlug,
-    registry_source: registrySource
+    registry_source: registrySource,
+    pulse_by: null
   };
+}
+
+async function readPulseWriter(targetDir) {
+  const pulse = await readProjectPulse(targetDir).catch(() => null);
+  if (!pulse || !pulse.exists) return null;
+  const pick = (value) => (value && !/^(none|null|-|—)$/i.test(String(value).trim()) ? String(value).trim() : null);
+  const writer = { last_agent: pick(pulse.last_agent), active_work: pick(pulse.active_work), last_updated: pick(pulse.last_updated) };
+  return writer.last_agent || writer.active_work ? writer : null;
 }
 
 function getSequenceForMode(config, mode, classification) {
@@ -755,7 +768,7 @@ async function loadOrCreateState(targetDir, options = {}) {
   const shouldPersist = options.persist !== false;
   let existing = await readJsonIfExists(statePath);
   const modeInfo = await detectWorkflowMode(targetDir);
-  const binding = { source: modeInfo.binding_source || null, registry: modeInfo.registry || null, registry_source: modeInfo.registry_source || null, moved: null, restored: null };
+  const binding = { source: modeInfo.binding_source || null, registry: modeInfo.registry || null, registry_source: modeInfo.registry_source || null, pulse_by: modeInfo.pulse_by || null, moved: null, restored: null };
 
   // Mode/feature-transition guard: if the persisted state no longer matches
   // the feature the registry binds (or the mode), it is stale. This covers

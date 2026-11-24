@@ -150,6 +150,7 @@ const MANAGED_FILES = [
   '.aioson/docs/dev/improvement-radar.md',
   '.aioson/docs/dev/scout.md',
   '.aioson/docs/dev/continuity-recovery.md',
+  '.aioson/docs/dev/parallel-sessions.md',
   '.aioson/docs/dev/runtime-handoffs.md',
   '.aioson/docs/dev/neural-chain-queue.md',
   '.aioson/docs/dev/site-delivery.md',

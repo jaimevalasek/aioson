@@ -12,7 +12,8 @@ const {
   extractCodeMapPaths,
   deriveNextStepFromPlan,
   readCorrectionsStatus,
-  listOpenCorrections
+  listOpenCorrections,
+  listOpenDevThreads
 } = require('../src/lib/dev-resume');
 const { runDevResumeData } = require('../src/commands/dev-resume');
 
@@ -534,5 +535,122 @@ describe('dev-resume — one resume state per feature', () => {
     } finally {
       await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
+  });
+});
+
+// Two chats on one folder: the project-level dev-state.md and the last handoff
+// are one per project, so a chat that names no feature used to resume whatever
+// the other chat wrote last. The resume now lists the threads that are open —
+// a tracked feature and a Simple Plan alike — and says it is ambiguous.
+describe('dev-resume — two chats on one folder', () => {
+  const { runStateSave } = require('../src/commands/state-save');
+  const silent = { log() {}, error() {} };
+
+  async function twoThreads() {
+    const tmp = await makeProject();
+    await writeFeaturesMd(tmp, [{ slug: 'checkout', status: 'in_progress' }]);
+    await fs.mkdir(path.join(tmp, '.aioson', 'context', 'simple-plans'), { recursive: true });
+    await fs.writeFile(path.join(tmp, '.aioson', 'context', 'simple-plans', 'fix-login.md'), '---\nstatus: in_progress\n---\n# Simple Plan - fix login\n', 'utf8');
+    const write = (options) => runStateSave({ args: [tmp], options: { json: true, ...options }, logger: silent });
+    await write({ feature: 'checkout', phase: '2', next: 'Checkout: payment webhook' });
+    await write({ feature: 'fix-login', next: 'Fix the login redirect', context: 'simple-plan' });
+    return tmp;
+  }
+
+  const cleanup = (tmp) => fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+
+  it('lists both open threads and calls the resume ambiguous when the chat names no feature', async () => {
+    const tmp = await twoThreads();
+    try {
+      const out = await runDevResumeData({ args: [tmp], options: { json: true } });
+      assert.equal(out.ambiguous, true);
+      assert.deepEqual(out.open_threads.map((t) => [t.feature, t.kind]).sort(), [['checkout', 'feature'], ['fix-login', 'simple-plan']]);
+      const checkout = out.open_threads.find((t) => t.feature === 'checkout');
+      assert.deepEqual([checkout.phase, checkout.next_step, checkout.stale], ['2', 'Checkout: payment webhook', false]);
+      assert.match(out.note, /ask which one it continues/);
+      assert.match(out.note, /parallel-sessions\.md/);
+      // The project-level dev-state.md is the last writer's copy: it must not be what decides.
+      const shared = await fs.readFile(path.join(tmp, '.aioson', 'context', 'dev-state.md'), 'utf8');
+      assert.match(shared, /active_feature: fix-login/);
+    } finally { await cleanup(tmp); }
+  });
+
+  it('keeps the human output one JSON document, the ambiguity inside it', async () => {
+    const tmp = await twoThreads();
+    try {
+      await writeLastHandoff(tmp, { feature_slug: 'checkout' });
+      const printed = [];
+      const out = await runDevResumeData({ args: [tmp], options: {}, logger: { log: (line) => printed.push(line), error() {} } });
+      assert.equal(out.data.feature_slug, 'checkout');
+      assert.equal(printed.length, 1, 'one document, no prose around it');
+      const document = JSON.parse(printed[0]);
+      assert.equal(document.feature_slug, 'checkout');
+      assert.equal(document.ambiguous, true);
+      assert.equal(document.open_threads.length, 2);
+    } finally { await cleanup(tmp); }
+  });
+
+  it('is not ambiguous once the chat names its feature', async () => {
+    const tmp = await twoThreads();
+    try {
+      const out = await runDevResumeData({ args: [tmp], options: { json: true, feature: 'checkout' } });
+      assert.equal(out.ambiguous, undefined);
+      assert.equal(out.open_threads, undefined);
+      assert.equal(out.data.feature_slug, 'checkout');
+    } finally { await cleanup(tmp); }
+  });
+
+  it('says so even when no tracked feature is in progress (two Simple Plans, a cold start for the feature resume)', async () => {
+    const tmp = await makeProject();
+    try {
+      await fs.mkdir(path.join(tmp, '.aioson', 'context', 'simple-plans'), { recursive: true });
+      for (const slug of ['fix-a', 'fix-b']) {
+        await fs.writeFile(path.join(tmp, '.aioson', 'context', 'simple-plans', `${slug}.md`), `# Simple Plan - ${slug}`, 'utf8');
+      }
+      const write = (options) => runStateSave({ args: [tmp], options: { json: true, ...options }, logger: silent });
+      await write({ feature: 'fix-a', next: 'Fix A', context: 'simple-plan' });
+      await write({ feature: 'fix-b', next: 'Fix B', context: 'simple-plan' });
+      const printed = [];
+      const out = await runDevResumeData({ args: [tmp], options: {}, logger: { log: (line) => printed.push(line), error() {} } });
+      assert.equal(out.data, null);
+      assert.equal(out.ambiguous, true);
+      assert.ok(printed.some((line) => /No in-progress feature detected/.test(line)));
+      assert.ok(printed.some((line) => /fix-a \(simple-plan\)/.test(line)) && printed.some((line) => /fix-b \(simple-plan\)/.test(line)));
+    } finally { await cleanup(tmp); }
+  });
+
+  it('a single open thread, a stale one, and a closed feature never make a resume ambiguous', async () => {
+    const tmp = await twoThreads();
+    try {
+      const ctx = path.join(tmp, '.aioson', 'context');
+      // fix-login goes stale: untouched for weeks.
+      const stale = path.join(ctx, 'features', 'fix-login', 'dev-state.md');
+      await fs.writeFile(stale, (await fs.readFile(stale, 'utf8')).replace(/last_updated: .*/, 'last_updated: 2020-01-01'), 'utf8');
+      const staleOnly = await runDevResumeData({ args: [tmp], options: { json: true } });
+      assert.equal(staleOnly.ambiguous, undefined, 'one live thread and one stale thread: nothing to ask');
+      assert.equal((await listOpenDevThreads(tmp)).find((t) => t.feature === 'fix-login').stale, true);
+
+      // checkout closes in the registry: its leftover state is no thread.
+      await writeFeaturesMd(tmp, [{ slug: 'checkout', status: 'done' }]);
+      assert.deepEqual((await listOpenDevThreads(tmp)).map((t) => t.feature), ['fix-login']);
+
+      // A finished Simple Plan leaves its dev-state in_progress; the plan's own status closes the thread.
+      const plan = path.join(ctx, 'simple-plans', 'fix-login.md');
+      for (const status of ['done', 'abandoned', 'paused']) {
+        await fs.writeFile(plan, `---\nstatus: ${status}\n---\n# Simple Plan - fix login\n`, 'utf8');
+        assert.deepEqual(await listOpenDevThreads(tmp), [], `a ${status} Simple Plan is not an open thread`);
+      }
+      await fs.writeFile(plan, '---\nstatus: in_progress  # resumed\n---\n# Simple Plan - fix login\n', 'utf8');
+      assert.deepEqual((await listOpenDevThreads(tmp)).map((t) => t.feature), ['fix-login']);
+    } finally { await cleanup(tmp); }
+  });
+
+  it('a project with no dev state has no threads', async () => {
+    const tmp = await makeProject();
+    try {
+      assert.deepEqual(await listOpenDevThreads(tmp), []);
+      const out = await runDevResumeData({ args: [tmp], options: { json: true } });
+      assert.equal(out.ambiguous, undefined);
+    } finally { await cleanup(tmp); }
   });
 });

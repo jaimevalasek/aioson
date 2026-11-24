@@ -2,7 +2,8 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { buildDevResumeData } = require('../lib/dev-resume');
+const { buildDevResumeData, listOpenDevThreads, OPEN_THREAD_WINDOW_DAYS } = require('../lib/dev-resume');
+const { readSessionFeature } = require('../lib/session-feature');
 const { buildPhaseCapsule, openObservations } = require('../lib/phase-capsule');
 const { readFeatureArtifactSafe } = require('../preflight-engine');
 const { isValidSlug } = require('../dossier/schema');
@@ -106,22 +107,51 @@ async function runPhaseCapsule({ targetDir, options, logger }) {
   return result;
 }
 
+// A chat that names no feature and shares its folder with another one: the
+// resume it would take is only whichever chat wrote last. `dev-state.md` at the
+// project level and the last handoff are one per project, so the answer must
+// not be guessed from them — the chat is told which threads are open and asks.
+async function resolveResumeAmbiguity(targetDir, requestedFeature) {
+  if (requestedFeature) return null;
+  const session = await readSessionFeature(path.resolve(targetDir)).catch(() => null);
+  if (session && session.feature) return null;
+  const live = (await listOpenDevThreads(targetDir).catch(() => [])).filter((thread) => !thread.stale);
+  if (live.length < 2) return null;
+  return {
+    ambiguous: true,
+    open_threads: live,
+    note: `${live.length} dev threads were written in this folder within ${OPEN_THREAD_WINDOW_DAYS} days and this chat names none: ask which one it continues before editing. The newest is only the last chat to write, not necessarily this one. Name it with --feature=<slug>; two chats at once each need their own session or worktree (.aioson/docs/dev/parallel-sessions.md).`
+  };
+}
+
+function printAmbiguity(logger, ambiguity) {
+  logger.log(`Open dev threads (${ambiguity.open_threads.length}) — ${ambiguity.note}`);
+  for (const thread of ambiguity.open_threads) {
+    const where = thread.phase ? `phase ${thread.phase}` : 'no phase';
+    logger.log(`  - ${thread.feature} (${thread.kind}) ${where}, ${thread.last_updated || 'undated'}: ${thread.next_step || 'no next step recorded'}`);
+  }
+}
+
 async function runDevResumeData({ args = [], options = {}, logger } = {}) {
   const targetDir = args[0] || '.';
   if (options.capsule) return runPhaseCapsule({ targetDir, options, logger });
-  const data = await buildDevResumeData(targetDir, { feature: optionText(options.feature) || null });
+  const requestedFeature = optionText(options.feature) || null;
+  const data = await buildDevResumeData(targetDir, { feature: requestedFeature });
+  const ambiguity = await resolveResumeAmbiguity(targetDir, requestedFeature);
 
   if (options.json || !logger) {
-    return { ok: true, data };
+    return { ok: true, data, ...(ambiguity || {}) };
   }
 
   if (data === null) {
     logger.log('No in-progress feature detected — cold start.');
-    return { ok: true, data: null };
+    if (ambiguity) printAmbiguity(logger, ambiguity);
+    return { ok: true, data: null, ...(ambiguity || {}) };
   }
 
-  logger.log(JSON.stringify(data, null, 2));
-  return { ok: true, data };
+  // Without --json the output stays one JSON document: the ambiguity rides in it.
+  logger.log(JSON.stringify(ambiguity ? { ...data, ...ambiguity } : data, null, 2));
+  return { ok: true, data, ...(ambiguity || {}) };
 }
 
 module.exports = { runDevResumeData };

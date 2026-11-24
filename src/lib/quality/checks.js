@@ -6,7 +6,7 @@ const { randomUUID, createHash } = require('node:crypto');
 const { execute, commandFor } = require('./process');
 const { writeJson, ensureNewOutput } = require('./files');
 const { sourceIdentity } = require('./provenance');
-const { computeImplementationFingerprint } = require('../implementation-fingerprint');
+const { computeImplementationFingerprint, snapshotImplementationTree, describeTreeChange } = require('../implementation-fingerprint');
 
 async function qualityPlan(root, options = {}) {
   const profile = options.profile || 'product';
@@ -51,6 +51,7 @@ async function runChecks(root, options = {}) {
   await ensureNewOutput(root, options.output);
   const runId = randomUUID();
   const source = { ...await sourceIdentity(root), fingerprint: computeImplementationFingerprint(root, plan.checks) };
+  const treeBefore = source.fingerprint ? snapshotImplementationTree(root) : null;
   const checks = [];
   for (const check of plan.checks) {
     const result = check.argv ? await execute(check.argv, { cwd: root, timeout: Number(check.timeout_ms ?? 600000) })
@@ -61,6 +62,8 @@ async function runChecks(root, options = {}) {
   }
   source.finished_fingerprint = computeImplementationFingerprint(root, plan.checks);
   source.binding = !source.fingerprint ? 'unavailable' : source.fingerprint === source.finished_fingerprint ? 'unchanged' : 'changed';
+  const sourceChange = source.binding === 'changed' ? describeTreeChange(treeBefore, snapshotImplementationTree(root)) : null;
+  if (sourceChange) source.change = sourceChange;
   const incomplete = !checks.length || checks.some(check => check.required && ['not_run', 'error'].includes(check.status));
   const status = incomplete || source.binding === 'changed' ? 'error'
     : checks.some(check => check.required && check.status === 'fail') ? 'fail'

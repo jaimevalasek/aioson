@@ -25,6 +25,8 @@ Build context in this order:
 
 If the user asks what happened recently, answer from memory and runtime first. Go to Git only if those sources are insufficient.
 
+Another chat may be open on this folder. `aioson dev:resume-data . --json` answers `ambiguous: true` with `open_threads` when this chat names no feature and more than one dev thread was written in the last 7 days: stop and ask which thread this chat continues, then pass it as `--feature=<slug>`. The project-level `dev-state.md` and the last handoff are only whichever chat wrote last. What two chats share and how to isolate them: `.aioson/docs/dev/parallel-sessions.md`.
+
 When the work resumes inside a multi-phase plan, compile the phase capsule first: `aioson dev:resume-data . --feature={slug} --phase={n} --capsule` (see `phase-loop.md`).
 
 ## Resume and drift events

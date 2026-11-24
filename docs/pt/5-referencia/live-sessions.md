@@ -106,6 +106,16 @@ O estado de retomada do `@dev` também é por feature: `dev:state:write --featur
 `.aioson/context/features/<slug>/dev-state.md` e mantém `.aioson/context/dev-state.md` como cópia do
 último gravado.
 
+### Dois chats comuns na mesma pasta
+
+Sem `live:start --own-session`, dois chats na mesma pasta compartilham a árvore de trabalho, o índice do git, o `HEAD` e a ligação do workflow (`active_feature` do `project-pulse.md`). Partes diferentes do sistema não ajudam: o que se compartilha é por projeto, não por área. Três sinais mostram a colisão em vez de escondê-la:
+
+- o gate técnico que bloqueia com `implementation_changed_during_checks` lista os arquivos que mudaram durante a execução (`source_change.paths`, e `head_changed` quando houve commit ou checkout). Arquivo que você não escreveu é do outro chat: rode de novo quando ele terminar, sem reverter;
+- o `Workflow binding mismatch` diz quem escreveu o pulse por último (`last_agent`, `active_work`, `last_updated`);
+- `aioson dev:resume-data . --json` devolve `ambiguous: true` e `open_threads` quando o chat não nomeia a feature e há mais de um fio de `@dev` escrito nos últimos 7 dias (feature ou Simple Plan ainda não concluído).
+
+Para isolar de verdade: uma sessão própria por chat (acima) separa a ligação e a retomada; um `git worktree` por chat separa também a árvore. A receita completa está em `.aioson/docs/dev/parallel-sessions.md`.
+
 ## Exemplo prático
 
 ```

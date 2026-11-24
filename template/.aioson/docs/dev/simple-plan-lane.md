@@ -154,7 +154,7 @@ A valid simple plan is not just a TODO list. It must show:
 
 A change below the lane (at most 2 behavior-bearing files, no decision, a known verification command) needs no plan file: implement it and report the verification that ran.
 
-To resume, read `.aioson/context/dev-state.md`; when it carries `--context=simple-plan`, reopen that plan, check its status and `Session state`, and continue from the recorded next slice.
+To resume, run `aioson dev:resume-data . --json` first: `ambiguous: true` means another chat has a dev thread open in this folder — ask which one this chat continues (`.aioson/docs/dev/parallel-sessions.md`), never take the newest. Then read `.aioson/context/features/{slug}/dev-state.md` (the slug's own state; the project-level `.aioson/context/dev-state.md` is only the last chat's copy); when it carries `--context=simple-plan`, reopen that plan, check its status and `Session state`, and continue from the recorded next slice.
 
 If a simple plan remains unfinished at session end, keep it as `in_progress` or `paused` and update `.aioson/context/dev-state.md` with `--context=simple-plan`.
 

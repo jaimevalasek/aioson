@@ -15,7 +15,14 @@ const { execSync } = require('node:child_process');
 const { readFileSafe, fileExists } = require('./preflight-engine');
 const { ensureDir } = require('./utils');
 const { readConfiguration, runChecks } = require('./lib/quality/checks');
-const { computeImplementationFingerprint, checkIdentity, MAX_FINGERPRINT_FILE_BYTES, MAX_FINGERPRINT_TOTAL_BYTES } = require('./lib/implementation-fingerprint');
+const {
+  computeImplementationFingerprint,
+  snapshotImplementationTree,
+  describeTreeChange,
+  checkIdentity,
+  MAX_FINGERPRINT_FILE_BYTES,
+  MAX_FINGERPRINT_TOTAL_BYTES
+} = require('./lib/implementation-fingerprint');
 
 const MAX_OUTPUT_LINES = 60;
 const EVIDENCE_RELATIVE_PATH = '.aioson/runtime/technical-evidence.json';
@@ -219,17 +226,22 @@ async function runTechnicalGate(targetDir, stage, options = {}) {
     }
   }
 
+  // Taken beside the fingerprint, compared only if the fingerprints differ: it
+  // is what lets the block say WHICH file moved under the run.
+  const treeBefore = fingerprint ? snapshotImplementationTree(targetDir) : null;
   let measured;
   try { measured = await measureTechnicalChecks(targetDir, stage, selection); }
   catch (error) { return { ok: false, status: 'error', stage, blocked: true, reasons: [error.message], results: [] }; }
   const finishedFingerprint = options.fingerprint || computeImplementationFingerprint(targetDir, checks);
   const sourceChanged = fingerprint && (finishedFingerprint !== fingerprint || (measured.fingerprint && measured.fingerprint !== fingerprint));
   if (sourceChanged && !measured.reasons.includes('implementation_changed_during_checks')) measured.reasons.push('implementation_changed_during_checks');
+  const sourceChange = sourceChanged ? describeTreeChange(treeBefore, snapshotImplementationTree(targetDir)) : null;
   const status = sourceChanged ? 'error' : measured.status;
   if (!measured.ok || sourceChanged) {
     return {
       ok: false, status, stage, blocked: true, reasons: measured.reasons,
       fingerprint, finished_fingerprint: finishedFingerprint,
+      ...(sourceChange ? { source_change: sourceChange } : {}),
       result_path: measured.result_path, results: measured.results
     };
   }
@@ -255,6 +267,7 @@ function formatGateError(gateResult) {
     `Stage: @${gateResult.stage}`,
     'Reasons:',
     ...gateResult.reasons.map((r) => `  - ${r}`),
+    ...(gateResult.source_change ? [`    ${gateResult.source_change.message}`] : []),
     '',
     'Fix the errors above before completing this stage.',
     'Use --force to override (not recommended).',

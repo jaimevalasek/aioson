@@ -175,6 +175,34 @@ test('--expect-feature keeps guarding explicit continuation, and the mismatch na
   });
 });
 
+// Two chats on one folder: the binding is one per project, so the chat that
+// did not move the pulse meets the mismatch. The message says who wrote the
+// pulse last and the two ways out, instead of sending it back to pulse:update —
+// which would move the binding away from the other chat in turn.
+test('the mismatch names who last wrote the pulse and how two chats each keep their own feature', async (t) => {
+  const dir = await project(t, { pulse: NEW, handoff: OLD });
+  await fs.writeFile(path.join(dir, '.aioson', 'context', 'project-pulse.md'),
+    `---\nlast_updated: 2026-11-24\nlast_agent: product\nactive_feature: ${NEW}\nactive_work: "${NEW} → @product → in_progress"\n---\n# Project Pulse\n`, 'utf8');
+  const loaded = await loadOrCreateState(dir, { persist: false });
+  assert.throws(() => assertExpectedFeature(loaded.state, { 'expect-feature': OLD }, loaded.binding), (error) => {
+    assert.match(error.message, /project-pulse\.md was last written by @product on 2026-11-24 \("deploy-channel → @product → in_progress"\)/);
+    assert.match(error.message, /two features cannot both advance through workflow:next here/);
+    assert.match(error.message, /live:start .* --own-session --feature=<slug>/);
+    assert.match(error.message, /\.aioson\/docs\/dev\/parallel-sessions\.md/);
+    return true;
+  });
+});
+
+test('a pulse that records no writer leaves the mismatch exactly as it was', async (t) => {
+  const dir = await project(t, { pulse: NEW, handoff: OLD });
+  const loaded = await loadOrCreateState(dir, { persist: false });
+  assert.equal(loaded.binding.pulse_by, null);
+  assert.throws(() => assertExpectedFeature(loaded.state, { 'expect-feature': OLD }, loaded.binding), (error) => {
+    assert.doesNotMatch(error.message, /was last written/);
+    return true;
+  });
+});
+
 test('workflow:status answers for the feature the registry names and says what moved; --json carries the binding', async (t) => {
   const dir = await project(t, { pulse: NEW, handoff: OLD });
   await fs.writeFile(path.join(dir, STATE_RELATIVE_PATH), `${JSON.stringify(PROGRESS, null, 2)}\n`, 'utf8');

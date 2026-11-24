@@ -214,7 +214,80 @@ async function buildDevResumeData(projectPath, { feature: requestedFeature = nul
   };
 }
 
+// A thread older than this is history, not a second chat: it does not make a
+// resume ambiguous (a project keeps a stale in_progress state for weeks).
+const OPEN_THREAD_WINDOW_DAYS = 7;
+const CLOSED_FEATURE_STATUSES = new Set(['done', 'abandoned', 'paused']);
+
+const CLOSED_PLAN_STATUSES = new Set(['done', 'abandoned', 'paused']);
+
+function readFrontmatterValue(raw, key) {
+  const match = String(raw || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return null;
+  const line = match[1].split(/\r?\n/).find((entry) => entry.startsWith(`${key}:`));
+  if (!line) return null;
+  return line.slice(key.length + 1).replace(/#.*$/, '').trim().replace(/^["']|["']$/g, '').toLowerCase() || null;
+}
+
+function readLastUpdated(raw) {
+  const value = readFrontmatterValue(raw, 'last_updated');
+  return value && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null;
+}
+
+/**
+ * The dev threads open in this folder: one per `features/<slug>/dev-state.md`
+ * still in progress — a tracked feature or a Simple Plan alike, the state
+ * `dev:state:write` keeps for each. The project-level dev-state.md is NOT a
+ * source: it is the copy of whoever wrote last, which is exactly the pointer
+ * two chats on one folder overwrite for each other.
+ *
+ * Newest first. `stale` marks a thread untouched for OPEN_THREAD_WINDOW_DAYS.
+ */
+async function listOpenDevThreads(targetDir, { now = Date.now() } = {}) {
+  const ctxDir = path.join(path.resolve(targetDir || '.'), '.aioson', 'context');
+  let slugs;
+  try {
+    slugs = await fs.readdir(path.join(ctxDir, 'features'));
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return [];
+    throw err;
+  }
+  const featuresRaw = await readFileOrNull(path.join(ctxDir, 'features.md'));
+  const statusOf = new Map((featuresRaw ? parseFeaturesTable(featuresRaw) : []).map((row) => [row.slug, String(row.status || '').toLowerCase()]));
+  const threads = [];
+  for (const slug of slugs.sort()) {
+    const relative = featureDevStateRel(slug);
+    if (!relative || CLOSED_FEATURE_STATUSES.has(statusOf.get(slug))) continue;
+    const file = path.join(ctxDir, relative);
+    const raw = await readFileOrNull(file);
+    if (!raw) continue;
+    const fields = extractDevStateFields(raw);
+    if (!isCurrentDevStateForFeature(fields, slug)) continue;
+    // A finished Simple Plan leaves its dev-state `in_progress` (the lane writes
+    // it only while work remains): the plan's own status is what closes the thread.
+    const planRaw = await readFileOrNull(path.join(ctxDir, 'simple-plans', `${slug}.md`));
+    if (planRaw && CLOSED_PLAN_STATUSES.has(readFrontmatterValue(planRaw, 'status'))) continue;
+    const lastUpdated = readLastUpdated(raw);
+    const modified = await fs.stat(file).then((stat) => stat.mtimeMs).catch(() => 0);
+    const touched = lastUpdated ? Date.parse(`${lastUpdated}T00:00:00Z`) : modified;
+    threads.push({
+      feature: slug,
+      kind: planRaw ? 'simple-plan' : 'feature',
+      phase: fields.active_phase,
+      next_step: fields.next_step,
+      last_updated: lastUpdated,
+      stale: now - touched > OPEN_THREAD_WINDOW_DAYS * 86400000,
+      modified
+    });
+  }
+  return threads
+    .sort((a, b) => String(b.last_updated || '').localeCompare(String(a.last_updated || '')) || b.modified - a.modified)
+    .map(({ modified: _modified, ...thread }) => thread);
+}
+
 module.exports = {
+  OPEN_THREAD_WINDOW_DAYS,
+  listOpenDevThreads,
   buildDevResumeData,
   extractDevStateFields,
   isCurrentDevStateForFeature,
