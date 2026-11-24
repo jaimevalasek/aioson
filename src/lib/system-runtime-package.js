@@ -255,6 +255,18 @@ const SYSTEM_BUILD_ALLOWED_EXTS = new Set([
 
 const BINARY_RUNTIME_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.wasm', '.bin', '.sqlite', '.sqlite3']);
 const LOCAL_STATE_DIRS = new Set(['uploads', 'logs', '.logs', 'backups', '.backups', '.data', '.runtime']);
+const DATABASE_EXTS = new Set(['.sqlite', '.sqlite3']);
+
+// A database in a local-state folder or anywhere under `.aioson/` holds what one
+// installation recorded, never what the app ships: out in both modes, even where
+// the walk is forced past .gitignore (`.aioson/squads`, the build output).
+function isLocalDatabase(relPath, ext) {
+  if (!DATABASE_EXTS.has(ext)) return false;
+  return relPath.split('/').slice(0, -1).some((part) => {
+    const name = part.toLowerCase();
+    return name === '.aioson' || LOCAL_STATE_DIRS.has(name);
+  });
+}
 
 const RUNTIME_SERVER_SOURCE_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts']);
 
@@ -454,6 +466,7 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
     const ext = entryName.includes('.')
       ? `.${entryName.split('.').pop().toLowerCase()}`
       : '';
+    if (isLocalDatabase(relPath, ext)) { exclude(relPath, 'local installation database'); return; }
     const isRuntimeServerSource =
       buildMode &&
       relPath.startsWith('server/') &&

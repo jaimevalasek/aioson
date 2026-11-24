@@ -2159,6 +2159,7 @@ module.exports = {
     list_local_item: '  {slug}',
 
     install_fetching: 'Fetching system "{ref}" from aioson.com...',
+    install_skipped_binary: '{count} non-text file(s) of the package were not installed: {files}',
     install_writing: 'Writing files...',
     install_done: 'System "{slug}" installed at {path}.'
   },

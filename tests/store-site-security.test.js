@@ -138,6 +138,14 @@ test('ST-15: system:install refuses a slug or file path from the site that would
   assert.ok(installed.includes(path.join('system-packages', 'demo', 'src', 'a.js')), installed.join('\n'));
 });
 
+test('system:install names the files it does not write: a binary of the package is never dropped in silence', async (ctx) => {
+  const { results } = await checkInstallContainment(ctx, (env) => env.system.runSystemInstall, [], [
+    { manifest: { slug: 'demo', version: '1.0.0' }, files: { 'system.json': '{}', 'base/k.sqlite': { encoding: 'base64', data: 'AA==' } } },
+    { manifest: { slug: 'plain', version: '1.0.0' }, files: { 'system.json': '{}' } }
+  ]);
+  assert.deepEqual(results.map((result) => result.skipped), [['base/k.sqlite'], []]);
+});
+
 test('squad:install refuses a slug or file path from the site that would land outside its folders, including bundled skill/genome paths', async (ctx) => {
   const { installed } = await checkInstallContainment(ctx, (env) => env.squad.runSquadInstall, [
     [{ manifest: { slug: '../x' }, files: { 'squad/squad.md': '# s' } }, /store\.error_install_unsafe_slug/],

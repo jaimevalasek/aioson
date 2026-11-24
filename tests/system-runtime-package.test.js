@@ -426,3 +426,18 @@ test('an icon is read as bytes in code mode too, so it is not corrupted by a tex
   const result = await collectSystemFiles(dir, { buildMode: false });
   assert.ok(Buffer.isBuffer(result.files['public/favicon.ico']) && result.files['public/favicon.ico'].equals(icon));
 });
+
+test('a database of one installation never travels: local-state folders and .aioson, in both modes', async (ctx) => {
+  const local = ['.data/app.sqlite', 'uploads/users.sqlite3', 'server/.runtime/state.sqlite', 'Backups/old.SQLITE', '.aioson/squads/sales/memory.sqlite'];
+  const shipped = ['base/knowledge.sqlite', 'src/logs/format.js', '.aioson/squads/sales/agent.md'];
+  const dir = await dataApp(ctx, Object.fromEntries([...local, ...shipped].map((name) => [name, /sqlite/i.test(name) ? databaseBytes(64) : 'const a = 1;'])));
+  for (const buildMode of [false, true]) {
+    const { files } = await collectSystemFiles(dir, { buildMode });
+    for (const name of local) assert.equal(files[name], undefined, `${name} stays out (buildMode ${buildMode})`);
+    assert.ok(files['base/knowledge.sqlite'], 'the data the app ships still travels');
+    assert.ok(files['.aioson/squads/sales/agent.md'], 'the squad itself still travels');
+  }
+  const code = await collectSystemFiles(dir, { buildMode: false });
+  assert.ok(code.files['src/logs/format.js'], 'a source folder named logs is still source in code mode');
+  assert.ok(code.excluded.some((item) => item.path === '.data/app.sqlite' && item.reason === 'local installation database'));
+});

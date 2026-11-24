@@ -525,6 +525,11 @@ async function runSystemInstall({ args, options, logger, t }) {
   // nada é apagado, copiado ou gravado antes de tudo cair dentro da pasta do pacote.
   const pkgDir = path.join(projectDir, SYSTEM_PACKAGES_DIR, assertInstallSlug(slug, t));
   const writes = installTargets(pkgDir, response.files, t);
+  // Only text files are written: what is left out is named, never dropped in silence.
+  const skipped = Object.keys(response.files).filter((name) => typeof response.files[name] !== 'string').sort();
+  const warnSkipped = () => {
+    if (skipped.length > 0) logger.log(`  [WARN] ${t('system.install_skipped_binary', { count: skipped.length, files: skipped.join(', ') })}`);
+  };
 
   const version = response.manifest?.version || '?';
   const publisher = response.publisher || 'unknown';
@@ -533,8 +538,9 @@ async function runSystemInstall({ args, options, logger, t }) {
   if (options.inspect) {
     logger.log(t('store.install_inspect_files', { count: Object.keys(response.files).length }));
     for (const f of Object.keys(response.files).sort()) logger.log(`  ${f}`);
+    warnSkipped();
     logger.log(t('store.install_inspect_hint'));
-    return { ok: true, slug, inspect: true, files: Object.keys(response.files) };
+    return { ok: true, slug, inspect: true, files: Object.keys(response.files), skipped };
   }
 
   if ((await exists(pkgDir)) && !options.force) {
@@ -549,8 +555,9 @@ async function runSystemInstall({ args, options, logger, t }) {
   logger.log(t('system.install_writing'));
   await writeInstallTargets(writes);
 
+  warnSkipped();
   logger.log(t('system.install_done', { slug, path: pkgDir }));
-  return { ok: true, slug, path: pkgDir, manifest: response.manifest };
+  return { ok: true, slug, path: pkgDir, manifest: response.manifest, skipped };
 }
 
 module.exports = {

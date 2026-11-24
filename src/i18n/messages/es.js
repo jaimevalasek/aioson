@@ -1853,6 +1853,7 @@ module.exports = {
     list_local_item: '  {slug}',
 
     install_fetching: 'Buscando sistema "{ref}" en aioson.com...',
+    install_skipped_binary: '{count} archivo(s) del paquete que no son de texto no se instalaron: {files}',
     install_writing: 'Escribiendo archivos...',
     install_done: 'Sistema "{slug}" instalado en {path}.'
   },
