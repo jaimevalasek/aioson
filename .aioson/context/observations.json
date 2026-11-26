@@ -1472,6 +1472,24 @@
       "created_at": "2026-11-24T20:09:44.528Z",
       "updated_at": "2026-11-24T20:09:44.528Z",
       "resolution": null
+    },
+    {
+      "id": "OBS-bc259e",
+      "kind": "risk",
+      "summary": "project-pulse.md active_feature is still one per project: with two TRACKED features in parallel, pulse:update moves it for both chats, and context:select derives the active feature from the pulse when a chat names none (that feature's spec…",
+      "detail": null,
+      "paths": [
+        "src/context-selector.js",
+        "src/commands/pulse-update.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-26T16:23:47.935Z",
+      "updated_at": "2026-11-26T16:23:47.935Z",
+      "resolution": null
     }
   ]
 }
