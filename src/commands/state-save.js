@@ -7,8 +7,10 @@
  * Stores active feature, phase, next step, and a compact context package.
  * Each feature has its own file — .aioson/context/features/<slug>/dev-state.md
  * — so two features in progress never overwrite each other's phase, next step
- * or history. .aioson/context/dev-state.md stays as a copy of the last one
- * written: the file a reader that names no feature opens.
+ * or history. .aioson/context/dev-state.md is the file a reader that names no
+ * feature opens: the copy of the one written while a single front is open,
+ * the index of the open fronts (no active_feature) once two or more are —
+ * the last chat to write is no longer every chat's feature (lib/dev-state-index.js).
  * Invoked by upstream agents (@product, @sheldon, @planner; legacy specialists supported) at
  * session end so the next @dev activation auto-resumes on `next_step` instead
  * of cold-starting.
@@ -47,6 +49,7 @@ const { contextDir, readFileSafe, parseFrontmatter, scanArtifacts, featureDevSta
 const { resolveTargetDir } = require('../lib/project-root');
 const { isUsableDesignDocFile } = require('../lib/design-doc-seed');
 const { appendPhaseCheckpoint } = require('../lib/dev-progress');
+const { writeProjectDevState, refreshProjectDevStateIndex } = require('../lib/dev-state-index');
 const { exists } = require('../utils');
 
 const MAX_CONTEXT = 4;
@@ -83,15 +86,23 @@ async function fileExistsRel(targetDir, rel) {
   }
 }
 
-// The feature's own state file and the project-level copy, then the stamped line
-// `dev:progress` reads. A failed stamp never fails the checkpoint.
-async function writeCheckpoint(targetDir, statePaths, text, stamp, now, warnings) {
-  for (const statePath of statePaths) {
+// The feature's own state file, then the project-level file (its copy, or the
+// index of the open fronts), then the stamped line `dev:progress` reads. A
+// slug that names no folder writes the project-level file only. A failed stamp
+// never fails the checkpoint.
+async function writeCheckpoint(targetDir, { featurePath, statePath }, text, stamp, now, warnings) {
+  let project = { mode: 'copy', open_fronts: [] };
+  if (featurePath) {
+    await fs.mkdir(path.dirname(featurePath), { recursive: true });
+    await fs.writeFile(featurePath, text, 'utf8');
+    project = await writeProjectDevState(targetDir, text, { now: now() });
+  } else {
     await fs.mkdir(path.dirname(statePath), { recursive: true });
     await fs.writeFile(statePath, text, 'utf8');
   }
   const checkpoint = await appendPhaseCheckpoint(targetDir, stamp, now);
   if (!checkpoint.ok) warnings.push(`phase stamp not recorded (${checkpoint.reason}); dev:progress will not count this checkpoint`);
+  return project;
 }
 
 // The state a write continues (its phase when `--phase` is omitted, and its
@@ -225,9 +236,9 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
     ''
   ].filter((l) => l !== null);
 
-  await writeCheckpoint(
+  const project = await writeCheckpoint(
     targetDir,
-    featurePath ? [featurePath, statePath] : [statePath],
+    { featurePath, statePath },
     lines.join('\n'),
     { feature: slug, phase, next },
     now,
@@ -238,6 +249,10 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
     ok: true,
     path: path.relative(targetDir, statePath),
     feature_path: featurePath ? path.relative(targetDir, featurePath) : null,
+    // `copy`: the project-level file is this state; `index`: two or more
+    // fronts are open and it lists them, naming none as the active one.
+    project_state: project.mode,
+    open_fronts: project.open_fronts,
     active_feature: slug,
     active_phase: phase,
     next_step: next,
@@ -246,24 +261,33 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
     warnings
   };
 
-  if (options.json) return result;
+  if (!options.json) printStateSave(logger, result, Boolean(contextTokens));
+  return result;
+}
 
+function printStateSave(logger, result, explicitContext) {
+  const { active_feature: slug, active_phase: phase, next_step: next, last_spec_version: specVersion, warnings } = result;
   logger.log('dev-state.md updated:');
   if (result.feature_path) logger.log(`  feature state: ${result.feature_path.split(path.sep).join('/')}`);
   logger.log(`  active_feature: ${slug}`);
   if (phase) logger.log(`  active_phase: ${phase}`);
   logger.log(`  next_step: "${next}"`);
   if (specVersion) logger.log(`  last_spec_version: ${specVersion}`);
-  logger.log(`  context_package: [${contextPackage.join(', ')}]`);
-  for (const w of warnings) logger.log(`  warn: ${w}`);
-  if (warnings.length === 0 && contextTokens) {
-    // Visible confirmation banner — agent kernels can rely on this to know
-    // they fulfilled the dev-state.md producer contract for @dev cold-resume.
-    const preview = next.length > 80 ? `${next.slice(0, 77)}...` : next;
-    logger.log(`  ✓ @dev will auto-resume on cold start: next_step="${preview}"`);
+  logger.log(`  context_package: [${result.context_package.join(', ')}]`);
+  const indexed = result.project_state === 'index';
+  if (indexed) {
+    logger.log(`  project dev-state.md: index of ${result.open_fronts.length} open fronts (${result.open_fronts.join(', ')}) — no chat's own state`);
   }
-
-  return result;
+  for (const w of warnings) logger.log(`  warn: ${w}`);
+  if (warnings.length > 0 || !explicitContext) return;
+  // Visible confirmation banner — agent kernels can rely on this to know
+  // they fulfilled the dev-state.md producer contract for @dev cold-resume.
+  // With other fronts open, a cold @dev that names none asks which one is its
+  // own; this front resumes when its chat names it.
+  const preview = next.length > 80 ? `${next.slice(0, 77)}...` : next;
+  logger.log(indexed
+    ? `  ✓ @dev resumes this front by name: next_step="${preview}" (aioson dev:resume-data . --feature=${slug})`
+    : `  ✓ @dev will auto-resume on cold start: next_step="${preview}"`);
 }
 
 /**
@@ -287,6 +311,14 @@ async function runStateSave({ args, options = {}, logger, now = Date.now }) {
  *   aioson state:reset . --archive
  *   aioson state:reset . --feature=checkout --archive --json
  */
+// The project-level file after a reset: gone with the front it named, or an
+// index of the open fronts that loses the row of the front just cleared.
+async function projectStateAfterReset(targetDir, clearedShared, clearedFeature) {
+  if (clearedShared) return 'removed';
+  if (!clearedFeature) return 'kept';
+  return (await refreshProjectDevStateIndex(targetDir).catch(() => ({ mode: 'kept' }))).mode;
+}
+
 async function runStateReset({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const statePath = path.join(contextDir(targetDir), 'dev-state.md');
@@ -334,12 +366,12 @@ async function runStateReset({ args, options = {}, logger }) {
   if (clearShared) await fs.unlink(statePath);
   if (clearFeature) await fs.unlink(featurePath);
   const removed = true;
-
   const result = {
     ok: true,
     removed,
     archived: archivedTo ? path.relative(targetDir, archivedTo) : null,
-    feature_state_removed: clearFeature
+    feature_state_removed: clearFeature,
+    project_state: await projectStateAfterReset(targetDir, clearShared, clearFeature)
   };
 
   if (options.json) return result;

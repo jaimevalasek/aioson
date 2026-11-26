@@ -569,9 +569,13 @@ describe('dev-resume — two chats on one folder', () => {
       assert.deepEqual([checkout.phase, checkout.next_step, checkout.stale], ['2', 'Checkout: payment webhook', false]);
       assert.match(out.note, /ask which one it continues/);
       assert.match(out.note, /parallel-sessions\.md/);
-      // The project-level dev-state.md is the last writer's copy: it must not be what decides.
+      // The project-level dev-state.md is the index of the two fronts, naming
+      // neither as the active one (it was the last writer's copy: fix-login).
       const shared = await fs.readFile(path.join(tmp, '.aioson', 'context', 'dev-state.md'), 'utf8');
-      assert.match(shared, /active_feature: fix-login/);
+      assert.match(shared, /^kind: open-fronts-index$/m);
+      assert.doesNotMatch(shared, /^active_feature:/m);
+      assert.match(shared, /\| fix-login \| simple-plan \|/);
+      assert.match(shared, /\| checkout \| feature \| 2 \|/);
     } finally { await cleanup(tmp); }
   });
 

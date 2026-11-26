@@ -295,16 +295,29 @@ test('AC-parallel-sessions-25 readDevState reads the feature asked about, and th
   const billing = await readDevState(dir, 'billing');
   assert.deepEqual([billing.active_feature, billing.active_phase, billing.state_file], ['billing', '5', 'features/billing/dev-state.md']);
 
-  // No feature named: the project-level file, as before — the last one written.
+  // No feature named: the project-level file — with two fronts open, their
+  // index, which names no feature (it used to be billing's, the last written:
+  // another chat's state read as this one's).
   const shared = await readDevState(dir);
-  assert.deepEqual([shared.active_feature, shared.state_file], ['billing', 'dev-state.md']);
+  assert.deepEqual([shared.exists, shared.index, shared.active_feature, shared.state_file], [true, true, undefined, 'dev-state.md']);
+  assert.equal(detectStaleDevState(shared), null);
 
-  // A feature with no state of its own falls back to the project-level file,
-  // and the stale check says whose it is.
+  // A feature with no state of its own has none: the index is not its state.
+  const other = await readDevState(dir, 'reports');
+  assert.deepEqual([other.exists, other.index], [false, true]);
+  assert.equal(detectStaleDevState(other, 'reports'), null);
+  assert.equal(detectStaleDevState(checkout, 'checkout'), null);
+});
+
+test('AC-parallel-sessions-25 a feature with no state of its own is still told whose copy the project-level file is', async () => {
+  const dir = await makeTempProject();
+  await writeFeaturesMd(dir, [{ slug: 'billing', status: 'in_progress' }]);
+  await runStateSave({ args: [dir], options: { json: true, feature: 'billing', phase: '5', next: 'billing next step' }, logger: makeLogger() });
+
+  // One front open: the project-level file is its copy, as before.
   const other = await readDevState(dir, 'reports');
   assert.deepEqual([other.active_feature, other.state_file], ['billing', 'dev-state.md']);
   assert.match(detectStaleDevState(other, 'reports'), /belongs to feature "billing", not "reports"/);
-  assert.equal(detectStaleDevState(checkout, 'checkout'), null);
 });
 
 test('AC-parallel-sessions-25 preflight of each feature reports its own dev state and no stale warning', async () => {

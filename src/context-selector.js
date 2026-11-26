@@ -279,6 +279,45 @@ function normalizeFeaturePointer(value) {
   return normalized;
 }
 
+const PROJECT_DEV_STATE_PATH = '.aioson/context/dev-state.md';
+const FRONT_DEV_STATE_RE = /^\.aioson\/context\/features\/([^/]+)\/dev-state\.md$/;
+
+/** `.aioson/context/features/<slug>/dev-state.md`: one front's own resume state. */
+function isFrontDevStatePath(relPath) {
+  return FRONT_DEV_STATE_RE.test(normalizeSlashes(relPath));
+}
+
+function isOwnFrontDevState(candidate, context) {
+  return isFrontDevStatePath(candidate.path) && Boolean(context.feature) && candidate.featureSlug === context.feature;
+}
+
+/**
+ * Where @dev stopped is one front's own state. The project-level dev-state.md
+ * is the copy of the last chat to write, or the index of the open fronts once
+ * two or more are: with a feature named, that feature's own file replaces it,
+ * and another front's state is never this task's — two chats on one folder
+ * bound each other's next step as must_load (measured: a chat naming its own
+ * feature got the other chat's dev-state.md as binding context).
+ *
+ * Returns the exclusion, or null when the candidate is not ruled out here.
+ */
+function devStateExclusion(candidate, context, directPathMatch) {
+  if (isFrontDevStatePath(candidate.path)) {
+    if (directPathMatch) return null;
+    // A front's resume state is @dev's own; reviewers read the stage and the artifacts.
+    if (context.agent !== 'dev') return { cause: 'dev_state_owner', feature_slug: candidate.featureSlug };
+    if (!isOwnFrontDevState(candidate, context)) return { cause: 'other_front_state', feature_slug: candidate.featureSlug };
+    return null;
+  }
+  if (candidate.path !== PROJECT_DEV_STATE_PATH || !context.feature || directPathMatch) return null;
+  if (context.agent === 'dev' && context.ownFrontState) {
+    return { cause: 'superseded_by_front_state', feature_slug: context.feature };
+  }
+  const pointed = normalizeFeaturePointer((candidate.frontmatter && candidate.frontmatter.active_feature) || '');
+  if (pointed && pointed !== context.feature) return { cause: 'other_front_state', feature_slug: pointed };
+  return null;
+}
+
 function isActivationOnlyTask(agent, mode, task) {
   if (!ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT.has(agent) || mode !== 'planning') return false;
   const normalized = normalizeToken(task);
@@ -423,8 +462,8 @@ function inferContextMetadata(relPath, fm, surfaceKey) {
   if (base === 'ui-spec.md') tags.push('ui-spec', 'ui', 'ux', 'frontend', 'visual-design');
   if (base === 'scope-check.md') tags.push('scope-check', 'alignment', 'pre-dev');
   if (relPath.includes('/bootstrap/')) tags.push('bootstrap');
-  if (relPath.includes('/features/') && base === 'dossier.md') {
-    tags.push('feature', 'dossier');
+  if (relPath.includes('/features/') && (base === 'dossier.md' || isFrontDevStatePath(relPath))) {
+    tags.push('feature', base === 'dossier.md' ? 'dossier' : 'dev-state');
     if (!featureSlug) {
       const parts = relPath.split('/');
       const index = parts.indexOf('features');
@@ -441,7 +480,9 @@ async function collectCandidates(targetDir) {
   for (const surface of SURFACES) {
     const relPaths = await walkMarkdown(targetDir, surface.dir, surface.recursive);
     for (const relPath of relPaths) {
-      if (surface.key === 'feature_dossier' && !relPath.endsWith('/dossier.md')) continue;
+      // A feature folder offers its dossier and its own dev state (one front's
+      // resume point: see devStateExclusion below).
+      if (surface.key === 'feature_dossier' && !relPath.endsWith('/dossier.md') && !isFrontDevStatePath(relPath)) continue;
       if (surface.key === 'skills' && !relPath.endsWith('/SKILL.md')) continue;
       const absPath = path.join(targetDir, relPath);
       const content = await readFileSafe(absPath);
@@ -814,7 +855,9 @@ function evaluateCandidate(candidate, context) {
   }
   if (context.activationOnly) {
     const allowedActivationPaths = ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT.get(context.agent);
-    if (!allowedActivationPaths || !allowedActivationPaths.has(candidate.path)) {
+    // An activation that names its feature reads that front's own dev state.
+    const ownFront = context.agent === 'dev' && isOwnFrontDevState(candidate, context);
+    if (!ownFront && (!allowedActivationPaths || !allowedActivationPaths.has(candidate.path))) {
       return { excluded: { cause: 'activation_only' } };
     }
   }
@@ -855,6 +898,9 @@ function evaluateCandidate(candidate, context) {
     score += 10;
     reasons.push('paths:direct');
   }
+
+  const devStateExcluded = devStateExclusion(candidate, context, directPathMatch);
+  if (devStateExcluded) return { excluded: devStateExcluded };
 
   const activeFeature = context.feature || context.activeFeature || '';
   const featureMentioned = candidate.featureSlug
@@ -973,6 +1019,33 @@ function scoreCandidate(candidate, context) {
   return evaluateCandidate(candidate, context).item || null;
 }
 
+/**
+ * Every candidate against the retrieval context: the selected ones, best
+ * first, and the verdict for each path `--explain` asked about.
+ */
+function evaluateCandidates(candidates, context, explainList) {
+  const explainPaths = new Set(explainList);
+  const explain = [];
+  const selected = [];
+  for (const candidate of candidates) {
+    const outcome = evaluateCandidate(candidate, context);
+    if (outcome.item) selected.push(outcome.item);
+    if (explainPaths.has(candidate.path)) {
+      explain.push(outcome.item
+        ? { path: candidate.path, status: 'selected', score: outcome.item.score, reason: outcome.item.reason }
+        : { path: candidate.path, status: 'excluded', ...outcome.excluded });
+      explainPaths.delete(candidate.path);
+    }
+  }
+  // A requested path no walk produced is its own diagnosis: the file is
+  // missing, named README, outside every surface, or not a skill router.
+  for (const missing of explainPaths) {
+    explain.push({ path: missing, status: 'excluded', cause: 'not_a_candidate' });
+  }
+  selected.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+  return { selected, explain };
+}
+
 async function selectContext(targetDir, options = {}) {
   // Retired ids (`deyvin`, `architect`) select as the agent that absorbed them.
   const agent = canonicalAgentId(normalizeToken(options.agent || 'dev'));
@@ -999,6 +1072,8 @@ async function selectContext(targetDir, options = {}) {
   const lookup = expandLookup(normalizeToken(task));
 
   const candidates = await collectCandidates(targetDir);
+  // The named feature has its own dev state: it, not the project-level copy or index, is where @dev stopped.
+  const ownFrontState = Boolean(feature) && candidates.some((candidate) => isFrontDevStatePath(candidate.path) && candidate.featureSlug === feature);
   const semanticEnabled = semanticSearchEnabled(options) && !activationOnly;
   const semanticTerms = semanticEnabled
     ? buildSemanticTerms({ task, paths }, candidates)
@@ -1006,36 +1081,18 @@ async function selectContext(targetDir, options = {}) {
   const semanticMatches = semanticEnabled
     ? buildSemanticMatches(candidates, semanticTerms)
     : new Map();
-  const explainPaths = new Set(splitOptionList(options.explain).map(normalizeSlashes));
-  const explain = [];
-  const selected = [];
-  for (const candidate of candidates) {
-    const outcome = evaluateCandidate(candidate, {
-      agent,
-      mode,
-      task,
-      paths,
-      feature,
-      activeFeature,
-      lookup,
-      activationOnly,
-      semanticMatches
-    });
-    if (outcome.item) selected.push(outcome.item);
-    if (explainPaths.has(candidate.path)) {
-      explain.push(outcome.item
-        ? { path: candidate.path, status: 'selected', score: outcome.item.score, reason: outcome.item.reason }
-        : { path: candidate.path, status: 'excluded', ...outcome.excluded });
-      explainPaths.delete(candidate.path);
-    }
-  }
-  // A requested path no walk produced is its own diagnosis: the file is
-  // missing, named README, outside every surface, or not a skill router.
-  for (const missing of explainPaths) {
-    explain.push({ path: missing, status: 'excluded', cause: 'not_a_candidate' });
-  }
-
-  selected.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+  const { selected, explain } = evaluateCandidates(candidates, {
+    agent,
+    mode,
+    task,
+    paths,
+    feature,
+    activeFeature,
+    ownFrontState,
+    lookup,
+    activationOnly,
+    semanticMatches
+  }, splitOptionList(options.explain).map(normalizeSlashes));
   const memory = semanticEnabled ? await collectMemoryMatches(targetDir, semanticTerms) : [];
 
   const result = {

@@ -223,6 +223,24 @@ function featureLines(who, devOrUnknown, resume, tally) {
   return lines;
 }
 
+/**
+ * The other fronts open in the folder. With the session's own front known,
+ * they are another chat's work; with none named and two or more open, the
+ * checkpoint names no feature and says what to ask instead — a feature read
+ * from the project-wide pointers would be only the last chat to write.
+ * Slugs come from feature folder names (validated): nothing to sanitize.
+ */
+function frontLines(fronts, resume) {
+  if (!fronts || !Array.isArray(fronts.open)) return [];
+  const mine = fronts.own || (resume && resume.feature_slug) || null;
+  if (mine) {
+    const others = fronts.open.filter((slug) => slug !== mine);
+    return others.length > 0 ? [oneLine(`Other fronts open in this folder (another chat's work — leave their files alone): ${others.join(', ')}`, 400)] : [];
+  }
+  if (fronts.open.length < 2) return [];
+  return [oneLine(`Open fronts in this folder: ${fronts.open.join(', ')} — this session named none on record: ask the owner which one it continues before editing (aioson dev:resume-data . --feature=<slug>).`, 480)];
+}
+
 /** The files the stretch changed, what still fails, the last test result and the plan. */
 function workLines(stretch, state, tally) {
   const lines = [];
@@ -280,11 +298,12 @@ function fitToBudget(lines, maxChars) {
  * @param {string|null} [input.continuityPath]  relative path of an existing continuity mapping
  * @param {string|null} [input.agent]  the session's agent when no activation was recorded
  * @param {object|null} [input.pressure]  compactionPressure() output: the session compacts every few minutes
+ * @param {{own: string|null, open: string[]}|null} [input.fronts]  this session's front and the fronts open in the folder
  * @param {string} [input.targetDir]
  * @param {number} [input.maxChars]
  * @returns {string|null}  null when there is nothing worth restoring
  */
-function buildCompactionRecap({ events = [], sessionScoped = false, resume = null, workflow = null, artifacts = [], continuityPath = null, observations = [], agent = null, pressure = null, targetDir = null, maxChars = DEFAULT_MAX_CHARS } = {}) {
+function buildCompactionRecap({ events = [], sessionScoped = false, resume = null, workflow = null, artifacts = [], continuityPath = null, observations = [], agent = null, pressure = null, fronts = null, targetDir = null, maxChars = DEFAULT_MAX_CHARS } = {}) {
   const list = Array.isArray(events) ? events : [];
   const window = compactionWindow(list);
   const stretch = summarizeStretch(window, targetDir);
@@ -293,6 +312,7 @@ function buildCompactionRecap({ events = [], sessionScoped = false, resume = nul
   const who = agentHandle(state.agent || agent);
   const lines = [
     ...roleLines(who, { resume, workflow, artifacts }, tally),
+    ...frontLines(fronts, resume),
     ...workLines(stretch, state, tally),
     ...noteLines({ continuityPath, observations, reply: stretch.reply }, tally)
   ];

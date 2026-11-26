@@ -35,7 +35,8 @@ const path = require('node:path');
 const { resolveProjectRoot, resolveTargetDir } = require('../lib/project-root');
 const { openRuntimeDb, resolveRuntimePaths, readAgentSession } = require('../runtime-store');
 const { resolveLauncherLiveSession } = require('./live');
-const { buildDevResumeData } = require('../lib/dev-resume');
+const { buildDevResumeData, listOpenDevThreads } = require('../lib/dev-resume');
+const { featureNamedByCommands, readSessionFeature } = require('../lib/session-feature');
 const { buildCompactionRecap, sessionAgent } = require('../lib/compaction-recap');
 const { compactionPressure, pressureNotice } = require('../lib/compaction-pressure');
 const { readStdin, hookAgentHandle } = require('./hooks-emit');
@@ -180,6 +181,37 @@ async function canonicalArtifacts(agent, targetDir, workflow, resume) {
   return Array.isArray(list) ? list.map((file) => path.relative(targetDir, file).replace(/\\/g, '/')) : [];
 }
 
+/**
+ * The front this session is on, and the fronts open in the folder.
+ *
+ * A plain chat (no `live:start`) names its front through its own recorded
+ * commands (`dev:state:write --feature=…` and the like). The project-wide
+ * pointers — the last handoff, the project-level dev-state — are the last chat
+ * to write: with two fronts open, a resume read from them would hand this
+ * session another chat's feature and next step, so it is dropped and the
+ * checkpoint says to ask instead (measured: two chats on one folder, each
+ * checkpoint named no feature while both sessions' commands named theirs).
+ */
+async function recapFront(targetDir, events, sessionScoped) {
+  const open = (await listOpenDevThreads(targetDir).catch(() => [])).filter((thread) => !thread.stale);
+  const openSlugs = open.map((thread) => thread.feature);
+  const own = sessionScoped
+    ? featureNamedByCommands(events.filter((event) => event && event.event_type === 'step_done').map((event) => event.message))
+    : null;
+  if (own) {
+    const thread = open.find((entry) => entry.feature === own);
+    // A Simple Plan is no features.md row: its own dev-state is the resume.
+    const resume = await buildDevResumeData(targetDir, { feature: own }).catch(() => null)
+      || { feature_slug: own, current_phase: (thread && thread.phase) || 'unknown', next_step: thread ? thread.next_step : null };
+    return { resume, fronts: { own, open: openSlugs } };
+  }
+  const resume = await buildDevResumeData(targetDir).catch(() => null);
+  const live = await readSessionFeature(targetDir).catch(() => null);
+  const liveFeature = live && live.feature ? live.feature : null;
+  const guessed = !liveFeature && open.length >= 2;
+  return { resume: guessed ? null : resume, fronts: { own: liveFeature, open: openSlugs } };
+}
+
 async function buildRecapResponse(targetDir, payload, options = {}) {
   const onDemand = options.when === 'always';
   if (!onDemand && (!payload || payload.source !== 'compact')) return {};
@@ -206,7 +238,7 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
   }
 
   const sessionScoped = Boolean(sessionId);
-  const resume = await buildDevResumeData(targetDir).catch(() => null);
+  const { resume, fronts } = await recapFront(targetDir, events, sessionScoped);
   const workflow = workflowStage(targetDir);
   const artifacts = await canonicalArtifacts(sessionAgent(events, sessionScoped), targetDir, workflow, resume).catch(() => []);
   const observations = await require('../lib/observations').recentObservations(targetDir, { hours: 24 }).catch(() => []);
@@ -219,6 +251,7 @@ async function buildRecapResponse(targetDir, payload, options = {}) {
     artifacts,
     continuityPath: continuityFor(targetDir, resume),
     observations,
+    fronts,
     targetDir,
     maxChars: options.maxChars
   });

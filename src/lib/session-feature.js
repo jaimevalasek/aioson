@@ -110,6 +110,38 @@ function normalizeFeatureSlug(value) {
   return validation.feature_slug;
 }
 
+// `aioson <command> <args>` inside a recorded shell command (`npx aioson`,
+// `node bin/aioson.js` too), up to the next command separator.
+const AIOSON_COMMAND_RE = /\baioson(?:\.js)?\s+([a-z][a-z0-9:-]*)([^\n;&|]*)/g;
+
+function readCommandOption(text, option) {
+  const match = String(text || '').match(new RegExp(`(?:^|\\s)--${option}(?:=|\\s+)("[^"]*"|'[^']*'|[^\\s"']+)`));
+  return match ? match[1].replace(/^["']|["']$/g, '') : null;
+}
+
+/**
+ * The feature a plain chat works on, read from the commands it ran.
+ *
+ * A chat opened without `live:start` has no session file, so every reader
+ * that asks "which feature is mine?" fell back to the project-wide pointers —
+ * the pulse, the project-level dev-state, the last handoff — which are the
+ * last chat to write, maybe another one. The chat's own hooks recorded every
+ * command it ran: the last one of FEATURE_BINDING_COMMANDS that named a
+ * feature is the front this chat is on. Oldest first in, the newest naming wins.
+ */
+function featureNamedByCommands(commands) {
+  let found = null;
+  for (const text of Array.isArray(commands) ? commands : []) {
+    for (const match of String(text || '').matchAll(AIOSON_COMMAND_RE)) {
+      const name = canonicalCommand(match[1]);
+      if (!name) continue;
+      const slug = normalizeFeatureSlug(readCommandOption(match[2], FEATURE_BINDING_COMMANDS.get(name)));
+      if (slug) found = slug;
+    }
+  }
+  return found;
+}
+
 /** The key `live:start` exported to this process, or null. */
 function ownSessionKey(env = process.env) {
   const key = String(env.AIOSON_LIVE_SESSION_KEY || env.AIOSON_LIVE_SESSION || '').trim();
@@ -237,5 +269,6 @@ module.exports = {
   readFeatureOfSessionDir,
   writeFeatureOfSessionDir,
   bindSessionFeature,
-  bindSessionFeatureForCommand
+  bindSessionFeatureForCommand,
+  featureNamedByCommands
 };

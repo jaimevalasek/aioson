@@ -134,8 +134,10 @@ test('state:save: human output confirms save', async () => {
 
 // ─── resume state per feature (parallel-sessions, AC-parallel-sessions-25) ───
 // Each feature has its own dev state, so the @dev of one never resumes from
-// what the @dev of another wrote last. The project-level dev-state.md stays as
-// a copy of the last write.
+// what the @dev of another wrote last. The project-level dev-state.md is the
+// copy of the write while one front is open, and the index of the open fronts
+// once two are: it used to stay the last write's copy, so a chat that loaded
+// it (context:brief binds it for @dev) read the other chat's feature as its own.
 
 const { runStateReset } = require('../src/commands/state-save');
 
@@ -168,19 +170,64 @@ test('AC-parallel-sessions-25 dev:state:write of two features do not overwrite e
     assert.match(billing, /^active_phase: 1$/m);
     assert.doesNotMatch(billing, /Checkout/, 'the history of another feature is not inherited');
 
-    // The project-level file is a copy of the last one written.
-    assert.equal(await readContext(dir, 'dev-state.md'), billing);
+    // Two fronts open: the project-level file is their index, no one's state.
+    const index = await readContext(dir, 'dev-state.md');
+    assert.match(index, /^kind: open-fronts-index$/m);
+    assert.match(index, /^open_fronts: 2$/m);
+    assert.doesNotMatch(index, /^active_feature:/m, 'the last chat to write is not every chat\'s feature');
+    assert.match(index, /\| billing \| feature \| 1 \| \d{4}-\d{2}-\d{2} \| Billing phase 2: invoices \| \.aioson\/context\/features\/billing\/dev-state\.md \|/);
+    assert.match(index, /\| checkout \| feature \| 2 \| \d{4}-\d{2}-\d{2} \| Checkout phase 3: payment webhook \| \.aioson\/context\/features\/checkout\/dev-state\.md \|/);
 
     // Checkout goes on from its own phase and history, not from billing's.
-    await write({ feature: 'checkout', next: 'Checkout phase 3: retries' });
+    const again = await write({ feature: 'checkout', next: 'Checkout phase 3: retries' });
+    assert.deepEqual([again.project_state, again.open_fronts.sort()], ['index', ['billing', 'checkout']]);
     const checkoutAgain = await readContext(dir, 'features/checkout/dev-state.md');
     assert.match(checkoutAgain, /^active_phase: 2$/m, 'a write without --phase keeps the phase of this feature');
     assert.deepEqual(
       historyLines(checkoutAgain).map((line) => line.replace(/^- \d{4}-\d{2}-\d{2}: /, '')),
       ['phase 2 — Checkout phase 3: payment webhook', 'phase 2 — Checkout phase 3: retries']
     );
-    assert.equal(await readContext(dir, 'dev-state.md'), checkoutAgain);
+    assert.match(await readContext(dir, 'dev-state.md'), /\| checkout \| feature \| 2 \| \d{4}-\d{2}-\d{2} \| Checkout phase 3: retries \|/);
     assert.equal(await readContext(dir, 'features/billing/dev-state.md'), billing, 'billing is untouched');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('AC-parallel-sessions-25 the index tells a front apart from the others, and the human output says it is no chat\'s own', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/simple-plans/fix-login.md', '---\nslug: fix-login\nstatus: in_progress\n---\n');
+    await writeFile(dir, '.aioson/context/prd-checkout.md', '---\nstatus: approved\n---\n');
+    await runStateSave({ args: [dir], options: { json: true, feature: 'checkout', phase: '2', next: 'checkout next' }, logger: makeLogger() });
+    const logger = makeLogger();
+    await runStateSave({ args: [dir], options: { feature: 'fix-login', next: 'fix | the redirect', context: 'simple-plan' }, logger });
+    const output = logger.lines.join('\n');
+    assert.match(output, /project dev-state\.md: index of 2 open fronts \(.*checkout.*\) — no chat's own state/);
+    assert.match(output, /✓ @dev resumes this front by name: next_step="fix \| the redirect" \(aioson dev:resume-data \. --feature=fix-login\)/);
+    assert.doesNotMatch(output, /auto-resume on cold start/, 'a cold @dev naming no front asks which one, it does not auto-resume');
+    const index = await readContext(dir, 'dev-state.md');
+    // A pipe in a next step cannot break the table.
+    assert.match(index, /\| fix-login \| simple-plan \| — \| \d{4}-\d{2}-\d{2} \| fix \\\| the redirect \|/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('AC-parallel-sessions-25 a front closed in features.md or untouched for a week leaves the copy in place', async () => {
+  const dir = await makeTmpDir();
+  try {
+    const write = (options) => runStateSave({ args: [dir], options: { json: true, ...options }, logger: makeLogger() });
+    await write({ feature: 'old-work', next: 'old next' });
+    // Re-date the old front 10 days back: stale history, not a second chat.
+    const oldPath = path.join(dir, '.aioson/context/features/old-work/dev-state.md');
+    await fs.writeFile(oldPath, (await fs.readFile(oldPath, 'utf8')).replace(/^last_updated: .+$/m, 'last_updated: 2000-01-01'), 'utf8');
+    await writeFile(dir, '.aioson/context/features.md', '| slug | status |\n|---|---|\n| done-work | done |\n');
+    await write({ feature: 'done-work', next: 'done next' });
+
+    const result = await write({ feature: 'current', next: 'current next' });
+    assert.equal(result.project_state, 'copy');
+    assert.equal(await readContext(dir, 'dev-state.md'), await readContext(dir, 'features/current/dev-state.md'));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -231,9 +278,11 @@ test('AC-parallel-sessions-25 state:reset --feature clears that feature and leav
     await write({ feature: 'checkout', phase: '2', next: 'checkout next' });
     await write({ feature: 'billing', phase: '1', next: 'billing next' });
 
-    // The project-level file names billing: resetting checkout leaves it.
+    // Two fronts: the project-level file is their index. Resetting checkout
+    // leaves one front open, so the index becomes billing's copy again.
+    assert.match(await readContext(dir, 'dev-state.md'), /^kind: open-fronts-index$/m);
     const reset = await runStateReset({ args: [dir], options: { feature: 'checkout', archive: true, json: true }, logger: makeLogger() });
-    assert.deepEqual([reset.ok, reset.removed, reset.feature_state_removed], [true, true, true]);
+    assert.deepEqual([reset.ok, reset.removed, reset.feature_state_removed, reset.project_state], [true, true, true, 'copy']);
     assert.match(reset.archived.split(path.sep).join('/'), /^\.aioson\/runtime\/devstate-history\/.+-checkout\.md$/);
     await assert.rejects(() => fs.access(path.join(dir, '.aioson/context/features/checkout/dev-state.md')));
     assert.match(await readContext(dir, 'dev-state.md'), /^active_feature: billing$/m);

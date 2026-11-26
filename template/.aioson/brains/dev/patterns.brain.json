@@ -3,7 +3,7 @@
   "agent": "dev",
   "domain": "patterns",
   "desc": "Implementation patterns @dev should default to. Quality-scored, anti-pattern aware. Seed nodes — extend with new q≥4 patterns after each significant slice.",
-  "updated": "2026-11-08",
+  "updated": "2026-11-26",
   "nodes": [
     {
       "id": "dev-001",
@@ -144,6 +144,20 @@
       "not": "\"the AC is in Portuguese, so the title follows it\" — the AC binds behavior, not the language of code; \"the other tests in this file are in Portuguese\" — matching them is how the drift spreads; \"it is only a string\" — it is the test's name",
       "warn": "touching a legacy test file puts its old titles in scope of the stage gate too: translate them, or ask the owner to record them as debt with `rules:check . --baseline`",
       "see": ["dev-009"]
+    },
+    {
+      "id": "dev-011",
+      "title": "on a folder another chat shares, your front is the one your own commands named — the project-wide pointers are only the last chat to write",
+      "tags": ["parallel", "continuity", "context", "process", "discipline", "git"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "Two chats on one folder share the working tree, the pulse, the last handoff and the project-level dev-state.md; each front keeps its own state in features/<slug>/dev-state.md. Name your feature on every command that takes one, so context:brief binds your front's own state and the checkpoint after a compaction says `Feature: <your slug>`. A next step you did not write — from the pulse, the project-level dev-state, a handoff — is another chat's work: never continue it, revert it or \"finish\" it. With two or more fronts open the project-level dev-state.md is their index (`kind: open-fronts-index`, no active_feature); `Open fronts in this folder … named none` or `ambiguous: true` from dev:resume-data means this chat never named one: ask the owner which front is yours before editing. A host that diffs the tree around a long shell command shows the other chat's edits as that command's: check what you wrote yourself before concluding a chat took over another's feature.",
+      "p": "`aioson dev:state:write . --feature=installers --next=\"…\"`, then `context:brief . --agent=dev --feature=installers`; the recap line `Other fronts open in this folder (another chat's work — leave their files alone): picker-cards` names files to leave alone",
+      "src": "AIOSON supervised session: two plain chats on one folder (a feature and a Simple Plan); the project-level dev-state.md flipped to whichever wrote last and context:brief bound it as must_load for the chat that had named its own feature, the post-compaction checkpoint named no feature for either, and the host's diff of a 4-minute test run showed the other chat's edits as the first chat's",
+      "date": "2026-11-26",
+      "not": "\"dev-state.md says the active feature is X, so I continue X\" — it is the last writer's, or the index; \"those files changed during my command, so they are mine to finish\" — the host diff is not authorship; \"I'll stop writing the shared file\" — it is the CLI's to write; name your front instead",
+      "warn": "stage explicit paths only (`git add -- <your files>`) and never `git stash`, `git checkout -- .`, `git clean` or `git reset --hard` on a shared tree: they take the other chat's uncommitted work",
+      "see": ["dev-006"]
     }
   ]
 }

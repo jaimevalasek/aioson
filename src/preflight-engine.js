@@ -396,9 +396,12 @@ async function readPhaseGates(targetDir, slug) {
 
 // @dev's resume state is one file per feature — features/<slug>/dev-state.md
 // — so two features in progress never overwrite each other's. The
-// project-level dev-state.md stays as a copy of the last one written: it is
-// what a reader that names no feature, and an older CLI, opens.
+// project-level dev-state.md is what a reader that names no feature, and an
+// older CLI, opens: the copy of the one written while a single front is open,
+// the index of the open fronts (`kind: open-fronts-index`, no active_feature)
+// once two or more are (lib/dev-state-index.js).
 const DEV_STATE_FILE = 'dev-state.md';
+const DEV_STATE_INDEX_KIND = 'open-fronts-index';
 
 /**
  * `features/<slug>/dev-state.md`, relative to the context directory, or null
@@ -426,6 +429,11 @@ async function readDevState(targetDir, slug = null) {
   // unparseable frontmatter both indicate corruption.
   const hasFrontmatterMarkers = /^---\r?\n[\s\S]*?\r?\n---/.test(content);
   const fm = parseFrontmatter(content);
+  if (fm.kind === DEV_STATE_INDEX_KIND) {
+    // The index of the open fronts is no front's state: a feature asked
+    // about has none of its own yet.
+    return slug ? { exists: false, index: true } : { exists: true, parseError: false, index: true, ...fm, content, state_file: stateFile };
+  }
   const fmIsEmpty = Object.keys(fm).length === 0;
   const parseError = content.trim().length > 0 && (!hasFrontmatterMarkers || fmIsEmpty);
   return { exists: true, parseError, ...fm, content, state_file: stateFile };
@@ -792,6 +800,7 @@ module.exports = {
   readPhaseGates,
   readDevState,
   featureDevStateRel,
+  DEV_STATE_INDEX_KIND,
   detectStaleDevStateRich,
   parseFeaturesMap,
   readProjectPulse,

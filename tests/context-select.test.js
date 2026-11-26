@@ -621,3 +621,74 @@ test('context:select loads implementation structure rules for Laravel data-acces
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+// ─── two fronts on one folder (parallel-sessions) ───
+// Measured on a consumer with two chats: the chat naming its own feature got
+// the project-level dev-state.md — the other chat's feature and next step,
+// the last one written — as binding context, and its own state as recall.
+
+test('AC-parallel-sessions-26 @dev naming its feature binds that front\'s own dev state, never the other chat\'s', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
+    await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: installers\n---\n# Pulse');
+    // The other chat wrote last: the project-level copy names its Simple Plan.
+    await writeFile(dir, '.aioson/context/dev-state.md', '---\nactive_feature: picker-cards\nnext_step: "Window check"\nstatus: in_progress\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/features/installers/dev-state.md', '---\nactive_feature: installers\nactive_phase: 1\nnext_step: "Linux tests"\nstatus: in_progress\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/features/picker-cards/dev-state.md', '---\nactive_feature: picker-cards\nnext_step: "Window check"\nstatus: in_progress\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/features/installers/dossier.md', '---\nfeature: installers\n---\n# Dossier');
+
+    const explain = '.aioson/context/dev-state.md,.aioson/context/features/picker-cards/dev-state.md';
+    const pick = async (options) => {
+      const result = await selectContext(dir, { agent: 'dev', mode: 'planning', semantic: false, explain, ...options });
+      return { paths: result.selected.map((item) => item.path), result };
+    };
+
+    for (const task of ['fix the linux tests', 'agent activation without concrete task']) {
+      const { paths, result } = await pick({ feature: 'installers', task });
+      assert.ok(paths.includes('.aioson/context/features/installers/dev-state.md'), `own front state binds (${task})`);
+      const own = result.selected.find((item) => item.path === '.aioson/context/features/installers/dev-state.md');
+      assert.equal(own.load_tier, 'always', task);
+      assert.equal(paths.includes('.aioson/context/dev-state.md'), false, `the other chat's copy is out (${task})`);
+      assert.equal(paths.includes('.aioson/context/features/picker-cards/dev-state.md'), false, `the other front's own state is out (${task})`);
+      const causes = Object.fromEntries(result.explain.map((entry) => [entry.path, entry.cause]));
+      assert.equal(causes['.aioson/context/dev-state.md'], 'superseded_by_front_state', task);
+      // A bare activation keeps everything but its continuity files out first.
+      assert.equal(causes['.aioson/context/features/picker-cards/dev-state.md'], task.startsWith('agent activation') ? 'activation_only' : 'other_front_state', task);
+    }
+
+    // The other chat naming its own front gets its own, not this one's.
+    const other = await pick({ feature: 'picker-cards', task: 'restyle the cards' });
+    assert.ok(other.paths.includes('.aioson/context/features/picker-cards/dev-state.md'));
+    assert.equal(other.paths.includes('.aioson/context/features/installers/dev-state.md'), false);
+
+    // A chat naming no feature reads the project-level file (with two fronts
+    // open dev:state:write makes it their index), and no front's own state.
+    const bare = await pick({ task: 'agent activation without concrete task' });
+    assert.ok(bare.paths.includes('.aioson/context/dev-state.md'));
+    assert.equal(bare.paths.some((p) => p.startsWith('.aioson/context/features/') && p.endsWith('/dev-state.md')), false);
+
+    // A front's resume state is @dev's own: a reviewer reads stage and artifacts.
+    const qa = await selectContext(dir, { agent: 'qa', mode: 'planning', semantic: false, feature: 'installers', task: 'review the linux tests' });
+    assert.equal(qa.selected.some((item) => item.path.endsWith('/dev-state.md')), false);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('AC-parallel-sessions-26 a feature with no state of its own does not inherit another front\'s project-level copy', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
+    await writeFile(dir, '.aioson/context/dev-state.md', '---\nactive_feature: picker-cards\nstatus: in_progress\n---\n# Dev State');
+    const named = await selectContext(dir, { agent: 'dev', mode: 'planning', semantic: false, feature: 'installers', task: 'start the installers work', explain: '.aioson/context/dev-state.md' });
+    assert.equal(named.selected.some((item) => item.path === '.aioson/context/dev-state.md'), false);
+    assert.deepEqual(named.explain[0], { path: '.aioson/context/dev-state.md', status: 'excluded', cause: 'other_front_state', feature_slug: 'picker-cards' });
+
+    // Its own legacy copy (a state written before fronts had their own file) still binds.
+    const own = await selectContext(dir, { agent: 'dev', mode: 'planning', semantic: false, feature: 'picker-cards', task: 'continue the cards' });
+    assert.ok(own.selected.some((item) => item.path === '.aioson/context/dev-state.md'));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

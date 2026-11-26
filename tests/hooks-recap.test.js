@@ -326,3 +326,79 @@ test('hooks:recap outside a project answers an empty injection', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ─── two chats on one folder (parallel-sessions) ───
+// Measured on a consumer: two plain chats (no live:start), one on a feature,
+// one on a Simple Plan. Each one's commands named its own front, yet the
+// checkpoint after a compaction named no feature at all — and the project-wide
+// pointers a resume falls back to are only the last chat to write.
+
+const { featureNamedByCommands } = require('../src/lib/session-feature');
+
+test('AC-parallel-sessions-27 the feature a chat works on is the last one its own aioson commands named', () => {
+  assert.equal(featureNamedByCommands([
+    '$ aioson dev:state:write . --feature=installers --phase=1 --next="Linux tests; then the Mac run"',
+    '$ npm test',
+    '$ aioson observe . --kind=defect --summary="pulse:update --feature=picker-cards collides"',
+    '$ cd /c/dev/app && aioson pulse:update . --agent=dev --feature "installers" --action="x" 2>&1 | tail -1'
+  ]), 'installers', 'a feature quoted inside another command\'s text names nothing');
+  assert.equal(featureNamedByCommands(['$ node bin/aioson.js workflow:next . --expect-feature=checkout --complete=dev']), 'checkout');
+  assert.equal(featureNamedByCommands(['$ npx aioson state:save . --feature=a --next=x', '$ aioson context:brief . --agent=dev --feature=b']), 'b', 'the newest naming wins');
+  assert.equal(featureNamedByCommands(['$ aioson workflow:next . --expect-feature=none', '$ aioson dev:state:write . --feature=../escape --next=x']), null, 'sentinels and unsafe slugs name no feature');
+  assert.equal(featureNamedByCommands([]), null);
+});
+
+test('AC-parallel-sessions-27 end to end: after a compaction each chat gets its own front back, and a chat that named none gets the question', (t) => {
+  const dir = makeProject();
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const ctx = path.join(dir, '.aioson', 'context');
+  fs.mkdirSync(path.join(ctx, 'simple-plans'), { recursive: true });
+  fs.writeFileSync(path.join(ctx, 'features.md'), '| slug | status |\n|---|---|\n| installers | in_progress |\n');
+  fs.writeFileSync(path.join(ctx, 'simple-plans', 'picker-cards.md'), '---\nslug: picker-cards\nstatus: in_progress\n---\n');
+  const env = { ...process.env };
+  delete env.AIOSON_LIVE_SESSION;
+  delete env.AIOSON_LIVE_SESSION_KEY;
+  const aioson = (argv, input = '') => {
+    const result = spawnSync(process.execPath, [CLI, argv[0], dir, ...argv.slice(1)], { input, env, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout;
+  };
+  const hook = (payload) => aioson([payload.hook_event_name === 'SessionStart' ? 'hooks:recap' : 'hooks:emit', '--agent=dev', '--source=claude', ...(payload.hook_event_name === 'SessionStart' ? ['--json'] : [])], JSON.stringify(payload));
+  // A chat runs a checkpoint command and its hook records it.
+  const checkpoint = (session, feature, next) => {
+    const command = `aioson dev:state:write . --feature=${feature} --next="${next}"`;
+    aioson(['dev:state:write', `--feature=${feature}`, `--next=${next}`]);
+    hook({ hook_event_name: 'PostToolUse', session_id: session, tool_name: 'Bash', tool_input: { command }, tool_response: { stdout: 'dev-state.md updated:' } });
+  };
+  hook({ hook_event_name: 'UserPromptSubmit', session_id: 'A', prompt: '/aioson:agent:dev' });
+  checkpoint('A', 'installers', 'run the Linux tests');
+  hook({ hook_event_name: 'UserPromptSubmit', session_id: 'B', prompt: '/aioson:agent:dev' });
+  checkpoint('B', 'picker-cards', 'check the cards window');
+  // The last handoff is the other chat's: one per project.
+  fs.writeFileSync(path.join(ctx, 'last-handoff.json'), JSON.stringify({ feature_slug: 'installers' }));
+
+  const recapOf = (session) => {
+    hook({ hook_event_name: 'PreCompact', session_id: session, trigger: 'auto' });
+    return JSON.parse(hook({ hook_event_name: 'SessionStart', session_id: session, source: 'compact' })).hookSpecificOutput.additionalContext;
+  };
+
+  const a = recapOf('A');
+  assert.match(a, /Feature: installers\n/);
+  assert.match(a, /Next step on record: run the Linux tests/);
+  assert.match(a, /Other fronts open in this folder \(another chat's work — leave their files alone\): picker-cards/);
+  assert.doesNotMatch(a, /check the cards window/);
+
+  // B wrote last, and B's front is a Simple Plan (no features.md row): still its own.
+  const b = recapOf('B');
+  assert.match(b, /Feature: picker-cards\n/);
+  assert.match(b, /Next step on record: check the cards window/);
+  assert.match(b, /another chat's work — leave their files alone\): installers/);
+  assert.doesNotMatch(b, /run the Linux tests/);
+
+  // A third chat that named no front gets no feature — the last handoff is A's — and the question.
+  hook({ hook_event_name: 'UserPromptSubmit', session_id: 'C', prompt: '/aioson:agent:dev' });
+  hook({ hook_event_name: 'PostToolUse', session_id: 'C', tool_name: 'Edit', tool_input: { file_path: path.join(dir, 'src', 'x.js') } });
+  const c = recapOf('C');
+  assert.doesNotMatch(c, /^Feature:/m, c);
+  assert.match(c, /Open fronts in this folder: (installers, picker-cards|picker-cards, installers) — this session named none on record: ask the owner which one it continues before editing/);
+});

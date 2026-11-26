@@ -15,7 +15,7 @@ One folder is one working tree, one git index, one `HEAD`, and one `.aioson/`. T
 |---|---|---|
 | Working tree, index, `HEAD` | One. Every changed-files measurement (`delivery:parity` at `agent:done`, the technical gate's fingerprint, `rules:check --changed`, `commit:prepare`) sees both chats' edits. | Only a worktree per chat. |
 | `project-pulse.md` `active_feature` and the workflow binding | One per project: the chat that runs `pulse:update --feature=<slug>` moves it for both, and the other's `workflow:next --expect-feature=<its slug>` aborts with `Workflow binding mismatch`. | `live:start --own-session --feature=<slug>` (a binding per session) or a worktree. |
-| Project-level `dev-state.md` | A copy of whichever chat wrote last. | `features/<slug>/dev-state.md` is per thread; read it with `dev:resume-data --feature=<slug>`. |
+| Project-level `dev-state.md` | One front open: its copy. Two or more written within 7 days: their index (`kind: open-fronts-index`, no `active_feature`), rewritten at every `dev:state:write`. | `features/<slug>/dev-state.md` is per front; `context:brief --feature=<slug>` binds that one for @dev, never the other chat's. |
 | `features.md` | One writer, locked. | Already safe. |
 | A Simple Plan | Never touches the binding, the pulse or `workflow:next`. | Already safe: the cheapest way to run a second chat beside a feature. |
 
@@ -24,12 +24,17 @@ One folder is one working tree, one git index, one `HEAD`, and one `.aioson/`. T
 - `implementation_changed_during_checks` now names what moved: `source_change.paths` (and `head_changed` when a commit or checkout happened) in the gate result, and the same line in the blocked message. The check itself, another chat, or another tool wrote there. Paths you did not write are the other chat's: **never revert them to make the gate pass**. Re-run when the other chat settles.
 - `workflow:next` `Workflow binding mismatch` names who last wrote the pulse (`last_agent`, `active_work`, `last_updated`). If it is the other chat, do not run `pulse:update` to take the binding back: that moves it away from the other chat in turn. Pick one of the two isolations below.
 - `dev:resume-data` returns `ambiguous: true` with `open_threads` when this chat names no feature and more than one dev thread was written in the last 7 days. Ask the owner which thread this chat continues. The newest is only the last chat to write.
+- After a compaction the checkpoint names the front this chat's own commands named (`Feature: <slug>`) and lists `Other fronts open in this folder` as the other chat's work. `Open fronts in this folder … named none` means this chat never named one: ask before editing.
 
 ## Rules for a chat on a shared tree
 
 - Name your feature on every command that takes one (`--feature`, `--expect-feature`); never rely on the pulse or the project-level `dev-state.md`.
 - Stage explicit paths (`git add -- <your files>`), then `commit:prepare . --staged-only`. Never `git add -A`, and never `git stash`, `git checkout -- .`, `git clean` or `git reset --hard` here: they take the other chat's uncommitted work.
 - A second chat for a bounded fix: Simple Plan. Two tracked features at once, or a long test suite while the other chat edits: isolate.
+
+## What the host shows is not who wrote
+
+A host that diffs the tree around a shell command (Claude Code does) shows every file that changed while the command ran as that command's own edit, the other chat's edits included. A chat running a long test suite or build therefore looks like it is editing the other chat's feature when it is not. Before saying a chat took over another's work, check what it wrote itself: its own Write/Edit calls, and `git diff` against the other chat's plan.
 
 ## Isolation 1 — an own session per chat
 
