@@ -1485,11 +1485,17 @@
       "feature": "execution-roles-onboarding",
       "origin_feature": null,
       "agent": null,
-      "status": "open",
+      "status": "resolved",
       "seen": 1,
       "created_at": "2026-11-26T16:23:47.935Z",
-      "updated_at": "2026-11-26T16:23:47.935Z",
-      "resolution": null
+      "updated_at": "2026-11-26T17:52:36.169Z",
+      "resolution": {
+        "as": "fixed",
+        "ref": "src/lib/chat-session.js",
+        "why": "76caea10: each host chat keeps its own feature in .aioson/runtime/chats; feature:current, context:select, workflow:next and the observation tag read it before the pulse",
+        "by": "improve",
+        "at": "2026-11-26T17:52:36.169Z"
+      }
     }
   ]
 }
