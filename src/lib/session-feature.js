@@ -19,6 +19,12 @@
  * The file is separate from `state.json` on purpose: every event rewrites the
  * state from a copy read earlier, and a feature kept there would be dropped by
  * the next event of a concurrent command.
+ *
+ * A chat opened straight in its host (Claude Code, Codex, agy, OpenCode) has
+ * no live session, but its host names the chat to every command it runs: that
+ * chat keeps its feature in `.aioson/runtime/chats/<key>.json`
+ * (chat-session.js). A live session of this project comes first; the chat is
+ * the answer only without one. The chat answer carries `chat: { key, hosts }`.
  */
 
 const fs = require('node:fs/promises');
@@ -26,6 +32,7 @@ const path = require('node:path');
 const { resolveRuntimePaths, openRuntimeDb } = require('../runtime-store');
 const { validateFeatureSlug } = require('../verification/path-policy');
 const { resolveTargetDir, resolveProjectRootOrSelf } = require('./project-root');
+const { resolveChatIdentity, readChatRecord, writeChatFeature } = require('./chat-session');
 
 const SESSION_FEATURE_FILE = 'feature.json';
 
@@ -110,13 +117,40 @@ function normalizeFeatureSlug(value) {
   return validation.feature_slug;
 }
 
-// `aioson <command> <args>` inside a recorded shell command (`npx aioson`,
-// `node bin/aioson.js` too), up to the next command separator.
-const AIOSON_COMMAND_RE = /\baioson(?:\.js)?\s+([a-z][a-z0-9:-]*)([^\n;&|]*)/g;
+// `aioson <command> <args>` inside one segment of a recorded shell command
+// (`npx aioson`, `node bin/aioson.js` too).
+const AIOSON_COMMAND_RE = /\baioson(?:\.js)?\s+([a-z][a-z0-9:-]*)(.*)$/;
+const SEGMENT_SPLIT_RE = /\r?\n|&&|\|\||[;&|]/;
+const CD_RE = /^cd\s+("[^"]*"|'[^']*'|\S+)\s*$/;
 
 function readCommandOption(text, option) {
   const match = String(text || '').match(new RegExp(`(?:^|\\s)--${option}(?:=|\\s+)("[^"]*"|'[^']*'|[^\\s"']+)`));
   return match ? match[1].replace(/^["']|["']$/g, '') : null;
+}
+
+function unquote(token) {
+  return String(token || '').replace(/^["']|["']$/g, '');
+}
+
+// The project argument of a command: the word right after the command name,
+// unless it is an option (`aioson context:brief --agent=dev` runs on `.`).
+function readCommandTarget(rest) {
+  const word = (String(rest || '').trim().match(/^("[^"]*"|'[^']*'|\S+)/) || [])[1];
+  return word && !word.startsWith('-') ? unquote(word) : null;
+}
+
+// A Bash tool on Windows writes `/c/dev/app` for `C:\dev\app`.
+function nativePath(value) {
+  const text = String(value || '');
+  const drive = process.platform === 'win32' ? text.match(/^\/([a-zA-Z])(\/.*)?$/) : null;
+  return drive ? `${drive[1]}:${drive[2] || '/'}` : text;
+}
+
+// The project or a folder inside it: the CLI resolves a subfolder to its project.
+function withinProject(target, root) {
+  const fold = (value) => (process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value));
+  const relative = path.relative(fold(root), fold(target));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 /**
@@ -128,13 +162,24 @@ function readCommandOption(text, option) {
  * last chat to write, maybe another one. The chat's own hooks recorded every
  * command it ran: the last one of FEATURE_BINDING_COMMANDS that named a
  * feature is the front this chat is on. Oldest first in, the newest naming wins.
+ *
+ * With `targetDir`, a command aimed at another folder (`aioson dev:state:write
+ * ../other-app --feature=x`, or after `cd ../other-app`) names that folder's
+ * front, not this one's: a chat working in one project while it measures
+ * another was recapped with the other project's feature.
  */
-function featureNamedByCommands(commands) {
+function featureNamedByCommands(commands, { targetDir = null } = {}) {
   let found = null;
   for (const text of Array.isArray(commands) ? commands : []) {
-    for (const match of String(text || '').matchAll(AIOSON_COMMAND_RE)) {
-      const name = canonicalCommand(match[1]);
+    let cwd = targetDir;
+    for (const raw of String(text || '').replace(/^\$\s*/, '').split(SEGMENT_SPLIT_RE)) {
+      const segment = raw.trim();
+      const cd = cwd ? segment.match(CD_RE) : null;
+      if (cd) { cwd = path.resolve(cwd, nativePath(unquote(cd[1]))); continue; }
+      const match = segment.match(AIOSON_COMMAND_RE);
+      const name = match ? canonicalCommand(match[1]) : null;
       if (!name) continue;
+      if (cwd && !withinProject(path.resolve(cwd, nativePath(readCommandTarget(match[2]) || '.')), targetDir)) continue;
       const slug = normalizeFeatureSlug(readCommandOption(match[2], FEATURE_BINDING_COMMANDS.get(name)));
       if (slug) found = slug;
     }
@@ -217,8 +262,25 @@ async function writeFeatureOfSessionDir(sessionDir, sessionKey, feature, source)
  */
 async function readSessionFeature(targetDir, env = process.env) {
   const session = await resolveOwnSession(targetDir, env);
-  if (!session) return null;
-  return { sessionKey: session.sessionKey, feature: await readFeatureFile(session.sessionDir) };
+  if (session) return { sessionKey: session.sessionKey, feature: await readFeatureFile(session.sessionDir) };
+  return readChatFeature(targetDir, env);
+}
+
+/**
+ * The feature of the host chat this process runs in, without a live session:
+ * `{ sessionKey: 'chat:<key>', feature, chat: { key, hosts } }`, with
+ * `feature: null` for a chat that has not named one here; null when no host
+ * names the chat.
+ */
+async function readChatFeature(targetDir, env = process.env) {
+  const identity = resolveChatIdentity(env);
+  if (!identity) return null;
+  const record = await readChatRecord(targetDir, identity.key).catch(() => null);
+  return {
+    sessionKey: `chat:${identity.key}`,
+    feature: normalizeFeatureSlug(record && record.feature),
+    chat: identity
+  };
 }
 
 /**
@@ -231,7 +293,7 @@ async function bindSessionFeature(targetDir, feature, { env = process.env, sourc
   if (!slug) return { bound: false, reason: 'invalid_feature' };
   try {
     const session = await resolveOwnSession(targetDir, env);
-    if (!session) return { bound: false, reason: 'no_live_session' };
+    if (!session) return bindChatFeature(targetDir, slug, { env, source });
     const previous = await readFeatureFile(session.sessionDir);
     if (previous !== slug) {
       await writeFeatureOfSessionDir(session.sessionDir, session.sessionKey, slug, source);
@@ -242,14 +304,22 @@ async function bindSessionFeature(targetDir, feature, { env = process.env, sourc
   }
 }
 
+async function bindChatFeature(targetDir, slug, { env, source }) {
+  const identity = resolveChatIdentity(env);
+  if (!identity) return { bound: false, reason: 'no_live_session' };
+  const written = await writeChatFeature(targetDir, identity, slug, { source });
+  if (!written) return { bound: false, reason: 'write_failed' };
+  return { bound: true, sessionKey: `chat:${identity.key}`, feature: slug, previous: written.previous, chat: identity };
+}
+
 /**
  * The CLI's single hook: a command of FEATURE_BINDING_COMMANDS that names a
- * feature binds the session it runs in before it executes, so the command
- * itself already answers about that feature.
+ * feature binds the session — or, without one, the host chat — it runs in
+ * before it executes, so the command itself already answers about that feature.
  */
 async function bindSessionFeatureForCommand({ command, args = [], options = {}, env = process.env } = {}) {
   const name = canonicalCommand(command);
-  if (!name || !ownSessionKey(env)) return null;
+  if (!name || (!ownSessionKey(env) && !resolveChatIdentity(env))) return null;
   const slug = normalizeFeatureSlug(options[FEATURE_BINDING_COMMANDS.get(name)]);
   if (!slug) return null;
   const targetDir = resolveProjectRootOrSelf(resolveTargetDir(args));
@@ -266,6 +336,7 @@ module.exports = {
   ownSessionKey,
   resolveOwnSession,
   readSessionFeature,
+  readChatFeature,
   readFeatureOfSessionDir,
   writeFeatureOfSessionDir,
   bindSessionFeature,

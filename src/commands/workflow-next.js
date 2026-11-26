@@ -384,9 +384,10 @@ async function detectWorkflowMode(targetDir) {
     registry = null;
   }
   // Inside a live session the registry is that session's own feature
-  // (feature:current, source `session`): two sessions on two features each
-  // move the binding to their own, and the other's progress waits archived.
-  const registrySource = registry && (registry.source === 'pulse' || registry.source === 'session') && registry.slug
+  // (feature:current, source `session`), and in a host chat the feature that
+  // chat named (`chat`): two chats on two features each move the binding to
+  // their own, and the other's progress waits archived.
+  const registrySource = registry && ['pulse', 'session', 'chat'].includes(registry.source) && registry.slug
     ? registry.source
     : null;
   const registrySlug = registrySource ? registry.slug : null;

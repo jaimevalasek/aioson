@@ -1454,13 +1454,15 @@ async function main() {
     const commandLogger =
       jsonMode && commandSupportsJson(command) ? silentLogger : logger;
 
-    // Inside a live session, a workflow command that names a feature says
-    // which feature THAT session is on (src/lib/session-feature.js) before it
-    // runs — so `feature:current` keeps answering it there, whatever another
-    // session of the same folder registers or advances. The cheap test first:
-    // hooks call this entry on every tool use and name no feature.
+    // Inside a live session — or a host chat that names itself to its
+    // commands (src/lib/chat-session.js) — a workflow command that names a
+    // feature says which feature THAT session is on (src/lib/session-feature.js)
+    // before it runs, so `feature:current` keeps answering it there, whatever
+    // another chat of the same folder registers or advances. The cheap test
+    // first: hooks call this entry on every tool use and name no feature.
     if ((typeof options.feature === 'string' || typeof options['expect-feature'] === 'string')
-      && (process.env.AIOSON_LIVE_SESSION_KEY || process.env.AIOSON_LIVE_SESSION)) {
+      && (process.env.AIOSON_LIVE_SESSION_KEY || process.env.AIOSON_LIVE_SESSION
+        || require('./lib/chat-session').resolveChatIdentity(process.env))) {
       try {
         await require('./lib/session-feature').bindSessionFeatureForCommand({ command, args, options });
       } catch { /* never fails the command */ }

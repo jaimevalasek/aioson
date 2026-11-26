@@ -12,7 +12,10 @@
  *   0. inside a live session (`live:start` exported its key to this process):
  *      the feature that session works on (src/lib/session-feature.js). Another
  *      session registering or advancing another feature never changes it.
+ *      Without one, the feature this host chat named (src/lib/chat-session.js).
  *   1. project-pulse.md `active_feature` (when set and not the `(none)` sentinel)
+ *      — unless this chat named none and another chat of the folder is on that
+ *      feature: then `ambiguous`, with `held_by_other_chat`.
  *   2. the single `in_progress` row in features.md (unambiguous fallback)
  *   3. empty — genuine project-level work, no active feature
  *
@@ -30,6 +33,7 @@
 const path = require('node:path');
 const { readProjectPulse, parseFeaturesMap, readFileSafe, contextDir } = require('../preflight-engine');
 const { readSessionFeature } = require('../lib/session-feature');
+const { otherActiveChats, describeChat } = require('../lib/chat-session');
 
 // Values that mean "no active feature" rather than a real slug.
 const NONE_SENTINELS = new Set(['', '(none)', 'none', 'null', '-', 'n/a']);
@@ -45,6 +49,12 @@ function isNone(value) {
 // A feature the registry already closed is nobody's current work.
 const CLOSED_STATUSES = new Set(['done', 'abandoned']);
 
+// The newest other chat of this folder on `slug`, or null.
+async function chatHolding(targetDir, ownKey, slug) {
+  const others = await otherActiveChats(targetDir, ownKey).catch(() => []);
+  return others.find((chat) => chat.feature === slug) || null;
+}
+
 async function resolveActiveFeature(targetDir, { env = process.env } = {}) {
   const featuresContent = await readFileSafe(path.join(contextDir(targetDir), 'features.md'));
   const map = parseFeaturesMap(featuresContent);
@@ -55,17 +65,17 @@ async function resolveActiveFeature(targetDir, { env = process.env } = {}) {
     }
   }
 
-  // 0. The live session that owns this process answers for itself. A session
-  //    whose feature was closed since is back to having none.
+  // 0. The live session — or, without one, the host chat — that owns this
+  //    process answers for itself. A feature closed since is back to none.
   const session = await readSessionFeature(targetDir, env).catch(() => null);
   if (session) {
     const status = session.feature ? normalizeSlug(map.get(session.feature)).toLowerCase() : '';
     if (session.feature && !CLOSED_STATUSES.has(status)) {
-      return { slug: session.feature, source: 'session', ambiguous: false, candidates: [] };
+      return { slug: session.feature, source: session.chat ? 'chat' : 'session', ambiguous: false, candidates: [] };
     }
-    // No feature of its own and more than one in progress: the pulse may be
-    // another session's, so nothing is guessed.
-    if (inProgress.length > 1) {
+    // A live session with no feature of its own and more than one in
+    // progress: the pulse may be another session's, so nothing is guessed.
+    if (!session.chat && inProgress.length > 1) {
       return { slug: '', source: 'session', ambiguous: true, candidates: inProgress };
     }
   }
@@ -74,7 +84,16 @@ async function resolveActiveFeature(targetDir, { env = process.env } = {}) {
   //    by pulse:update and reset by feature:close.
   const pulse = await readProjectPulse(targetDir);
   if (pulse && pulse.exists && !isNone(pulse.active_feature)) {
-    return { slug: normalizeSlug(pulse.active_feature), source: 'pulse', ambiguous: false, candidates: [] };
+    const slug = normalizeSlug(pulse.active_feature);
+    // A chat that named no feature here: the pulse is one per project, and a
+    // feature another chat of this folder named in the last hours is that
+    // chat's front. Handing it over is how one chat dropped its own work to
+    // continue the other's — so nothing is guessed, and the holder is named.
+    const holder = session && session.chat ? await chatHolding(targetDir, session.chat.key, slug) : null;
+    if (holder) {
+      return { slug: '', source: 'chat', ambiguous: true, candidates: inProgress, held_by_other_chat: holder };
+    }
+    return { slug, source: 'pulse', ambiguous: false, candidates: [] };
   }
 
   // 2. features.md — fall back to the unique in_progress row.
@@ -141,6 +160,11 @@ async function runFeatureCurrent({ args = [], options = {}, logger = console } =
     // Plain mode prints ONLY the slug so `$(aioson feature:current .)` is
     // directly usable in shell substitution; ambiguous/none print nothing.
     if (resolved.slug) logger.log(resolved.slug);
+    // stderr: stdout stays empty for `$(aioson feature:current .)`.
+    if (resolved.held_by_other_chat && typeof logger.error === 'function') {
+      const holder = resolved.held_by_other_chat;
+      logger.error(`project-pulse.md names ${holder.feature}, the front of ${describeChat(holder)} on this folder; this chat named none — ask which feature it continues, then name it (--feature=<slug>).`);
+    }
     if (payload.summary && resolved.slug) {
       if (payload.summary.title) logger.log(`title: ${payload.summary.title}`);
       if (payload.summary.goal) logger.log(`goal: ${payload.summary.goal}`);

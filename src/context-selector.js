@@ -14,6 +14,7 @@ const {
   readDevState
 } = require('./preflight-engine');
 const { openRuntimeDb } = require('./runtime-store');
+const { resolveActiveFeature } = require('./commands/feature-current');
 const { searchAnyProjectLearnings } = require('./learning-loop-fts5');
 const { classifyDesignDocSeed } = require('./lib/design-doc-seed');
 
@@ -1046,6 +1047,17 @@ function evaluateCandidates(candidates, context, explainList) {
   return { selected, explain };
 }
 
+// No feature named: the live session's or this chat's own feature, then the
+// pulse, then the project-level dev-state. The pulse is one per project: a
+// session that named none with several in progress, or a chat whose pulse
+// feature is another chat's front, binds no feature rather than the other's.
+async function unnamedFeaturePointer(targetDir, devState) {
+  const registry = await resolveActiveFeature(targetDir).catch(() => null);
+  if (!registry) return (await readProjectPulse(targetDir)).active_feature || devState.active_feature || '';
+  if (registry.source === 'features.md' || registry.source === 'none') return devState.active_feature || '';
+  return registry.ambiguous ? '' : registry.slug || '';
+}
+
 async function selectContext(targetDir, options = {}) {
   // Retired ids (`deyvin`, `architect`) select as the agent that absorbed them.
   const agent = canonicalAgentId(normalizeToken(options.agent || 'dev'));
@@ -1055,11 +1067,8 @@ async function selectContext(targetDir, options = {}) {
   const feature = normalizeFeaturePointer(options.feature || options.slug || '');
   const activationOnly = isActivationOnlyTask(agent, mode, task);
 
-  const pulse = await readProjectPulse(targetDir);
   const devState = await readDevState(targetDir);
-  const activeFeature = normalizeFeaturePointer(
-    feature || pulse.active_feature || devState.active_feature || ''
-  );
+  const activeFeature = normalizeFeaturePointer(feature || await unnamedFeaturePointer(targetDir, devState));
 
   // Keyword matching (task_types, triggers, aliases, entities, description)
   // reads the TASK only. The active feature slug and the touched paths are

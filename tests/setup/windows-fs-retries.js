@@ -46,6 +46,16 @@ if (!process.env.AIOSON_DESIGN_REGISTRY) {
   process.env.AIOSON_DESIGN_REGISTRY = require('node:path').join(__filename, 'no-registry', 'design-fingerprints.json');
 }
 
+// All platforms: the suite runs inside a host chat more often than not (an
+// agent runs it), and every host names its chat to the commands it runs
+// (TOOL_CAPS `chat_env`, src/lib/chat-session.js). Inherited, that name made
+// every spawned CLI of every test one and the same chat, recording features
+// in the fixtures and answering from them. A test that wants a chat passes
+// its own env.
+for (const caps of Object.values(require('../../src/lib/tool-capabilities').TOOL_CAPS)) {
+  for (const name of caps.chat_env || []) delete process.env[name];
+}
+
 // All platforms: one temp root per suite run. Hundreds of tests create
 // fixtures with fs.mkdtemp(os.tmpdir()…); a teardown that loses a Windows
 // handle race, or a test that never cleans, left its tree in the machine's

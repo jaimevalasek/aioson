@@ -18,6 +18,7 @@ const path = require('node:path');
 const { contextDir, readFileSafe, parseFrontmatter, parseFeaturesMap } = require('../preflight-engine');
 const { resolveTargetDir, resolveProjectRootOrSelf } = require('../lib/project-root');
 const { isNone } = require('./feature-current');
+const { resolveChatIdentity, otherActiveChats, describeChat } = require('../lib/chat-session');
 
 function nowDate() {
   return new Date().toISOString().slice(0, 10);
@@ -41,13 +42,30 @@ async function inspectWorkflowBinding(targetDir, slug) {
   };
 }
 
+// The pulse is one per project. Moving `active_feature` off a feature another
+// chat of this folder is still on takes nothing from that chat (it answers
+// from its own record, src/lib/chat-session.js), but both chats are told the
+// folder is shared — the pulse alone said nothing.
+async function chatLeftOnPrevious(targetDir, previous, slug, env = process.env) {
+  if (!previous || isNone(previous) || previous === slug) return null;
+  const own = resolveChatIdentity(env);
+  const others = await otherActiveChats(targetDir, own ? own.key : null).catch(() => []);
+  const holder = others.find((chat) => chat.feature === previous);
+  return holder ? { feature: holder.feature, hosts: holder.hosts, minutes_ago: holder.minutes_ago } : null;
+}
+
+function logChatLeft(logger, other, slug) {
+  if (!other) return;
+  logger.log(`  note: ${other.feature} stays the front of ${describeChat(other)} on this folder — that chat keeps its own feature; this one is on ${slug}.`);
+}
+
 // `aioson pulse:update . --feature=<slug>` is the command the workflow's
 // binding-mismatch error prints, and it died on `--agent is required` (exit
 // 1, pulse unchanged). The agent belongs to the session record (last_agent,
 // the activity line, active_work); moving the registry needs none of it, so
 // --feature alone rewrites active_feature (and its Status line) and keeps
 // everything else as it was.
-async function moveActiveFeature(targetDir, slug, options, logger) {
+async function moveActiveFeature(targetDir, slug, options, logger, env) {
   const pulsePath = path.join(contextDir(targetDir), 'project-pulse.md');
   const existing = await readFileSafe(pulsePath);
   const previous = existing ? parseFrontmatter(existing).active_feature || null : null;
@@ -68,21 +86,24 @@ async function moveActiveFeature(targetDir, slug, options, logger) {
   await fs.writeFile(pulsePath, content, 'utf8');
 
   const binding = await inspectWorkflowBinding(targetDir, slug);
+  const otherChat = await chatLeftOnPrevious(targetDir, previous, slug, env);
   const result = {
     ok: true,
     path: path.relative(targetDir, pulsePath),
     active_feature: slug,
     previous_active_feature: previous,
-    workflow_binding: binding
+    workflow_binding: binding,
+    ...(otherChat ? { other_chat: otherChat } : {})
   };
   if (options.json) return result;
   logger.log(`Project pulse: active_feature → ${slug}${previous && previous !== slug ? ` (was ${previous})` : ''}`);
+  logChatLeft(logger, otherChat, slug);
   if (binding && binding.follows) logger.log('  workflow binding: follows on the next workflow:next / workflow:status (the previous feature\'s progress is archived, and restored on return)');
   if (binding && !binding.follows) logger.log(`  warning: ${binding.warning}`);
   return result;
 }
 
-async function runPulseUpdate({ args, options = {}, logger }) {
+async function runPulseUpdate({ args, options = {}, logger, env = process.env }) {
   const targetDir = resolveProjectRootOrSelf(resolveTargetDir(args)); // from a subfolder too
   const agent = options.agent ? String(options.agent) : null;
   const slug = options.feature ? String(options.feature) : null;
@@ -94,7 +115,7 @@ async function runPulseUpdate({ args, options = {}, logger }) {
 
   if (!agent) {
     if (slug && options.feature !== true && !gate && !action && !next && !phase && !verdict) {
-      return moveActiveFeature(targetDir, slug.trim(), options, logger);
+      return moveActiveFeature(targetDir, slug.trim(), options, logger, env);
     }
     if (options.json) return { ok: false, reason: 'missing_agent' };
     logger.log('--agent is required to record a session (--gate/--action/--next/--phase/--verdict). Example: aioson pulse:update . --agent=dev --feature=checkout — to move only the active feature: aioson pulse:update . --feature=<slug>');
@@ -171,6 +192,7 @@ async function runPulseUpdate({ args, options = {}, logger }) {
   await fs.writeFile(pulsePath, lines.join('\n'), 'utf8');
 
   const binding = await inspectWorkflowBinding(targetDir, slug);
+  const otherChat = slug ? await chatLeftOnPrevious(targetDir, fm.active_feature, slug, env) : null;
   const result = {
     ok: true,
     path: path.relative(targetDir, pulsePath),
@@ -179,23 +201,27 @@ async function runPulseUpdate({ args, options = {}, logger }) {
     active_feature: slug,
     active_work: activeWork,
     next_recommendation: nextRec,
-    workflow_binding: binding
+    workflow_binding: binding,
+    ...(otherChat ? { other_chat: otherChat } : {})
   };
 
-  if (options.json) return result;
+  if (!options.json) printSessionRecord(logger, result, next);
+  return result;
+}
 
+function printSessionRecord(logger, result, next) {
+  const binding = result.workflow_binding;
   logger.log('Project pulse updated:');
-  logger.log(`  last_agent: ${agent}`);
-  if (gate) logger.log(`  last_gate: ${gate}`);
-  if (slug) logger.log(`  active_work: ${activeWork}`);
+  logger.log(`  last_agent: ${result.last_agent}`);
+  if (result.last_gate) logger.log(`  last_gate: ${result.last_gate}`);
+  if (result.active_feature) logger.log(`  active_work: ${result.active_work}`);
+  logChatLeft(logger, result.other_chat, result.active_feature);
   logger.log(`  Recent activity: +1 entry (kept last 3)`);
   if (next) logger.log(`  Next: ${next}`);
   // A session record routinely names a feature before its features.md row
   // exists (briefing, project-level work); the warning is for a listed
   // feature the binding will not follow.
   if (binding && !binding.follows && binding.feature_status) logger.log(`  warning: ${binding.warning}`);
-
-  return result;
 }
 
 module.exports = { runPulseUpdate };

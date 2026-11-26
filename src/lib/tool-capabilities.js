@@ -53,6 +53,15 @@
 // bypass anyway, and Codex refuses it twice ("cannot be used multiple times"),
 // refuses it next to its `--yolo` alias, and silently overrode an explicit
 // `--sandbox workspace-write --ask-for-approval on-request`.
+//
+// `chat_env` names the environment variables through which the host tells a
+// shell command its model runs WHICH chat it belongs to, first match wins
+// (src/lib/chat-session.js). Measured by having each installed CLI run one
+// probe twice in one conversation (2026-11-26): every value was the same in
+// both calls and different in another chat. OpenCode exports no session id,
+// only the pid of the host process, so there the chat is the process. A host
+// without the field has not been measured: its chats fall back to the
+// project-wide pointers, as before.
 const TOOL_CAPS = {
   claude: {
     install_command: 'npm install -g @anthropic-ai/claude-code',
@@ -67,6 +76,7 @@ const TOOL_CAPS = {
     yolo_args: ['--dangerously-skip-permissions'],
     permission_flags: ['--dangerously-skip-permissions', '--allow-dangerously-skip-permissions', '--permission-mode'],
     read_only_args: ['--permission-mode', 'plan'],
+    chat_env: ['CLAUDE_CODE_SESSION_ID'],
     execution: {
       additional_workspaces: true,
       model_catalog: false,
@@ -102,6 +112,8 @@ const TOOL_CAPS = {
     // operator's machine, the Windows sandbox setup fails to load and the
     // model reports DONE without writing (see the header note).
     read_only_args: ['--sandbox', 'read-only'],
+    // Both carry the thread id (measured equal); the older name second.
+    chat_env: ['CODEX_THREAD_ID', 'CODEX_SESSION_ID'],
     execution: {
       additional_workspaces: true,
       model_catalog: true,
@@ -125,6 +137,9 @@ const TOOL_CAPS = {
     yolo_args: ['--auto'],
     permission_flags: ['--auto'],
     read_only_args: null,
+    // No session id reaches a shell command, only the host's pid: two
+    // OpenCode windows are two chats, a new session inside one window is not.
+    chat_env: ['OPENCODE_PID'],
     execution: {
       additional_workspaces: false,
       model_catalog: false,
@@ -227,6 +242,7 @@ const TOOL_CAPS = {
     yolo_args: ['--dangerously-skip-permissions'],
     permission_flags: ['--dangerously-skip-permissions'],
     read_only_args: null,
+    chat_env: ['ANTIGRAVITY_CONVERSATION_ID'],
     execution: null,
   },
   // Keep the legacy interactive `agy` key; execution roles use the product
@@ -266,6 +282,7 @@ const TOOL_CAPS = {
     yolo_args: ['--mode', 'accept-edits', '--dangerously-skip-permissions'],
     permission_flags: ['--dangerously-skip-permissions', '--mode', '--sandbox'],
     read_only_args: null,
+    chat_env: ['ANTIGRAVITY_CONVERSATION_ID'],
     execution: {
       additional_workspaces: true,
       model_catalog: false,

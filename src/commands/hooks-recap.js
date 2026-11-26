@@ -196,7 +196,7 @@ async function recapFront(targetDir, events, sessionScoped) {
   const open = (await listOpenDevThreads(targetDir).catch(() => [])).filter((thread) => !thread.stale);
   const openSlugs = open.map((thread) => thread.feature);
   const own = sessionScoped
-    ? featureNamedByCommands(events.filter((event) => event && event.event_type === 'step_done').map((event) => event.message))
+    ? featureNamedByCommands(events.filter((event) => event && event.event_type === 'step_done').map((event) => event.message), { targetDir })
     : null;
   if (own) {
     const thread = open.find((entry) => entry.feature === own);
@@ -206,8 +206,10 @@ async function recapFront(targetDir, events, sessionScoped) {
     return { resume, fronts: { own, open: openSlugs } };
   }
   const resume = await buildDevResumeData(targetDir).catch(() => null);
+  // A live session only: the hook's own session is the payload's session_id,
+  // and its commands above already said what a host chat named.
   const live = await readSessionFeature(targetDir).catch(() => null);
-  const liveFeature = live && live.feature ? live.feature : null;
+  const liveFeature = live && !live.chat && live.feature ? live.feature : null;
   const guessed = !liveFeature && open.length >= 2;
   return { resume: guessed ? null : resume, fronts: { own: liveFeature, open: openSlugs } };
 }
