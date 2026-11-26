@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.84.2] - 2026-11-26
+
+### Fixed
+
+- **Each chat on a shared folder keeps its own feature.** Two chats opened straight in their host on one folder answered "which feature is mine?" from the project-wide pointers, which are only the last chat to write: `project-pulse.md` `active_feature`, the project-level `dev-state.md` and the last handoff. One chat read the other's feature and next step as its own, and its `workflow:next --expect-feature=<mine>` aborted on a binding mismatch. Every host measured names its chat to the shell commands it runs — Claude Code `CLAUDE_CODE_SESSION_ID`, Codex `CODEX_THREAD_ID`, agy `ANTIGRAVITY_CONVERSATION_ID`, OpenCode `OPENCODE_PID` (the window: it exports no session id) — and a host started from another one inherits that id and adds its own, so the chat is all of them together. A command that names a feature records it in `.aioson/runtime/chats/<key>.json`; `feature:current`, `context:select`/`context:brief`, `dev:resume-data`, the observation tag and `workflow:next` read it before the pulse (source `chat`). A chat that named none, while another chat named the pulse's feature in the last 12 hours, gets `ambiguous` with `held_by_other_chat` instead of that feature, and `pulse:update` says when the feature it replaces is another chat's (`other_chat`). A host not measured, and a terminal of its own, read the pulse as before; a `live:start` session still comes first.
+- **The project-level `dev-state.md` lists the open fronts instead of copying the last one.** With one front open it is still the copy of its state; with two or more written within 7 days it is their index (`kind: open-fronts-index`, no `active_feature`), pointing at each front's own `features/<slug>/dev-state.md`. `context:brief --agent=dev --feature=<slug>` binds that front's own state as `must_load` (it bound the project-level copy: the other chat's feature and next step), and never another front's. After a compaction the checkpoint names the front the chat's own commands named, skipping commands aimed at another folder, and lists the other open fronts as another chat's work. `parallel-sessions.md` also says that a host which diffs the tree around a long shell command (Claude Code does) shows the other chat's edits as that command's own.
+
+To pick it up: `aioson update` (the `parallel-sessions.md` doc and the dev brain).
+
 ## [1.84.1] - 2026-11-24
 
 ### Fixed
