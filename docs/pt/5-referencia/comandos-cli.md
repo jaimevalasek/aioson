@@ -140,6 +140,19 @@ O que um agente nota fora do escopo atual — um defeito ao lado da feature, uma
 
 Onde aparece: `workflow:status` (`Open observations: N (...)`, `openObservations` no `--json`), `context:brief` e `context:select` de cada agente (os itens cujo tipo o endereça, nesta ordem: a feature dele, os caminhos informados, o projeto — no máximo cinco, com `+N more`; item preso a slug sem linha viva no `features.md` conta como do projeto; as perguntas respondidas da feature vêm depois, com a resposta, até ela fechar), o handoff do `workflow:next` e do `agent:done`, o prompt do `agent:prompt`, o `feature:close` (com veredito de aceite, itens abertos da feature fechada vão para o hub do projeto com `origin_feature`, nunca apagados; um FAIL os mantém presos à feature), o `hygiene:scan` (`stale_observations`, abertos há 30 dias ou mais; `unreadable_observations`) e o recap pós-compactação (abertos primeiro). Memória não canônica: nunca escopo, nunca aprovação, nunca gate. O protocolo completo está em `.aioson/docs/observations.md`.
 
+### Resultados das entregas e avaliação
+
+O que cada entrega usou e como foi, medido sem modelo de IA no fechamento, guardado no projeto em `.aioson/outcomes/`. Detalhes em [resultados-e-avaliacao.md](./resultados-e-avaliacao.md).
+
+| Comando | O que faz | Quando usar |
+|---|---|---|
+| `outcome:record . --feature=<slug> [--verdict=] [--kind=feature\|simple-plan]` | Grava `.aioson/outcomes/{slug}.json`: práticas detectadas (imagens no briefing, protótipo aprovado, PRD revisado, plano em fases, navegador, shakedown...) e resultado medido (QA de primeira, voltas FAIL→PASS, achados, duração). Esquema fechado: só números e categorias | O `feature:close` e o `agent:done` do `@dev` (Simple Plan com `status: done`) já rodam; à mão, para registrar uma entrega antiga |
+| `outcome:report . [--portfolio]` | Regera `.aioson/outcomes/REPORT.md`: quais práticas vêm com resultados melhores, com 3 entregas com e 3 sem na mesma classificação; `--portfolio` soma todos os projetos aioson da máquina | Para ver o que tem funcionado melhor para você |
+| `outcome:feedback . [--feature=<slug>] [--no-open]` | Abre a tela local de avaliação (nota 1–5, o que foi bom, o que poderia ser melhor), que também abre sozinha no fim de uma entrega, no máximo uma vez por dia | Para avaliar uma entrega quando quiser |
+| `outcome:feedback . --rating=1..5 [--good=] [--bad=]` / `--later` / `--snooze=week\|month` / `--never` / `--on` | Salva a avaliação sem a tela, pula esta entrega, adia por uma semana ou um mês, desliga ou religa os convites | Scripts, ou para ajustar a frequência |
+
+O aioson não envia nada (a pasta é versionada como o resto de `.aioson/`); comentários passam por limpeza (caminhos, links, e-mails, números longos, segredos e o nome do projeto saem) antes de serem guardados. `AIOSON_FEEDBACK=off` desliga a tela; `feature:close --no-feedback` pula o convite uma vez.
+
 ### Orquestração paralela
 
 | Comando | O que faz | Quando usar |

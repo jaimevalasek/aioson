@@ -240,6 +240,7 @@ const { runStateSave, runStateReset } = lazy(() => { const { runStateSave, runSt
 const { runOpIdentity } = lazy(() => { const { runOpIdentity } = require('./commands/op-identity'); return { runOpIdentity }; });
 const { runOpCapture } = lazy(() => { const { runOpCapture } = require('./commands/op-capture'); return { runOpCapture }; });
 const { runObserve, runObservationList, runObservationResolve, runObservationRoute } = lazy(() => { const { runObserve, runObservationList, runObservationResolve, runObservationRoute } = require('./commands/observe'); return { runObserve, runObservationList, runObservationResolve, runObservationRoute }; });
+const { runOutcomeRecord, runOutcomeReport, runOutcomeFeedback } = lazy(() => { const { runOutcomeRecord, runOutcomeReport, runOutcomeFeedback } = require('./commands/outcome'); return { runOutcomeRecord, runOutcomeReport, runOutcomeFeedback }; });
 const { runOpPromote } = lazy(() => { const { runOpPromote } = require('./commands/op-promote'); return { runOpPromote }; });
 const { runOpForget } = lazy(() => { const { runOpForget } = require('./commands/op-forget'); return { runOpForget }; });
 const { runOpList } = lazy(() => { const { runOpList } = require('./commands/op-list'); return { runOpList }; });
@@ -971,6 +972,12 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'observation-resolve',
   'observation:route',
   'observation-route',
+  'outcome:record',
+  'outcome-record',
+  'outcome:report',
+  'outcome-report',
+  'outcome:feedback',
+  'outcome-feedback',
   'dev:state:write',
   'dev-state-write',
   'feature:close',
@@ -1177,7 +1184,7 @@ const HELP_KEYS = [
   'cli.help_storage_triage', 'cli.help_i18n_add', 'cli.help_agents', 'cli.help_agent_prompt',
   'cli.help_agent_help', 'cli.help_agent_invoke', 'cli.help_agent_epilogue', 'cli.help_rule_new',
   'cli.help_doc_new', 'cli.help_decide', 'cli.help_observe', 'cli.help_observation_list',
-  'cli.help_observation_resolve', 'cli.help_observation_route', 'cli.help_op_list', 'cli.help_op_show', 'cli.help_op_capture', 'cli.help_op_profile', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
+  'cli.help_observation_resolve', 'cli.help_observation_route', 'cli.help_outcome_record', 'cli.help_outcome_report', 'cli.help_outcome_feedback', 'cli.help_op_list', 'cli.help_op_show', 'cli.help_op_capture', 'cli.help_op_profile', 'cli.help_hooks_recap', 'cli.help_briefing_sources',
   'cli.help_briefing_approve', 'cli.help_briefing_unapprove', 'cli.help_briefing_review', 'cli.help_briefing_apply_feedback',
   'cli.help_briefing_feedback', 'cli.help_briefing_migrate_lineage', 'cli.help_exploration', 'cli.help_context_validate', 'cli.help_context_digest',
   'cli.help_context_pack', 'cli.help_context_search', 'cli.help_context_select', 'cli.help_context_brief',
@@ -2098,6 +2105,12 @@ async function main() {
       result = await runObservationResolve({ args, options, logger: commandLogger });
     } else if (command === 'observation:route' || command === 'observation-route') {
       result = await runObservationRoute({ args, options, logger: commandLogger });
+    } else if (command === 'outcome:record' || command === 'outcome-record') {
+      result = await runOutcomeRecord({ args, options, logger: commandLogger });
+    } else if (command === 'outcome:report' || command === 'outcome-report') {
+      result = await runOutcomeReport({ args, options, logger: commandLogger });
+    } else if (command === 'outcome:feedback' || command === 'outcome-feedback') {
+      result = await runOutcomeFeedback({ args, options, logger: commandLogger });
     } else if (command === 'op:promote' || command === 'op-promote') {
       result = await runOpPromote({ args, options, logger: commandLogger });
     } else if (command === 'op:forget' || command === 'op-forget') {

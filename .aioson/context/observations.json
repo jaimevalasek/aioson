@@ -1496,6 +1496,56 @@
         "by": "improve",
         "at": "2026-11-26T17:52:36.169Z"
       }
+    },
+    {
+      "id": "OBS-5be368",
+      "kind": "defect",
+      "summary": "aioson auth login browser mode never completes: CLI sends callback http://127.0.0.1:PORT/callback without code_challenge and waits for ?token=, but aioson.com /auth/cli only accepts /aioson-auth/callback with a PKCE challenge and returns ?…",
+      "detail": null,
+      "paths": [],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-27T16:18:44.551Z",
+      "updated_at": "2026-11-27T16:18:44.551Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-fa6b74",
+      "kind": "defect",
+      "summary": "harness:retro collectFeatureSources never reads done/{slug}/dossier/dossier.md nor done/{slug}/dossier/ as a feature dir (resolveLocations ~:443, featureDirs): a re-close of an archived feature mines 0 FAIL-to-PASS cycles and misses findin…",
+      "detail": null,
+      "paths": [
+        "src/lib/retro/retro-sources.js",
+        "src/lib/outcomes/measures.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-27T18:34:11.843Z",
+      "updated_at": "2026-11-27T18:34:11.843Z",
+      "resolution": null
+    },
+    {
+      "id": "OBS-20e8f9",
+      "kind": "idea",
+      "summary": "Screens pasted into the chat never reach the project, so the visual_inputs practice cannot be measured for them: @briefing could save pasted or attached screens to .aioson/briefings/{slug}/references/ so outcome records and tips see the pr…",
+      "detail": null,
+      "paths": [
+        "src/lib/outcomes/practices.js"
+      ],
+      "feature": "execution-roles-onboarding",
+      "origin_feature": null,
+      "agent": null,
+      "status": "open",
+      "seen": 1,
+      "created_at": "2026-11-27T18:34:12.025Z",
+      "updated_at": "2026-11-27T18:34:12.025Z",
+      "resolution": null
     }
   ]
 }

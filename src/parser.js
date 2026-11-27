@@ -100,6 +100,9 @@ const BOOLEAN_FLAGS = new Set([
   // feature:close / feature:archive — pure booleans; `--preflight .`,
   // `--restore .`, `--no-archive .` etc. must not swallow the path positional.
   'preflight', 'explain', 'restore', 'sweep', 'no-archive', 'no-distill', 'no-trim', 'keep-evidence',
+  // outcome:report / outcome:feedback, and feature:close's `--no-feedback` —
+  // pure booleans; `--never .` / `--portfolio .` must not swallow the path.
+  'portfolio', 'later', 'never', 'on', 'serve', 'no-open', 'no-feedback',
   // briefing:apply-feedback — pure booleans; `--confirm .` / `--declined .`
   // / `--allow-stale .` must not swallow the path positional.
   'confirm', 'confirm-if-clean', 'declined', 'allow-stale',

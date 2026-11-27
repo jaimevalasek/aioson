@@ -703,6 +703,17 @@ async function readPrdTitle(targetDir, slug) {
   return heading[1].replace(/^PRD\s*[—–:-]\s*/i, '').trim().slice(0, 160);
 }
 
+async function practiceTipsFor(targetDir, selection) {
+  const { practiceTips, TIP_AGENTS } = require('./lib/outcomes/tips');
+  if (!TIP_AGENTS.has(String(selection.agent || '').replace(/^@/, ''))) return [];
+  const { projectLocale } = require('./lib/outcomes/record');
+  return practiceTips(targetDir, {
+    agent: selection.agent,
+    locale: projectLocale(targetDir),
+    feature: selection.feature || selection.active_feature || null
+  });
+}
+
 async function buildContextBrief(targetDir, options = {}) {
   const agent = normalizeToken(options.agent || 'dev');
   const mode = options.mode || 'planning';
@@ -803,6 +814,9 @@ async function buildContextBrief(targetDir, options = {}) {
     : [];
   if (related.length > 0) fallbackUsed.push('broad_recall');
 
+  // One measured tip for the agents that shape a new delivery (lib/outcomes/tips.js).
+  const practiceTips = await practiceTipsFor(targetDir, selection).catch(() => []);
+
   const brief = {
     ok: true,
     agent: selection.agent,
@@ -831,6 +845,7 @@ async function buildContextBrief(targetDir, options = {}) {
     review_criteria: dedupe([...verificationHints, ...constraints], 18),
     memory: selection.memory || [],
     related,
+    ...(practiceTips.length > 0 ? { practice_tips: practiceTips } : {}),
     selected_count: selection.selected.length,
     semantic: selection.semantic,
     task_vocabulary: taskVocabulary,

@@ -24,6 +24,7 @@
 | [../deyvin-subtask-scout/README.md](../deyvin-subtask-scout/README.md) | Sub-Task Scout do `@dev`: primitiva de diagnóstico estruturado, `scout:prep/validate/commit`, caps configuráveis, archivamento por feature |
 | [agent-execution.md](./agent-execution.md) | Execução de subagentes: manifesto, resolução segura de modelos, `reasoning_effort`, fallback, relatórios e telemetria |
 | [operator-memory.md](./operator-memory.md) | Memória do operador: identidade, captura, promoção por tipo de sinal e reforço idempotente |
+| [resultados-e-avaliacao.md](./resultados-e-avaliacao.md) | Resultados das entregas: práticas × resultado medidos no fechamento, REPORT.md, dica no briefing/product e tela local de avaliação |
 
 ---
 

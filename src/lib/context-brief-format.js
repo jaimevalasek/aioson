@@ -123,6 +123,10 @@ function fullBriefLines(result) {
     out.push('Related (recall — history/archive select cannot see):');
     for (const item of result.related) out.push(`- ${item.path} [${item.source_type}] ${item.reason || ''}`);
   }
+  if (result.practice_tips && result.practice_tips.length > 0) {
+    out.push('Practice tips (measured in .aioson/outcomes/, offer — never impose):');
+    for (const tip of result.practice_tips) out.push(`- ${tip}`);
+  }
   return out;
 }
 
@@ -178,6 +182,7 @@ function compactBriefLines(result) {
   if (result.related && result.related.length > 0) {
     out.push(`Related (recall — history/archive select cannot see): ${result.related.map((item) => item.path).join(', ')}`);
   }
+  for (const tip of result.practice_tips || []) out.push(`Practice tip: ${tip}`);
   const tail = omitted > 0 ? `${omitted} constraint/forbidden/hint line(s) are quoted from must_load files and omitted; ` : '';
   out.push(`(${tail}\`--full\` prints every reason, outline and line.)`);
   return out;

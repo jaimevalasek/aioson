@@ -1468,12 +1468,19 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       });
     } catch { /* ignore — never blocks agent_done */ }
 
+    // A Simple Plan closes here (status: done + @dev's agent:done): its
+    // outcome record is written and the review screen may open. Best-effort.
+    const simplePlanOutcome = normalizedAgent === '@dev'
+      ? await require('../lib/outcomes/simple-plan-hook').closeFinishedSimplePlans(targetDir, { options }).catch(() => null)
+      : null;
+
     if (!options.json) {
       logVerifyArtifactLine(logger, verifyArtifact);
       logDeliveryParityLine(logger, deliveryParity, t);
       logBriefConsultationLine(logger, briefConsultation);
+      for (const line of (simplePlanOutcome && simplePlanOutcome.lines) || []) logger.log(line);
     }
-    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation };
+    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact, delivery_parity: deliveryParity, context_brief: briefConsultation, ...(simplePlanOutcome && simplePlanOutcome.recorded.length > 0 ? { outcome: { simple_plans: simplePlanOutcome.recorded, feedback: simplePlanOutcome.feedback } } : {}) };
   } finally {
     db.close();
   }

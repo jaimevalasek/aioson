@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Each delivery leaves a record of how it was done and how it went, and the person can review it.**
+  - Before this, nothing compared deliveries, and `feature:close` pruned the evidence a comparison would need (the runtime DB, the JSON evidence under `done/{slug}/`, the workflow state).
+  - **The record.** Right after the close gates, before anything is archived, the close writes `.aioson/outcomes/{slug}.json` (`src/lib/outcomes/`) without a model. It holds:
+    - the practices detected in the artifacts: screens, documents or data as briefing input (following the briefing's `source_plans`), identity from references, prototype approved, visual directions, PRD reviewed, phased plan, runtime proven, browser walkthrough, shakedown, decisions, test report, project rules, execution shape;
+    - the measured result: first-pass QA, FAIL→PASS cycles, findings by severity, tokens when the host reported them, duration, gates forced.
+  - **Closed schema.** A record holds numbers, booleans and enumerations only. The one free text is the person's comment, scrubbed of paths, file names, links, e-mails, IPs, long numbers, secrets and the project's names before it is stored. A record outside the schema is never written.
+  - **Simple Plans.** A plan set to `status: done` is recorded by @dev's `agent:done`. Plans older than two days are never recorded late.
+  - **`.aioson/outcomes/REPORT.md`** (`aioson outcome:report [--portfolio]`) says which practices go with better results. It only says so with three deliveries with and three without the practice in the same classification, and the wording is "associated with", never "causes".
+  - **A tip at decision time.** `context:brief` for @briefing, @refiner and @product carries one line when a practice has strong evidence and the active feature does not use it yet.
+  - **A local review screen** (`aioson outcome:feedback`): a rating from 1 to 5, what went well, what could be better, and a live preview of the scrubbed text. It opens in the browser after an accepted close, at most once every 20 hours, with "not now", "pause for 1 week / 1 month" and "don't ask again". It never opens in a test run, in CI, on a headless machine, with `AIOSON_FEEDBACK=off`, or with `feature:close --no-feedback`.
+  - aioson sends nothing anywhere. The records live in the project's `.aioson/`, versioned like the rest of it.
+
 ## [1.84.2] - 2026-11-26
 
 ### Fixed

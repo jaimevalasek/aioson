@@ -492,6 +492,8 @@ async function runFeatureClose({ args, options = {}, logger }) {
     return { ok: false, reason: 'closure_followups_ineligible', error: followups.error || followups.reason || 'Conditional acceptance never uses --force' };
   }
   let forceBypass = null;
+  // The outcome record reads the runtime checks this gate already ran.
+  let integrityForOutcome = null;
   if (isAcceptedVerdict(verdict)) {
     const planDir = path.join(targetDir, '.aioson', 'plans', slug);
     const contractPath = path.join(planDir, 'harness-contract.json');
@@ -507,6 +509,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
       runChecks: Boolean(contractContent) && !preflight,
       timeout: options.timeout
     });
+    integrityForOutcome = integrityGate;
     if (!integrityGate.ok) {
       blockers.push({
         gate: 'harness_contract',
@@ -780,6 +783,14 @@ async function runFeatureClose({ args, options = {}, logger }) {
     catch (error) { return { ok: false, reason: 'followup_persistence_failed', error: error.message }; }
     updates.push(`accepted with followups: ${followupPlans.join(', ')}`);
   }
+
+  // 0b. Outcome record (lib/outcomes): which practices this delivery used and
+  // how it went, read BEFORE the steps below rewrite the workflow state and
+  // the registry row and archive the feature folder. Best-effort.
+  const outcomeCapture = await require('../lib/outcomes/close-hook').captureAtClose({
+    targetDir, slug, verdict, integrity: integrityForOutcome, forceBypass
+  }).catch((err) => ({ ok: false, line: `outcome: not recorded (${(err && err.message) || err})` }));
+  updates.push(outcomeCapture.line);
 
   // 0. Dossier guarantee — verdict-agnostic; ensures every closed feature has a dossier
   // for archive + audit trail. Telemetry is silent on failure.
@@ -1093,6 +1104,14 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
   }
 
+  // 8. The person's review of the delivery: the report is regenerated and, on
+  // an accepted close, the review screen may open (at most once a day; the
+  // person can skip, snooze or turn it off). Never blocks, never in a test run.
+  const feedback = await require('../lib/outcomes/close-hook').finishAtClose({
+    targetDir, slug, accepted: isAcceptedVerdict(verdict), options
+  }).catch(() => ({ invited: false, reason: 'error', line: null }));
+  if (feedback.line) updates.push(feedback.line);
+
   const result = {
     ok: closeErrors.length === 0,
     ...(closeErrors.length > 0 ? { reason: 'completed_with_errors' } : {}),
@@ -1110,7 +1129,10 @@ async function runFeatureClose({ args, options = {}, logger }) {
     archive,
     scoutArchive,
     distillation,
-    runtimeMaintenance
+    runtimeMaintenance,
+    outcome: outcomeCapture.ok
+      ? { file: outcomeCapture.file, practices_detected: outcomeCapture.detected, feedback: { invited: feedback.invited, reason: feedback.reason } }
+      : { file: null, feedback: { invited: false, reason: feedback.reason } }
   };
 
   if (options.json) return result;
